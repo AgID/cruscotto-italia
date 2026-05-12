@@ -76,6 +76,7 @@ SHARDS = [
     ("veicoli",    "veicoli/{istat}.json"),
     ("redditi",    "redditi/{istat}.json"),
     ("immobili_pa", "immobili_pa/{istat}.json"),
+    ("anncsu",     "anncsu/{istat}.json"),
 ]
 
 ETL_VERSION = "0.1.0"
