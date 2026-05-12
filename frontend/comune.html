@@ -3936,11 +3936,15 @@ function renderAnncsuTab(d) {
     </div>
   `;
 
-  // Sezione chart: sempre visibile se ci sono strade
+  // Sezione chart: visibile solo se il comune ha conferito georef.
+  // Aosta (e altri comuni con 0% geo-ref) → nascondiamo entrambi i chart:
+  // il chart top10 sarebbe statisticamente valido ma fuorviante UX-mente
+  // (l'utente vede '0% geo-ref' e si aspetta che tutto il blocco sia vuoto).
   const topStrade = Array.isArray(k.top_10_strade) ? k.top_10_strade : [];
   const metodi = k.metodi_georef || {};
   const hasMetodi = Object.values(metodi).some(v => v > 0);
-  const chartsBlock = (topStrade.length || hasMetodi) ? `
+  const hasGeoRef = (k.pct_geo_ref || 0) > 0;
+  const chartsBlock = (hasGeoRef && (topStrade.length || hasMetodi)) ? `
     <div class="anncsu-charts">
       ${topStrade.length ? `
         <div class="anncsu-chart-col">
