@@ -345,3 +345,60 @@ export async function handleAdmin(req: Request, env: Env): Promise<Response> {
 
   return new Response("Admin route not found", { status: 404 });
 }
+
+/**
+ * Pass-through R2 per shard ANNCSU FULL (Opzione C lazy fetch frontend).
+ *
+ * Espone /data/anncsu_full/<istat>.json mappato direttamente all'oggetto
+ * R2 anncsu_full/<istat>.json. Risposta:
+ *  - 200 + JSON body con cache 24h (sono dati immutabili, snapshot fissato)
+ *  - 404 se shard non esiste (comune senza civici geo-ref, es. Aosta)
+ *  - 503 se R2 down
+ *
+ * Sicurezza: solo questo path è esposto (validato in router con regex
+ * /^\d{6}$/), non si può navigare in altre directory del bucket.
+ *
+ * Performance: l'utente scarica 0.4MB (Lecce) - 4.3MB (Roma) gzippato.
+ * R2 egress è gratuito su Cloudflare quindi nessun cost concern.
+ */
+export async function handleDataAnncsuFull(istat: string, env: Env): Promise<Response> {
+  const key = `anncsu_full/${istat}.json`;
+  try {
+    const obj = await env.DATA.get(key);
+    if (!obj) {
+      return new Response(
+        JSON.stringify({ error: "not_found", istat, key }),
+        {
+          status: 404,
+          headers: {
+            "Content-Type": "application/json",
+            "Access-Control-Allow-Origin": "*",
+          },
+        }
+      );
+    }
+    return new Response(obj.body, {
+      status: 200,
+      headers: {
+        "Content-Type": "application/json; charset=utf-8",
+        // R2 invia già il body gzippato se Accept-Encoding lo permette.
+        "Cache-Control": "public, max-age=86400, immutable",
+        "Access-Control-Allow-Origin": "*",
+        // ETag già fornito da R2 per cache validation lato browser.
+        ...(obj.httpEtag ? { "ETag": obj.httpEtag } : {}),
+      },
+    });
+  } catch (err) {
+    console.error("handleDataAnncsuFull error:", err);
+    return new Response(
+      JSON.stringify({ error: "r2_unavailable", message: String(err) }),
+      {
+        status: 503,
+        headers: {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*",
+        },
+      }
+    );
+  }
+}

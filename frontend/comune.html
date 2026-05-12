@@ -850,6 +850,11 @@ const MCP_ENDPOINT = window.location.hostname === 'localhost'
   ? 'http://localhost:8787/mcp'
   : 'https://cruscotto-italia-mcp.datigovit.workers.dev/mcp';
 
+// Base URL per fetch lazy degli shard ANNCSU FULL (Opzione C).
+// Endpoint Worker GET /data/anncsu_full/<istat>.json → pass-through R2.
+// Stessa origine del Worker MCP (Cloudflare lo serve, CORS *).
+const ANNCSU_FULL_BASE = MCP_ENDPOINT.replace(/\/mcp$/, '/data/anncsu_full');
+
 async function mcpCall(toolName, args) {
   const res = await fetch(MCP_ENDPOINT, {
     method: 'POST',
@@ -4019,8 +4024,8 @@ function initAnncsu(d) {
   const puntiRaw = Array.isArray(d.punti) ? d.punti : [];
   if (!puntiRaw.length) return;   // gestito già nel render
 
-  // ---- 1) Flag outlier via MAD
-  const punti = anncsuFlagOutliers(puntiRaw);
+  // ---- 1) Flag outlier via MAD (let perché ricostruito su enrich full)
+  let punti = anncsuFlagOutliers(puntiRaw);
 
   // ---- 2) Mappa con OSM (stessa tile-source di Aria/Immobili PA)
   const lats = punti.map(p => p.lat);
@@ -4036,26 +4041,29 @@ function initAnncsu(d) {
   }).addTo(map);
 
   // ---- 3) Renderizza legenda dinamica con conteggi
-  const metodiUsati = new Map();
-  let nOutlier = 0;
-  punti.forEach(p => {
-    if (p._outlier) { nOutlier++; return; }
-    const m = (p.met != null && p.met !== 0) ? p.met : 0;
-    metodiUsati.set(m, (metodiUsati.get(m) || 0) + 1);
-  });
   const legendEl = document.getElementById('anncsu-legend');
-  if (legendEl) {
-    const items = [];
-    [...metodiUsati.entries()].sort((a, b) => b[1] - a[1]).forEach(([metodo, n]) => {
-      const color = ANNCSU_METODO_COLORS[metodo] || '#9E9E9E';
-      const label = ANNCSU_METODO_LABELS[metodo] || 'Sconosciuto';
-      items.push(`<span class="anncsu-legend-item"><span class="anncsu-legend-dot" style="background:${color}"></span>${label} (${fmtNum(n)})</span>`);
+  function _renderLegend() {
+    const metodiUsati = new Map();
+    let nOutlier = 0;
+    punti.forEach(p => {
+      if (p._outlier) { nOutlier++; return; }
+      const m = (p.met != null && p.met !== 0) ? p.met : 0;
+      metodiUsati.set(m, (metodiUsati.get(m) || 0) + 1);
     });
-    if (nOutlier > 0) {
-      items.push(`<span class="anncsu-legend-item"><span class="anncsu-legend-dot" style="background:${ANNCSU_OUTLIER_COLOR}"></span>Outlier georef (${fmtNum(nOutlier)})</span>`);
+    if (legendEl) {
+      const items = [];
+      [...metodiUsati.entries()].sort((a, b) => b[1] - a[1]).forEach(([metodo, n]) => {
+        const color = ANNCSU_METODO_COLORS[metodo] || '#9E9E9E';
+        const label = ANNCSU_METODO_LABELS[metodo] || 'Sconosciuto';
+        items.push(`<span class="anncsu-legend-item"><span class="anncsu-legend-dot" style="background:${color}"></span>${label} (${fmtNum(n)})</span>`);
+      });
+      if (nOutlier > 0) {
+        items.push(`<span class="anncsu-legend-item"><span class="anncsu-legend-dot" style="background:${ANNCSU_OUTLIER_COLOR}"></span>Outlier georef (${fmtNum(nOutlier)})</span>`);
+      }
+      legendEl.innerHTML = items.join('');
     }
-    legendEl.innerHTML = items.join('');
   }
+  _renderLegend();
 
   // ---- 4) Layer markers + redraw cluster grid-based
   let markersLayer = L.layerGroup().addTo(map);
@@ -4192,7 +4200,7 @@ function initAnncsu(d) {
   // ha tendina ingovernabile e troppo grande). Min 4 caratteri.
   // Limite noto: sample 1000 punti, vedi TODO opzione C in cima alla funzione.
   let topOdonimi = [];
-  if (acEl) {
+  function _recomputeTopOdonimi() {
     const odoFreq = new Map();
     punti.forEach(p => {
       if (p.odo) odoFreq.set(p.odo, (odoFreq.get(p.odo) || 0) + 1);
@@ -4201,6 +4209,9 @@ function initAnncsu(d) {
       .sort((a, b) => b[1] - a[1])
       .slice(0, 200)
       .map(([odo, _]) => odo);
+  }
+  if (acEl) {
+    _recomputeTopOdonimi();
   }
 
   function closeAutocomplete() {
@@ -4372,6 +4383,82 @@ function initAnncsu(d) {
         }
       }
     });
+  }
+
+  // ---- 11) Reload con dataset più completo (Opzione C lazy fetch)
+  // Quando arriva il shard FULL da /data/anncsu_full/<istat>.json, sostituisce
+  // i 1000 punti sample con TUTTI i civici geo-ref del comune.
+  // Aggiorna: punti (con flag outlier), legenda, autocomplete top200,
+  // markers cluster, info-line "X/Y civici", e i counts dei chip filtri.
+  function reloadPunti(newPuntiRaw) {
+    if (!Array.isArray(newPuntiRaw) || newPuntiRaw.length <= punti.length) {
+      return;  // nessun guadagno o dato invalido
+    }
+    punti = anncsuFlagOutliers(newPuntiRaw);
+    _renderLegend();
+    _recomputeTopOdonimi();
+
+    // Aggiorna info-line con conteggio reale
+    const noteEl = document.querySelector('.anncsu-map-note');
+    if (noteEl) {
+      const k = d.kpi || {};
+      noteEl.innerHTML = `Tutti i ${fmtNum(punti.length)} numeri civici geo-referenziati del comune (${fmtNum(k.n_civici || 0)} totali). Marker colorati per metodo di geo-referenziazione utilizzato dal Comune nel conferimento ad ANNCSU.`;
+    }
+
+    // Aggiorna conteggi nei chip filtri esistenti
+    if (filtersEl) {
+      const newCounts = new Map();
+      punti.forEach(p => {
+        const key = p._outlier ? 'outlier' : (p.met || 0);
+        newCounts.set(key, (newCounts.get(key) || 0) + 1);
+      });
+      filtersEl.querySelectorAll('.anncsu-chip').forEach(btn => {
+        const m = btn.dataset.method;
+        const key = (m === 'outlier') ? 'outlier' : parseInt(m, 10);
+        const countEl = btn.querySelector('.anncsu-chip-count');
+        if (countEl && newCounts.has(key)) {
+          countEl.textContent = `(${fmtNum(newCounts.get(key))})`;
+        }
+        // Assicura che il filtro sia attivo per default (nuova categoria)
+        if (newCounts.has(key) && !activeMethods.has(key)) {
+          activeMethods.add(key);
+          btn.setAttribute('aria-pressed', 'true');
+        }
+      });
+    }
+
+    redrawClusters();
+  }
+
+  // Espongo l'istanza per riusarla da fuori (es. tryEnrichAnncsuFull)
+  window.__anncsuInstance = { reloadPunti, map };
+}
+
+
+// Lazy fetch dello shard ANNCSU FULL via Worker endpoint dedicato.
+// Chiamato in background dopo il primo render initAnncsu(sample).
+// Gestisce 404 (es. Aosta) e altri errori in modo silenzioso: la mappa
+// continua a funzionare con i 1000 punti sample, l'utente non vede errori.
+async function tryEnrichAnncsuFull(istat) {
+  if (!istat || !window.__anncsuInstance) return;
+  try {
+    const url = `${ANNCSU_FULL_BASE}/${istat}.json`;
+    const res = await fetch(url);
+    if (!res.ok) {
+      // 404 = comune senza shard full (Aosta o ghost): silenzioso
+      // 5xx = errore server: log ma non rompere l'esperienza
+      if (res.status >= 500) {
+        console.warn(`ANNCSU full enrich failed: HTTP ${res.status}`);
+      }
+      return;
+    }
+    const fullData = await res.json();
+    if (Array.isArray(fullData.punti)) {
+      window.__anncsuInstance.reloadPunti(fullData.punti);
+    }
+  } catch (err) {
+    // Network error o JSON malformato: silenzioso
+    console.warn(`ANNCSU full enrich error: ${err.message}`);
   }
 }
 
@@ -4892,7 +4979,15 @@ function bindTabSwitching() {
       if (tab.dataset.tab === 'anncsu') {
         if (window.__anncsuData && !window.__anncsuInited) {
           // setTimeout 0: garantisce che #anncsu-map sia layout-ed nel DOM
-          setTimeout(() => initAnncsu(window.__anncsuData), 0);
+          setTimeout(() => {
+            initAnncsu(window.__anncsuData);
+            // Enrichment lazy (Opzione C): fetch dello shard FULL in background
+            // 300ms di delay per non bloccare il primo paint della mappa
+            const istatParam = new URLSearchParams(window.location.search).get('istat');
+            if (istatParam) {
+              setTimeout(() => tryEnrichAnncsuFull(istatParam), 300);
+            }
+          }, 0);
           window.__anncsuInited = true;
         }
       }
