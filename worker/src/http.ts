@@ -11,7 +11,7 @@ export async function handleInfo(_req: Request, _env: Env): Promise<Response> {
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>Cruscotto Italia · MCP Server</title>
-<meta name="description" content="Server Model Context Protocol che federa tredici dataset pubblici sui comuni italiani. Connettilo a Claude Desktop, ChatGPT o client MCP generici.">
+<meta name="description" content="Server Model Context Protocol che federa tredici dataset pubblici sui comuni italiani. Connettilo a Claude.ai (web e mobile), Claude Desktop, ChatGPT o client MCP generici.">
 <!-- Design Italia: stessi token e font del frontend Cruscotto Italia -->
 <link rel="stylesheet" href="https://cruscotto-italia.piersoftckan.biz/css/tokens.css">
 <link rel="stylesheet" href="https://cruscotto-italia.piersoftckan.biz/css/base.css">
@@ -231,9 +231,25 @@ pre code {
 
   <div class="eyebrow">§ MCP Server · v0.4</div>
   <h1>Cruscotto Italia <em>MCP</em>.</h1>
-  <p class="lead">Server <a href="https://modelcontextprotocol.io" target="_blank" rel="noopener">Model Context Protocol</a> che federa tredici dataset pubblici sui comuni italiani (ANAC, BDAP-MOP, SIOPE, PNRR, ISPRA, ISTAT, MIUR, ACI, MEF Federalismo Fiscale, MEF Patrimonio Immobiliare). Connettilo al tuo client LLM per interrogare i dati ufficiali con linguaggio naturale.</p>
+  <p class="lead">Server <a href="https://modelcontextprotocol.io" target="_blank" rel="noopener">Model Context Protocol</a> che federa tredici dataset pubblici sui comuni italiani (ANAC, BDAP-MOP, SIOPE, PNRR, ISPRA, ISTAT, MIUR, ACI, MEF Federalismo Fiscale, MEF Patrimonio Immobiliare, Agenzia delle Entrate ANNCSU). Connettilo al tuo client LLM per interrogare i dati ufficiali con linguaggio naturale.</p>
 
   <h2>Come <em>connetterlo</em></h2>
+
+  <h3>Claude.ai (web e mobile)</h3>
+  <p>Disponibile sui piani <strong>Free</strong> (limite 1 connettore custom), <strong>Pro</strong>, <strong>Max</strong>, <strong>Team</strong> ed <strong>Enterprise</strong>.</p>
+  <ol>
+    <li>Apri <a href="https://claude.ai/settings/connectors" target="_blank" rel="noopener">claude.ai/settings/connectors</a> (oppure <em>Settings → Connectors</em>).</li>
+    <li>Click sul pulsante <strong>+</strong> accanto a "Connectors" → <strong>Add custom connector</strong>.</li>
+    <li>Compila il form:
+      <ul>
+        <li><strong>Name</strong>: <code>Cruscotto Italia</code></li>
+        <li><strong>Remote MCP server URL</strong>: <code>https://cruscotto-italia-mcp.piersoftckan.biz/mcp</code></li>
+      </ul>
+    </li>
+    <li>Lascia <em>Advanced settings</em> vuoto (nessuna autenticazione richiesta).</li>
+    <li>Click <strong>Add</strong> e poi <strong>Connect</strong>.</li>
+  </ol>
+  <p>Per attivare il connettore in una chat: pulsante <strong>+</strong> in basso a sinistra → <strong>Connectors</strong> → toggle <em>Cruscotto Italia</em>.</p>
 
   <h3>Claude Desktop</h3>
   <p>Aggiungi al file <code>claude_desktop_config.json</code>:</p>
@@ -261,7 +277,7 @@ pre code {
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'</code></pre>
 
   <h2>Tool <em>disponibili</em></h2>
-  <p>11 strumenti MCP. Il tool <code>search_comune</code> va sempre chiamato per primo quando l'utente fornisce un nome di comune, per ottenere il codice ISTAT.</p>
+  <p>10 strumenti MCP. Il tool <code>search_comune</code> va sempre chiamato per primo quando l'utente fornisce un nome di comune, per ottenere il codice ISTAT.</p>
 
   <div class="tools">
     <div class="tool-row"><div class="tool-name">mcp_info</div><div class="tool-desc">Metadata del server: versione, sorgenti integrate, freshness dei dati.</div></div>
