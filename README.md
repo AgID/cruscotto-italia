@@ -1,9 +1,12 @@
 # Cruscotto Italia
 
-> La carta d'identità data-driven dei comuni italiani. Otto dataset pubblici ricomposti per comune.
+> **Repo istituzionale curato da [AgID](https://www.agid.gov.it/).** Progetto sviluppato da [Francesco Piero Paolicelli (@piersoft)](https://piersoft.it), in adozione presso AgID. Il repo originale dell'autore è [piersoft/cruscotto-italia](https://github.com/piersoft/cruscotto-italia).
 
-[![Deploy Worker](https://github.com/piersoft/cruscotto-italia/actions/workflows/deploy-worker.yml/badge.svg)](https://github.com/piersoft/cruscotto-italia/actions/workflows/deploy-worker.yml)
-[![ETL Mensile](https://github.com/piersoft/cruscotto-italia/actions/workflows/etl-monthly.yml/badge.svg)](https://github.com/piersoft/cruscotto-italia/actions/workflows/etl-monthly.yml)
+
+> La carta d'identità data-driven dei comuni italiani. Dodici dataset pubblici ricomposti per comune.
+
+[![Deploy Worker](https://github.com/AgID/cruscotto-italia/actions/workflows/deploy-worker.yml/badge.svg)](https://github.com/AgID/cruscotto-italia/actions/workflows/deploy-worker.yml)
+[![ETL Mensile](https://github.com/AgID/cruscotto-italia/actions/workflows/etl-monthly.yml/badge.svg)](https://github.com/AgID/cruscotto-italia/actions/workflows/etl-monthly.yml)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](LICENSE)
 
 Cerchi un comune ("Lecce") e ottieni una vista a 360° su:
