@@ -731,6 +731,82 @@ def build_all_shards(strad_data: dict, indir_data: dict,
 
 
 # ----------------------------------------------------------------------
+# FASE 4b - FULL SHARDS (opzione C: tutti i civici geo-ref, no sample)
+# ----------------------------------------------------------------------
+# Genera shard pesanti su prefisso anncsu_full/<istat>.json contenenti
+# TUTTI i civici geo-ref del comune (non sample 1000). Lecce ~3.7MB JSON
+# crudo, ~0.4MB gzip. Roma stimata ~50MB crudo, ~4.3MB gzip. Italia
+# totale stimata ~0.23GB gzippato su R2.
+#
+# Schema slim per minimizzare peso:
+#   {
+#     "_etl_version": "0.1.0-fase-c",
+#     "_source": "MEF DE - ANNCSU full",
+#     "_snapshot_date": "YYYY-MM-DD",
+#     "_generated_at": "ISO-8601",
+#     "kpi": { ... }  # stessi KPI dello shard sample per backward compat
+#     "punti": [      # TUTTI i civici geo-ref (no sample)
+#       {"lat":..., "lon":..., "civ":..., "esp":..., "odo":...,
+#        "met":int, "quota": int|null}
+#     ]
+#   }
+
+def build_full_shard(istat: str, strad: dict, indir: dict,
+                     snapshot_date: str) -> dict:
+    """Costruisce shard FULL con TUTTI i civici geo-ref (no sample)."""
+    kpi = _build_kpi(strad, indir)
+    punti = indir.get("punti_geo", [])
+    return {
+        "_etl_version": "0.1.0-fase-c",
+        "_source": SOURCE_LABEL + " (full)",
+        "_snapshot_date": snapshot_date,
+        "_generated_at": datetime.now(timezone.utc).isoformat(),
+        "_full": True,
+        "kpi": kpi,
+        "punti": punti,
+    }
+
+
+def build_all_full_shards(strad_data: dict, indir_data: dict,
+                          snapshot_date: str, out_dir: Path,
+                          canonical_istat: Optional[set[str]] = None) -> int:
+    """Genera shard FULL nel directory locale. Pattern identico a build_all_shards."""
+    out_dir.mkdir(parents=True, exist_ok=True)
+    all_istat = set(strad_data.keys()) | set(indir_data.keys())
+    if canonical_istat is not None:
+        ghost = all_istat - canonical_istat
+        if ghost:
+            log.info("anncsu_full_ghost_istat_excluded",
+                     count=len(ghost), sample=sorted(ghost)[:10])
+        all_istat = all_istat & canonical_istat
+
+    log.info("anncsu_full_build_shards_start",
+             istat_count=len(all_istat), out_dir=str(out_dir))
+    written = 0
+    skipped_no_geo = 0
+    for istat in sorted(all_istat):
+        strad = strad_data.get(istat, {})
+        indir = indir_data.get(istat, {})
+        # Skip comuni senza punti geo-ref (es. Aosta) per non sprecare R2
+        punti = indir.get("punti_geo", [])
+        if not punti:
+            skipped_no_geo += 1
+            continue
+        payload = build_full_shard(istat, strad, indir, snapshot_date)
+        path = out_dir / f"{istat}.json"
+        with path.open("w", encoding="utf-8") as fh:
+            json.dump(payload, fh, ensure_ascii=False, separators=(",", ":"))
+        written += 1
+        if written % 500 == 0:
+            log.info("anncsu_full_build_shards_progress",
+                     done=written, total=len(all_istat))
+
+    log.info("anncsu_full_build_shards_done",
+             written=written, skipped_no_geo=skipped_no_geo)
+    return written
+
+
+# ----------------------------------------------------------------------
 # FASE 5 - PUSH R2 (pattern aria.py)
 # ----------------------------------------------------------------------
 
@@ -809,6 +885,81 @@ def push_shards_to_r2(shard_dir: Path,
     }
 
 
+def push_full_shards_to_r2(shard_dir: Path,
+                           force_upload: bool = False) -> dict:
+    """Push paralleli su prefix anncsu_full/. Stesso pattern di push_shards_to_r2."""
+    if not shard_dir.exists():
+        log.warning("anncsu_full_no_shard_dir_to_push", path=str(shard_dir))
+        return {"uploaded": 0, "unchanged": 0, "errors": 0}
+
+    import boto3 as _b3
+    _client = _b3.client(
+        "s3",
+        endpoint_url=f"https://{os.environ['R2_ACCOUNT_ID']}.r2.cloudflarestorage.com",
+        aws_access_key_id=os.environ["R2_ACCESS_KEY_ID"],
+        aws_secret_access_key=os.environ["R2_SECRET_ACCESS_KEY"],
+    )
+
+    shard_files = sorted(shard_dir.glob("*.json"))
+
+    remote_etag: dict[str, str] = {}
+    try:
+        _pag = _client.get_paginator("list_objects_v2")
+        for _page in _pag.paginate(Bucket=r2.get_bucket(), Prefix="anncsu_full/"):
+            for _o in _page.get("Contents", []):
+                name = _o["Key"].split("/")[-1]
+                etag = (_o.get("ETag") or "").strip('"').lower()
+                remote_etag[name] = etag
+        log.info("anncsu_full_shard_remote_listed", count=len(remote_etag))
+    except Exception as e:
+        log.warning("anncsu_full_shard_list_failed", error=str(e))
+
+    to_upload: list[Path] = []
+    if force_upload:
+        to_upload = list(shard_files)
+        log.info("anncsu_full_force_upload", count=len(to_upload))
+    else:
+        n_same = 0
+        for sf in shard_files:
+            rmd5 = remote_etag.get(sf.name)
+            if rmd5 is None or _md5_file(sf) != rmd5:
+                to_upload.append(sf)
+            else:
+                n_same += 1
+        log.info("anncsu_full_md5_compared",
+                 total=len(shard_files), unchanged=n_same,
+                 to_upload=len(to_upload))
+
+    def _upload_one(sf: Path) -> str:
+        r2.upload_file(sf, f"anncsu_full/{sf.name}",
+                       content_type="application/json")
+        return sf.name
+
+    uploaded = 0
+    errors = 0
+    with ThreadPoolExecutor(max_workers=24) as ex:
+        futures = {ex.submit(_upload_one, sf): sf for sf in to_upload}
+        for f in as_completed(futures):
+            try:
+                f.result()
+                uploaded += 1
+                if uploaded % 200 == 0:
+                    log.info("anncsu_full_push_progress",
+                             uploaded=uploaded, total=len(to_upload))
+            except Exception as e:
+                errors += 1
+                log.error("anncsu_full_upload_failed", error=str(e))
+
+    log.info("anncsu_full_push_done",
+             uploaded=uploaded, unchanged=len(shard_files) - len(to_upload),
+             errors=errors)
+    return {
+        "uploaded": uploaded,
+        "unchanged": len(shard_files) - len(to_upload),
+        "errors": errors,
+    }
+
+
 # ----------------------------------------------------------------------
 # CLI
 # ----------------------------------------------------------------------
@@ -830,6 +981,15 @@ def main() -> int:
     ap.add_argument("--no-canonical-filter", action="store_true",
                     help="Disabilita il filtro contro lookup/comuni-bundle.json "
                          "(rischia di scrivere shard per ISTAT soppressi)")
+    ap.add_argument("--full-shards", action="store_true",
+                    help="Genera anche shard FULL (anncsu_full/<istat>.json) "
+                         "con tutti i civici geo-ref, non solo sample 1000. "
+                         "Output peso: ~0.23GB gzippato totale nazionale.")
+    ap.add_argument("--skip-sample", action="store_true",
+                    help="Non genera/pusha gli shard sample (anncsu/). Utile "
+                         "se --full-shards e gli sample sono già su R2.")
+    ap.add_argument("--full-outdir", default="dist/anncsu_full",
+                    help="Directory shard FULL locali (default: dist/anncsu_full)")
     args = ap.parse_args()
 
     if args.regioni:
@@ -890,18 +1050,39 @@ def main() -> int:
             log.warning("anncsu_canonical_load_failed",
                         error=str(e),
                         note="proceeding without ghost ISTAT filter")
-    out_dir = Path(args.outdir)
-    n_written = build_all_shards(strad_data, indir_data, snapshot,
-                                 out_dir, canonical_istat=canonical)
+
+    n_written_sample = 0
+    n_written_full = 0
+
+    # FASE 4a: shard SAMPLE (anncsu/) — skippabile via --skip-sample
+    if not args.skip_sample:
+        out_dir = Path(args.outdir)
+        n_written_sample = build_all_shards(strad_data, indir_data, snapshot,
+                                            out_dir, canonical_istat=canonical)
+
+    # FASE 4b: shard FULL (anncsu_full/) — solo se --full-shards
+    if args.full_shards:
+        full_out_dir = Path(args.full_outdir)
+        n_written_full = build_all_full_shards(strad_data, indir_data, snapshot,
+                                               full_out_dir,
+                                               canonical_istat=canonical)
 
     # FASE 5: push R2
     if args.target == "r2":
-        result = push_shards_to_r2(out_dir, force_upload=args.force_upload)
-        log.info("anncsu_r2_push_result", **result)
+        if not args.skip_sample:
+            result = push_shards_to_r2(Path(args.outdir),
+                                       force_upload=args.force_upload)
+            log.info("anncsu_r2_push_sample_result", **result)
+        if args.full_shards:
+            result_full = push_full_shards_to_r2(Path(args.full_outdir),
+                                                  force_upload=args.force_upload)
+            log.info("anncsu_r2_push_full_result", **result_full)
 
     elapsed = time.time() - t_start
     log.info("anncsu_etl_done", elapsed_s=round(elapsed, 1),
-             shards=n_written, snapshot=snapshot)
+             shards_sample=n_written_sample,
+             shards_full=n_written_full,
+             snapshot=snapshot)
     return 0
 
 
