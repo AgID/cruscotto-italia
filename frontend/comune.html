@@ -690,6 +690,24 @@ footer a{color:rgba(255,255,255,0.85);text-decoration:none}
 /* --- Tab Veicoli --- */
 .veicoli-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:18px;}
 @media (max-width:720px){.veicoli-grid{grid-template-columns:1fr;}}
+/* Patrimonio PA — chip filtri categoria */
+.impa-filters{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0 16px;}
+.impa-chip{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;min-height:28px;background:var(--bg-soft);border:1px solid var(--border);border-radius:14px;font-family:var(--font-sans);font-size:12px;color:var(--ink);cursor:pointer;transition:all .15s ease;line-height:1;}
+.impa-chip:hover{background:#fff;border-color:var(--blu-italia);}
+.impa-chip:focus-visible{outline:2px solid var(--blu-italia);outline-offset:2px;}
+.impa-chip[aria-pressed="false"]{opacity:.4;background:transparent;}
+.impa-chip[aria-pressed="false"] .impa-chip-dot{opacity:.4;}
+.impa-chip-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+.impa-chip-label{font-weight:500;}
+.impa-chip-count{font-family:var(--font-mono);font-size:11px;color:var(--mute);margin-left:2px;}
+.impa-chip-all{background:var(--blu-italia);color:#fff;border-color:var(--blu-italia);font-weight:600;}
+.impa-chip-all:hover{background:var(--blu-italia-dark);border-color:var(--blu-italia-dark);}
+.impa-chip-all[aria-pressed="false"]{background:transparent;color:var(--ink);border-color:var(--border);}
+.impa-map{height:480px;border-radius:8px;overflow:hidden;background:#eef2f5;position:relative;z-index:0;isolation:isolate;}
+@media (max-width:720px){.impa-map{height:360px;}}
+.impa-cluster{background:transparent !important;border:none !important;}
+.impa-chart-wrap{height:480px;position:relative;}
+@media (max-width:720px){.impa-chart-wrap{height:420px;}}
 .veicoli-col-h{font-family:var(--serif);font-size:18px;color:var(--ink);font-style:italic;margin:0 0 10px;border-bottom:1px solid var(--paper-2);padding-bottom:6px;}
 .veicoli-parco-stack{display:flex;height:28px;background:var(--bg-alt);border-radius:3px;overflow:hidden;margin-top:10px;}
 .veicoli-parco-seg{display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:10px;font-weight:700;color:var(--paper);text-transform:uppercase;letter-spacing:.05em;min-width:0;}
@@ -854,6 +872,8 @@ function renderComune(data) {
   // Cache dati Redditi per lazy-render chart al click del tab
   window.__redditiData = k.redditi || null;
   window.__redditiChartRendered = false;
+  window.__immobiliPaData = k.immobili_pa || null;
+  window.__immobiliPaInited = false;
   const tabs = [
     { id: 'panoramica', label: 'Panoramica', kpi: '' },
     { id: 'demografia', label: 'Demografia', kpi: k.popolazione != null ? fmtNum(k.popolazione) : '—' },
@@ -867,7 +887,8 @@ function renderComune(data) {
     { id: 'opere', label: 'Opere', kpi: k.opere?.count != null ? fmtNum(k.opere.count) : '—' },
     { id: 'contratti', label: 'Contratti', kpi: fmtNum(k.contratti?.count || 0) },
     { id: 'spese', label: 'Spese SIOPE', kpi: '<span data-tab-spese-count><span class="tab-spinner"></span></span>' },
-    { id: 'redditi', label: 'Redditi e fisco', kpi: k.redditi?.anni?.[String(k.redditi.anni_disponibili?.slice(-1)[0])]?.reddito_complessivo?.medio != null ? '€' + fmtNum(k.redditi.anni[String(k.redditi.anni_disponibili.slice(-1)[0])].reddito_complessivo.medio) : '—' }
+    { id: 'redditi', label: 'Redditi e fisco', kpi: k.redditi?.anni?.[String(k.redditi.anni_disponibili?.slice(-1)[0])]?.reddito_complessivo?.medio != null ? '€' + fmtNum(k.redditi.anni[String(k.redditi.anni_disponibili.slice(-1)[0])].reddito_complessivo.medio) : '—' },
+    { id: 'patrimonio-pa', label: 'Patrimonio PA', kpi: k.immobili_pa?.kpi?.n_totale != null ? fmtNum(k.immobili_pa.kpi.n_totale) : '—' }
   ];
 
   document.getElementById('comune-content').innerHTML = `
@@ -938,6 +959,7 @@ function renderComune(data) {
       ${renderAriaTabSkeleton()}
       ${renderVeicoliTab(k.veicoli)}
       ${renderRedditiTab(k.redditi)}
+      ${renderImmobiliPaTab(k.immobili_pa)}
     </div>
   `;
 }
@@ -3484,6 +3506,299 @@ function renderRedditiFiscoChart(r) {
   });
 }
 
+// ===========================================================================
+// Tab Patrimonio PA — MEF Dipartimento delle Finanze, Censimento Beni Immobili
+// Pubblici al 31/12/2022, fonte: dati.mef.gov.it (CC BY 4.0)
+// ===========================================================================
+const IMPA_CAT_COLORS = {
+  "fabbricati_sociali_scolastici":      "#0066CC",
+  "fabbricati_sociali_sanitari":        "#D9364F",
+  "fabbricati_sociali_sportivi":        "#00A86B",
+  "fabbricati_sociali_culturali":       "#A050BE",
+  "fabbricati_amministrativi_uffici":   "#5C6F82",
+  "fabbricati_amministrativi_sicurezza":"#3A3A3A",
+  "fabbricati_residenziali":            "#E89400",
+  "fabbricati_pertinenze":              "#C9A23E",
+  "fabbricati_magazzini":               "#8B6F47",
+  "fabbricati_parcheggi":               "#1B7BBC",
+  "fabbricati_produttivi":              "#9B2335",
+  "terreni_agricoli":                   "#7CB342",
+  "terreni_boschivi":                   "#33691E",
+  "terreni_pascolo":                    "#C0CA33",
+  "terreni_urbani":                     "#FF6F00",
+  "terreni_parchi_pubblici":            "#388E3C",
+  "altro":                              "#9E9E9E"
+};
+const IMPA_CAT_LABELS = {
+  "fabbricati_sociali_scolastici":      "Scolastico",
+  "fabbricati_sociali_sanitari":        "Sanitario",
+  "fabbricati_sociali_sportivi":        "Sportivo",
+  "fabbricati_sociali_culturali":       "Culturale",
+  "fabbricati_amministrativi_uffici":   "Uffici PA",
+  "fabbricati_amministrativi_sicurezza":"Sicurezza/Caserme",
+  "fabbricati_residenziali":            "Residenziale",
+  "fabbricati_pertinenze":              "Pertinenze",
+  "fabbricati_magazzini":               "Magazzini",
+  "fabbricati_parcheggi":               "Parcheggi",
+  "fabbricati_produttivi":              "Produttivi",
+  "terreni_agricoli":                   "Terreni agricoli",
+  "terreni_boschivi":                   "Terreni boschivi",
+  "terreni_pascolo":                    "Pascoli",
+  "terreni_urbani":                     "Terreni urbani",
+  "terreni_parchi_pubblici":            "Parchi pubblici",
+  "altro":                              "Altro"
+};
+function renderImmobiliPaTab(d) {
+  if (!d || !d.kpi || d.kpi.n_totale == null) {
+    return `
+      <div class="tab-pane" id="pane-patrimonio-pa">
+        <div class="section-title">§ Patrimonio PA</div>
+        <h2 class="section-h">Dati <em>non disponibili</em>.</h2>
+        <p class="muted">Il comune non risulta nel Censimento MEF dei Beni Immobili Pubblici 2022, oppure non ha dichiarato beni immobili.</p>
+      </div>`;
+  }
+  const k = d.kpi;
+  const supKm2 = (k.superficie_totale_mq != null) ? (k.superficie_totale_mq / 1e6) : null;
+  const anno = d.anno_rilevazione || 2022;
+
+  return `
+    <div class="tab-pane" id="pane-patrimonio-pa">
+      <div class="section-title">§ Patrimonio PA</div>
+      <h2 class="section-h">Beni immobili pubblici dichiarati al MEF, <em>fabbricati e terreni</em>, anno ${anno}.</h2>
+      <div class="tab-kpis">
+        <div class="tab-kpi">
+          <div class="lab">Totale immobili</div>
+          <div class="val">${fmtNum(k.n_totale)}</div>
+          <div class="sub">fabbricati + terreni</div>
+        </div>
+        <div class="tab-kpi">
+          <div class="lab">Fabbricati</div>
+          <div class="val">${fmtNum(k.n_fabbricati || 0)}</div>
+          <div class="sub">edifici dichiarati</div>
+        </div>
+        <div class="tab-kpi">
+          <div class="lab">Terreni</div>
+          <div class="val">${fmtNum(k.n_terreni || 0)}</div>
+          <div class="sub">particelle catastali</div>
+        </div>
+        <div class="tab-kpi ${supKm2 != null ? '' : 'tbd'}">
+          <div class="lab">Superficie totale</div>
+          <div class="val">${supKm2 != null ? supKm2.toFixed(2) + ' km&sup2;' : '&mdash;'}</div>
+          <div class="sub">somma superfici dichiarate</div>
+        </div>
+        <div class="tab-kpi ${k.pct_geo_referenziati != null ? '' : 'tbd'}">
+          <div class="lab">Geo-referenziati</div>
+          <div class="val">${k.pct_geo_referenziati != null ? k.pct_geo_referenziati.toFixed(1) + '%' : '&mdash;'}</div>
+          <div class="sub">con coordinate</div>
+        </div>
+        <div class="tab-kpi ${k.pct_vincolo_qualsiasi != null ? '' : 'tbd'}">
+          <div class="lab">Con vincolo</div>
+          <div class="val">${k.pct_vincolo_qualsiasi != null ? k.pct_vincolo_qualsiasi.toFixed(1) + '%' : '&mdash;'}</div>
+          <div class="sub">tutela culturale/paesaggistica</div>
+        </div>
+        <div class="tab-kpi ${k.pct_uso_terzi != null ? '' : 'tbd'}">
+          <div class="lab">Dati a terzi</div>
+          <div class="val">${k.pct_uso_terzi != null ? k.pct_uso_terzi.toFixed(1) + '%' : '&mdash;'}</div>
+          <div class="sub">in uso a soggetti terzi</div>
+        </div>
+      </div>
+
+      <div class="veicoli-grid">
+        <div>
+          <h3 class="veicoli-col-h">Mappa (${fmtNum((d.punti || []).length)} punti)</h3>
+          <div id="impa-map-main" class="impa-map" role="region" aria-label="Mappa beni immobili pubblici"></div>
+          <div class="impa-filters" id="impa-filters-main" role="group" aria-label="Filtri categoria">
+            ${renderImmobiliPaFilters(k.mix_categoria || {})}
+          </div>
+          <div class="veicoli-euro-note">Cluster auto-aggregati &middot; ${(d.punti || []).length >= 500 ? 'campione 500 punti stratificati per categoria' : 'tutti i punti dichiarati'}</div>
+        </div>
+        <div>
+          <h3 class="veicoli-col-h">Mix per categoria</h3>
+          <div class="impa-chart-wrap">
+            <canvas id="impa-mix-chart" aria-label="Distribuzione immobili per categoria" role="img"></canvas>
+          </div>
+          <div class="veicoli-euro-note">17 macro-categorie semantiche MEF</div>
+        </div>
+      </div>
+
+      <p class="muted" style="font-family:var(--mono);font-size:11px;margin-top:18px;">
+        Fonte: <a href="${d._source_url || 'https://dati.mef.gov.it/'}" target="_blank" rel="noopener">${d._source || 'MEF - Dipartimento delle Finanze'}</a>.
+        Licenza CC BY 4.0. Rilevazione al 31/12/${anno}.
+      </p>
+    </div>`;
+}
+
+// Chip filtri categoria — ordinati per count desc, mostra solo categorie presenti
+function renderImmobiliPaFilters(mixCategoria) {
+  const entries = Object.entries(mixCategoria || {})
+    .filter(([k, v]) => v > 0)
+    .sort((a, b) => b[1] - a[1]);
+  if (!entries.length) return '';
+  const chips = entries.map(([cat, count]) => {
+    const color = IMPA_CAT_COLORS[cat] || '#9E9E9E';
+    const label = IMPA_CAT_LABELS[cat] || cat;
+    return `<button type="button" class="impa-chip" data-cat="${cat}" aria-pressed="true">
+      <span class="impa-chip-dot" style="background:${color}" aria-hidden="true"></span>
+      <span class="impa-chip-label">${label}</span>
+      <span class="impa-chip-count">${fmtNum(count)}</span>
+    </button>`;
+  }).join('');
+  return `<button type="button" class="impa-chip impa-chip-all" data-cat="__all__" aria-pressed="true">
+    <span class="impa-chip-label">Tutti</span>
+  </button>${chips}`;
+}
+
+// Inizializza mappa Leaflet con cluster grid-based, popup tipologici,
+// chip filtri click-toggle, Chart.js bar orizzontale mix categoria
+function initImmobiliPa(d) {
+  if (!d || !d.punti) return;
+  const punti = d.punti || [];
+  const mapEl = document.getElementById('impa-map-main');
+  if (!mapEl || typeof L === 'undefined') return;
+
+  // ---- 1) Bounding box dei punti
+  if (!punti.length) {
+    mapEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted);font-family:var(--mono);font-size:12px;">Nessun punto geo-referenziato.</div>';
+    return;
+  }
+  const lats = punti.map(p => p.lat);
+  const lons = punti.map(p => p.lon);
+  const bounds = L.latLngBounds([[Math.min(...lats), Math.min(...lons)], [Math.max(...lats), Math.max(...lons)]]);
+
+  // ---- 2) Mappa con OSM (stessa tile-source di Aria)
+  const map = L.map('impa-map-main', { scrollWheelZoom: false, zoomControl: true }).fitBounds(bounds, { padding: [20, 20] });
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+  }).addTo(map);
+
+  // ---- 3) Stato filtri (Set di categorie attive)
+  const activeCats = new Set(punti.map(p => p.cat));
+
+  // ---- 4) Layer markers (gruppo) + redraw cluster grid-based
+  let markersLayer = L.layerGroup().addTo(map);
+  function makeDot(p) {
+    const color = IMPA_CAT_COLORS[p.cat] || '#9E9E9E';
+    return L.circleMarker([p.lat, p.lon], {
+      radius: 6, fillColor: color, color: '#fff', weight: 1.5, opacity: 1, fillOpacity: 0.85
+    }).bindPopup(`
+      <div style="font-family:var(--ui);font-size:12px;min-width:160px">
+        <div style="font-weight:600;color:${color};margin-bottom:4px">${IMPA_CAT_LABELS[p.cat] || p.cat}</div>
+        <div><b>Tipologia:</b> ${p.tipo || '—'}</div>
+        ${p.sup ? `<div><b>Superficie:</b> ${fmtNum(p.sup)} m&sup2;</div>` : ''}
+        <div><b>Vincolo:</b> ${p.vincolo ? 'Sì' : 'No'}</div>
+        <div><b>Uso a terzi:</b> ${p.uso_terzi ? 'Sì' : 'No'}</div>
+      </div>
+    `);
+  }
+  function makeCluster(lat, lon, count) {
+    const html = `<div style="background:#0066CC;color:#fff;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-family:var(--ui);font-weight:700;font-size:13px;box-shadow:0 2px 4px rgba(0,0,0,0.3);border:2px solid #fff">${count}</div>`;
+    return L.marker([lat, lon], {
+      icon: L.divIcon({ html, className: 'impa-cluster', iconSize: [32, 32], iconAnchor: [16, 16] })
+    });
+  }
+  function redrawClusters() {
+    markersLayer.clearLayers();
+    const z = map.getZoom();
+    const visible = punti.filter(p => activeCats.has(p.cat));
+    // Cluster soglia: a zoom <14 raggruppa, oltre mostra punti singoli
+    if (z >= 14 || visible.length <= 50) {
+      visible.forEach(p => markersLayer.addLayer(makeDot(p)));
+      return;
+    }
+    // Grid clustering: dividi i bounds in celle, raggruppa per cella
+    const cellSize = z < 10 ? 0.05 : z < 12 ? 0.015 : 0.005;
+    const grid = new Map();
+    visible.forEach(p => {
+      const key = `${Math.floor(p.lat / cellSize)}_${Math.floor(p.lon / cellSize)}`;
+      if (!grid.has(key)) grid.set(key, []);
+      grid.get(key).push(p);
+    });
+    grid.forEach(cellPunti => {
+      if (cellPunti.length === 1) {
+        markersLayer.addLayer(makeDot(cellPunti[0]));
+      } else {
+        const avgLat = cellPunti.reduce((s, p) => s + p.lat, 0) / cellPunti.length;
+        const avgLon = cellPunti.reduce((s, p) => s + p.lon, 0) / cellPunti.length;
+        markersLayer.addLayer(makeCluster(avgLat, avgLon, cellPunti.length));
+      }
+    });
+  }
+  redrawClusters();
+  map.on('zoomend moveend', redrawClusters);
+
+  // ---- 5) Chip handlers (toggle categoria)
+  const filtersEl = document.getElementById('impa-filters-main');
+  if (filtersEl) {
+    filtersEl.addEventListener('click', (ev) => {
+      const btn = ev.target.closest('.impa-chip');
+      if (!btn) return;
+      const cat = btn.dataset.cat;
+      if (cat === '__all__') {
+        // Reset tutti attivi
+        activeCats.clear();
+        punti.forEach(p => activeCats.add(p.cat));
+        filtersEl.querySelectorAll('.impa-chip').forEach(b => b.setAttribute('aria-pressed', 'true'));
+      } else {
+        if (activeCats.has(cat)) {
+          activeCats.delete(cat);
+          btn.setAttribute('aria-pressed', 'false');
+        } else {
+          activeCats.add(cat);
+          btn.setAttribute('aria-pressed', 'true');
+        }
+        // Aggiorna stato del bottone "Tutti": acceso solo se tutte le categorie sono attive
+        const allBtn = filtersEl.querySelector('.impa-chip-all');
+        if (allBtn) {
+          const totalCats = new Set(punti.map(p => p.cat)).size;
+          allBtn.setAttribute('aria-pressed', activeCats.size === totalCats ? 'true' : 'false');
+        }
+      }
+      redrawClusters();
+    });
+  }
+
+  // ---- 6) Chart.js bar orizzontale Mix per categoria
+  const canvas = document.getElementById('impa-mix-chart');
+  if (canvas && window.Chart && d.kpi && d.kpi.mix_categoria) {
+    const entries = Object.entries(d.kpi.mix_categoria)
+      .filter(([k, v]) => v > 0)
+      .sort((a, b) => b[1] - a[1]);
+    const labels = entries.map(([k]) => IMPA_CAT_LABELS[k] || k);
+    const data = entries.map(([, v]) => v);
+    const colors = entries.map(([k]) => IMPA_CAT_COLORS[k] || '#9E9E9E');
+    new Chart(canvas.getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [{ data, backgroundColor: colors, borderWidth: 0, barThickness: 'flex', maxBarThickness: 20 }]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: { label: (ctx) => `${ctx.parsed.x} immobili` }
+          }
+        },
+        scales: {
+          x: {
+            beginAtZero: true,
+            ticks: { font: { family: 'var(--mono)', size: 10 }, callback: (v) => fmtNum(v) },
+            grid: { color: 'rgba(0,0,0,0.05)' }
+          },
+          y: {
+            ticks: { font: { family: 'var(--mono)', size: 10 }, autoSkip: false },
+            grid: { display: false }
+          }
+        }
+      }
+    });
+  }
+}
+
 function renderVeicoliTab(v) {
   if (!v || !v.parco_veicoli) {
     return `
@@ -3987,6 +4302,14 @@ function bindTabSwitching() {
           window.__redditiChartRendered = true;
         }
       }
+      // Lazy-init mappa Leaflet + chart Mix categoria Patrimonio PA al primo click
+      if (tab.dataset.tab === 'patrimonio-pa') {
+        if (window.__immobiliPaData && !window.__immobiliPaInited) {
+          // setTimeout 0: garantisce che #impa-map-main sia layout-ed nel DOM
+          setTimeout(() => initImmobiliPa(window.__immobiliPaData), 0);
+          window.__immobiliPaInited = true;
+        }
+      }
 
       // Lazy-load tab Spese: chiamata al primo click
       if (tab.dataset.tab === 'spese') {
@@ -4430,6 +4753,7 @@ function adaptDashboardToOverview(d) {
       scuole: d.scuole,  // pass-through completo per renderScuoleTab
       veicoli: d.veicoli,  // pass-through completo per renderVeicoliTab
       redditi: d.redditi,  // pass-through completo per renderRedditiTab
+      immobili_pa: d.immobili_pa,  // pass-through completo per renderImmobiliPaTab
     },
   };
 }

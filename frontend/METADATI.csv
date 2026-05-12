@@ -169,3 +169,25 @@ bdap_kpi,totale.finanz_enti_terr,Finanziamenti enti territoriali totali (euro),e
 bdap_kpi,per_stato.CHIUSO,Aggregato opere chiuse,dict,BDAP MOP,cumulato,https://bdap-opendata.rgs.mef.gov.it,IODL 2.0
 bdap_kpi,per_stato.ATTIVO,Aggregato opere attive,dict,BDAP MOP,cumulato,https://bdap-opendata.rgs.mef.gov.it,IODL 2.0
 bdap_kpi,top_settori,"Top 5 settori per costo (settore, count, costo)",lista,BDAP MOP,cumulato,https://bdap-opendata.rgs.mef.gov.it,IODL 2.0
+immobili_pa,_etl_version,Versione del pipeline ETL Patrimonio PA,testo,Cruscotto Italia,corrente,{{SITE_URL}},CC BY 4.0
+immobili_pa,_source,Sorgente originaria del dato,testo,MEF DE,31/12/2022,https://www.mef.gov.it/dipartimenti/entrate/patrimonio_immobiliare/,CC BY 4.0
+immobili_pa,_generated_at,Timestamp ISO 8601 generazione shard,datetime,Cruscotto Italia,corrente,{{SITE_URL}},CC BY 4.0
+immobili_pa,anno_rilevazione,Anno di rilevazione del Censimento MEF,anno,MEF DE,31/12/2022,https://www.mef.gov.it/dipartimenti/entrate/patrimonio_immobiliare/,CC BY 4.0
+immobili_pa,kpi.n_totale,Numero totale immobili dichiarati (fabbricati + terreni),numero,MEF DE,31/12/2022,https://www.mef.gov.it/dipartimenti/entrate/patrimonio_immobiliare/,CC BY 4.0
+immobili_pa,kpi.n_fabbricati,Numero fabbricati dichiarati,numero,MEF DE,31/12/2022,https://www.mef.gov.it/dipartimenti/entrate/patrimonio_immobiliare/,CC BY 4.0
+immobili_pa,kpi.n_terreni,Numero terreni (particelle catastali) dichiarati,numero,MEF DE,31/12/2022,https://www.mef.gov.it/dipartimenti/entrate/patrimonio_immobiliare/,CC BY 4.0
+immobili_pa,kpi.pct_geo_referenziati,Percentuale immobili con coordinate geografiche,percentuale,MEF DE,31/12/2022,https://www.mef.gov.it/dipartimenti/entrate/patrimonio_immobiliare/,CC BY 4.0
+immobili_pa,kpi.pct_vincolo_qualsiasi,Percentuale immobili con vincolo qualsiasi (culturale o paesaggistico),percentuale,MEF DE,31/12/2022,https://www.mef.gov.it/dipartimenti/entrate/patrimonio_immobiliare/,CC BY 4.0
+immobili_pa,kpi.pct_vincolo_culturale,Percentuale immobili con vincolo culturale stretto,percentuale,MEF DE,31/12/2022,https://www.mef.gov.it/dipartimenti/entrate/patrimonio_immobiliare/,CC BY 4.0
+immobili_pa,kpi.pct_uso_terzi,Percentuale immobili dati in uso a soggetti terzi,percentuale,MEF DE,31/12/2022,https://www.mef.gov.it/dipartimenti/entrate/patrimonio_immobiliare/,CC BY 4.0
+immobili_pa,kpi.superficie_totale_mq,Superficie totale dichiarata (metri quadri),mq,MEF DE,31/12/2022,https://www.mef.gov.it/dipartimenti/entrate/patrimonio_immobiliare/,CC BY 4.0
+immobili_pa,kpi.mix_categoria,Conteggio immobili per ognuna delle 17 macro-categorie semantiche,dict,MEF DE,31/12/2022,https://www.mef.gov.it/dipartimenti/entrate/patrimonio_immobiliare/,CC BY 4.0
+immobili_pa,kpi.mix_natura,Conteggio per natura (FABBRICATO/TERRENO),dict,MEF DE,31/12/2022,https://www.mef.gov.it/dipartimenti/entrate/patrimonio_immobiliare/,CC BY 4.0
+immobili_pa,punti,"Campione fino a 500 punti stratificati per categoria con lat/lon/cat/tipo/sup/vincolo/uso_terzi",lista,MEF DE,31/12/2022,https://www.mef.gov.it/dipartimenti/entrate/patrimonio_immobiliare/,CC BY 4.0
+immobili_pa,punti[].lat,Latitudine WGS84 (6 decimali ~11cm),coord,MEF DE,31/12/2022,https://www.mef.gov.it/dipartimenti/entrate/patrimonio_immobiliare/,CC BY 4.0
+immobili_pa,punti[].lon,Longitudine WGS84 (6 decimali ~11cm),coord,MEF DE,31/12/2022,https://www.mef.gov.it/dipartimenti/entrate/patrimonio_immobiliare/,CC BY 4.0
+immobili_pa,punti[].cat,Categoria semantica (vedi mix_categoria per chiavi),codice,MEF DE,31/12/2022,https://www.mef.gov.it/dipartimenti/entrate/patrimonio_immobiliare/,CC BY 4.0
+immobili_pa,punti[].tipo,Tipologia testuale dichiarata MEF,testo,MEF DE,31/12/2022,https://www.mef.gov.it/dipartimenti/entrate/patrimonio_immobiliare/,CC BY 4.0
+immobili_pa,punti[].sup,Superficie dichiarata (mq),mq,MEF DE,31/12/2022,https://www.mef.gov.it/dipartimenti/entrate/patrimonio_immobiliare/,CC BY 4.0
+immobili_pa,punti[].vincolo,Presenza di vincolo (true se diverso da Nessuno),boolean,MEF DE,31/12/2022,https://www.mef.gov.it/dipartimenti/entrate/patrimonio_immobiliare/,CC BY 4.0
+immobili_pa,punti[].uso_terzi,Immobile in uso a soggetti terzi,boolean,MEF DE,31/12/2022,https://www.mef.gov.it/dipartimenti/entrate/patrimonio_immobiliare/,CC BY 4.0

@@ -24,6 +24,7 @@ FONTI ORIGINARIE E LORO LICENZE
 - MIUR (Anagrafe Scuole) ............................. CC BY 4.0
 - ACI (Parco veicolare — LOD) ........................ CC BY 4.0
 - MEF Dipartimento Finanze (Redditi IRPEF) ........... CC BY 3.0
+- MEF Dip. Entrate (Beni Immobili Pubblici 2022) ..... CC BY 4.0
 - OpenStreetMap (cartografia) ........................ ODbL
 
 Per il dettaglio dei dataset e degli URL originari delle fonti,
