@@ -3,7 +3,7 @@
 > **Repo istituzionale curato da [AgID](https://www.agid.gov.it/).** Progetto sviluppato da [Francesco Piero Paolicelli (@piersoft)](https://piersoft.it), in adozione presso AgID. Il repo originale dell'autore è [piersoft/cruscotto-italia](https://github.com/piersoft/cruscotto-italia).
 
 
-> La carta d'identità data-driven dei comuni italiani. Dodici dataset pubblici ricomposti per comune.
+> La carta d'identità data-driven dei comuni italiani. I dataset pubblici dei principali enti istituzionali, federati e ricomposti per comune.
 
 [![Deploy Worker](https://github.com/AgID/cruscotto-italia/actions/workflows/deploy-worker.yml/badge.svg)](https://github.com/AgID/cruscotto-italia/actions/workflows/deploy-worker.yml)
 [![ETL Mensile](https://github.com/AgID/cruscotto-italia/actions/workflows/etl-monthly.yml/badge.svg)](https://github.com/AgID/cruscotto-italia/actions/workflows/etl-monthly.yml)
@@ -18,6 +18,14 @@ Cerchi un comune ("Lecce") e ottieni una vista a 360° su:
 - 👥 **Demografia comunale** (ISTAT POSAS)
 - 🎓 **Profilo socioeconomico** (ISTAT Censimento permanente)
 - 🏨 **Turismo** (ISTAT capacità ricettiva + flussi provinciali)
+- 🏫 **Scuole** (MIUR — Anagrafe scuole statali)
+- 🌫️ **Qualità dell'aria** (ISPRA SNPA — PM10/PM2.5/NO2)
+- 🚗 **Parco veicoli e incidenti** (ISTAT 41_993 + ACI LOD)
+- 💶 **Redditi e fisco** (MEF — Dichiarazioni IRPEF)
+- 🏛️ **Patrimonio immobiliare PA** (MEF DE — Beni Immobili Pubblici)
+- 🏠 **Civici e strade** (ANNCSU — Agenzia delle Entrate, Open Data HVD)
+
+L'elenco completo, con licenze, frequenze di aggiornamento e link diretti alle fonti, è in [`about.html`](https://cruscotto-italia.piersoftckan.biz/about.html).
 
 Tutto ricomposto sulla **spina dorsale anagrafica ISTAT comuni**.
 
@@ -28,7 +36,8 @@ Frontend (HTML statico) → Worker (Cloudflare) → R2 (JSON shard per comune)
                               ↑
               ETL Python (GitHub Actions, cadenze multiple)
                               ↑
-   ANAC · BDAP-MOP · SIOPE · Italia Domani (PNRR) · ISTAT (POSAS, Censimento, Turismo)
+   ANAC · BDAP-MOP · SIOPE · Italia Domani (PNRR) · ISTAT (POSAS, Censimento, Turismo, Veicoli, Incidenti)
+   MIUR · ISPRA SNPA · ACI LOD · MEF (IRPEF, Beni Immobili) · Agenzia Entrate (ANNCSU)
 ```
 
 Tutti i dettagli architetturali sono in [`DESIGN.md`](DESIGN.md).
