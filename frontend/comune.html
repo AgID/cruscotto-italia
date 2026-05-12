@@ -4073,7 +4073,29 @@ function initAnncsu(d) {
   // ---- 4) Layer markers + redraw cluster grid-based
   let markersLayer = L.layerGroup().addTo(map);
 
-  function makeDot(p) {
+  function makeDot(p, highlight) {
+    if (highlight) {
+      // Marker della via ricercata: rosso pieno, radius doppio, bordo
+      // bianco più spesso. Sempre rendered come marker singolo
+      // (mai dentro cluster).
+      const fullCivico = (p.civ || '') + (p.esp || '');
+      const metodoLabel = ANNCSU_METODO_LABELS[p.met] || '—';
+      return L.circleMarker([p.lat, p.lon], {
+        radius: 10,
+        fillColor: '#D9364F',
+        color: '#fff',
+        weight: 2.5,
+        opacity: 1,
+        fillOpacity: 0.95
+      }).bindPopup(`
+        <div style="font-family:var(--ui);font-size:12px;min-width:180px">
+          <div style="font-weight:600;color:#D9364F;margin-bottom:4px">${p.odo || 'Via senza nome'} <b>${fullCivico || '—'}</b></div>
+          ${p.quota ? `<div><b>Quota:</b> ${fmtNum(p.quota)} m s.l.m.</div>` : ''}
+          <div><b>Metodo:</b> ${metodoLabel}</div>
+          <div style="margin-top:4px;color:#D9364F;font-size:11px"><b>★ Risultato della ricerca</b></div>
+        </div>
+      `);
+    }
     const color = p._outlier
       ? ANNCSU_OUTLIER_COLOR
       : (ANNCSU_METODO_COLORS[p.met] || '#9E9E9E');
@@ -4103,6 +4125,10 @@ function initAnncsu(d) {
     });
   }
 
+  // Set di reference ai punti che matchano la ricerca (popolato in
+  // listener searchEl.input). Highlighted sempre come marker singoli.
+  let searchHighlightSet = new Set();
+
   function redrawClusters() {
     markersLayer.clearLayers();
     const z = map.getZoom();
@@ -4110,13 +4136,18 @@ function initAnncsu(d) {
     // Cluster soglia: a zoom <15 raggruppa, oltre mostra punti singoli
     // (più alta di Immobili PA perché civici sono molto più densi)
     if (z >= 15 || visible.length <= 60) {
-      visible.forEach(p => markersLayer.addLayer(makeDot(p)));
+      visible.forEach(p => markersLayer.addLayer(makeDot(p, searchHighlightSet.has(p))));
       return;
     }
-    // Outlier sempre visibili come marker singoli (mai clusterizzati)
-    const inliers = visible.filter(p => !p._outlier);
-    const outliers = visible.filter(p => p._outlier);
-    outliers.forEach(p => markersLayer.addLayer(makeDot(p)));
+    // Highlighted dalla ricerca: sempre visibili come marker singoli (mai cluster)
+    // Outlier: sempre visibili come marker singoli (mai clusterizzati)
+    const highlighted = visible.filter(p => searchHighlightSet.has(p));
+    const rest = visible.filter(p => !searchHighlightSet.has(p));
+    highlighted.forEach(p => markersLayer.addLayer(makeDot(p, true)));
+
+    const inliers = rest.filter(p => !p._outlier);
+    const outliers = rest.filter(p => p._outlier);
+    outliers.forEach(p => markersLayer.addLayer(makeDot(p, false)));
 
     // Grid clustering sugli inlier
     const cellSize = z < 10 ? 0.05 : z < 12 ? 0.015 : z < 14 ? 0.005 : 0.0015;
@@ -4128,7 +4159,7 @@ function initAnncsu(d) {
     });
     grid.forEach(cellPunti => {
       if (cellPunti.length === 1) {
-        markersLayer.addLayer(makeDot(cellPunti[0]));
+        markersLayer.addLayer(makeDot(cellPunti[0], false));
       } else {
         const avgLat = cellPunti.reduce((s, p) => s + p.lat, 0) / cellPunti.length;
         const avgLon = cellPunti.reduce((s, p) => s + p.lon, 0) / cellPunti.length;
@@ -4300,7 +4331,15 @@ function initAnncsu(d) {
       searchTimer = setTimeout(() => {
         const q = searchEl.value.trim();
         resultEl.className = 'anncsu-search-result';
-        if (!q) { resultEl.textContent = ''; return; }
+        if (!q) {
+          resultEl.textContent = '';
+          // Clear highlight quando la search è vuota
+          if (searchHighlightSet.size > 0) {
+            searchHighlightSet = new Set();
+            redrawClusters();
+          }
+          return;
+        }
         // Tokenize: ultima cifra (eventualmente con esponente A/B) = civico, resto = via
         const numMatch = q.match(/(\d+)\s*([A-Za-z]?)\s*$/);
         const civQuery = numMatch ? numMatch[1] : '';
@@ -4312,6 +4351,9 @@ function initAnncsu(d) {
           const espOk = !espQuery || (p.esp || '').toUpperCase() === espQuery;
           return odoOk && civOk && espOk;
         });
+        // Aggiorna highlight set + ridisegna mappa con i match evidenziati
+        searchHighlightSet = new Set(matches);
+        redrawClusters();
         if (matches.length === 0) {
           resultEl.className = 'anncsu-search-result anncsu-notfound';
           resultEl.textContent = `Nessun civico trovato (campione di ${fmtNum(punti.length)} su ${fmtNum(d.kpi?.n_civici_geo_ref || 0)} totali).`;
@@ -4435,7 +4477,18 @@ function initAnncsu(d) {
       });
     }
 
-    redrawClusters();
+    // Reset highlight: le reference nel Set puntavano ai vecchi
+    // oggetti del sample, ora i punti sono i 47k del full shard.
+    // Se l'utente ha ancora testo nella search, rilancio il filtro
+    // per ripopolare il Set con le nuove reference.
+    searchHighlightSet = new Set();
+    const searchEl2 = document.getElementById('anncsu-search');
+    if (searchEl2 && searchEl2.value.trim()) {
+      // Trigger 'input' event per rifare la search sui nuovi punti
+      searchEl2.dispatchEvent(new Event('input'));
+    } else {
+      redrawClusters();
+    }
   }
 
   // Espongo l'istanza per riusarla da fuori (es. tryEnrichAnncsuFull)
