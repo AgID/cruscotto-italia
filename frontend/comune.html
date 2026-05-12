@@ -709,6 +709,14 @@ footer a{color:rgba(255,255,255,0.85);text-decoration:none}
 .impa-cluster{background:transparent !important;border:none !important;}
 .impa-chart-wrap{height:480px;position:relative;}
 @media (max-width:720px){.impa-chart-wrap{height:420px;}}
+/* ---- Tab ANNCSU - Toponomastica (strade e civici) ---- */
+.anncsu-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:18px 0 28px;}
+@media (max-width:960px){.anncsu-kpis{grid-template-columns:repeat(2,1fr);}}
+@media (max-width:540px){.anncsu-kpis{grid-template-columns:1fr;}}
+.anncsu-kpi{padding:14px 16px;background:var(--paper-2);border:1px solid var(--ink-mute);border-left:3px solid var(--accent);}
+.anncsu-kpi-lab{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:var(--ink-mute);margin-bottom:6px;}
+.anncsu-kpi-val{font-family:var(--serif);font-size:28px;color:var(--ink);font-weight:400;line-height:1;font-variation-settings:'opsz' 60;}
+.anncsu-kpi-unit{font-family:var(--mono);font-size:11px;color:var(--ink-mute);text-transform:uppercase;letter-spacing:.06em;margin-left:8px;font-weight:400;}
 .veicoli-col-h{font-family:var(--serif);font-size:18px;color:var(--ink);font-style:italic;margin:0 0 10px;border-bottom:1px solid var(--paper-2);padding-bottom:6px;}
 .veicoli-parco-stack{display:flex;height:28px;background:var(--bg-alt);border-radius:3px;overflow:hidden;margin-top:10px;}
 .veicoli-parco-seg{display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:10px;font-weight:700;color:var(--paper);text-transform:uppercase;letter-spacing:.05em;min-width:0;}
@@ -875,6 +883,8 @@ function renderComune(data) {
   window.__redditiChartRendered = false;
   window.__immobiliPaData = k.immobili_pa || null;
   window.__immobiliPaInited = false;
+  window.__anncsuData = k.anncsu || null;
+  window.__anncsuInited = false;
   const tabs = [
     { id: 'panoramica', label: 'Panoramica', kpi: '' },
     { id: 'demografia', label: 'Demografia', kpi: k.popolazione != null ? fmtNum(k.popolazione) : '—' },
@@ -889,7 +899,8 @@ function renderComune(data) {
     { id: 'contratti', label: 'Contratti', kpi: fmtNum(k.contratti?.count || 0) },
     { id: 'spese', label: 'Spese SIOPE', kpi: '<span data-tab-spese-count><span class="tab-spinner"></span></span>' },
     { id: 'redditi', label: 'Redditi e fisco', kpi: k.redditi?.anni?.[String(k.redditi.anni_disponibili?.slice(-1)[0])]?.reddito_complessivo?.medio != null ? '€' + fmtNum(k.redditi.anni[String(k.redditi.anni_disponibili.slice(-1)[0])].reddito_complessivo.medio) : '—' },
-    { id: 'patrimonio-pa', label: 'Patrimonio PA', kpi: k.immobili_pa?.kpi?.n_totale != null ? fmtNum(k.immobili_pa.kpi.n_totale) : '—' }
+    { id: 'patrimonio-pa', label: 'Patrimonio PA', kpi: k.immobili_pa?.kpi?.n_totale != null ? fmtNum(k.immobili_pa.kpi.n_totale) : '—' },
+    { id: 'anncsu', label: 'ANNCSU', kpi: k.anncsu?.kpi?.n_strade != null ? fmtNum(k.anncsu.kpi.n_strade) : '—' }
   ];
 
   document.getElementById('comune-content').innerHTML = `
@@ -961,6 +972,7 @@ function renderComune(data) {
       ${renderVeicoliTab(k.veicoli)}
       ${renderRedditiTab(k.redditi)}
       ${renderImmobiliPaTab(k.immobili_pa)}
+      ${renderAnncsuTab(k.anncsu)}
     </div>
   `;
 }
@@ -3800,6 +3812,68 @@ function initImmobiliPa(d) {
   }
 }
 
+// ===========================================================================
+// Tab ANNCSU - Archivio Nazionale Numeri Civici e Strade Urbane
+// Sotto-step 3a: KPI cards only. La mappa Leaflet e i chart arrivano in 3b/3c.
+// ===========================================================================
+
+function renderAnncsuTab(d) {
+  // Comune senza dati ANNCSU (es. ghost ISTAT o comuni mai conferiti)
+  if (!d || !d.kpi) {
+    return `
+      <div class="tab-pane" id="pane-anncsu">
+        <div class="section-title">§ ANNCSU</div>
+        <h2 class="section-h">Dati <em>non disponibili</em>.</h2>
+        <p class="muted">Il comune non risulta nell'Archivio Nazionale dei Numeri Civici e delle Strade Urbane.</p>
+      </div>`;
+  }
+  const k = d.kpi;
+  const snapshot = d._snapshot_date || '';
+
+  // KPI sempre presenti
+  const cards = [];
+  cards.push({ lab: 'Strade', val: fmtNum(k.n_strade || 0), unit: 'odonimi' });
+  cards.push({ lab: 'Numeri civici', val: fmtNum(k.n_civici || 0), unit: '' });
+  cards.push({ lab: 'Geo-referenziati', val: (k.pct_geo_ref != null ? k.pct_geo_ref.toFixed(1) : '—'), unit: '%' });
+  if (k.quota_mean_m != null) {
+    cards.push({ lab: 'Quota media', val: fmtNum(Math.round(k.quota_mean_m)), unit: 'm s.l.m.' });
+  }
+  // Condizionali (omessi se 0)
+  if (k.n_strade_bilingui != null && k.n_strade_bilingui > 0) {
+    cards.push({ lab: 'Strade bilingui', val: fmtNum(k.n_strade_bilingui), unit: 'su ' + fmtNum(k.n_strade || 0) });
+  }
+  if (k.n_civici_rosso != null && k.n_civici_rosso > 0) {
+    cards.push({ lab: 'Civici rosso', val: fmtNum(k.n_civici_rosso), unit: 'commerciali' });
+  }
+  if (k.n_civici_nero != null && k.n_civici_nero > 0) {
+    cards.push({ lab: 'Civici nero', val: fmtNum(k.n_civici_nero), unit: 'residenziali' });
+  }
+  if (k.n_civici_metrici != null && k.n_civici_metrici > 0) {
+    cards.push({ lab: 'Civici metrici', val: fmtNum(k.n_civici_metrici), unit: 'in metri' });
+  }
+
+  const cardsHtml = cards.map(c => `
+    <div class="anncsu-kpi">
+      <div class="anncsu-kpi-lab">${c.lab}</div>
+      <div class="anncsu-kpi-val">${c.val}<span class="anncsu-kpi-unit">${c.unit}</span></div>
+    </div>
+  `).join('');
+
+  return `
+    <div class="tab-pane" id="pane-anncsu">
+      <div class="section-title">§ Toponomastica</div>
+      <h2 class="section-h">Strade e civici certificati <em>dal Comune</em>.</h2>
+      <p class="muted">
+        Dati conferiti dal Comune all'Archivio Nazionale dei Numeri Civici e
+        delle Strade Urbane (ANNCSU), realizzato da Agenzia delle Entrate
+        e ISTAT ai sensi del DPCM 12/05/2016. Snapshot: ${snapshot || 'n.d.'}.
+      </p>
+      <div class="anncsu-kpis">${cardsHtml}</div>
+    </div>
+  `;
+}
+
+
 function renderVeicoliTab(v) {
   if (!v || !v.parco_veicoli) {
     return `
@@ -4755,6 +4829,7 @@ function adaptDashboardToOverview(d) {
       veicoli: d.veicoli,  // pass-through completo per renderVeicoliTab
       redditi: d.redditi,  // pass-through completo per renderRedditiTab
       immobili_pa: d.immobili_pa,  // pass-through completo per renderImmobiliPaTab
+      anncsu: d.anncsu,  // pass-through completo per renderAnncsuTab
     },
   };
 }
