@@ -5624,9 +5624,33 @@ CONTENUTO DELLO ZIP
 - METADATI.csv         Legenda campi, fonti, periodi di riferimento
 - LICENSE.txt          Licenza d'uso e attribuzioni
 
-I dati di origine sono pubblicati dalle istituzioni elencate in LICENSE.txt
-e sono disponibili sui rispettivi portali open data. L'aggregazione in
-formato unico (dati-completi.json) è opera di Cruscotto Italia.
+FONTI INTEGRATE (14 dataset, 10 istituzioni)
+--------------------------------------------
+- ANAC                   Contratti pubblici (OCDS)
+- BDAP-MOP               Opere pubbliche dei comuni
+- SIOPE                  Flussi di cassa (per_anno multi-anno)
+- Italia Domani (PNRR)   Progetti del Piano (Sistema ReGiS)
+- ISPRA                  Consumo suolo, IdroGEO, rifiuti, SNPA qualità aria
+- ISTAT                  Demografia, profilo censimento, turismo, incidenti
+- MIUR                   Anagrafe scuole statali
+- ACI                    Parco veicolare per classe Euro (LOD)
+- MEF Dip. Finanze       Redditi IRPEF su base comunale 2020-2024
+- MEF Dip. Entrate       Censimento beni immobili pubblici 2022
+- Agenzia Entrate+ISTAT  ANNCSU — strade e numeri civici certificati
+
+I dati di origine sono pubblicati dalle istituzioni elencate in
+LICENSE.txt e sono disponibili sui rispettivi portali open data.
+L'aggregazione in formato unico (dati-completi.json) è opera di
+Cruscotto Italia.
+
+NOTA SUI CIVICI ANNCSU
+----------------------
+La sezione "anncsu" del JSON contiene fino a 1000 numeri civici di
+esempio (campo "punti"). Per il dataset completo dei civici di
+questo comune (Lecce ~48mila, Roma ~516mila, ecc.), interroga
+l'endpoint:
+
+  https://cruscotto-italia-mcp.piersoftckan.biz/data/anncsu_full/${istat}.json
 
 `;
       zip.file('README.txt', readme);

@@ -191,3 +191,27 @@ immobili_pa,punti[].tipo,Tipologia testuale dichiarata MEF,testo,MEF DE,31/12/20
 immobili_pa,punti[].sup,Superficie dichiarata (mq),mq,MEF DE,31/12/2022,https://www.mef.gov.it/dipartimenti/entrate/patrimonio_immobiliare/,CC BY 4.0
 immobili_pa,punti[].vincolo,Presenza di vincolo (true se diverso da Nessuno),boolean,MEF DE,31/12/2022,https://www.mef.gov.it/dipartimenti/entrate/patrimonio_immobiliare/,CC BY 4.0
 immobili_pa,punti[].uso_terzi,Immobile in uso a soggetti terzi,boolean,MEF DE,31/12/2022,https://www.mef.gov.it/dipartimenti/entrate/patrimonio_immobiliare/,CC BY 4.0
+anncsu,_etl_version,Versione del pipeline ETL ANNCSU,testo,Cruscotto Italia,corrente,{{SITE_URL}},Open Data UE 2023/138
+anncsu,_source,Sorgente originaria del dato,testo,Agenzia delle Entrate + ISTAT,snapshot mensile,https://anncsu.open.agenziaentrate.gov.it/,Open Data UE 2023/138
+anncsu,_snapshot_date,Data dello snapshot ANNCSU utilizzato (AAAA-MM-GG),data,Agenzia Entrate,snapshot mensile,https://anncsu.open.agenziaentrate.gov.it/,Open Data UE 2023/138
+anncsu,_generated_at,Timestamp ISO 8601 generazione shard,datetime,Cruscotto Italia,corrente,{{SITE_URL}},Open Data UE 2023/138
+anncsu,kpi.n_strade,Numero di odonimi (strade) certificati dal Comune,numero,Agenzia Entrate,snapshot mensile,https://anncsu.open.agenziaentrate.gov.it/,Open Data UE 2023/138
+anncsu,kpi.n_civici,Numero totale di numeri civici dichiarati dal Comune,numero,Agenzia Entrate,snapshot mensile,https://anncsu.open.agenziaentrate.gov.it/,Open Data UE 2023/138
+anncsu,kpi.n_civici_geo_ref,Numero di civici con coordinate WGS84 conferite,numero,Agenzia Entrate,snapshot mensile,https://anncsu.open.agenziaentrate.gov.it/,Open Data UE 2023/138
+anncsu,kpi.pct_geo_ref,Percentuale di civici geo-referenziati sul totale,percentuale,Agenzia Entrate,snapshot mensile,https://anncsu.open.agenziaentrate.gov.it/,Open Data UE 2023/138
+anncsu,kpi.n_strade_bilingui,Numero di odonimi con denominazione bilingue (es. Bolzano),numero,Agenzia Entrate,snapshot mensile,https://anncsu.open.agenziaentrate.gov.it/,Open Data UE 2023/138
+anncsu,kpi.n_civici_rosso,Civici con numerazione storica rosso (Firenze/Genova - esercizi commerciali),numero,Agenzia Entrate,snapshot mensile,https://anncsu.open.agenziaentrate.gov.it/,Open Data UE 2023/138
+anncsu,kpi.n_civici_nero,Civici con numerazione storica nero (Firenze/Genova - residenziali),numero,Agenzia Entrate,snapshot mensile,https://anncsu.open.agenziaentrate.gov.it/,Open Data UE 2023/138
+anncsu,kpi.n_civici_metrici,Civici espressi in unità metriche (es. lungo strade extraurbane),numero,Agenzia Entrate,snapshot mensile,https://anncsu.open.agenziaentrate.gov.it/,Open Data UE 2023/138
+anncsu,kpi.n_civici_bis,Civici con esponente alfabetico (A/B/bis/ter),numero,Agenzia Entrate,snapshot mensile,https://anncsu.open.agenziaentrate.gov.it/,Open Data UE 2023/138
+anncsu,kpi.quota_mean_m,Quota altimetrica media dei civici (metri s.l.m.),metri,Agenzia Entrate,snapshot mensile,https://anncsu.open.agenziaentrate.gov.it/,Open Data UE 2023/138
+anncsu,kpi.bbox,"Bounding box geografico [lat_min, lat_max, lon_min, lon_max] dei civici",coordinate,Agenzia Entrate,snapshot mensile,https://anncsu.open.agenziaentrate.gov.it/,Open Data UE 2023/138
+anncsu,kpi.top_10_strade,Top 10 strade per numero di civici (oggetti odo+acc),oggetto,Agenzia Entrate,snapshot mensile,https://anncsu.open.agenziaentrate.gov.it/,Open Data UE 2023/138
+anncsu,kpi.metodi_georef,Distribuzione metodi di geo-referenziazione (gps/catasto/ortofoto/cartografia/altro),oggetto,Agenzia Entrate,snapshot mensile,https://anncsu.open.agenziaentrate.gov.it/,Open Data UE 2023/138
+anncsu,punti[].lat,Latitudine WGS84 del civico (gradi decimali),gradi,Agenzia Entrate,snapshot mensile,https://anncsu.open.agenziaentrate.gov.it/,Open Data UE 2023/138
+anncsu,punti[].lon,Longitudine WGS84 del civico (gradi decimali),gradi,Agenzia Entrate,snapshot mensile,https://anncsu.open.agenziaentrate.gov.it/,Open Data UE 2023/138
+anncsu,punti[].odo,Odonimo (nome della strada) come certificato dal Comune,testo,Agenzia Entrate,snapshot mensile,https://anncsu.open.agenziaentrate.gov.it/,Open Data UE 2023/138
+anncsu,punti[].civ,Numero civico,numero,Agenzia Entrate,snapshot mensile,https://anncsu.open.agenziaentrate.gov.it/,Open Data UE 2023/138
+anncsu,punti[].esp,Esponente alfabetico del civico (es. A/B/bis),testo,Agenzia Entrate,snapshot mensile,https://anncsu.open.agenziaentrate.gov.it/,Open Data UE 2023/138
+anncsu,punti[].quota,Quota altimetrica del singolo civico (metri s.l.m.),metri,Agenzia Entrate,snapshot mensile,https://anncsu.open.agenziaentrate.gov.it/,Open Data UE 2023/138
+anncsu,punti[].met,Codice metodo di georeferenziazione (1=GPS 2=Catasto 3=Ortofoto 4=Cartografia 5=Altro),codice,Agenzia Entrate,snapshot mensile,https://anncsu.open.agenziaentrate.gov.it/,Open Data UE 2023/138

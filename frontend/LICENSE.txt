@@ -11,7 +11,8 @@ ATTRIBUZIONE RICHIESTA
 In caso di riutilizzo, citare come segue:
 
   "Elaborazione su dati Cruscotto Italia, fonti originarie: ANAC,
-   BDAP-MOP, SIOPE, Italia Domani, ISPRA, ISTAT, MIUR, ARPA, ACI, MEF."
+   BDAP-MOP, SIOPE, Italia Domani, ISPRA, ISTAT, MIUR, ARPA, ACI, MEF,
+   Agenzia delle Entrate."
 
 FONTI ORIGINARIE E LORO LICENZE
 -------------------------------
@@ -25,6 +26,8 @@ FONTI ORIGINARIE E LORO LICENZE
 - ACI (Parco veicolare — LOD) ........................ CC BY 4.0
 - MEF Dipartimento Finanze (Redditi IRPEF) ........... CC BY 3.0
 - MEF Dip. Entrate (Beni Immobili Pubblici 2022) ..... CC BY 4.0
+- Agenzia Entrate + ISTAT (ANNCSU - civici e strade) . Open Data UE
+                                                       2023/138 (HVD)
 - OpenStreetMap (cartografia) ........................ ODbL
 
 Per il dettaglio dei dataset e degli URL originari delle fonti,
