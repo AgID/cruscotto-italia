@@ -116,16 +116,17 @@ Servono credenziali in 3 posti diversi a seconda dello scenario:
 |---|---|---|
 | Smoke test ETL (`scripts/smoke-test-etl.py`) | nessuna credenziale | locale |
 | ETL Python `--target=local` (default) | nessuna credenziale | locale |
-| ETL Python `--target=r2` (push su bucket) | 3 var R2 in `.env` | locale |
+| ETL Python `--target=r2` (push su bucket) | 4 export `R2_*` nel profilo shell | `~/.bashrc` |
 | Worker `npm run dev` | nessuna credenziale (binding R2 in sola lettura) | locale |
-| Worker `wrangler deploy` | `wrangler login` interattivo o env CF | locale |
+| Worker `wrangler deploy` | `wrangler login` interattivo o `CLOUDFLARE_API_TOKEN` | `~/.bashrc` |
 | Workflow CI/CD GitHub Actions | 6 GitHub Secrets | Settings repo |
+
+In locale, le credenziali vivono come `export VAR=...` in `~/.bashrc` (o equivalente) dell'utente che esegue ETL e Wrangler. Vedi `docs/SECRETS.md` § 6 per il dettaglio delle export richieste.
 
 **Documentazione completa**:
 
-- [`docs/SECRETS.md`](docs/SECRETS.md) — inventario dei 6 GitHub Secrets, procedure per crearli su Cloudflare, rotazione e revoca
+- [`docs/SECRETS.md`](docs/SECRETS.md) — inventario dei 6 GitHub Secrets + procedure per crearli su Cloudflare + rotazione e revoca + setup locale via `~/.bashrc`
 - [`docs/INFRASTRUCTURE.md`](docs/INFRASTRUCTURE.md) — architettura completa, pre-flight checklist setup, note operative deploy/maintenance
-- [`.env.example`](.env.example) — template variabili d'ambiente locali
 
 ### Setup locale
 
