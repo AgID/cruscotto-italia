@@ -823,7 +823,7 @@ footer a:hover { color: #fff !important; }
     </div>
     <div class="mini-search" id="mini-search-wrap">
       <input type="search" id="quick-search" placeholder="Cerca un altro comune…" autocomplete="off"
-             role="combobox" aria-label="Cerca comune" aria-haspopup="listbox"
+             role="combobox" aria-label="Cerca comune"
              aria-controls="mini-suggestions" aria-expanded="false" aria-autocomplete="list">
       <div class="mini-suggestions" id="mini-suggestions" role="listbox" aria-label="Suggerimenti comuni"></div>
     </div>
@@ -4210,9 +4210,12 @@ function initAnncsu(d) {
     punti.forEach(p => {
       if (p.odo) odoFreq.set(p.odo, (odoFreq.get(p.odo) || 0) + 1);
     });
+    // Nessun .slice(): tutti gli odonimi distinti sono candidati per
+    // l'autocomplete. Il filtro client-side (length>=4 + max 8 visibili)
+    // tiene la dropdown leggera. Performance: 2178 stringhe a Lecce =
+    // microsecondi per il filter.
     topOdonimi = [...odoFreq.entries()]
       .sort((a, b) => b[1] - a[1])
-      .slice(0, 200)
       .map(([odo, _]) => odo);
   }
   if (acEl) {
