@@ -768,7 +768,7 @@ footer a:hover { color: #fff !important; }
 <main id="main">
 
 <div id="comune-content">
-  <div class="loading wrap">Caricamento dati comune</div>
+  <div class="loading wrap" role="status" aria-live="polite">Caricamento dati comune</div>
 </div>
 
 </main>
@@ -1175,8 +1175,8 @@ function renderDemografiaTabSkeleton() {
         Include indici demografici (vecchiaia, dipendenza) e piramide delle eta.
       </p>
       <div id="demografia-content">
-        <div class="spese-loading">
-          <div class="spese-loading-spinner"></div>
+        <div class="spese-loading" role="status" aria-live="polite">
+          <div class="spese-loading-spinner" aria-hidden="true"></div>
           <div>Caricamento dati ISTAT…</div>
         </div>
       </div>
@@ -1347,8 +1347,8 @@ function renderProfiloTabSkeleton() {
         che lavoro fa, come si muove. Fonte ISTAT, Censimento permanente, anno 2024.
       </p>
       <div id="profilo-content">
-        <div class="spese-loading">
-          <div class="spese-loading-spinner"></div>
+        <div class="spese-loading" role="status" aria-live="polite">
+          <div class="spese-loading-spinner" aria-hidden="true"></div>
           <div>Caricamento dati ISTAT…</div>
         </div>
       </div>
@@ -1625,8 +1625,8 @@ function renderTurismoTabSkeleton() {
         Strutture e posti letto del comune nel 2024 (alberghi e extra-alberghiero, da agriturismi a B&B), con confronto sul bacino provinciale per arrivi e presenze. Fonte ISTAT.
       </p>
       <div id="turismo-content">
-        <div class="spese-loading">
-          <div class="spese-loading-spinner"></div>
+        <div class="spese-loading" role="status" aria-live="polite">
+          <div class="spese-loading-spinner" aria-hidden="true"></div>
           <div>Caricamento dati ISTAT…</div>
         </div>
       </div>
@@ -1900,8 +1900,8 @@ function renderPnrrTabSkeleton() {
         Tutti i progetti finanziati con fondi del Piano Nazionale di Ripresa e Resilienza realizzati direttamente dal Comune.
       </p>
       <div id="pnrr-content">
-        <div class="spese-loading">
-          <div class="spese-loading-spinner"></div>
+        <div class="spese-loading" role="status" aria-live="polite">
+          <div class="spese-loading-spinner" aria-hidden="true"></div>
           <div>Caricamento dati Italia Domani…</div>
         </div>
       </div>
@@ -2034,7 +2034,7 @@ function renderPnrrContent(container, data) {
       <div class="pnrr-list" id="pnrr-list">
         ${progetti.map((p, idx) => renderPnrrRow(p, idx)).join('')}
       </div>
-      <div class="pnrr-empty" id="pnrr-no-results" style="display:none;">Nessun progetto corrisponde ai filtri selezionati.</div>
+      <div class="pnrr-empty" id="pnrr-no-results" style="display:none;" role="status" aria-live="polite">Nessun progetto corrisponde ai filtri selezionati.</div>
     </div>
 
     <div class="tab-footer">
@@ -2163,7 +2163,7 @@ function renderTerritorioTabSkeleton() {
         il proprio territorio.
       </p>
       <div data-territorio-content>
-        <div class="loading-block"><span class="tab-spinner"></span> Caricamento…</div>
+        <div class="loading-block" role="status" aria-live="polite"><span class="tab-spinner" aria-hidden="true"></span> Caricamento…</div>
       </div>
     </div>
   `;
@@ -2189,7 +2189,7 @@ async function loadTerritorio(istat) {
 
     renderTerritorioContent(data);
   } catch (err) {
-    container.innerHTML = `<div class="terr-empty">Errore nel caricamento: ${err.message || err}</div>`;
+    container.innerHTML = `<div class="terr-empty" role="alert">Errore nel caricamento: ${err.message || err}</div>`;
   }
 }
 
@@ -2553,8 +2553,8 @@ function renderSpeseTabSkeleton() {
         Dati pre-calcolati da BDAP OpenData (RGS-MEF), aggregati a livello comunale.
       </p>
       <div id="spese-content">
-        <div class="spese-loading">
-          <div class="spese-loading-spinner"></div>
+        <div class="spese-loading" role="status" aria-live="polite">
+          <div class="spese-loading-spinner" aria-hidden="true"></div>
           <div>Caricamento dati SIOPE…</div>
         </div>
       </div>
@@ -4018,7 +4018,7 @@ function renderAriaTabSkeleton() {
         superamenti dei limiti di legge e linee guida OMS, trend decennale.
       </p>
       <div data-aria-content>
-        <div class="loading-block"><span class="tab-spinner"></span> Caricamento…</div>
+        <div class="loading-block" role="status" aria-live="polite"><span class="tab-spinner" aria-hidden="true"></span> Caricamento…</div>
       </div>
     </div>
   `;

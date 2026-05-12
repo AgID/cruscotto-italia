@@ -380,3 +380,107 @@ footer .footer-bottom a {
   white-space: nowrap !important;
   border: 0 !important;
 }
+
+/* ─────────────────────────────────────────────────────────────────────
+   WCAG 2.1 AA — Criterio 2.2.2 Pause, Stop, Hide
+   Rispetta la preferenza utente di sistema "Riduci movimenti"
+   (utenti con sensibilità vestibolari, vertigini, motion sickness).
+   ───────────────────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────
+   Footer istituzionale (Design Italia)
+   Spostato in base.css per essere ereditato da TUTTE le pagine
+   (accessibilita.html, eventuali future pagine).
+   ───────────────────────────────────────────────────────────────────── */
+footer {
+  background: var(--ink);
+  color: rgba(255,255,255,0.85);
+  padding: var(--sp-7) 0 var(--sp-5);
+}
+footer > .wrap:first-of-type {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr;
+  gap: var(--sp-6);
+}
+footer > .wrap:nth-of-type(2) {
+  display: block;
+  margin-top: var(--sp-6);
+  padding-top: var(--sp-4);
+  border-top: 1px solid rgba(255,255,255,0.15);
+}
+@media (max-width: 840px) {
+  footer > .wrap:first-of-type {
+    grid-template-columns: 1fr 1fr;
+    gap: var(--sp-5);
+  }
+}
+footer ul {
+  list-style: none;
+  padding: 0;
+  margin: var(--sp-3) 0 0;
+}
+footer ul li {
+  margin-bottom: 6px;
+  font-size: 13px;
+}
+footer h3, footer h4 {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin: 0 0 var(--sp-3);
+  color: #fff;
+}
+footer .colophon {
+  font-size: 14px;
+  line-height: 1.5;
+}
+footer .colophon {
+  font-family: var(--font-sans);
+  font-size: var(--fs-sm);
+  font-weight: 400;
+  line-height: 1.5;
+  color: rgba(255,255,255,0.85);
+}
+footer .colophon em {
+  color: rgba(255,255,255,0.6);
+  font-style: normal;
+}
+footer h3, footer h4, footer strong {
+  color: #fff;
+  font-weight: var(--fw-semibold);
+}
+footer a {
+  color: rgba(255,255,255,0.85);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+footer a:hover {
+  color: #fff;
+}
+footer .footer-bottom {
+  margin-top: var(--sp-6);
+  padding-top: var(--sp-4);
+  border-top: 1px solid rgba(255,255,255,0.15);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.75);
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
+}
+footer .footer-bottom .wrap { display: contents; }
+footer .footer-bottom a {
+  color: rgba(255,255,255,0.85);
+}

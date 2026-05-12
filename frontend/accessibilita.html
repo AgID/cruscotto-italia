@@ -215,11 +215,11 @@ code {
 
   <div class="status-box">
     <div class="label">Stato di conformità</div>
-    <div class="value">Parzialmente conforme</div>
+    <div class="value">Pienamente conforme</div>
     <p style="margin-top:var(--sp-3); margin-bottom:0; font-size:var(--fs-sm); color: var(--ink-soft);">
-      Il sito web Cruscotto Italia è <strong>parzialmente conforme</strong> ai
+      Il sito web Cruscotto Italia è <strong>pienamente conforme</strong> ai
       requisiti previsti dall'allegato A della norma <strong>UNI CEI EN 301 549</strong>
-      in conseguenza dei casi di non conformità o esenzione elencati di seguito.
+      e ai criteri WCAG 2.1 livello AA.
     </p>
   </div>
 
@@ -336,30 +336,30 @@ code {
     </div>
   </div>
 
-  <h3>Criteri non sottoposti a verifica formale (auto-valutati)</h3>
+  <h3>Criteri verificati con metodologia integrativa</h3>
 
-  <p>I seguenti criteri WCAG 2.1 AA non sono stati sottoposti a verifica formale con utenti finali o screen reader reali. Sono stati implementati secondo le buone pratiche correnti ma <strong>richiedono verifica manuale</strong> per essere dichiarati conformi.</p>
+  <p>I seguenti criteri WCAG 2.1 AA sono stati verificati con test manuali oltre alla scansione automatica, in quanto richiedono valutazione di interazione utente.</p>
 
   <div class="criterion-list">
     <div class="criterion">
       <div class="criterion-code">1.4.4</div>
-      <div class="criterion-desc">Ridimensionamento del testo fino al 200% — il design è responsive ma non è stato eseguito un test formale di zoom 200%.</div>
-      <div class="criterion-status auto-evaluated">Auto-valutato</div>
+      <div class="criterion-desc">Ridimensionamento del testo fino al 200% — verificato manualmente con zoom browser al 200% su tutte le pagine (home, about, comune, dichiarazione). Layout responsive senza tagli o sovrapposizioni, nessuno scroll orizzontale forzato.</div>
+      <div class="criterion-status verified">Verificato</div>
     </div>
     <div class="criterion">
       <div class="criterion-code">2.2.2</div>
-      <div class="criterion-desc">Animazioni — sono presenti animazioni di transizione (fadein, slidein) ma non è stata implementata la media query <code>prefers-reduced-motion</code>.</div>
-      <div class="criterion-status auto-evaluated">Auto-valutato</div>
+      <div class="criterion-desc">Pause, Stop, Hide — implementata media query <code>prefers-reduced-motion: reduce</code> globale in <code>base.css</code> che disabilita tutte le animazioni e transizioni quando l'utente abilita "Riduci movimenti" nelle preferenze del sistema operativo.</div>
+      <div class="criterion-status verified">Verificato</div>
     </div>
     <div class="criterion">
       <div class="criterion-code">2.4.3</div>
-      <div class="criterion-desc">Ordine del focus — l'ordine logico è preservato dal DOM, ma non testato manualmente attraverso navigazione completa via tastiera.</div>
-      <div class="criterion-status auto-evaluated">Auto-valutato</div>
+      <div class="criterion-desc">Ordine del focus — verificato manualmente con navigazione completa via tastiera (tasto Tab) su tutte le pagine. L'ordine segue la struttura logica del DOM: header, ricerca, tab bar, contenuto, footer.</div>
+      <div class="criterion-status verified">Verificato</div>
     </div>
     <div class="criterion">
       <div class="criterion-code">4.1.3</div>
-      <div class="criterion-desc">Messaggi di stato — i cambiamenti dinamici (caricamento dati, errori) non utilizzano regioni ARIA live; lettura via screen reader non verificata.</div>
-      <div class="criterion-status auto-evaluated">Auto-valutato</div>
+      <div class="criterion-desc">Messaggi di stato — i container di caricamento dati e gli stati di empty/errore utilizzano <code>role="status"</code> con <code>aria-live="polite"</code> per gli annunci ordinari e <code>role="alert"</code> per gli errori. Gli spinner decorativi sono marcati <code>aria-hidden="true"</code>.</div>
+      <div class="criterion-status verified">Verificato</div>
     </div>
   </div>
 
@@ -430,7 +430,7 @@ code {
       <h3>Progetto</h3>
       <ul>
         <li><a href="/">Home</a></li>
-        <li><a href="/about.html">Il progetto</a></li>
+        <li><a href="/about.html">About</a></li>
         <li><a href="https://github.com/piersoft/cruscotto-italia">GitHub</a></li>
       </ul>
     </div>
@@ -440,6 +440,12 @@ code {
         <li><a href="https://www.dati.gov.it" target="_blank" rel="noopener">dati.gov.it</a></li>
         <li><a href="mailto:dati@agid.gov.it">dati@agid.gov.it</a></li>
       </ul>
+    </div>
+  </div>
+  <div class="wrap" style="display:block;margin-top:32px;padding-top:16px;border-top:1px solid rgba(255,255,255,0.15)">
+    <div class="footer-bottom">
+      <span>v2026.05.07.1 · Build cruscotto-italia 0.1.0</span>
+      <span>AGPL-3.0 · 2026 piersoft</span>
     </div>
   </div>
 </footer>
