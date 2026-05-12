@@ -4178,26 +4178,43 @@ function initAnncsu(d) {
   const listEl = document.getElementById('anncsu-search-list');
   let searchTimer = null;
 
-  // Popola datalist autocomplete con odonimi UNICI presenti nei punti del
-  // sample, ordinati per frequenza decrescente, max 200 voci.
-  // Limite noto: il sample è 1000/N punti, quindi vie sotto-rappresentate
-  // possono mancare. Vedi TODO opzione C in cima alla funzione.
+  // Pre-calcolo top 200 odonimi unici per frequenza nei punti del sample.
+  // Il datalist viene popolato dinamicamente solo se l'utente digita >=3
+  // caratteri, per evitare la tendina lunga al focus (limite UX del
+  // datalist HTML5 nativo: non supporta min-chars).
+  // Limite noto: sample 1000 punti, vedi TODO opzione C in cima alla funzione.
+  let topOdonimi = [];
   if (listEl) {
     const odoFreq = new Map();
     punti.forEach(p => {
       if (p.odo) odoFreq.set(p.odo, (odoFreq.get(p.odo) || 0) + 1);
     });
-    const topOdonimi = [...odoFreq.entries()]
+    topOdonimi = [...odoFreq.entries()]
       .sort((a, b) => b[1] - a[1])
       .slice(0, 200)
       .map(([odo, _]) => odo);
-    listEl.innerHTML = topOdonimi
-      .map(o => `<option value="${o.replace(/"/g, '&quot;')}"></option>`)
-      .join('');
   }
 
   if (searchEl && resultEl) {
     searchEl.addEventListener('input', () => {
+      // Popola datalist solo se l'utente ha digitato >=3 caratteri
+      // (evita tendina lunga al focus con datalist HTML5 nativo)
+      if (listEl) {
+        const inputVal = searchEl.value.trim().toUpperCase();
+        if (inputVal.length >= 3) {
+          // Filtra top 200 odonimi per match substring case-insensitive
+          // e limita a max 50 voci per il datalist (più che sufficiente)
+          const matchingOdonimi = topOdonimi
+            .filter(o => o.toUpperCase().includes(inputVal))
+            .slice(0, 50);
+          listEl.innerHTML = matchingOdonimi
+            .map(o => `<option value="${o.replace(/"/g, '&quot;')}"></option>`)
+            .join('');
+        } else {
+          listEl.innerHTML = '';
+        }
+      }
+
       clearTimeout(searchTimer);
       searchTimer = setTimeout(() => {
         const q = searchEl.value.trim();
