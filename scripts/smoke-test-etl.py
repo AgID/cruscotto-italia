@@ -52,10 +52,10 @@ ETL_PLAN = [
     ("territorio",     "medium",     ["--skip-idrogeo", "--skip-rifiuti"],              300),
     ("scuole",         "medium",     [],                                                360),
     ("pnrr_progetti",  "medium",     [],                                                360),
-    ("anac",           "medium",     ["--months", "202604"],                            360),
-    ("immobili_pa",    "medium",     ["--regione", "VAL"],                              360),
+    ("anac",           "medium",     ["--months", "202603"],                            360),
+    ("immobili_pa",    "medium",     ["--regione", "VALLE-D_AOSTA"],                              360),
     ("siope",          "medium",     ["--regioni", "02", "--anni", "2026"],             420),
-    ("anncsu",         "medium",     ["--regioni", "02"],                               420),
+    ("anncsu",         "medium",     ["--regioni", "VALL"],                               420),
 
     # --------- SLOW ---------
     ("bdap",           "slow",       [],                                                900),
@@ -74,6 +74,11 @@ OUTDIR_FLAG = {
     "redditi":     "--outdir",
     "scuole":      "--outdir",
 }
+
+# Alcuni ETL (wrapper o ETL con output hardcoded) non accettano alcun
+# flag di output dir. Per quelli, l'output va nella dir di default
+# definita nello script ETL stesso (tipicamente dist/<source>/).
+ETL_NO_OUTPUT_DIR = {"bdap_mop", "bdap_siope", "veicoli"}
 
 # -----------------------------------------------------------------------------
 # Helpers
@@ -107,12 +112,18 @@ def run_one(name: str, tier: str, extra_args: list, timeout_s: int) -> dict:
     out_dir.mkdir(parents=True, exist_ok=True)
     log_path = LOG_DIR / f"{name}.log"
 
-    outdir_flag = OUTDIR_FLAG.get(name, "--output-dir")
-    cmd = [
-        sys.executable, "-m", f"etl.sources.{name}",
-        "--target", "local",
-        outdir_flag, str(out_dir),
-    ] + extra_args
+    if name in ETL_NO_OUTPUT_DIR:
+        cmd = [
+            sys.executable, "-m", f"etl.sources.{name}",
+            "--target", "local",
+        ] + extra_args
+    else:
+        outdir_flag = OUTDIR_FLAG.get(name, "--output-dir")
+        cmd = [
+            sys.executable, "-m", f"etl.sources.{name}",
+            "--target", "local",
+            outdir_flag, str(out_dir),
+        ] + extra_args
 
     log(f"{C['cyan']}[{tier:10s}]{C['reset']} {C['bold']}{name:18s}{C['reset']} "
         f"timeout={timeout_s}s  args: {' '.join(cmd[3:])}")
@@ -147,9 +158,17 @@ def run_one(name: str, tier: str, extra_args: list, timeout_s: int) -> dict:
 
     elapsed = time.time() - t0
 
-    # Conta file prodotti
+    # Conta file prodotti. Per ETL_NO_OUTPUT_DIR, l'output reale è
+    # nella dir di default dell'ETL (es. dist/<name>/); proviamo a guardare lì.
+    candidate_dirs = [out_dir]
+    if name in ETL_NO_OUTPUT_DIR:
+        for cand in [Path("dist") / name, Path("dist") / name.replace("_", "-")]:
+            if cand.is_dir():
+                candidate_dirs.append(cand)
     try:
-        files = list(out_dir.rglob("*.json"))
+        files = []
+        for d in candidate_dirs:
+            files.extend(d.rglob("*.json"))
         n_files = len(files)
         total_bytes = sum(f.stat().st_size for f in files)
     except Exception:
