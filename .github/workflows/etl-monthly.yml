@@ -4,6 +4,8 @@ name: ETL · Monthly
 #  - Anagrafica unificata (ISTAT + IPA)
 #  - BDAP-MOP (opere pubbliche)
 #  - SIOPE Spese (force refresh: --no-cache, scarica nuovi mesi pubblicati)
+#  - ANNCSU (Agenzia Entrate + ISTAT, snapshot mensile civici e strade,
+#    --full-shards genera anche shard pesanti su anncsu_full/)
 #
 # Al termine, ricostruisce dashboard/<istat>.json.
 #
@@ -15,7 +17,7 @@ on:
   workflow_dispatch:
     inputs:
       sources:
-        description: 'Comma-separated list (anagrafica,bdap,siope,dashboard) or "all"'
+        description: 'Comma-separated list (anagrafica,bdap,siope,anncsu,dashboard) or "all"'
         required: false
         default: 'all'
       siope_no_cache:
@@ -90,15 +92,39 @@ jobs:
         run: python -m etl.sources.siope --target=r2 --anni=2026 ${{ steps.nocache.outputs.flag }}
 
   # ---------------------------------------------------------------------------
-  # Dashboard rebuild parte SOLO quando i 3 ETL upstream sono finiti.
+  anncsu:
+    name: ETL · ANNCSU (civici e strade certificate)
+    runs-on: [self-hosted, linux, aruba]
+    if: ${{ github.event_name == 'schedule' || contains(github.event.inputs.sources, 'anncsu') || github.event.inputs.sources == 'all' || github.event.inputs.sources == '' }}
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: etl/requirements.txt
+      - run: pip install -r etl/requirements.txt
+      - name: Run ANNCSU ETL (sample shard 1000 punti)
+        # Cron: scarica snapshot fresco da agenziaentrate.gov.it (no cache).
+        # Genera shard sample anncsu/<istat>.json + push R2.
+        run: python -m etl.sources.anncsu --target=r2
+      - name: Run ANNCSU ETL (full shard, tutti i civici)
+        # Riusa cache locale appena scaricata, solo build+push shard pesanti
+        # su prefisso R2 anncsu_full/. Esposti via Worker
+        # GET /data/anncsu_full/<istat>.json
+        run: python -m etl.sources.anncsu --target=r2 --skip-download --skip-sample --full-shards
+
+  # ---------------------------------------------------------------------------
+  # Dashboard rebuild parte SOLO quando i 4 ETL upstream sono finiti.
   # Sufficiente che almeno UNO sia andato in success (perché il dashboard.py
   # legge tutti gli shard esistenti su R2 e compone — non dipende dal nuovo
   # output di un singolo ETL).
   dashboard:
     name: ETL · Dashboard rebuild (single-fetch shard)
     runs-on: [self-hosted, linux, aruba]
-    needs: [anagrafica, bdap, siope]
-    if: ${{ always() && (needs.anagrafica.result == 'success' || needs.bdap.result == 'success' || needs.siope.result == 'success') }}
+    needs: [anagrafica, bdap, siope, anncsu]
+    if: ${{ always() && (needs.anagrafica.result == 'success' || needs.bdap.result == 'success' || needs.siope.result == 'success' || needs.anncsu.result == 'success') }}
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
