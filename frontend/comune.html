@@ -3898,10 +3898,8 @@ function renderAnncsuTab(d) {
       <h3 class="anncsu-h3">Mappa dei civici geo-referenziati</h3>
       <p class="muted anncsu-map-note">
         Campione di ${fmtNum(punti.length)} numeri civici su ${fmtNum(k.n_civici_geo_ref || 0)} totali.
-        Marker colorati per metodo di geo-referenziazione.
-        I civici in <span class="anncsu-outlier-marker"></span> <strong>rosso</strong> sono punti
-        statisticamente fuori dal centro abitato — possibili errori di
-        georeferenziazione nel conferimento.
+        Marker colorati per metodo di geo-referenziazione utilizzato dal Comune
+        nel conferimento ad ANNCSU.
       </p>
       <div class="anncsu-controls">
         <input type="text" id="anncsu-search" class="anncsu-search-input"
@@ -3977,31 +3975,18 @@ const ANNCSU_METODO_LABELS = {
 };
 const ANNCSU_OUTLIER_COLOR = '#D9364F';   // rosso outlier (errore georef sospetto)
 
-// Detection outlier robusta via Median Absolute Deviation (MAD).
-// Soglia 6*MAD ≈ 4 sigma robusto. Comuni con forma molto allungata
-// (valli alpine) potrebbero avere falsi positivi ma è raro.
+// Detection outlier: ATTUALMENTE DISABILITATA.
+//
+// Implementazione MAD originale rimossa perché produceva troppi falsi
+// positivi sui comuni con territorio frammentato (Lecce con frazioni
+// balneari a 10km dal centro storico, L'Aquila con 56 frazioni sparse,
+// Roma con Ostia, Genova lunga 35km, ecc.).
+//
+// La soluzione corretta è point-in-polygon con i confini ISTAT ufficiali
+// (CC BY 3.0, ~30MB GeoJSON nazionale dopo semplificazione). Da implementare
+// lato ETL come flag pre-computed: vedi handoff future.
 function anncsuFlagOutliers(punti) {
-  if (!punti || punti.length < 20) {
-    // Troppo pochi punti per stat robuste: nessun outlier
-    return punti.map(p => ({ ...p, _outlier: false }));
-  }
-  const lats = punti.map(p => p.lat).sort((a, b) => a - b);
-  const lons = punti.map(p => p.lon).sort((a, b) => a - b);
-  const median = (arr) => arr[Math.floor(arr.length / 2)];
-  const medianLat = median(lats);
-  const medianLon = median(lons);
-  const madLat = median(punti.map(p => Math.abs(p.lat - medianLat)).sort((a, b) => a - b));
-  const madLon = median(punti.map(p => Math.abs(p.lon - medianLon)).sort((a, b) => a - b));
-  // Guardia: MAD può essere 0 se molti punti coincidono — fallback su nessun outlier
-  if (madLat === 0 || madLon === 0) {
-    return punti.map(p => ({ ...p, _outlier: false }));
-  }
-  const THRESHOLD = 6;
-  return punti.map(p => ({
-    ...p,
-    _outlier: Math.abs(p.lat - medianLat) > THRESHOLD * madLat ||
-              Math.abs(p.lon - medianLon) > THRESHOLD * madLon
-  }));
+  return (punti || []).map(p => ({ ...p, _outlier: false }));
 }
 
 // Inizializza mappa Leaflet per la tab ANNCSU.
