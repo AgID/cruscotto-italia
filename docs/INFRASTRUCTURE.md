@@ -266,3 +266,37 @@ A gennaio/febbraio di ogni anno, aggiornare etl/sources/siope.py:
 - MIGRAZIONE_AGID_HANDOFF.md (piano completo refactor config.json, fornito separatamente)
 - Workflow GitHub Actions in .github/workflows/
 - README.md (descrizione progetto e overview architetturale)
+
+---
+
+## 7. Security hardening nginx (2026-05-12)
+
+VA di primo livello eseguita su cruscotto-italia.piersoftckan.biz (frontend Aruba). Configurazione applicata da replicare a giugno su infrastruttura AgID.
+
+### 7.1 Snippet security headers condiviso
+
+File: /etc/nginx/snippets/security-headers.conf
+
+Include 6 header di sicurezza (X-Content-Type-Options, X-Frame-Options, Referrer-Policy, HSTS, Permissions-Policy, CSP). Va incluso sia a livello server sia in ogni location block che usa add_header (nginx gotcha: add_header non eredita se nel location ci sono altri add_header).
+
+CSP attuale permette: 'self' + Google Fonts + Worker MCP (sia .workers.dev sia custom domain piersoftckan.biz) + tile OSM. Da aggiornare a giugno con il dominio worker AgID.
+
+### 7.2 Difesa file backup
+
+Location regex nel vhost che blocca file .bak/.backup/.swp/.swo/.orig/.old/.tmp/~ (rifiuta con 404 senza esporre il file). Necessario perché lavorando con sed/python su file in produzione si creano spesso file .bak temporanei.
+
+### 7.3 server_tokens off
+
+In /etc/nginx/nginx.conf blocco http: nasconde versione nginx nei banner Server e nelle error pages default. Beneficio per tutti i vhost del server.
+
+### 7.4 TLS
+
+Configurazione TLS attuale gestita da Certbot (Let's Encrypt R12). Già conforme: TLS 1.2 e 1.3 only, ECDHE-RSA-AES256-GCM-SHA384 + TLS_AES_256_GCM_SHA384, X25519. TLS 1.0/1.1 disabilitati.
+
+Auto-rinnovo certbot attivo. Su infrastruttura AgID a giugno: replicare con certbot o equivalente, oppure usare cert AgID istituzionale se disponibile.
+
+### 7.5 Miglioramenti residui (bassa priorità)
+
+- OCSP stapling (attualmente assente lato Aruba, gestito automaticamente lato Cloudflare)
+- CSP senza 'unsafe-inline' (richiede refactor inline scripts/styles con nonce/hash, ~2-3h di lavoro)
+- Rate limiting nginx (oggi solo sul Worker via KV)
