@@ -52,6 +52,9 @@ cat > "$CONFIG_FILE" <<EOF
   "runners": ["htmlcs", "axe"],
   "includeWarnings": true,
   "hideElements": ".leaflet-tile-container, .leaflet-marker-icon, canvas",
+  "chromeLaunchConfig": {
+    "args": ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"]
+  },
   "actions": [
     "wait for element [data-tab='anncsu'] to be visible",
     "click element [data-tab='anncsu']",
