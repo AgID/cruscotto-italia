@@ -274,6 +274,46 @@ def _extract_snapshot_date(csv_filename: str) -> str:
     return ""
 
 
+def load_canonical_istat() -> set[str]:
+    """Carica il set di tutti gli ISTAT validi (~7896) dal bundle R2.
+
+    Usato per filtrare ghost ISTAT presenti in ANNCSU ma soppressi/fusi
+    (es. 047023 Vergemoli fuso nel 2014 in Fabbriche di Vergemoli).
+    """
+    log.info("anncsu_loading_canonical_istat")
+    client = r2.get_r2_client()
+    obj = client.get_object(Bucket=r2.get_bucket(),
+                            Key="lookup/comuni-bundle.json")
+    bundle = json.loads(obj["Body"].read())["comuni"]
+    canonical = set(bundle.keys())
+    log.info("anncsu_canonical_loaded", n_comuni=len(canonical))
+    return canonical
+
+
+def _is_bilingual_odonimo(odo: str) -> bool:
+    """Detect odonimi bilingui dal pattern testuale dell'ODONIMO.
+
+    ANNCSU non popola DIZIONE_LINGUA1/2 in modo uniforme:
+    - Cogne (VALL) usa correttamente DIZIONE_LINGUA1 = francese
+    - Bolzano (TREN) NON popola le colonne lingua: il bilinguismo
+      tedesco è codificato direttamente nell'ODONIMO con separatore.
+
+    Pattern bilingue tipici:
+      "VIA ROMA / ROMSTRASSE"
+      "VIA ROMA - ROMSTRASSE"
+      "PIAZZA SAN MARCO/SAN MARCOPLATZ"
+    """
+    if not odo or len(odo) < 8:
+        return False
+    # Separator ' - ' o ' / ' o '/' standalone (con almeno 3 char per parte)
+    for sep in (" - ", " / ", "/"):
+        if sep in odo:
+            parts = [p.strip() for p in odo.split(sep) if p.strip()]
+            if len(parts) >= 2 and all(len(p) >= 3 for p in parts):
+                return True
+    return False
+
+
 def parse_strad_region(zip_path: Path) -> tuple[dict, str]:
     """Parsa lo stradario regionale.
 
@@ -311,10 +351,13 @@ def parse_strad_region(zip_path: Path) -> tuple[dict, str]:
             acc = 0
         ling1 = (row.get("DIZIONE_LINGUA1") or "").strip()
         ling2 = (row.get("DIZIONE_LINGUA2") or "").strip()
+        # Bilingue se ha LINGUA1/2 popolata (Cogne, Friuli) O se l'ODONIMO
+        # contiene un separatore bilingue (Bolzano, Glorenza)
+        is_bilingual = bool(ling1 or ling2) or _is_bilingual_odonimo(odo)
 
         d = per_istat[istat]
         d["n_strade"] += 1
-        if ling1 or ling2:
+        if is_bilingual:
             d["n_strade_bilingui"] += 1
         d["top_strade_acc"].append((odo, acc))
         if prog:
@@ -443,9 +486,11 @@ def parse_indir_region(zip_path: Path,
 
         if esponente:
             d["n_civici_bis"] += 1
-        if specificita == "ROSSO":
+        # SPECIFICITA: nei dati reali ANNCSU è codificata come 'N'/'R'
+        # (singola lettera), non 'NERO'/'ROSSO' come da metadata storica
+        if specificita in ("ROSSO", "R"):
             d["n_civici_rosso"] += 1
-        elif specificita == "NERO":
+        elif specificita in ("NERO", "N"):
             d["n_civici_nero"] += 1
         if metrico and metrico != "0":
             d["n_civici_metrici"] += 1
@@ -643,12 +688,28 @@ def build_shard(istat: str, strad: dict, indir: dict,
 
 
 def build_all_shards(strad_data: dict, indir_data: dict,
-                     snapshot_date: str, out_dir: Path) -> int:
-    """Genera tutti i file shard locali. Ritorna numero scritti."""
+                     snapshot_date: str, out_dir: Path,
+                     canonical_istat: Optional[set[str]] = None) -> int:
+    """Genera tutti i file shard locali. Ritorna numero scritti.
+
+    Args:
+        canonical_istat: se passato, filtra gli ISTAT che non sono nella
+            lookup canonica (ghost da fusioni/soppressioni storiche).
+    """
     out_dir.mkdir(parents=True, exist_ok=True)
     # Unione istat: STRAD ∪ INDIR (un comune potrebbe teoricamente avere
     # solo strade ma 0 civici geo-ref)
     all_istat = set(strad_data.keys()) | set(indir_data.keys())
+
+    # Filtro ghost (ISTAT soppressi non più in anagrafica canonica)
+    if canonical_istat is not None:
+        ghost = all_istat - canonical_istat
+        if ghost:
+            log.info("anncsu_ghost_istat_excluded",
+                     count=len(ghost),
+                     sample=sorted(ghost)[:10])
+        all_istat = all_istat & canonical_istat
+
     log.info("anncsu_build_shards_start", istat_count=len(all_istat),
              out_dir=str(out_dir))
 
@@ -766,6 +827,9 @@ def main() -> int:
                     help="Non pusha gli ZIP raw su R2 durante il download")
     ap.add_argument("--force-upload", action="store_true",
                     help="Push R2 di tutti gli shard senza md5 check")
+    ap.add_argument("--no-canonical-filter", action="store_true",
+                    help="Disabilita il filtro contro lookup/comuni-bundle.json "
+                         "(rischia di scrivere shard per ISTAT soppressi)")
     args = ap.parse_args()
 
     if args.regioni:
@@ -818,8 +882,17 @@ def main() -> int:
              istat=len(indir_data))
 
     # FASE 4: build shard
+    canonical = None
+    if not args.no_canonical_filter:
+        try:
+            canonical = load_canonical_istat()
+        except Exception as e:
+            log.warning("anncsu_canonical_load_failed",
+                        error=str(e),
+                        note="proceeding without ghost ISTAT filter")
     out_dir = Path(args.outdir)
-    n_written = build_all_shards(strad_data, indir_data, snapshot, out_dir)
+    n_written = build_all_shards(strad_data, indir_data, snapshot,
+                                 out_dir, canonical_istat=canonical)
 
     # FASE 5: push R2
     if args.target == "r2":
