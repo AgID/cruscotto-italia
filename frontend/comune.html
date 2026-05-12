@@ -726,7 +726,7 @@ footer a{color:rgba(255,255,255,0.85);text-decoration:none}
 .anncsu-cluster{background:transparent !important;border:none !important;}
 .anncsu-legend{display:flex;flex-wrap:wrap;gap:14px;margin:0 0 12px;font-family:var(--mono);font-size:10px;color:var(--ink-mute);text-transform:uppercase;letter-spacing:.05em;}
 .anncsu-legend-item{display:inline-flex;align-items:center;gap:6px;}
-.anncsu-legend-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;border:1.5px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,0.12);}
+.anncsu-legend-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;border:1.5px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,0.12);color:transparent;}
 .anncsu-controls{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;margin:0 0 12px;}
 @media (max-width:720px){.anncsu-controls{grid-template-columns:1fr;}.anncsu-controls input,.anncsu-controls .anncsu-filters,.anncsu-controls .anncsu-search-wrap{width:100%;min-width:0;box-sizing:border-box;}}
 .anncsu-search-wrap{position:relative;}
@@ -823,8 +823,9 @@ footer a:hover { color: #fff !important; }
     </div>
     <div class="mini-search" id="mini-search-wrap">
       <input type="search" id="quick-search" placeholder="Cerca un altro comune…" autocomplete="off"
-             aria-label="Cerca comune" aria-haspopup="listbox" aria-controls="mini-suggestions">
-      <div class="mini-suggestions" id="mini-suggestions" role="listbox"></div>
+             role="combobox" aria-label="Cerca comune" aria-haspopup="listbox"
+             aria-controls="mini-suggestions" aria-expanded="false" aria-autocomplete="list">
+      <div class="mini-suggestions" id="mini-suggestions" role="listbox" aria-label="Suggerimenti comuni"></div>
     </div>
   </div>
 </div>
@@ -5308,6 +5309,7 @@ function renderAriaMap(stazioni) {
     if (!results || results.length === 0) {
       miniBox.innerHTML = '<div class="mini-suggestion" style="cursor:default;color:var(--ink-mute);font-style:italic">Nessun comune trovato.</div>';
       miniBox.classList.add('open');
+      miniInput.setAttribute('aria-expanded', 'true');
       return;
     }
     miniBox.innerHTML = results.map((c, i) => `
@@ -5343,6 +5345,7 @@ function renderAriaMap(stazioni) {
         console.error('mini-search error:', err);
         miniBox.innerHTML = `<div class="mini-suggestion" style="color:var(--accent);cursor:default">⚠️ ${err.message}</div>`;
         miniBox.classList.add('open');
+        miniInput.setAttribute('aria-expanded', 'true');
       }
     }, 200);
   });
