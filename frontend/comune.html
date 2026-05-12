@@ -728,9 +728,15 @@ footer a{color:rgba(255,255,255,0.85);text-decoration:none}
 .anncsu-legend-item{display:inline-flex;align-items:center;gap:6px;}
 .anncsu-legend-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;border:1.5px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,0.12);}
 .anncsu-controls{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;margin:0 0 12px;}
-@media (max-width:720px){.anncsu-controls{grid-template-columns:1fr;}.anncsu-controls input,.anncsu-controls .anncsu-filters{width:100%;min-width:0;box-sizing:border-box;}}
-.anncsu-search-input{font-family:var(--sans);font-size:14px;padding:8px 12px;border:1px solid var(--ink-mute);background:var(--paper);color:var(--ink);outline:none;border-radius:4px;}
+@media (max-width:720px){.anncsu-controls{grid-template-columns:1fr;}.anncsu-controls input,.anncsu-controls .anncsu-filters,.anncsu-controls .anncsu-search-wrap{width:100%;min-width:0;box-sizing:border-box;}}
+.anncsu-search-wrap{position:relative;}
+.anncsu-search-input{font-family:var(--sans);font-size:14px;padding:8px 12px;border:1px solid var(--ink-mute);background:var(--paper);color:var(--ink);outline:none;border-radius:4px;width:100%;box-sizing:border-box;}
 .anncsu-search-input:focus{border-color:var(--accent);box-shadow:0 0 0 2px rgba(0,102,204,0.12);}
+.anncsu-autocomplete{position:absolute;top:calc(100% + 4px);left:0;right:0;max-height:260px;overflow-y:auto;background:var(--paper);border:1px solid var(--ink-mute);border-radius:4px;box-shadow:0 4px 12px rgba(0,0,0,0.12);z-index:1000;margin:0;padding:0;list-style:none;font-family:var(--sans);font-size:13px;}
+.anncsu-autocomplete[hidden]{display:none;}
+.anncsu-autocomplete li{padding:8px 12px;cursor:pointer;color:var(--ink);border-bottom:1px solid var(--paper-2);}
+.anncsu-autocomplete li:last-child{border-bottom:none;}
+.anncsu-autocomplete li:hover,.anncsu-autocomplete li.anncsu-ac-active{background:var(--accent);color:#fff;}
 .anncsu-filters{display:flex;flex-wrap:wrap;gap:6px;}
 .anncsu-chip{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;min-height:28px;background:var(--paper-2);border:1px solid var(--ink-mute);border-radius:14px;font-family:var(--mono);font-size:11px;color:var(--ink);cursor:pointer;transition:all .15s ease;line-height:1;text-transform:uppercase;letter-spacing:.04em;}
 .anncsu-chip:hover{background:#fff;border-color:var(--accent);}
@@ -3902,11 +3908,13 @@ function renderAnncsuTab(d) {
         nel conferimento ad ANNCSU.
       </p>
       <div class="anncsu-controls">
-        <input type="text" id="anncsu-search" class="anncsu-search-input"
-               list="anncsu-search-list"
-               placeholder="Cerca odonimo (es: VIA ROMA)…" autocomplete="off"
-               aria-label="Cerca strada per nome">
-        <datalist id="anncsu-search-list"></datalist>
+        <div class="anncsu-search-wrap">
+          <input type="text" id="anncsu-search" class="anncsu-search-input"
+                 placeholder="Cerca odonimo (min 4 caratteri)…" autocomplete="off"
+                 aria-label="Cerca strada per nome"
+                 aria-autocomplete="list" aria-controls="anncsu-autocomplete">
+          <ul id="anncsu-autocomplete" class="anncsu-autocomplete" role="listbox" hidden></ul>
+        </div>
         <div id="anncsu-filters" class="anncsu-filters" role="group" aria-label="Filtri metodo georef"></div>
       </div>
       <div id="anncsu-legend" class="anncsu-legend" role="group" aria-label="Legenda metodi di geo-referenziazione"></div>
@@ -4175,16 +4183,16 @@ function initAnncsu(d) {
   // ---- 8) Search civico (VIA ROMA 10 → zoom + popup)
   const searchEl = document.getElementById('anncsu-search');
   const resultEl = document.getElementById('anncsu-search-result');
-  const listEl = document.getElementById('anncsu-search-list');
+  const acEl = document.getElementById('anncsu-autocomplete');
   let searchTimer = null;
+  let acActive = -1;   // indice voce attiva via tastiera (-1 = nessuna)
 
   // Pre-calcolo top 200 odonimi unici per frequenza nei punti del sample.
-  // Il datalist viene popolato dinamicamente solo se l'utente digita >=3
-  // caratteri, per evitare la tendina lunga al focus (limite UX del
-  // datalist HTML5 nativo: non supporta min-chars).
+  // Custom dropdown <ul> sotto l'input (non datalist HTML5 nativo che
+  // ha tendina ingovernabile e troppo grande). Min 4 caratteri.
   // Limite noto: sample 1000 punti, vedi TODO opzione C in cima alla funzione.
   let topOdonimi = [];
-  if (listEl) {
+  if (acEl) {
     const odoFreq = new Map();
     punti.forEach(p => {
       if (p.odo) odoFreq.set(p.odo, (odoFreq.get(p.odo) || 0) + 1);
@@ -4195,23 +4203,77 @@ function initAnncsu(d) {
       .map(([odo, _]) => odo);
   }
 
+  function closeAutocomplete() {
+    if (acEl) { acEl.hidden = true; acEl.innerHTML = ''; }
+    acActive = -1;
+  }
+
+  function renderAutocomplete(matches) {
+    if (!acEl) return;
+    if (matches.length === 0) { closeAutocomplete(); return; }
+    acEl.innerHTML = matches
+      .slice(0, 8)
+      .map((o, i) => `<li role="option" data-idx="${i}" data-val="${o.replace(/"/g, '&quot;')}">${o}</li>`)
+      .join('');
+    acEl.hidden = false;
+    acActive = -1;
+  }
+
+  if (acEl) {
+    // Click su voce: riempie input + lancia search
+    acEl.addEventListener('mousedown', (ev) => {
+      const li = ev.target.closest('li[data-val]');
+      if (!li) return;
+      ev.preventDefault();
+      searchEl.value = li.dataset.val;
+      closeAutocomplete();
+      // Trigger ricerca immediata
+      searchEl.dispatchEvent(new Event('input'));
+    });
+  }
+
+  // Chiudi dropdown al click fuori
+  document.addEventListener('click', (ev) => {
+    if (acEl && !acEl.contains(ev.target) && ev.target !== searchEl) {
+      closeAutocomplete();
+    }
+  });
+
   if (searchEl && resultEl) {
+    // Navigazione tastiera nell'autocomplete
+    searchEl.addEventListener('keydown', (ev) => {
+      if (!acEl || acEl.hidden) return;
+      const items = acEl.querySelectorAll('li');
+      if (!items.length) return;
+      if (ev.key === 'ArrowDown') {
+        ev.preventDefault();
+        acActive = Math.min(acActive + 1, items.length - 1);
+        items.forEach((it, i) => it.classList.toggle('anncsu-ac-active', i === acActive));
+        items[acActive]?.scrollIntoView({ block: 'nearest' });
+      } else if (ev.key === 'ArrowUp') {
+        ev.preventDefault();
+        acActive = Math.max(acActive - 1, 0);
+        items.forEach((it, i) => it.classList.toggle('anncsu-ac-active', i === acActive));
+        items[acActive]?.scrollIntoView({ block: 'nearest' });
+      } else if (ev.key === 'Enter' && acActive >= 0) {
+        ev.preventDefault();
+        searchEl.value = items[acActive].dataset.val;
+        closeAutocomplete();
+        searchEl.dispatchEvent(new Event('input'));
+      } else if (ev.key === 'Escape') {
+        closeAutocomplete();
+      }
+    });
+
     searchEl.addEventListener('input', () => {
-      // Popola datalist solo se l'utente ha digitato >=3 caratteri
-      // (evita tendina lunga al focus con datalist HTML5 nativo)
-      if (listEl) {
+      // Popola autocomplete custom solo se >=4 caratteri
+      if (acEl) {
         const inputVal = searchEl.value.trim().toUpperCase();
-        if (inputVal.length >= 3) {
-          // Filtra top 200 odonimi per match substring case-insensitive
-          // e limita a max 50 voci per il datalist (più che sufficiente)
-          const matchingOdonimi = topOdonimi
-            .filter(o => o.toUpperCase().includes(inputVal))
-            .slice(0, 50);
-          listEl.innerHTML = matchingOdonimi
-            .map(o => `<option value="${o.replace(/"/g, '&quot;')}"></option>`)
-            .join('');
+        if (inputVal.length >= 4) {
+          const matches = topOdonimi.filter(o => o.toUpperCase().includes(inputVal));
+          renderAutocomplete(matches);
         } else {
-          listEl.innerHTML = '';
+          closeAutocomplete();
         }
       }
 
