@@ -16,6 +16,7 @@
  *   - territorio/<istat>.json
  *   - bdap/dettaglio/<istat>.json    (opere)
  *   - siope/<istat>.json             (spese SIOPE pre-calcolate)
+ *   - immobili_pa/<istat>.json     (MEF DE - Beni Immobili Pubblici 2022)
  *   - lookup/anac-aggregato.json[<cf>] (contratti)
  *
  * Schema output (passa-attraverso del file R2):
@@ -40,7 +41,19 @@
  *                                         //       "2026": { ..., parziale: true }
  *                                         //     }
  *                                         //   }
- *     "anac":        { ... } | null
+ *     "anac":        { ... } | null,
+ *     "immobili_pa": { ... } | null    // MEF DE - Beni Immobili Pubblici 2022:
+ *                                       //   { anno_rilevazione: 2022,
+ *                                       //     kpi: { n_totale, n_fabbricati, n_terreni,
+ *                                       //            pct_geo_referenziati,
+ *                                       //            pct_vincolo_qualsiasi, pct_vincolo_culturale,
+ *                                       //            pct_uso_terzi, superficie_totale_mq,
+ *                                       //            mix_categoria, mix_natura },
+ *                                       //     punti: [{ lat, lon, cat, tipo, sup,
+ *                                       //               vincolo, uso_terzi }, ...]
+ *                                       //               // capped a 500 punti per comune
+ *                                       //               // (sampling stratificato per categoria)
+ *                                       //   }
  *   }
  *
  * NB sulla cache:
@@ -94,7 +107,7 @@ interface DashboardShard {
 
 export const comuneDashboard: ToolDefinition = {
   description:
-    "Vista completa di un comune italiano in una sola chiamata: anagrafica, demografia, profilo censimento, turismo, progetti PNRR, territorio (ISPRA Suolo/IdroGEO/Rifiuti), qualità dell'aria (ISPRA SNPA: PM10/PM2.5/NO2 con stazioni), opere pubbliche (BDAP-MOP), spese (SIOPE multi-anno con per_anno e anno_default), contratti (ANAC), scuole (MIUR), veicoli e incidenti (ISTAT 41_993 parco PRA per classe Euro + ISTAT 41_983 incidenti stradali con morti/feriti + ACI LOD nuove iscrizioni per alimentazione), redditi e fisco (MEF Dipartimento delle Finanze: dichiarazioni IRPEF su base comunale a.i. 2020-2024 con numero contribuenti, reddito medio, distribuzione per 8 fasce di reddito, tipologie dipendente/pensione/autonomo/fabbricati, addizionale comunale e imposta netta media). Tool da preferire per qualsiasi domanda generale su un comune ('mostrami Bergamo', 'dati di Milano'). Richiede istat_code (6 cifre, es. '075035'). Se hai solo il nome, chiama prima search_comune per ottenerlo. Accetta anche denominazione ma è meno affidabile sui casi di omonimia/fusione.",
+    "Vista completa di un comune italiano in una sola chiamata: anagrafica, demografia, profilo censimento, turismo, progetti PNRR, territorio (ISPRA Suolo/IdroGEO/Rifiuti), qualità dell'aria (ISPRA SNPA: PM10/PM2.5/NO2 con stazioni), opere pubbliche (BDAP-MOP), spese (SIOPE multi-anno con per_anno e anno_default), contratti (ANAC), scuole (MIUR), veicoli e incidenti (ISTAT 41_993 parco PRA per classe Euro + ISTAT 41_983 incidenti stradali con morti/feriti + ACI LOD nuove iscrizioni per alimentazione), redditi e fisco (MEF Dipartimento delle Finanze: dichiarazioni IRPEF su base comunale a.i. 2020-2024 con numero contribuenti, reddito medio, distribuzione per 8 fasce di reddito, tipologie dipendente/pensione/autonomo/fabbricati, addizionale comunale e imposta netta media). Tool da preferire per qualsiasi domanda generale su un comune ('mostrami Bergamo', 'dati di Milano'). Richiede istat_code (6 cifre, es. '075035'). Se hai solo il nome, chiama prima search_comune per ottenerlo. Accetta anche denominazione ma è meno affidabile sui casi di omonimia/fusione. Include anche la sezione immobili_pa con beni immobili pubblici detenuti dalle PA (MEF DE 2022, dichiarazioni al 31/12/2022): KPI aggregati (fabbricati/terreni, vincolo culturale, uso a terzi, superficie totale, mix categoria) e fino a 500 punti georeferenziati con tipologia e categoria semantica.",
   inputSchema: {
     type: "object",
     properties: {

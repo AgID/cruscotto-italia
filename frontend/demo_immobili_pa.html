@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Demo Patrimonio PA - Cruscotto Italia</title>
+
+<!-- Vendored: same-origin (CSP-safe) -->
+<link rel="stylesheet" href="vendor/leaflet.css">
+
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background: #f5f6f8;
+    color: #17324d;
+    line-height: 1.5;
+  }
+  header {
+    background: #0066CC;
+    color: white;
+    padding: 16px 24px;
+  }
+  header h1 { margin: 0; font-size: 20px; font-weight: 500; }
+  header p { margin: 4px 0 0; font-size: 13px; opacity: 0.9; }
+
+  .container {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+
+  .toolbar {
+    background: white;
+    padding: 16px 20px;
+    border-radius: 8px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    border: 1px solid rgba(23, 50, 77, 0.1);
+  }
+  .toolbar label { font-size: 14px; color: #5C6F82; }
+  .toolbar select {
+    font-size: 14px;
+    padding: 6px 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background: white;
+    min-width: 240px;
+  }
+  .toolbar .info { font-size: 13px; color: #5C6F82; margin-left: auto; }
+
+  .kpis {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .kpi {
+    background: white;
+    padding: 16px;
+    border-radius: 8px;
+    border: 1px solid rgba(23, 50, 77, 0.1);
+  }
+  .kpi-label { font-size: 12px; color: #5C6F82; text-transform: uppercase; letter-spacing: 0.5px; }
+  .kpi-value { font-size: 26px; font-weight: 500; margin-top: 4px; color: #17324d; }
+  .kpi-unit { font-size: 13px; color: #5C6F82; margin-left: 4px; }
+
+  .panels {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 16px;
+  }
+  @media (max-width: 900px) {
+    .panels { grid-template-columns: 1fr; }
+  }
+  .panel {
+    background: white;
+    padding: 16px;
+    border-radius: 8px;
+    border: 1px solid rgba(23, 50, 77, 0.1);
+  }
+  .panel h2 {
+    margin: 0 0 12px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #5C6F82;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  #map { height: 520px; border-radius: 4px; }
+  #chart-container { position: relative; height: 480px; }
+
+  .filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 12px;
+    font-size: 12px;
+  }
+  .filter-chip {
+    padding: 4px 10px;
+    background: #f0f3f6;
+    border: 1px solid transparent;
+    border-radius: 12px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .filter-chip.active {
+    background: #0066CC;
+    color: white;
+  }
+  .filter-chip:hover:not(.active) { background: #e0e6ec; }
+
+  .loading {
+    padding: 60px;
+    text-align: center;
+    color: #5C6F82;
+    font-size: 14px;
+  }
+  .error {
+    background: #fdecea;
+    color: #9b1c1c;
+    padding: 16px;
+    border-radius: 8px;
+    font-size: 14px;
+  }
+
+  .leaflet-popup-content { font-size: 13px; margin: 8px 12px; }
+  .leaflet-popup-content strong { color: #17324d; }
+  .popup-tipo { font-weight: 500; margin-bottom: 4px; }
+  .popup-meta { color: #5C6F82; font-size: 12px; }
+
+  .legend-dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-right: 6px;
+    vertical-align: middle;
+  }
+
+  .cluster-icon {
+    background: #0066CC;
+    color: white;
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 500;
+    border: 2px solid white;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Demo Patrimonio PA — Beni immobili pubblici dei Comuni</h1>
+  <p>Fonte: MEF Dipartimento Economia, Censimento Beni Immobili Pubblici 2022 · Licenza CC BY 4.0</p>
+</header>
+
+<div class="container">
+
+  <div class="toolbar">
+    <label for="comune-select">Comune di test:</label>
+    <select id="comune-select">
+      <option value="058091">Roma (058091)</option>
+      <option value="015146">Milano (015146)</option>
+      <option value="007003" selected>Aosta (007003)</option>
+      <option value="007021">Cogne (007021)</option>
+    </select>
+    <div class="info" id="info-source">—</div>
+  </div>
+
+  <div id="content">
+    <div class="loading">Caricamento dati…</div>
+  </div>
+
+</div>
+
+<!-- Vendored scripts: same-origin -->
+<script src="vendor/leaflet.js"></script>
+<script src="vendor/chart.umd.min.js"></script>
+
+<script>
+const MCP_ENDPOINT = "https://cruscotto-italia-mcp.datigovit.workers.dev/mcp";
+
+const CAT_COLORS = {
+  "fabbricati_sociali_scolastici":    "#0066CC",
+  "fabbricati_sociali_sanitari":      "#D9364F",
+  "fabbricati_sociali_sportivi":      "#00A86B",
+  "fabbricati_sociali_culturali":     "#A050BE",
+  "fabbricati_amministrativi_uffici": "#5C6F82",
+  "fabbricati_amministrativi_sicurezza":"#3A3A3A",
+  "fabbricati_residenziali":          "#E89400",
+  "fabbricati_pertinenze":            "#C9A23E",
+  "fabbricati_magazzini":             "#8B6F47",
+  "fabbricati_parcheggi":             "#1B7BBC",
+  "fabbricati_produttivi":            "#9B2335",
+  "terreni_agricoli":                 "#7CB342",
+  "terreni_boschivi":                 "#33691E",
+  "terreni_pascolo":                  "#C0CA33",
+  "terreni_urbani":                   "#FF6F00",
+  "terreni_parchi_pubblici":          "#388E3C",
+  "altro":                            "#9E9E9E",
+};
+
+const CAT_LABELS = {
+  "fabbricati_sociali_scolastici":    "Scolastico",
+  "fabbricati_sociali_sanitari":      "Sanitario",
+  "fabbricati_sociali_sportivi":      "Sportivo",
+  "fabbricati_sociali_culturali":     "Culturale",
+  "fabbricati_amministrativi_uffici": "Uffici PA",
+  "fabbricati_amministrativi_sicurezza":"Sicurezza/Caserme",
+  "fabbricati_residenziali":          "Residenziale",
+  "fabbricati_pertinenze":            "Pertinenze",
+  "fabbricati_magazzini":             "Magazzini",
+  "fabbricati_parcheggi":             "Parcheggi",
+  "fabbricati_produttivi":            "Produttivi",
+  "terreni_agricoli":                 "Terreni agricoli",
+  "terreni_boschivi":                 "Terreni boschivi",
+  "terreni_pascolo":                  "Pascoli",
+  "terreni_urbani":                   "Terreni urbani",
+  "terreni_parchi_pubblici":          "Parchi pubblici",
+  "altro":                            "Altro",
+};
+
+let map = null;
+let markerLayer = null;
+let chart = null;
+let currentData = null;
+let activeFilters = new Set();
+
+async function loadComune(istat) {
+  const root = document.getElementById("content");
+  root.innerHTML = `<div class="loading">Caricamento ${istat}…</div>`;
+  document.getElementById("info-source").textContent = "—";
+
+  try {
+    const resp = await fetch(MCP_ENDPOINT, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        jsonrpc: "2.0", id: 1,
+        method: "tools/call",
+        params: { name: "comune_dashboard", arguments: { istat_code: istat } },
+      }),
+    });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const json = await resp.json();
+    if (json.error) throw new Error(JSON.stringify(json.error));
+
+    const text = json.result?.content?.[0]?.text;
+    if (!text) throw new Error("Nessun payload dal worker MCP");
+    const data = JSON.parse(text);
+
+    const immobili = data.immobili_pa;
+    if (!immobili) {
+      root.innerHTML = `<div class="error">
+        Il comune <strong>${data.anagrafica?.denominazione || istat}</strong> non ha la sezione <code>immobili_pa</code>.<br>
+        <small>Generato: ${data._generated_at || "?"} | Missing: ${(data._missing || []).join(", ") || "nessuno"}</small>
+      </div>`;
+      return;
+    }
+
+    currentData = { comune: data.anagrafica, immobili };
+    document.getElementById("info-source").textContent =
+      `${data.anagrafica.denominazione} (${data.anagrafica.provincia}) · ${immobili.kpi.n_totale.toLocaleString("it-IT")} immobili · dati ${immobili.anno_rilevazione}`;
+
+    render(currentData);
+  } catch (err) {
+    root.innerHTML = `<div class="error"><strong>Errore caricamento:</strong> ${err.message}</div>`;
+    console.error(err);
+  }
+}
+
+function render({ comune, immobili }) {
+  const kpi = immobili.kpi;
+  const root = document.getElementById("content");
+
+  root.innerHTML = `
+    <div class="kpis">
+      <div class="kpi"><div class="kpi-label">Totale immobili</div><div class="kpi-value">${kpi.n_totale.toLocaleString("it-IT")}</div></div>
+      <div class="kpi"><div class="kpi-label">Fabbricati</div><div class="kpi-value">${kpi.n_fabbricati.toLocaleString("it-IT")}</div></div>
+      <div class="kpi"><div class="kpi-label">Terreni</div><div class="kpi-value">${kpi.n_terreni.toLocaleString("it-IT")}</div></div>
+      <div class="kpi"><div class="kpi-label">Superficie tot.</div><div class="kpi-value">${(kpi.superficie_totale_mq / 1_000_000).toFixed(1)}<span class="kpi-unit">km²</span></div></div>
+      <div class="kpi"><div class="kpi-label">Geo-referenziati</div><div class="kpi-value">${kpi.pct_geo_referenziati.toFixed(1)}<span class="kpi-unit">%</span></div></div>
+      <div class="kpi"><div class="kpi-label">Con vincolo</div><div class="kpi-value">${kpi.pct_vincolo_qualsiasi.toFixed(1)}<span class="kpi-unit">%</span></div></div>
+      <div class="kpi"><div class="kpi-label">Dati a terzi</div><div class="kpi-value">${kpi.pct_uso_terzi.toFixed(1)}<span class="kpi-unit">%</span></div></div>
+    </div>
+
+    <div class="panels">
+      <div class="panel">
+        <h2>Mappa (${immobili.punti.length} punti)</h2>
+        <div class="filters" id="filters"></div>
+        <div id="map"></div>
+      </div>
+      <div class="panel">
+        <h2>Mix per categoria</h2>
+        <div id="chart-container"><canvas id="chart"></canvas></div>
+      </div>
+    </div>
+  `;
+
+  renderFilters(immobili);
+  renderMap(immobili);
+  renderChart(immobili);
+}
+
+function renderFilters(immobili) {
+  const container = document.getElementById("filters");
+  const cats = Object.keys(immobili.kpi.mix_categoria);
+  activeFilters = new Set(cats);
+
+  const all = document.createElement("span");
+  all.className = "filter-chip active";
+  all.textContent = "Tutti";
+  all.addEventListener("click", () => {
+    activeFilters = new Set(cats);
+    document.querySelectorAll(".filter-chip[data-cat]").forEach(c => c.classList.add("active"));
+    refreshMap(immobili);
+  });
+  container.appendChild(all);
+
+  cats.forEach(cat => {
+    const chip = document.createElement("span");
+    chip.className = "filter-chip active";
+    chip.dataset.cat = cat;
+    chip.innerHTML = `<span class="legend-dot" style="background:${CAT_COLORS[cat]||'#999'}"></span>${CAT_LABELS[cat]||cat} (${immobili.kpi.mix_categoria[cat]})`;
+    chip.addEventListener("click", () => {
+      if (activeFilters.has(cat)) {
+        activeFilters.delete(cat);
+        chip.classList.remove("active");
+      } else {
+        activeFilters.add(cat);
+        chip.classList.add("active");
+      }
+      refreshMap(immobili);
+    });
+    container.appendChild(chip);
+  });
+}
+
+// Custom clustering grid-based (sostituisce MarkerCluster)
+function clusterPoints(points, map) {
+  const zoom = map.getZoom();
+  // Su zoom alto mostra tutti i punti individuali
+  if (zoom >= 15) {
+    return points.map(p => ({ type: "marker", point: p }));
+  }
+  // Grid size in pixel (~ 60px per cluster cell)
+  const cellPx = 60;
+  const grid = new Map();
+  points.forEach(p => {
+    const pt = map.latLngToContainerPoint([p.lat, p.lon]);
+    const gx = Math.floor(pt.x / cellPx);
+    const gy = Math.floor(pt.y / cellPx);
+    const key = `${gx},${gy}`;
+    if (!grid.has(key)) grid.set(key, []);
+    grid.get(key).push(p);
+  });
+  const result = [];
+  grid.forEach(cellPoints => {
+    if (cellPoints.length === 1) {
+      result.push({ type: "marker", point: cellPoints[0] });
+    } else {
+      const avgLat = cellPoints.reduce((s, p) => s + p.lat, 0) / cellPoints.length;
+      const avgLon = cellPoints.reduce((s, p) => s + p.lon, 0) / cellPoints.length;
+      result.push({ type: "cluster", lat: avgLat, lon: avgLon, count: cellPoints.length });
+    }
+  });
+  return result;
+}
+
+function renderMap(immobili) {
+  if (map) map.remove();
+  const pts = immobili.punti;
+  if (!pts.length) {
+    document.getElementById("map").innerHTML = "<div class='loading'>Nessun punto georeferenziato</div>";
+    return;
+  }
+
+  const avgLat = pts.reduce((s, p) => s + p.lat, 0) / pts.length;
+  const avgLon = pts.reduce((s, p) => s + p.lon, 0) / pts.length;
+
+  map = L.map("map").setView([avgLat, avgLon], 13);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 19, attribution: '© OpenStreetMap'
+  }).addTo(map);
+
+  markerLayer = L.layerGroup().addTo(map);
+  populateLayer(immobili);
+  map.on("zoomend moveend", () => populateLayer(immobili));
+}
+
+function populateLayer(immobili) {
+  markerLayer.clearLayers();
+  const filtered = immobili.punti.filter(p => activeFilters.has(p.cat));
+  const items = clusterPoints(filtered, map);
+
+  items.forEach(item => {
+    if (item.type === "marker") {
+      const p = item.point;
+      const color = CAT_COLORS[p.cat] || "#999";
+      const m = L.circleMarker([p.lat, p.lon], {
+        radius: 6, fillColor: color, color: "white",
+        weight: 1, opacity: 1, fillOpacity: 0.85,
+      });
+      const supStr = p.sup ? `${p.sup.toLocaleString("it-IT")} mq` : "—";
+      m.bindPopup(`
+        <div class="popup-tipo">${p.tipo}</div>
+        <div class="popup-meta">
+          Categoria: <strong>${CAT_LABELS[p.cat] || p.cat}</strong><br>
+          Superficie: ${supStr}<br>
+          Vincolo tutela: ${p.vincolo ? "Sì" : "No"}<br>
+          Uso a terzi: ${p.uso_terzi ? "Sì" : "No"}
+        </div>
+      `);
+      markerLayer.addLayer(m);
+    } else {
+      // Cluster
+      const icon = L.divIcon({
+        html: `<div class="cluster-icon">${item.count}</div>`,
+        className: "",
+        iconSize: [36, 36],
+        iconAnchor: [18, 18],
+      });
+      const c = L.marker([item.lat, item.lon], { icon });
+      c.on("click", () => {
+        map.setView([item.lat, item.lon], Math.min(map.getZoom() + 2, 18));
+      });
+      markerLayer.addLayer(c);
+    }
+  });
+}
+
+function refreshMap(immobili) {
+  if (!markerLayer) return;
+  populateLayer(immobili);
+}
+
+function renderChart(immobili) {
+  if (chart) chart.destroy();
+  const mix = immobili.kpi.mix_categoria;
+  const entries = Object.entries(mix).sort((a, b) => b[1] - a[1]);
+  const labels = entries.map(([k]) => CAT_LABELS[k] || k);
+  const data = entries.map(([, v]) => v);
+  const colors = entries.map(([k]) => CAT_COLORS[k] || "#999");
+
+  const ctx = document.getElementById("chart").getContext("2d");
+  chart = new Chart(ctx, {
+    type: "bar",
+    data: { labels, datasets: [{ data, backgroundColor: colors }] },
+    options: {
+      indexAxis: "y",
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { beginAtZero: true, grid: { color: "rgba(0,0,0,0.05)" } },
+        y: { ticks: { font: { size: 11 } } },
+      },
+    },
+  });
+}
+
+document.getElementById("comune-select").addEventListener("change", (e) => loadComune(e.target.value));
+loadComune("007003");
+</script>
+
+</body>
+</html>

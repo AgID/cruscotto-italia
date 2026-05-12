@@ -11,7 +11,7 @@ export async function handleInfo(_req: Request, _env: Env): Promise<Response> {
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>Cruscotto Italia · MCP Server</title>
-<meta name="description" content="Server Model Context Protocol che federa dodici dataset pubblici sui comuni italiani. Connettilo a Claude Desktop, ChatGPT o client MCP generici.">
+<meta name="description" content="Server Model Context Protocol che federa tredici dataset pubblici sui comuni italiani. Connettilo a Claude Desktop, ChatGPT o client MCP generici.">
 <!-- Design Italia: stessi token e font del frontend Cruscotto Italia -->
 <link rel="stylesheet" href="https://cruscotto-italia.piersoftckan.biz/css/tokens.css">
 <link rel="stylesheet" href="https://cruscotto-italia.piersoftckan.biz/css/base.css">
@@ -222,7 +222,7 @@ pre code {
   <div class="wrap">
     <div class="mini-brand-wrap">
       <a href="https://cruscotto-italia.piersoftckan.biz" class="mini-brand">Cruscotto <span class="it">Italia</span></a>
-      <span class="mini-brand-sub">MCP Server · 12 fonti istituzionali</span>
+      <span class="mini-brand-sub">MCP Server · 13 fonti istituzionali</span>
     </div>
   </div>
 </div>
@@ -231,7 +231,7 @@ pre code {
 
   <div class="eyebrow">§ MCP Server · v0.4</div>
   <h1>Cruscotto Italia <em>MCP</em>.</h1>
-  <p class="lead">Server <a href="https://modelcontextprotocol.io" target="_blank" rel="noopener">Model Context Protocol</a> che federa dodici dataset pubblici sui comuni italiani (ANAC, BDAP-MOP, SIOPE, PNRR, ISPRA, ISTAT, MIUR, ACI, MEF). Connettilo al tuo client LLM per interrogare i dati ufficiali con linguaggio naturale.</p>
+  <p class="lead">Server <a href="https://modelcontextprotocol.io" target="_blank" rel="noopener">Model Context Protocol</a> che federa tredici dataset pubblici sui comuni italiani (ANAC, BDAP-MOP, SIOPE, PNRR, ISPRA, ISTAT, MIUR, ACI, MEF Federalismo Fiscale, MEF Patrimonio Immobiliare). Connettilo al tuo client LLM per interrogare i dati ufficiali con linguaggio naturale.</p>
 
   <h2>Come <em>connetterlo</em></h2>
 
@@ -266,7 +266,7 @@ pre code {
   <div class="tools">
     <div class="tool-row"><div class="tool-name">mcp_info</div><div class="tool-desc">Metadata del server: versione, sorgenti integrate, freshness dei dati.</div></div>
     <div class="tool-row"><div class="tool-name">search_comune</div><div class="tool-desc">Risolve un nome di comune in codice ISTAT a 6 cifre. Da chiamare per primo.</div></div>
-    <div class="tool-row"><div class="tool-name">comune_dashboard</div><div class="tool-desc">Vista completa in una sola chiamata: anagrafica, demografia, profilo, turismo, PNRR, territorio, aria, opere, contratti aggregati, SIOPE multi-anno, scuole, veicoli e incidenti, redditi IRPEF.</div></div>
+    <div class="tool-row"><div class="tool-name">comune_dashboard</div><div class="tool-desc">Vista completa in una sola chiamata: anagrafica, demografia, profilo, turismo, PNRR, territorio, aria, opere, contratti aggregati, SIOPE multi-anno, scuole, veicoli e incidenti, redditi IRPEF, patrimonio immobiliare PA.</div></div>
     <div class="tool-row"><div class="tool-name">comune_demografia</div><div class="tool-desc">Popolazione per età e sesso (POSAS al 1 gennaio 2026), piramide demografica, indici di vecchiaia e dipendenza.</div></div>
     <div class="tool-row"><div class="tool-name">comune_profilo</div><div class="tool-desc">Censimento permanente ISTAT: istruzione, lavoro, famiglie, mobilità, cittadinanza.</div></div>
     <div class="tool-row"><div class="tool-name">comune_turismo</div><div class="tool-desc">Capacità ricettiva comunale (alberghi ed extra-alberghiero) e flussi turistici provinciali.</div></div>

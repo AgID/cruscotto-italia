@@ -9,7 +9,7 @@ import type { ToolDefinition } from "./index.js";
 
 export const mcpInfo: ToolDefinition = {
   description:
-    "Returns server metadata, version, and data freshness for each integrated source (ANAC, BDAP-MOP, SIOPE, Italia Domani PNRR, ISTAT, ISPRA, MIUR, ACI).",
+    "Returns server metadata, version, and data freshness for each integrated source (ANAC, BDAP-MOP, SIOPE, Italia Domani PNRR, ISTAT, ISPRA, MIUR, ACI, MEF Federalismo Fiscale, MEF Patrimonio Immobiliare PA).",
   inputSchema: {
     type: "object",
     properties: {},
@@ -27,8 +27,8 @@ export const mcpInfo: ToolDefinition = {
       service: "cruscotto-italia-mcp",
       version: "0.4.0",
       protocol: "MCP 2024-11-05",
-      datasets: 12,
-      institutions: 8,
+      datasets: 13,
+      institutions: 9,
       municipalities: 7918,
       sources: {
         anac: {
@@ -79,11 +79,18 @@ export const mcpInfo: ToolDefinition = {
             "Nuove iscrizioni veicoli per alimentazione (ACI LOD)",
           ],
         },
-        mef: {
+        mef_redditi: {
           canonical: "https://www.finanze.gov.it/it/statistiche-fiscali/DichiarazioniFiscali-/",
           license: "CC-BY 3.0",
           datasets: [
             "Redditi e principali variabili IRPEF su base comunale (a.i. 2020-2024)",
+          ],
+        },
+        mef_patrimonio: {
+          canonical: "https://www.de.mef.gov.it/it/attivita_istituzionali/patrimonio_pubblico/censimento_immobili_pubblici/",
+          license: "CC-BY 4.0",
+          datasets: [
+            "Censimento beni immobili pubblici detenuti dalle Amministrazioni Pubbliche al 31/12/2022 (fabbricati e terreni con geolocalizzazione)",
           ],
         },
       },

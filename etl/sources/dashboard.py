@@ -19,6 +19,7 @@ Sorgenti accorpate:
 - bdap/dettaglio/<istat>.json    (BDAP-MOP opere)
 - siope/<istat>.json             (SIOPE Spese pre-calcolate)
 - scuole/<istat>.json            (MIUR Anagrafe scuole statali)
+- immobili_pa/<istat>.json       (MEF DE - Beni Immobili Pubblici 2022)
 - lookup/anac-aggregato.json     (filtrato per CF)
 - lookup/comuni-bundle.json      (anagrafica)
 
@@ -74,6 +75,7 @@ SHARDS = [
     ("aria",       "aria/{istat}.json"),
     ("veicoli",    "veicoli/{istat}.json"),
     ("redditi",    "redditi/{istat}.json"),
+    ("immobili_pa", "immobili_pa/{istat}.json"),
 ]
 
 ETL_VERSION = "0.1.0"
