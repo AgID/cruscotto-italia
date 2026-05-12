@@ -42,8 +42,10 @@ LOG_DIR = BASE_OUT / "_logs"
 ETL_PLAN = [
     # --------- FAST ---------
     ("anagrafica",     "fast",       [],                                                 60),
-    ("bdap_mop",       "fast",       [],                                                 60),
-    ("bdap_siope",     "fast",       ["--year", "2026"],                                 90),
+    # bdap_mop e bdap_siope rimossi: sono stub v0.1 non implementati
+    # (vedi etl/sources/bdap_mop.py e bdap_siope.py: stampano "Not yet
+    # implemented" ed escono 0). Il lavoro reale è fatto da bdap.py e
+    # siope.py, già nel piano.
 
     # --------- MEDIUM ---------
     ("demografia",     "medium",     [],                                                300),
@@ -52,7 +54,10 @@ ETL_PLAN = [
     ("territorio",     "medium",     ["--skip-idrogeo", "--skip-rifiuti"],              300),
     ("scuole",         "medium",     [],                                                360),
     ("pnrr_progetti",  "medium",     [],                                                360),
-    ("anac",           "medium",     ["--months", "202603"],                            360),
+    # anac: ANAC OCDS-IT bulk pubblica i mesi con ritardo variabile (talvolta
+    # >2 mesi). Lo script prova in cascata mesi sempre più vecchi finché ne
+    # trova uno disponibile. Gestito da run_one_anac_with_fallback.
+    ("anac",           "medium",     ["--months", "ANAC_FALLBACK"],                     360),
     ("immobili_pa",    "medium",     ["--regione", "VALLE-D_AOSTA"],                              360),
     ("siope",          "medium",     ["--regioni", "02", "--anni", "2026"],             420),
     ("anncsu",         "medium",     ["--regioni", "VALL"],                               420),
@@ -78,7 +83,7 @@ OUTDIR_FLAG = {
 # Alcuni ETL (wrapper o ETL con output hardcoded) non accettano alcun
 # flag di output dir. Per quelli, l'output va nella dir di default
 # definita nello script ETL stesso (tipicamente dist/<source>/).
-ETL_NO_OUTPUT_DIR = {"bdap_mop", "bdap_siope", "veicoli"}
+ETL_NO_OUTPUT_DIR = {"veicoli"}  # ETL con OUTPUT_DIR hardcoded, niente --output-dir
 
 # -----------------------------------------------------------------------------
 # Helpers
@@ -106,11 +111,92 @@ def fmt_time(s: float) -> str:
     return f"{int(m)}m{int(r):02d}s"
 
 
+def run_one_anac(name, tier, extra_args, timeout_s, out_dir, log_path):
+    """Per anac, prova mesi in cascata (ritardo pubblicazione variabile)."""
+    # Lista candidati: ultimo trimestre disponibile
+    now = time.gmtime()
+    candidates = []
+    y, m = now.tm_year, now.tm_mon
+    for _ in range(6):  # prova fino a 6 mesi indietro
+        m -= 1
+        if m == 0:
+            m = 12
+            y -= 1
+        candidates.append(f"{y}{m:02d}")
+    log(f"   {C['dim']}anac: provo mesi in cascata: {candidates}{C['reset']}")
+
+    other_args = [a for a in extra_args if a not in ("--months", "ANAC_FALLBACK")]
+    t0 = time.time()
+    last_log = ""
+    for month in candidates:
+        cmd = [
+            sys.executable, "-m", f"etl.sources.{name}",
+            "--target", "local",
+            "--output-dir", str(out_dir),
+            "--months", month,
+        ] + other_args
+        try:
+            with open(log_path, "w") as logf:
+                logf.write(f"=== Tentativo mese {month} ===\n")
+                logf.flush()
+                proc = subprocess.run(
+                    cmd, stdout=logf, stderr=subprocess.STDOUT,
+                    timeout=timeout_s, cwd=Path.cwd(),
+                )
+            last_log = log_path.read_text()
+            if proc.returncode == 0:
+                elapsed = time.time() - t0
+                files = list(out_dir.rglob("*.json"))
+                n_files = len(files)
+                total_bytes = sum(f.stat().st_size for f in files)
+                sample = files[0].name if files else None
+                log(f"   {C['green']}OK      {C['reset']}elapsed={fmt_time(elapsed)}  "
+                    f"files={n_files}  size={total_bytes/1024:.0f}KB  sample={sample}  "
+                    f"month={month}")
+                return {
+                    "name": name, "tier": tier, "status": "OK",
+                    "exit_code": 0, "elapsed_s": round(elapsed, 1),
+                    "n_files": n_files, "total_kb": round(total_bytes / 1024, 1),
+                    "sample_file": sample, "err_excerpt": f"month={month}",
+                    "log_path": str(log_path), "cmd": cmd,
+                }
+            # se month_not_available, ritenta col precedente
+            if "month_not_available" in last_log:
+                log(f"   {C['dim']}anac: {month} non disponibile, provo precedente{C['reset']}")
+                continue
+            # altro tipo di errore: fail subito
+            break
+        except subprocess.TimeoutExpired:
+            elapsed = time.time() - t0
+            log(f"   {C['yell']}TIMEOUT {C['reset']}elapsed={fmt_time(elapsed)}  month={month}")
+            return {"name": name, "tier": tier, "status": "TIMEOUT",
+                    "exit_code": -1, "elapsed_s": round(elapsed, 1),
+                    "n_files": 0, "total_kb": 0, "sample_file": None,
+                    "err_excerpt": f"timeout on month {month}",
+                    "log_path": str(log_path), "cmd": cmd}
+
+    # Tutti i mesi falliti
+    elapsed = time.time() - t0
+    tail = " | ".join(l.strip()[:80] for l in last_log.splitlines()[-5:] if l.strip())
+    log(f"   {C['red']}FAIL    {C['reset']}elapsed={fmt_time(elapsed)}  "
+        f"tutti i {len(candidates)} mesi non disponibili")
+    log(f"   {C['dim']}tail: {tail[:200]}{C['reset']}")
+    return {"name": name, "tier": tier, "status": "FAIL",
+            "exit_code": 1, "elapsed_s": round(elapsed, 1),
+            "n_files": 0, "total_kb": 0, "sample_file": None,
+            "err_excerpt": f"tutti i {len(candidates)} mesi non disponibili: {tail[:120]}",
+            "log_path": str(log_path), "cmd": cmd}
+
+
 def run_one(name: str, tier: str, extra_args: list, timeout_s: int) -> dict:
     """Esegue un singolo ETL con timeout. Ritorna dict risultati."""
     out_dir = BASE_OUT / name
     out_dir.mkdir(parents=True, exist_ok=True)
     log_path = LOG_DIR / f"{name}.log"
+
+    # Caso speciale: anac con sentinella ANAC_FALLBACK → prova mesi in cascata
+    if name == "anac" and "ANAC_FALLBACK" in extra_args:
+        return run_one_anac(name, tier, extra_args, timeout_s, out_dir, log_path)
 
     if name in ETL_NO_OUTPUT_DIR:
         cmd = [
@@ -162,7 +248,10 @@ def run_one(name: str, tier: str, extra_args: list, timeout_s: int) -> dict:
     # nella dir di default dell'ETL (es. dist/<name>/); proviamo a guardare lì.
     candidate_dirs = [out_dir]
     if name in ETL_NO_OUTPUT_DIR:
-        for cand in [Path("dist") / name, Path("dist") / name.replace("_", "-")]:
+        # veicoli.py ha OUTPUT_DIR = Path("output/veicoli") hardcoded
+        for cand in [Path("output") / name,
+                     Path("dist") / name,
+                     Path("dist") / name.replace("_", "-")]:
             if cand.is_dir():
                 candidate_dirs.append(cand)
     try:
