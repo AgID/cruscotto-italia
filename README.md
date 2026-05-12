@@ -109,74 +109,23 @@ Linee guida:
 
 ### Credenziali
 
-Cruscotto Italia richiede credenziali Cloudflare per due scopi indipendenti:
+Cruscotto Italia gira su Cloudflare (Worker + R2) e GitHub Actions (CI/CD).
+Servono credenziali in 3 posti diversi a seconda dello scenario:
 
-1. **ETL Python** scrive gli shard JSON su R2 (lettura + scrittura)
-2. **Wrangler CLI / GitHub Action `deploy-worker.yml`** deploya il Worker su Cloudflare
-
-In locale **non servono credenziali se ti basta:**
-
-- girare il Worker con `npm run dev` (legge R2 di produzione in sola lettura via binding wrangler)
-- girare gli ETL con `--target=local` (scrivono solo su disco, default su tutti gli ETL)
-- girare lo smoke test (`python3 scripts/smoke-test-etl.py`)
-
-#### Variabili d'ambiente (ETL locale che scrive su R2)
-
-Servono solo se vuoi pushare shard su R2 dalla tua macchina (es. `--target=r2`). Crea un file `.env` nella root del repo (è già in `.gitignore`):
-
-```bash
-# .env
-R2_ACCOUNT_ID="<il tuo account id Cloudflare>"
-R2_ACCESS_KEY_ID="<access key R2 creata da Cloudflare → R2 → Manage API Tokens>"
-R2_SECRET_ACCESS_KEY="<secret key R2>"
-R2_BUCKET="cruscotto-italia-data"   # opzionale, è il default
-```
-
-Per caricarle prima di lanciare un ETL:
-
-```bash
-set -a; source .env; set +a
-python -m etl.sources.demografia --target=r2
-```
-
-Le chiavi R2 si generano dal pannello Cloudflare:
-`R2 → Overview → Manage R2 API Tokens → Create API Token` con permessi `Object Read & Write` sul bucket `cruscotto-italia-data`.
-
-#### Credenziali Wrangler (deploy del Worker da locale)
-
-Per `wrangler deploy` dalla tua macchina:
-
-```bash
-cd worker
-wrangler login   # apre browser, fa OAuth con Cloudflare
-```
-
-In alternativa, env var:
-
-```bash
-export CLOUDFLARE_ACCOUNT_ID="<account id>"
-export CLOUDFLARE_API_TOKEN="<API token con scope: Workers Scripts:Edit, R2:Edit>"
-wrangler deploy
-```
-
-#### GitHub Secrets (per i workflow CI/CD)
-
-I workflow in `.github/workflows/` leggono i secrets dalla repo. Vanno settati in:
-
-**Settings → Secrets and variables → Actions → New repository secret**
-
-I secrets richiesti:
-
-| Nome | Workflow che lo usa | Cosa contiene |
+| Scenario | Cosa serve | Dove |
 |---|---|---|
-| `R2_ACCOUNT_ID` | `etl-annual.yml`, `etl-monthly.yml` | account ID Cloudflare |
-| `R2_ACCESS_KEY_ID` | `etl-annual.yml`, `etl-monthly.yml` | access key R2 (Object R/W) |
-| `R2_SECRET_ACCESS_KEY` | `etl-annual.yml`, `etl-monthly.yml` | secret key R2 |
-| `WORKER_ADMIN_TOKEN` | `etl-annual.yml`, `etl-monthly.yml` | bearer token per chiamate admin al Worker |
-| `CLOUDFLARE_ACCOUNT_ID` | `deploy-worker.yml` | account ID Cloudflare |
-| `CLOUDFLARE_API_TOKEN` | `deploy-worker.yml` | API token con scope Workers Scripts:Edit |
+| Smoke test ETL (`scripts/smoke-test-etl.py`) | nessuna credenziale | locale |
+| ETL Python `--target=local` (default) | nessuna credenziale | locale |
+| ETL Python `--target=r2` (push su bucket) | 3 var R2 in `.env` | locale |
+| Worker `npm run dev` | nessuna credenziale (binding R2 in sola lettura) | locale |
+| Worker `wrangler deploy` | `wrangler login` interattivo o env CF | locale |
+| Workflow CI/CD GitHub Actions | 6 GitHub Secrets | Settings repo |
 
-`R2_BUCKET` non è settato come secret perché ha valore di default nel codice (`cruscotto-italia-data`).
+**Documentazione completa**:
+
+- [`docs/SECRETS.md`](docs/SECRETS.md) — inventario dei 6 GitHub Secrets, procedure per crearli su Cloudflare, rotazione e revoca
+- [`docs/INFRASTRUCTURE.md`](docs/INFRASTRUCTURE.md) — architettura completa, pre-flight checklist setup, note operative deploy/maintenance
+- [`.env.example`](.env.example) — template variabili d'ambiente locali
 
 ### Setup locale
 
