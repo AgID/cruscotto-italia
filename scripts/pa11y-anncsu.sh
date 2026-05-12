@@ -48,7 +48,7 @@ cat > "$CONFIG_FILE" <<EOF
 {
   "standard": "$STANDARD",
   "timeout": 60000,
-  "wait": 2000,
+  "wait": 4000,
   "runners": ["htmlcs", "axe"],
   "includeWarnings": true,
   "hideElements": ".leaflet-tile-container, .leaflet-marker-icon, canvas",
@@ -58,7 +58,7 @@ cat > "$CONFIG_FILE" <<EOF
   "actions": [
     "wait for element [data-tab='anncsu'] to be visible",
     "click element [data-tab='anncsu']",
-    "wait for ${WAIT_MS}"
+    "wait for element #pane-anncsu to be visible"
   ]
 }
 EOF
