@@ -9,7 +9,7 @@ import type { ToolDefinition } from "./index.js";
 
 export const mcpInfo: ToolDefinition = {
   description:
-    "Returns server metadata, version, and data freshness for each integrated source (ANAC, BDAP-MOP, SIOPE, Italia Domani PNRR, ISTAT, ISPRA, MIUR, ACI, MEF Federalismo Fiscale, MEF Patrimonio Immobiliare PA).",
+    "Returns server metadata, version, and data freshness for each integrated source (ANAC, BDAP-MOP, SIOPE, Italia Domani PNRR, ISTAT, ISPRA, MIUR, ACI, MEF Federalismo Fiscale, MEF Patrimonio Immobiliare PA, Agenzia delle Entrate/ISTAT ANNCSU).",
   inputSchema: {
     type: "object",
     properties: {},
@@ -25,10 +25,10 @@ export const mcpInfo: ToolDefinition = {
     }
     return {
       service: "cruscotto-italia-mcp",
-      version: "0.4.0",
+      version: "0.5.0",
       protocol: "MCP 2024-11-05",
-      datasets: 13,
-      institutions: 9,
+      datasets: 14,
+      institutions: 10,
       municipalities: 7918,
       sources: {
         anac: {
@@ -91,6 +91,13 @@ export const mcpInfo: ToolDefinition = {
           license: "CC-BY 4.0",
           datasets: [
             "Censimento beni immobili pubblici detenuti dalle Amministrazioni Pubbliche al 31/12/2022 (fabbricati e terreni con geolocalizzazione)",
+          ],
+        },
+        anncsu: {
+          canonical: "https://anncsu.open.agenziaentrate.gov.it/",
+          license: "Open data ai sensi del Regolamento UE 2023/138 (HVD)",
+          datasets: [
+            "Archivio Nazionale dei Numeri Civici e delle Strade Urbane (ANNCSU): stradario e indirizzario con georeferenziazione, snapshot continuo (Agenzia delle Entrate + ISTAT)",
           ],
         },
       },

@@ -17,6 +17,10 @@
  *   - bdap/dettaglio/<istat>.json    (opere)
  *   - siope/<istat>.json             (spese SIOPE pre-calcolate)
  *   - immobili_pa/<istat>.json     (MEF DE - Beni Immobili Pubblici 2022)
+ *   - anncsu/<istat>.json          (Agenzia Entrate + ISTAT - ANNCSU strade
+ *                                   e numeri civici certificati, sample 1000
+ *                                   punti geo-ref. Full su anncsu_full/ via
+ *                                   endpoint dedicato /data/anncsu_full/)
  *   - lookup/anac-aggregato.json[<cf>] (contratti)
  *
  * Schema output (passa-attraverso del file R2):
@@ -53,6 +57,30 @@
  *                                       //               vincolo, uso_terzi }, ...]
  *                                       //               // capped a 500 punti per comune
  *                                       //               // (sampling stratificato per categoria)
+ *                                       //   }
+ *     "anncsu":      { ... } | null    // Agenzia Entrate + ISTAT - ANNCSU
+ *                                       //   (Archivio Nazionale Numeri Civici
+ *                                       //   e Strade Urbane), snapshot mensile:
+ *                                       //   { _snapshot_date: "YYYY-MM-DD",
+ *                                       //     kpi: { n_strade, n_civici,
+ *                                       //            n_civici_geo_ref,
+ *                                       //            pct_geo_ref,
+ *                                       //            n_strade_bilingui,
+ *                                       //            n_civici_rosso, n_civici_nero,
+ *                                       //            n_civici_metrici, n_civici_bis,
+ *                                       //            quota_mean_m,
+ *                                       //            top_10_strade: [{odo, acc}, ...],
+ *                                       //            metodi_georef:
+ *                                       //              {gps, catasto, ortofoto,
+ *                                       //               cartografia, altro},
+ *                                       //            bbox: [latmin, latmax,
+ *                                       //                   lonmin, lonmax] },
+ *                                       //     punti: [{ lat, lon, odo, civ, esp,
+ *                                       //               quota, met }, ...]
+ *                                       //             // sample 1000 punti per
+ *                                       //             // comune; per il dataset
+ *                                       //             // completo fetch HTTP GET
+ *                                       //             // /data/anncsu_full/<istat>.json
  *                                       //   }
  *   }
  *
@@ -107,7 +135,7 @@ interface DashboardShard {
 
 export const comuneDashboard: ToolDefinition = {
   description:
-    "Vista completa di un comune italiano in una sola chiamata: anagrafica, demografia, profilo censimento, turismo, progetti PNRR, territorio (ISPRA Suolo/IdroGEO/Rifiuti), qualità dell'aria (ISPRA SNPA: PM10/PM2.5/NO2 con stazioni), opere pubbliche (BDAP-MOP), spese (SIOPE multi-anno con per_anno e anno_default), contratti (ANAC), scuole (MIUR), veicoli e incidenti (ISTAT 41_993 parco PRA per classe Euro + ISTAT 41_983 incidenti stradali con morti/feriti + ACI LOD nuove iscrizioni per alimentazione), redditi e fisco (MEF Dipartimento delle Finanze: dichiarazioni IRPEF su base comunale a.i. 2020-2024 con numero contribuenti, reddito medio, distribuzione per 8 fasce di reddito, tipologie dipendente/pensione/autonomo/fabbricati, addizionale comunale e imposta netta media). Tool da preferire per qualsiasi domanda generale su un comune ('mostrami Bergamo', 'dati di Milano'). Richiede istat_code (6 cifre, es. '075035'). Se hai solo il nome, chiama prima search_comune per ottenerlo. Accetta anche denominazione ma è meno affidabile sui casi di omonimia/fusione. Include anche la sezione immobili_pa con beni immobili pubblici detenuti dalle PA (MEF DE 2022, dichiarazioni al 31/12/2022): KPI aggregati (fabbricati/terreni, vincolo culturale, uso a terzi, superficie totale, mix categoria) e fino a 500 punti georeferenziati con tipologia e categoria semantica.",
+    "Vista completa di un comune italiano in una sola chiamata: anagrafica, demografia, profilo censimento, turismo, progetti PNRR, territorio (ISPRA Suolo/IdroGEO/Rifiuti), qualità dell'aria (ISPRA SNPA: PM10/PM2.5/NO2 con stazioni), opere pubbliche (BDAP-MOP), spese (SIOPE multi-anno con per_anno e anno_default), contratti (ANAC), scuole (MIUR), veicoli e incidenti (ISTAT 41_993 parco PRA per classe Euro + ISTAT 41_983 incidenti stradali con morti/feriti + ACI LOD nuove iscrizioni per alimentazione), redditi e fisco (MEF Dipartimento delle Finanze: dichiarazioni IRPEF su base comunale a.i. 2020-2024 con numero contribuenti, reddito medio, distribuzione per 8 fasce di reddito, tipologie dipendente/pensione/autonomo/fabbricati, addizionale comunale e imposta netta media). Tool da preferire per qualsiasi domanda generale su un comune ('mostrami Bergamo', 'dati di Milano'). Richiede istat_code (6 cifre, es. '075035'). Se hai solo il nome, chiama prima search_comune per ottenerlo. Accetta anche denominazione ma è meno affidabile sui casi di omonimia/fusione. Include anche la sezione immobili_pa con beni immobili pubblici detenuti dalle PA (MEF DE 2022, dichiarazioni al 31/12/2022): KPI aggregati (fabbricati/terreni, vincolo culturale, uso a terzi, superficie totale, mix categoria) e fino a 500 punti georeferenziati con tipologia e categoria semantica. Sezione anncsu (Agenzia delle Entrate + ISTAT - Archivio Nazionale Numeri Civici e Strade Urbane, snapshot mensile) con KPI sul numero di odonimi e civici, percentuale di georeferenziazione, bilinguismo, numerazione storica rosso/nero (Firenze, Genova), top 10 strade per accessi e distribuzione metodi di geo-referenziazione (GPS, catasto, ortofoto, cartografia). Punti sample (1000) georeferenziati per la mappa; per il dataset completo dei civici di un comune (Lecce 47.917, Roma 515.815, ecc.) fai una richiesta HTTP GET a /data/anncsu_full/<istat>.json sullo stesso host del Worker.",
   inputSchema: {
     type: "object",
     properties: {
