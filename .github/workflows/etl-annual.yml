@@ -157,7 +157,7 @@ jobs:
           cache-dependency-path: etl/requirements.txt
       - run: pip install -r etl/requirements.txt
       - name: Run Redditi ETL
-        run: python -m etl.sources.redditi
+        run: python -m etl.sources.redditi --target=r2
 
   immobili_pa:
     name: ETL · MEF Patrimonio Immobiliare PA (Beni immobili pubblici 2022)

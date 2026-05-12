@@ -658,6 +658,23 @@ def push_shards_r2(shards: dict[str, dict], force: bool = False) -> tuple[int, i
     return uploaded, skipped
 
 
+def write_local(shards: dict[str, dict], outdir: Path) -> int:
+    """Scrive gli shard su filesystem locale invece che su R2.
+
+    Pattern uniforme con gli altri ETL (scuole.py, aria.py, ...).
+    Output: <outdir>/<istat>.json (un file per comune).
+    """
+    outdir.mkdir(parents=True, exist_ok=True)
+    n = 0
+    for istat, data in shards.items():
+        body = json.dumps(data, ensure_ascii=False, separators=(",", ":"))
+        with open(outdir / f"{istat}.json", "w", encoding="utf-8") as f:
+            f.write(body)
+        n += 1
+    log.info("redditi_local_done: %d shard in %s", n, str(outdir))
+    return n
+
+
 # -----------------------------------------------------------------------------
 # Pipeline
 # -----------------------------------------------------------------------------
@@ -668,11 +685,13 @@ def run(
     force: bool = False,
     limit: int | None = None,
     dry_run: bool = False,
+    target: str = "local",
+    outdir: Path = Path("dist/redditi"),
 ) -> None:
     log.info("=" * 60)
     log.info("ETL MEF Redditi IRPEF")
     log.info("Anni: %s", years)
-    log.info("Force: %s | Limit: %s | Dry-run: %s", force, limit, dry_run)
+    log.info("Force: %s | Limit: %s | Dry-run: %s | Target: %s", force, limit, dry_run, target)
     log.info("=" * 60)
 
     years_data: dict[int, dict[str, dict]] = {}
@@ -703,8 +722,12 @@ def run(
         print(json.dumps(shards[sample_key], ensure_ascii=False, indent=2))
         return
 
-    uploaded, skipped = push_shards_r2(shards, force=force)
-    log.info("FINE: uploaded=%d, skipped=%d", uploaded, skipped)
+    if target == "r2":
+        uploaded, skipped = push_shards_r2(shards, force=force)
+        log.info("FINE: uploaded=%d, skipped=%d", uploaded, skipped)
+    else:
+        n = write_local(shards, outdir)
+        log.info("FINE (target=local): %d shard scritti in %s", n, str(outdir))
 
 
 def parse_args():
@@ -731,6 +754,17 @@ def parse_args():
         action="store_true",
         help="Non scrive su R2, stampa solo uno shard di esempio",
     )
+    p.add_argument(
+        "--target",
+        choices=["local", "r2"],
+        default="local",
+        help="Output target: 'local' scrive su disco, 'r2' fa upload Cloudflare R2 (default: local)",
+    )
+    p.add_argument(
+        "--outdir",
+        default="dist/redditi",
+        help="Output dir per --target=local (default: dist/redditi)",
+    )
     return p.parse_args()
 
 
@@ -751,7 +785,8 @@ def main():
         )
         sys.exit(2)
 
-    run(years=years, force=args.force, limit=args.limit, dry_run=args.dry_run)
+    run(years=years, force=args.force, limit=args.limit, dry_run=args.dry_run,
+        target=args.target, outdir=Path(args.outdir))
 
 
 if __name__ == "__main__":
