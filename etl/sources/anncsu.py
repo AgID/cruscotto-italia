@@ -124,12 +124,15 @@ DOWNLOAD_TIMEOUT_SEC = 120
 SAMPLE_PER_COMUNE = 1000       # Sample stratificato per mappa
 TOP_STRADE_LIMIT = 10
 
-# Metodi georef ANNCSU (codifica ufficiale 1-4)
+# Metodi georef ANNCSU (codifica ufficiale 1-4 da DPCM 12/05/2016;
+# valore 5 osservato nei dati reali, non documentato — probabilmente
+# introdotto dopo l'attivazione dell'archivio)
 METODO_LABEL = {
     "1": "gps",
     "2": "catasto",
     "3": "ortofoto",
     "4": "cartografia",
+    "5": "altro",
 }
 
 
