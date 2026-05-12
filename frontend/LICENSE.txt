@@ -1,0 +1,31 @@
+LICENZA D'USO
+=============
+
+I dati contenuti in questo archivio sono distribuiti con licenza
+Creative Commons Attribuzione 4.0 Internazionale (CC BY 4.0).
+
+Testo completo: https://creativecommons.org/licenses/by/4.0/deed.it
+
+ATTRIBUZIONE RICHIESTA
+----------------------
+In caso di riutilizzo, citare come segue:
+
+  "Elaborazione su dati Cruscotto Italia, fonti originarie: ANAC,
+   BDAP-MOP, SIOPE, Italia Domani, ISPRA, ISTAT, MIUR, ARPA, ACI, MEF."
+
+FONTI ORIGINARIE E LORO LICENZE
+-------------------------------
+- ANAC (Autorità Nazionale Anticorruzione) ........... CC BY 4.0
+- BDAP-MOP (MEF — Opere Pubbliche) ................... IODL 2.0
+- SIOPE (dati.gov.it / Banca d'Italia) ............... CC BY 4.0
+- Italia Domani (PNRR — Presidenza del Consiglio) .... CC BY 4.0
+- ISPRA (Suolo, IdroGEO, Catasto Rifiuti, SNPA Aria) . CC BY 4.0
+- ISTAT (POSAS, Censimento, Turismo, Incidenti) ...... CC BY 3.0 IT
+- MIUR (Anagrafe Scuole) ............................. CC BY 4.0
+- ACI (Parco veicolare — LOD) ........................ CC BY 4.0
+- MEF Dipartimento Finanze (Redditi IRPEF) ........... CC BY 3.0
+- OpenStreetMap (cartografia) ........................ ODbL
+
+Per il dettaglio dei dataset e degli URL originari delle fonti,
+consultare il file METADATI.csv accluso e la pagina /about.html
+del sito Cruscotto Italia.

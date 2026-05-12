@@ -1,0 +1,172 @@
+/* ============================================================
+   Cruscotto Italia — Design Tokens
+   Linee guida Design Italia / AgID
+   ------------------------------------------------------------
+   Font: Titillium Web (self-hosted, WOFF2)
+   - 400 sha384-UqtIncqvV7/VozTnnlz9V4qUxgK7ppjMM6jttJyQnCsY1GU2SMDhtMvxvKlSPuie
+   - 600 sha384-CyPZs/7bsOAcAD7OrQ0oE4+TV4HMwkG8iFIZ79r9kQr4UEsPooKJQNB6y42/NB5y
+   - 700 sha384-HgzSbKX5e7Gqbp+ejq9JIlItnHIzrReMQ/YjWhq8bLeYeNRqUTqOhhW8vbDlHiML
+   ============================================================ */
+
+@font-face {
+  font-family: 'Titillium Web';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('../vendor/fonts/titillium-400.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Titillium Web';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('../vendor/fonts/titillium-600.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Titillium Web';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('../vendor/fonts/titillium-700.woff2') format('woff2');
+}
+
+:root {
+  /* ----- Colori istituzionali Design Italia ----- */
+  --blu-italia:      #0066CC;  /* primario, link, CTA, badge attivi */
+  --blu-italia-dark: #004C99;  /* hover, focus */
+  --blu-italia-light:#E6F1FB;  /* sfondi tenui, alert info */
+
+  --ink:             #17324d;  /* testo principale, titoli */
+  --ink-soft:        #2C3E50;  /* testo secondario forte */
+  --mute:            #5C6F82;  /* testo discreto, label */
+  --mute-soft:       #8A95A1;  /* placeholder, metadati */
+
+  --bg:              #FFFFFF;  /* sfondo pagina */
+  --bg-alt:          #F5F6F7;  /* sfondo sezioni, footer chiaro */
+  --bg-soft:         #FAFBFC;  /* card */
+
+  --border:          #E3E7EB;  /* bordi standard */
+  --border-soft:     #EDEFF2;  /* bordi tenui */
+
+  --success:         #008055;
+  --warning:         #A66300;
+  --danger:          #CC334D;
+
+  /* ----- Tipografia ----- */
+  --font-sans: 'Titillium Web', -apple-system, BlinkMacSystemFont,
+               'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono',
+               Consolas, 'Courier New', monospace;
+
+  /* Scala tipografica (Design Italia, rem-based, base 16px) */
+  --fs-xs:   0.75rem;   /* 12px - micro label */
+  --fs-sm:   0.875rem;  /* 14px - metadati, footer */
+  --fs-base: 1rem;      /* 16px - testo corrente */
+  --fs-md:   1.125rem;  /* 18px - lead */
+  --fs-lg:   1.375rem;  /* 22px - h3 */
+  --fs-xl:   1.75rem;   /* 28px - h2 */
+  --fs-2xl:  2.5rem;    /* 40px - h1 page */
+  --fs-3xl:  4rem;      /* 64px - hero comune */
+
+  /* Pesi */
+  --fw-regular:  400;
+  --fw-semibold: 600;
+  --fw-bold:     700;
+
+  /* Line height */
+  --lh-tight:  1.2;
+  --lh-normal: 1.5;
+  --lh-loose:  1.7;
+
+  /* ----- Spaziature (4px base) ----- */
+  --sp-1:  0.25rem;   /* 4 */
+  --sp-2:  0.5rem;    /* 8 */
+  --sp-3:  0.75rem;   /* 12 */
+  --sp-4:  1rem;      /* 16 */
+  --sp-5:  1.5rem;    /* 24 */
+  --sp-6:  2rem;      /* 32 */
+  --sp-7:  3rem;      /* 48 */
+  --sp-8:  4rem;      /* 64 */
+
+  /* ----- Layout ----- */
+  --container-max: 1280px;
+  --container-pad: 1.5rem;
+
+  /* ----- Border radius ----- */
+  --radius-sm: 4px;
+  --radius:    6px;
+  --radius-lg: 8px;
+
+  /* ----- Ombre (discrete, istituzionali) ----- */
+  --shadow-sm: 0 1px 2px rgba(23, 50, 77, 0.04);
+  --shadow:    0 2px 8px rgba(23, 50, 77, 0.06);
+  --shadow-md: 0 4px 16px rgba(23, 50, 77, 0.08);
+
+  /* ----- Transizioni ----- */
+  --t-fast:   120ms ease;
+  --t-normal: 200ms ease;
+  /* ----- Palette grafici istituzionale (Design Italia) ----- */
+  /* Sfumature blu per categorie/serie multiple */
+  --chart-blue-1:  #0066CC;  /* primario */
+  --chart-blue-2:  #2A7FD4;
+  --chart-blue-3:  #5497DD;
+  --chart-blue-4:  #7FAFE5;
+  --chart-blue-5:  #A9C7EE;
+  --chart-blue-6:  #D4DFF6;  /* pastello */
+
+  /* Accenti neutri per serie aggiuntive */
+  --chart-ink:     #17324d;  /* navy testo */
+  --chart-slate:   #5C6F82;  /* grigio bluastro */
+  --chart-slate-2: #8A95A1;  /* grigio chiaro */
+
+  /* Accenti semantici */
+  --chart-success: #008055;  /* verde, positivo / elettrico */
+  --chart-warning: #A66300;  /* arancio, attenzione */
+  --chart-danger:  #CC334D;  /* rosso, critico (morti, soglie superate) */
+
+}
+
+/* ----- Reset minimo + base ----- */
+*, *::before, *::after { box-sizing: border-box; }
+
+html {
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: var(--fs-base);
+  font-weight: var(--fw-regular);
+  line-height: var(--lh-normal);
+  color: var(--ink);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  margin: 0;
+  font-weight: var(--fw-bold);
+  line-height: var(--lh-tight);
+  color: var(--ink);
+}
+
+a {
+  color: var(--blu-italia);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: color var(--t-fast);
+}
+a:hover { color: var(--blu-italia-dark); }
+a:focus-visible {
+  outline: 2px solid var(--blu-italia);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* Numeri tabulari per cifre allineate (KPI, tabelle) */
+.tabular-nums { font-variant-numeric: tabular-nums; }

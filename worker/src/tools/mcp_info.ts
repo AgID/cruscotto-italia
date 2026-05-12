@@ -1,0 +1,94 @@
+/**
+ * Tool: mcp_info
+ *
+ * Returns server metadata, version, and data freshness for each integrated source.
+ * Reads R2 manifest.json populated by the ETL pipeline.
+ */
+import type { Env } from "../index.js";
+import type { ToolDefinition } from "./index.js";
+
+export const mcpInfo: ToolDefinition = {
+  description:
+    "Returns server metadata, version, and data freshness for each integrated source (ANAC, BDAP-MOP, SIOPE, Italia Domani PNRR, ISTAT, ISPRA, MIUR, ACI).",
+  inputSchema: {
+    type: "object",
+    properties: {},
+    additionalProperties: false,
+  },
+  handler: async (_args: Record<string, unknown>, env: Env) => {
+    let manifest: Record<string, unknown> | null = null;
+    try {
+      const obj = await env.DATA.get("manifest.json");
+      if (obj) manifest = (await obj.json()) as Record<string, unknown>;
+    } catch {
+      /* manifest may not exist on first deploy */
+    }
+    return {
+      service: "cruscotto-italia-mcp",
+      version: "0.4.0",
+      protocol: "MCP 2024-11-05",
+      datasets: 12,
+      institutions: 8,
+      municipalities: 7918,
+      sources: {
+        anac: {
+          canonical: "https://dati.anticorruzione.it/opendata",
+          license: "CC-BY 4.0",
+          datasets: ["contratti pubblici (OCDS)"],
+        },
+        bdap: {
+          canonical: "https://bdap-opendata.rgs.mef.gov.it",
+          license: "IODL 2.0",
+          datasets: ["BDAP-MOP opere pubbliche", "SIOPE flussi di cassa"],
+        },
+        italia_domani: {
+          canonical: "https://italiadomani.gov.it/it/strumenti/dati-e-trasparenza.html",
+          license: "CC-BY 4.0",
+          datasets: ["PNRR progetti (Sistema ReGiS)"],
+        },
+        istat: {
+          canonical: "https://www.istat.it",
+          license: "CC-BY 3.0 IT",
+          datasets: [
+            "POSAS demografia",
+            "Censimento permanente (profilo)",
+            "Turismo (TUR_1, TUR_7)",
+          ],
+        },
+        ispra: {
+          canonical: "https://www.isprambiente.gov.it",
+          license: "CC-BY 4.0",
+          datasets: [
+            "consumo di suolo (SNPA)",
+            "rischio idrogeologico (IdroGEO)",
+            "rifiuti urbani (Catasto Rifiuti)",
+            "qualità dell'aria (rete SNPA - PM10, PM2.5, NO2)",
+          ],
+        },
+        miur: {
+          canonical: "https://dati.istruzione.it",
+          license: "CC-BY 4.0",
+          datasets: ["Anagrafe Scuole Statali (DS0400SCUANAGRAFESTAT)"],
+        },
+        aci: {
+          canonical: "https://lod.aci.it",
+          license: "CC-BY 4.0",
+          datasets: [
+            "Parco veicoli per classe Euro (ISTAT 41_993 DCIS_VEICOLIPRA_COM)",
+            "Incidenti stradali con morti e feriti (ISTAT 41_983)",
+            "Nuove iscrizioni veicoli per alimentazione (ACI LOD)",
+          ],
+        },
+        mef: {
+          canonical: "https://www.finanze.gov.it/it/statistiche-fiscali/DichiarazioniFiscali-/",
+          license: "CC-BY 3.0",
+          datasets: [
+            "Redditi e principali variabili IRPEF su base comunale (a.i. 2020-2024)",
+          ],
+        },
+      },
+      manifest: manifest ?? { warning: "manifest not yet populated by ETL" },
+      generated_at: new Date().toISOString(),
+    };
+  },
+};

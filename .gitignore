@@ -1,0 +1,58 @@
+# Node / Worker
+node_modules/
+dist/
+.wrangler/
+.dev.vars
+*.log
+
+# Python / ETL
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+
+# Data — i parquet stanno SU R2, non nel repo
+*.parquet
+*.csv
+# Eccezione: METADATI.csv del frontend è statico e versionato
+!frontend/METADATI.csv
+*.csv.gz
+*.jsonl
+*.jsonl.gz
+*.zip
+/tmp/
+/etl/data/
+/etl/output/
+
+# Eccezione: i fixtures di test sono OK, sono mini
+!tests/fixtures/**/*.csv
+!tests/fixtures/**/*.parquet
+!tests/fixtures/**/*.json
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Secrets
+.env
+.env.local
+secrets/
+
+# Build artifacts
+/frontend/dist/
+/worker/build/
+
+# Coverage
+coverage/
+.coverage
+htmlcov/
+*.bak*
+output/

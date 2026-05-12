@@ -1,0 +1,106 @@
+name: ETL · Weekly
+
+# Cadenza settimanale per le fonti che cambiano spesso:
+#  - ANAC OCDS (file mensile contratti pubblici aggiornato ~settimanalmente)
+#  - PNRR Italia Domani (CSV ReGiS aggiornato regolarmente)
+#
+# Al termine, ricostruisce dashboard/<istat>.json (single-fetch shard).
+#
+# Cron: ogni lunedi' alle 04:00 UTC = 05:00/06:00 ora di Roma (DST).
+
+on:
+  schedule:
+    - cron: '0 4 * * 1'
+  workflow_dispatch:
+    inputs:
+      sources:
+        description: 'Comma-separated list (anac,pnrr,dashboard) or "all"'
+        required: false
+        default: 'all'
+      anac_years:
+        description: 'ANAC: comma-separated years (default: current year)'
+        required: false
+        default: ''
+
+env:
+  R2_ACCOUNT_ID:        ${{ secrets.R2_ACCOUNT_ID }}
+  R2_ACCESS_KEY_ID:     ${{ secrets.R2_ACCESS_KEY_ID }}
+  R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+  R2_BUCKET:            cruscotto-italia-data
+
+jobs:
+  # ---------------------------------------------------------------------------
+  anac:
+    name: ETL · ANAC OCDS (contratti pubblici)
+    runs-on: [self-hosted, linux, aruba]
+    if: ${{ github.event_name == 'schedule' || contains(github.event.inputs.sources, 'anac') || github.event.inputs.sources == 'all' || github.event.inputs.sources == '' }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: etl/requirements.txt
+      - run: pip install -r etl/requirements.txt
+      - name: Compute target years
+        id: years
+        run: |
+          if [ -n "${{ github.event.inputs.anac_years }}" ]; then
+            echo "value=${{ github.event.inputs.anac_years }}" >> $GITHUB_OUTPUT
+          else
+            echo "value=$(date -u +%Y)" >> $GITHUB_OUTPUT
+          fi
+      - name: Run ANAC ETL
+        run: python -m etl.sources.anac --target=r2 --years=${{ steps.years.outputs.value }}
+
+  # ---------------------------------------------------------------------------
+  pnrr:
+    name: ETL · PNRR (Italia Domani / ReGiS)
+    runs-on: [self-hosted, linux, aruba]
+    if: ${{ github.event_name == 'schedule' || contains(github.event.inputs.sources, 'pnrr') || github.event.inputs.sources == 'all' || github.event.inputs.sources == '' }}
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: etl/requirements.txt
+      - run: pip install -r etl/requirements.txt
+      - name: Run PNRR ETL
+        run: python -m etl.sources.pnrr_progetti --target=r2
+
+  # ---------------------------------------------------------------------------
+  # Dashboard: rebuild dei dashboard/<istat>.json shard a valle di ANAC + PNRR.
+  # Sempre eseguito (purche' uno almeno dei due upstream sia andato a buon fine).
+  dashboard:
+    name: ETL · Dashboard rebuild (single-fetch shard)
+    runs-on: [self-hosted, linux, aruba]
+    needs: [anac, pnrr]
+    if: ${{ always() && (needs.anac.result == 'success' || needs.pnrr.result == 'success') }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: etl/requirements.txt
+      - run: pip install -r etl/requirements.txt
+      - name: Run Dashboard ETL
+        run: python -m etl.sources.dashboard --target=r2
+
+  # ---------------------------------------------------------------------------
+  notify:
+    name: Notify worker (cache purge)
+    needs: [dashboard]
+    if: ${{ always() && needs.dashboard.result == 'success' }}
+    runs-on: [self-hosted, linux, aruba]
+    steps:
+      - name: Purge worker cache
+        run: |
+          curl -sS -X POST "https://cruscotto-italia-mcp.datigovit.workers.dev/admin/cache/purge" \
+            -H "Authorization: Bearer ${{ secrets.WORKER_ADMIN_TOKEN }}" \
+            -H "Content-Type: application/json" \
+          || echo "Cache purge endpoint non disponibile (non-critical)"

@@ -1,0 +1,1030 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Cruscotto Italia</title>
+<meta name="description" content="Una vista integrata su ogni comune italiano: bilanci, opere pubbliche, contratti, progetti PNRR, demografia, qualità dell'aria, scuole, redditi. Dati ufficiali aggregati da dodici fonti pubbliche istituzionali.">
+<meta property="og:title" content="Cruscotto Italia">
+<meta property="og:description" content="Una vista integrata su ogni comune italiano. Dati ufficiali aggregati da dodici fonti pubbliche istituzionali: ISTAT, ANAC, BDAP-MOP, SIOPE, Italia Domani, ISPRA, MIUR, MEF, ACI.">
+<meta property="og:type" content="website">
+
+<!-- Design Italia: Titillium Web self-hosted -->
+<link rel="stylesheet" href="/css/tokens.css">
+<link rel="stylesheet" href="/css/base.css">
+
+<style>
+/* === ALIAS bridge: vecchi nomi -> nuovi token Design Italia === */
+:root{
+  --paper: var(--bg);
+  --paper-2: var(--bg-alt);
+  --ink-mute: var(--mute);
+  --accent: var(--blu-italia);
+  --accent-2: var(--blu-italia-dark);
+  --gold: var(--warning);
+  --rule: var(--border);
+  --serif: var(--font-sans);
+  --sans: var(--font-sans);
+  --mono: var(--font-mono);
+}
+
+/* === Override Design Italia: niente corsivo nei titoli === */
+em, h1 em, h2 em, h3 em, .brand em, .section-h em {
+  font-style: normal !important;
+  color: var(--blu-italia);
+  font-weight: inherit;
+}
+
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  font-family:var(--sans);
+  background:var(--paper);
+  color:var(--ink);
+  font-size:16px;
+  line-height:1.55;
+  font-weight:400;
+  min-height:100vh;
+  /* paper texture overlay */
+  background-image:
+    radial-gradient(ellipse at top, rgba(184,137,61,0.04), transparent 70%),
+    radial-gradient(ellipse at bottom, rgba(200,51,31,0.03), transparent 70%);
+}
+
+a{color:var(--ink);text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:3px}
+a:hover{color:var(--accent)}
+
+.skip{position:absolute;left:-9999px;top:0;background:var(--ink);color:var(--paper);padding:12px;z-index:1000}
+.skip:focus{left:8px;top:8px}
+
+.wrap{max-width:1200px;margin:0 auto;padding:0 24px}
+
+/* ============= MASTHEAD ============= */
+header.masthead{
+  border-bottom:2px solid var(--rule);
+  padding:24px 0 28px;
+  position:relative;
+  background:var(--paper);
+}
+header.masthead::after{
+  content:"";
+  position:absolute;
+  bottom:-8px;left:0;right:0;
+  border-bottom:1px solid var(--rule);
+}
+.masthead-row{
+  display:flex;
+  justify-content:space-between;
+  align-items:baseline;
+  gap:24px;
+  flex-wrap:wrap;
+}
+.brand{
+  font-family:var(--serif);
+  font-weight:700;
+  font-size:clamp(28px,5vw,52px);
+  letter-spacing:-0.04em;
+  line-height:0.95;
+  font-variation-settings:"opsz" 144, "SOFT" 30;
+}
+.brand .it{color:var(--accent);font-style:italic;font-weight:600;font-variation-settings:"opsz" 144, "SOFT" 100, "WONK" 1}
+.tagline{
+  font-family:var(--mono);
+  font-size:11px;
+  text-transform:uppercase;
+  letter-spacing:0.18em;
+  color:var(--ink-mute);
+}
+.edition{
+  font-family:var(--mono);
+  font-size:11px;
+  letter-spacing:0.1em;
+  color:var(--ink-mute);
+  text-transform:uppercase;
+}
+.edition span{color:var(--accent);font-weight:600}
+
+/* ============= HERO ============= */
+.hero{
+  padding:64px 0 40px;
+  border-bottom:1px solid var(--rule);
+  position:relative;
+}
+.hero-grid{
+  display:grid;
+  grid-template-columns:1.4fr 1fr;
+  gap:48px;
+  align-items:end;
+}
+@media(max-width:840px){.hero-grid{grid-template-columns:1fr;gap:32px}}
+
+.hero h1{
+  font-family:var(--serif);
+  font-weight:300;
+  font-size:clamp(40px,7vw,84px);
+  line-height:0.96;
+  letter-spacing:-0.035em;
+  font-variation-settings:"opsz" 144, "SOFT" 50;
+  margin-bottom:24px;
+}
+.hero h1 em{
+  font-style:italic;
+  color:var(--accent);
+  font-weight:400;
+  font-variation-settings:"opsz" 144, "SOFT" 100, "WONK" 1;
+}
+.hero h1 strong{
+  font-weight:700;
+  font-variation-settings:"opsz" 144, "SOFT" 30;
+}
+.hero-lede{
+  font-family:var(--serif);
+  font-size:18px;
+  font-weight:400;
+  font-variation-settings:"opsz" 24;
+  line-height:1.5;
+  color:var(--ink-soft);
+  max-width:560px;
+}
+.hero-meta{
+  font-family:var(--mono);
+  font-size:11px;
+  letter-spacing:0.12em;
+  text-transform:uppercase;
+  color:var(--ink-mute);
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  border-left:2px solid var(--accent);
+  padding-left:16px;
+}
+.hero-meta dt{display:inline;font-weight:500;color:var(--ink)}
+.hero-meta dd{display:inline;margin-left:6px}
+
+/* ============= SEARCH ============= */
+.search-section{
+  padding:48px 0;
+  border-bottom:2px solid var(--rule);
+  background:var(--paper-2);
+  position:relative;
+}
+.search-section::before{
+  content:"§ Inizia";
+  position:absolute;
+  top:16px;left:24px;
+  font-family:var(--serif);
+  font-style:italic;
+  font-size:14px;
+  color:var(--ink-mute);
+}
+.search-wrap{
+  max-width:780px;
+  margin:24px auto 0;
+}
+.search-label{
+  display:block;
+  font-family:var(--mono);
+  font-size:11px;
+  text-transform:uppercase;
+  letter-spacing:0.16em;
+  color:var(--ink-mute);
+  margin-bottom:8px;
+}
+.search-box{
+  position:relative;
+  display:flex;
+  align-items:center;
+  background:var(--paper);
+  border:2px solid var(--rule);
+  transition:border-color .15s, box-shadow .15s;
+}
+.search-box:focus-within{
+  border-color:var(--accent);
+  box-shadow:6px 6px 0 var(--accent);
+}
+.search-box input{
+  flex:1;
+  font-family:var(--serif);
+  font-size:28px;
+  font-weight:400;
+  font-variation-settings:"opsz" 36;
+  background:transparent;
+  border:none;
+  outline:none;
+  padding:18px 20px;
+  color:var(--ink);
+}
+.search-box input::placeholder{
+  color:var(--ink-mute);
+  font-style:italic;
+}
+.search-box-icon{
+  padding:0 20px;
+  color:var(--ink-mute);
+}
+
+/* === Responsive search box === */
+@media (max-width: 720px) {
+  .search-box input {
+    font-size: 18px;
+    padding: 14px 12px;
+    font-style: normal;
+  }
+  .search-box input::placeholder {
+    font-style: normal;
+    font-size: 16px;
+  }
+  .search-box-icon {
+    padding: 0 12px;
+  }
+  .search-helper { font-size: 11px; }
+}
+@media (max-width: 380px) {
+  .search-box input {
+    font-size: 16px;
+    padding: 12px 10px;
+  }
+  .search-box input::placeholder { font-size: 14px; }
+}
+
+.suggestions{
+  position:absolute;
+  top:100%;left:0;right:0;
+  background:var(--paper);
+  border:2px solid var(--rule);
+  border-top:none;
+  z-index:50;
+  max-height:400px;
+  overflow-y:auto;
+  display:none;
+}
+.suggestions.open{display:block}
+.suggestion{
+  display:flex;
+  align-items:baseline;
+  justify-content:space-between;
+  padding:14px 20px;
+  cursor:pointer;
+  border-bottom:1px solid var(--paper-2);
+  font-family:var(--sans);
+}
+.suggestion:hover, .suggestion.active{background:var(--paper-2)}
+.suggestion-name{
+  font-family:var(--serif);
+  font-size:18px;
+  font-weight:500;
+}
+.suggestion-meta{
+  font-family:var(--mono);
+  font-size:11px;
+  color:var(--ink-mute);
+  letter-spacing:0.06em;
+}
+.search-helper{
+  margin-top:12px;
+  font-family:var(--mono);
+  font-size:11px;
+  letter-spacing:0.08em;
+  color:var(--ink-mute);
+  text-align:center;
+  text-transform:uppercase;
+}
+.search-helper kbd{
+  font-family:var(--mono);
+  background:var(--paper);
+  border:1px solid var(--ink-mute);
+  border-bottom-width:2px;
+  padding:2px 6px;
+  font-size:10px;
+}
+
+/* ============= MACRO KPI ============= */
+.macro{
+  padding:64px 0;
+  border-bottom:2px solid var(--rule);
+}
+.section-title{
+  font-family:var(--serif);
+  font-style:italic;
+  font-size:14px;
+  font-weight:400;
+  font-variation-settings:"opsz" 14, "WONK" 1;
+  color:var(--ink-mute);
+  margin-bottom:8px;
+}
+.section-h{
+  font-family:var(--serif);
+  font-size:clamp(28px,4vw,42px);
+  font-weight:300;
+  letter-spacing:-0.025em;
+  line-height:1.05;
+  margin-bottom:32px;
+  font-variation-settings:"opsz" 72, "SOFT" 50;
+}
+.section-h em{font-style:italic;color:var(--accent);font-variation-settings:"opsz" 72, "SOFT" 100, "WONK" 1}
+
+.kpis{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+  gap:0;
+  border:2px solid var(--rule);
+}
+
+/* Variante per le 11 fonti dati */
+.kpis-3x3{
+  grid-template-columns:repeat(6, 1fr);
+}
+/* Reset bordi: ogni cella ha right+bottom; con 10 elementi (3+3+3+1)
+   l'ultima riga ha 1 sola cella (ACI, last-child). Si toglie il bottom solo
+   al last-child, e il right alle posizioni 3n (3°,6°,9°) e al last-child. */
+.kpis-3x3 .kpi{border-right:1px solid var(--rule);border-bottom:1px solid var(--rule);grid-column:span 2;}
+.kpis-3x3 .kpi:nth-child(3n){border-right:none;}
+/* ACI (last-child, 10°) è da solo sull'ultima riga: niente bottom
+   (è già la riga finale), ma SI border-right per chiudere la cella
+   contro lo spazio vuoto a destra. */
+/* ACI (last-child, 10°) da solo sull'ultima riga: si espande a piena larghezza
+   per evitare il "buco" a destra. Niente bottom (è l'ultima riga del contenitore). */
+/* Ultime 2 card (ACI 10° + MEF 11°) condividono ultima riga 50/50 */
+.kpis-3x3 .kpi:nth-last-child(-n+2){border-bottom:none;grid-column:span 3;}
+.kpis-3x3 .kpi:nth-last-child(2){border-right:1px solid var(--rule);}
+.kpis-3x3 .kpi:last-child{border-right:none;}
+/* Le cifre nei 9 KPI sono un po' più contenute */
+.kpis-3x3 .kpi-value{font-size:clamp(28px,3.5vw,40px);}
+.kpis-3x3 .kpi{padding:24px 22px;}
+
+@media (max-width:780px){
+  .kpis-3x3{grid-template-columns:repeat(2, 1fr);}
+  .kpis-3x3 .kpi{border-right:1px solid var(--rule);border-bottom:1px solid var(--rule);grid-column:span 2;}
+  .kpis-3x3 .kpi:nth-child(3n){border-right:1px solid var(--rule);}
+  .kpis-3x3 .kpi:nth-child(2n){border-right:none;}
+  /* Con 10 elementi in 2 colonne: 5 righe da 2, l'ultima riga sono gli ultimi 2. */
+  .kpis-3x3 .kpi:nth-last-child(-n+2){border-bottom:none;}
+  .kpis-3x3 .kpi-value{font-size:24px;}
+  .kpis-3x3 .kpi{padding:18px 16px;}
+}
+@media (max-width:480px){
+  .kpis-3x3{grid-template-columns:1fr;}
+  .kpis-3x3 .kpi{grid-column:auto !important;}
+  .kpis-3x3 .kpi{border-right:none !important;border-bottom:1px solid var(--rule) !important;}
+  .kpis-3x3 .kpi:last-child{border-bottom:none !important;}
+}
+.kpi{
+  padding:32px 24px;
+  border-right:1px solid var(--rule);
+  border-bottom:1px solid var(--rule);
+  position:relative;
+  background:var(--paper);
+}
+.kpi:last-child{border-right:none}
+.kpi-source{
+  font-family:var(--mono);
+  font-size:9px;
+  text-transform:uppercase;
+  letter-spacing:0.18em;
+  color:var(--ink-mute);
+  margin-bottom:12px;
+}
+.kpi-source::before{content:"●";color:var(--accent);margin-right:6px}
+.kpi-value{
+  font-family:var(--serif);
+  font-size:clamp(36px,5vw,52px);
+  font-weight:400;
+  letter-spacing:-0.03em;
+  line-height:1;
+  font-variation-settings:"opsz" 72, "SOFT" 30;
+}
+.kpi-unit{
+  font-size:18px;
+  color:var(--ink-mute);
+  font-style:italic;
+  font-weight:300;
+  margin-left:4px;
+}
+.kpi-label{
+  font-family:var(--sans);
+  font-size:13px;
+  color:var(--ink-soft);
+  margin-top:8px;
+  font-weight:400;
+}
+.kpi.tbd .kpi-value{color:var(--ink-mute);font-style:italic;font-size:32px}
+
+/* ============= SOURCES STRIP ============= */
+.sources{
+  padding:48px 0;
+  border-bottom:2px solid var(--rule);
+  background:var(--paper-2);
+}
+.sources-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+  gap:16px;
+  margin-top:24px;
+}
+.source-card{
+  padding:20px;
+  background:var(--paper);
+  border:1px solid var(--rule);
+  position:relative;
+}
+.source-card .num{
+  position:absolute;
+  top:12px;right:16px;
+  font-family:var(--serif);
+  font-style:italic;
+  font-size:11px;
+  color:var(--ink-mute);
+}
+.source-card h3{
+  font-family:var(--serif);
+  font-size:22px;
+  font-weight:600;
+  margin-bottom:6px;
+  letter-spacing:-0.01em;
+}
+.source-card p{
+  font-size:13px;
+  color:var(--ink-soft);
+  margin-bottom:10px;
+  min-height:40px;
+}
+.source-card .badge{
+  display:inline-block;
+  font-family:var(--mono);
+  font-size:10px;
+  text-transform:uppercase;
+  letter-spacing:0.1em;
+  color:var(--ink-mute);
+  border:1px solid var(--ink-mute);
+  padding:2px 6px;
+}
+.source-card .badge.live{border-color:var(--accent-2);color:var(--accent-2)}
+
+/* ============= ABOUT ============= */
+.about{
+  padding:80px 0;
+  border-bottom:2px solid var(--rule);
+}
+.about-grid{
+  display:grid;
+  grid-template-columns:1fr 2fr;
+  gap:48px;
+}
+@media(max-width:840px){.about-grid{grid-template-columns:1fr}}
+
+.about-grid h2{
+  font-family:var(--serif);
+  font-size:32px;
+  font-weight:300;
+  letter-spacing:-0.025em;
+  font-variation-settings:"opsz" 72, "SOFT" 50;
+}
+.about-grid h2 em{font-style:italic;color:var(--accent)}
+
+.about-content p{
+  font-family:var(--serif);
+  font-size:18px;
+  font-weight:400;
+  line-height:1.6;
+  margin-bottom:18px;
+  font-variation-settings:"opsz" 24;
+  color:var(--ink-soft);
+}
+.about-content p:first-child::first-letter{
+  font-family:var(--serif);
+  font-weight:700;
+  font-size:64px;
+  float:left;
+  line-height:0.85;
+  margin-right:8px;
+  margin-top:6px;
+  color:var(--accent);
+  font-variation-settings:"opsz" 144, "SOFT" 100, "WONK" 1;
+}
+
+/* ============= FOOTER ============= */
+footer{
+  padding:48px 0 32px;
+  background:var(--ink);
+  color:var(--paper);
+}
+footer .wrap{
+  display:grid;
+  grid-template-columns:2fr 1fr 1fr 1fr;
+  gap:32px;
+}
+@media(max-width:840px){footer .wrap{grid-template-columns:1fr 1fr;gap:24px}}
+
+footer h4{
+  font-family:var(--mono);
+  font-size:11px;
+  text-transform:uppercase;
+  letter-spacing:0.16em;
+  color:var(--gold);
+  margin-bottom:12px;
+}
+footer ul{list-style:none}
+footer li{margin-bottom:6px;font-size:13px}
+footer a{color:var(--paper);text-decoration:none;border-bottom:1px solid transparent}
+footer a:hover{border-bottom-color:var(--gold);color:var(--gold)}
+
+footer .colophon{
+  font-family:var(--serif);
+  font-size:14px;
+  font-weight:400;
+  line-height:1.5;
+  font-variation-settings:"opsz" 18;
+  color:var(--paper);
+  opacity:.85;
+}
+footer .colophon em{color:var(--gold);font-style:italic}
+footer .footer-bottom{
+  margin-top:32px;
+  padding-top:16px;
+  border-top:1px solid #333;
+  font-family:var(--mono);
+  font-size:10px;
+  letter-spacing:0.08em;
+  text-transform:uppercase;
+  color:var(--ink-mute);
+  display:flex;
+  justify-content:space-between;
+  flex-wrap:wrap;
+  gap:12px;
+}
+footer .footer-bottom .wrap{display:contents}
+
+/* ============= ANIMATIONS ============= */
+@keyframes fadein{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+@keyframes slidein{from{opacity:0;transform:translateX(-20px)}to{opacity:1;transform:none}}
+.hero h1{animation:fadein .8s ease-out backwards}
+.hero-lede{animation:fadein .8s ease-out .15s backwards}
+.hero-meta{animation:slidein .8s ease-out .3s backwards}
+.search-wrap{animation:fadein .8s ease-out .45s backwards}
+
+/* Print friendly */
+@media print {
+  .search-section, footer { display: none; }
+  body { background: white; color: black; }
+}
+
+/* =================================================================
+   OVERRIDE Design Italia — neutralizza il vecchio tema "warm"
+   ================================================================= */
+
+/* 1) Body senza texture avorio: sfondo bianco pulito */
+body {
+  background-image: none !important;
+  background: var(--bg) !important;
+}
+
+/* 2) Niente corsivo su titoli, KPI e em ovunque */
+em, h1 em, h2 em, h3 em,
+.brand .it, .section-h em,
+.about-grid h2 em,
+.kpi-unit, .kpi.tbd .kpi-value,
+.suggestion {
+  font-style: normal !important;
+  font-variation-settings: normal !important;
+}
+
+/* 3) Em e accenti: blu istituzionale, mai oro/rosso */
+em, h1 em, h2 em, h3 em,
+.section-h em, .about-grid h2 em {
+  color: var(--blu-italia) !important;
+}
+
+/* 4) Footer .colophon em: bianco soft (footer ha sfondo navy) */
+footer { background: var(--ink) !important; color: rgba(255,255,255,0.85) !important; }
+footer .colophon em {
+  color: rgba(255,255,255,0.6) !important;
+  font-style: normal !important;
+}
+footer h3, footer h4, footer strong {
+  color: #fff !important;
+  font-weight: var(--fw-semibold) !important;
+}
+footer a {
+  color: rgba(255,255,255,0.85) !important;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+footer a:hover { color: #fff !important; }
+
+/* 5) Bullet KPI: blu istituzionale invece di rosso */
+.kpi-source::before { color: var(--blu-italia) !important; }
+
+/* 6) Hero meta lista (FONTI/COMUNI/DATASET/...): bordo blu istituzionale */
+.hero-meta {
+  border-left-color: var(--blu-italia) !important;
+}
+
+/* WCAG 2.1 AA — fix contrasto footer-bottom (era 2.53:1 su navy) */
+footer .footer-bottom {
+  color: rgba(255, 255, 255, 0.75) !important;
+  border-top-color: rgba(255, 255, 255, 0.15) !important;
+}
+footer .footer-bottom a {
+  color: rgba(255, 255, 255, 0.85) !important;
+}
+</style>
+</head>
+<body>
+<a href="#main" class="skip">Salta al contenuto</a>
+
+<!-- ============ HEADER ISTITUZIONALE ============ -->
+<div class="mini-mast">
+  <div class="wrap">
+    <div class="mini-brand-wrap">
+      <a href="/" class="mini-brand">Cruscotto <span class="it">Italia</span></a>
+      <span class="mini-brand-sub">7.918 comuni · 12 fonti istituzionali</span>
+    </div>
+  </div>
+</div>
+
+<main id="main">
+
+<!-- ============ HERO ============ -->
+<section class="hero">
+  <div class="wrap">
+    <div class="hero-grid">
+      <div>
+        <h1>Dodici dataset pubblici.<br>Una sola vista, per ogni <em>comune italiano</em>.</h1>
+        <p class="hero-lede">
+          Cerca un comune italiano e accedi a una sintesi unificata:
+          dati di bilancio, opere pubbliche, contratti, progetti PNRR,
+          demografia, profilo socioeconomico, turismo, qualità dell'aria,
+          scuole, parco veicoli, redditi. I dati provengono da dodici fonti
+          pubbliche ufficiali (ISTAT, ANAC, BDAP-MOP, SIOPE, Italia Domani,
+          ISPRA, MIUR, MEF, ACI) e vengono ricomposti per ciascuno dei
+          comuni italiani.
+        </p>
+      </div>
+      <dl class="hero-meta">
+        <div><dt>Fonti</dt><dd>8 istituzioni</dd></div>
+        <div><dt>Comuni</dt><dd>7.894 (feb 2026)</dd></div>
+        <div><dt>Dataset</dt><dd>9 fonti federate</dd></div>
+        <div><dt>Licenza dati</dt><dd>CC-BY 4.0</dd></div>
+        <div><dt>Codice</dt><dd>AGPL-3.0</dd></div>
+      </dl>
+    </div>
+  </div>
+</section>
+
+<!-- ============ SEARCH ============ -->
+<section class="search-section">
+  <div class="wrap">
+    <h2 class="visually-hidden">Ricerca comune</h2>
+    <div class="search-wrap">
+      <label class="search-label" for="comune-search">Cerca un comune italiano</label>
+      <div class="search-box">
+        <span class="search-box-icon" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        </span>
+        <input
+          type="search"
+          id="comune-search"
+          autocomplete="off"
+          placeholder="Es. Lecce, Milano, Napoli…"
+          aria-haspopup="listbox"
+          aria-controls="suggestions">
+        <div class="suggestions" id="suggestions" role="listbox"></div>
+      </div>
+      <div class="search-helper">
+        <kbd>↑</kbd> <kbd>↓</kbd> per navigare · <kbd>↵</kbd> per aprire · <kbd>esc</kbd> per chiudere
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ MACRO KPI ============ -->
+<section class="macro">
+  <div class="wrap">
+    <div class="section-title">§ I numeri d'Italia</div>
+    <h2 class="section-h">Dodici fonti, <em>una sola</em> visione.</h2>
+    <div class="kpis kpis-3x3">
+      <div class="kpi tbd">
+        <div class="kpi-source">ANAC OCDS</div>
+        <div class="kpi-value">~117K<span class="kpi-unit">contratti</span></div>
+        <div class="kpi-label">Aggiudicazioni di marzo 2026 su 15.873 enti italiani</div>
+      </div>
+      <div class="kpi tbd">
+        <div class="kpi-source">OpenBDAP MOP</div>
+        <div class="kpi-value">555K<span class="kpi-unit">opere</span></div>
+        <div class="kpi-label">Progetti CUP monitorati (RGS-MEF)</div>
+      </div>
+      <div class="kpi tbd">
+        <div class="kpi-source">SIOPE</div>
+        <div class="kpi-value">€53,5<span class="kpi-unit">mld</span></div>
+        <div class="kpi-label">Flussi di cassa comunali 2025 (estrapolazione campionaria)</div>
+      </div>
+      <div class="kpi tbd">
+        <div class="kpi-source">Italia Domani</div>
+        <div class="kpi-value">~73K<span class="kpi-unit">progetti</span></div>
+        <div class="kpi-label">PNRR ReGiS — comune come Soggetto Attuatore</div>
+      </div>
+      <div class="kpi tbd">
+        <div class="kpi-source">ISTAT POSAS</div>
+        <div class="kpi-value">7.894<span class="kpi-unit">comuni</span></div>
+        <div class="kpi-label">Anagrafica al 21 febbraio 2026 (post-fusione Castegnero Nanto)</div>
+      </div>
+      <div class="kpi tbd">
+        <div class="kpi-source">ISTAT Profilo</div>
+        <div class="kpi-value">7.918<span class="kpi-unit">comuni</span></div>
+        <div class="kpi-label">Censimento permanente: istruzione, lavoro, mobilità</div>
+      </div>
+      <div class="kpi tbd">
+        <div class="kpi-source">ISTAT Turismo</div>
+        <div class="kpi-value">107<span class="kpi-unit">province</span></div>
+        <div class="kpi-label">Capacità ricettiva e flussi turistici provinciali</div>
+      </div>
+      <div class="kpi tbd">
+        <div class="kpi-source">ISPRA</div>
+        <div class="kpi-value">7.895<span class="kpi-unit">comuni</span></div>
+        <div class="kpi-label">Consumo di suolo (SNPA), idrogeologia, rifiuti urbani</div>
+      </div>
+      <div class="kpi tbd">
+        <div class="kpi-source">MIUR</div>
+        <div class="kpi-value">~50K<span class="kpi-unit">scuole</span></div>
+        <div class="kpi-label">Anagrafe Scuole Statali in 6.657 comuni</div>
+      </div>
+      <div class="kpi tbd">
+        <div class="kpi-source">ISTAT · ACI</div>
+        <div class="kpi-value">7.913<span class="kpi-unit">comuni</span></div>
+        <div class="kpi-label">Parco veicoli, incidenti, nuove iscrizioni</div>
+      </div>
+      <div class="kpi tbd" data-kpi-source="MEF">
+        <div class="kpi-source">MEF</div>
+        <div class="kpi-value">7.896<span class="kpi-unit">comuni</span></div>
+        <div class="kpi-label">Dichiarazioni IRPEF, reddito medio, fasce, addizionali</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ SOURCES ============ -->
+<section class="sources">
+  <div class="wrap">
+    <div class="section-title">§ Le fonti</div>
+    <h2 class="section-h">Le <em>fonti integrate</em>.</h2>
+    <div class="sources-grid">
+      <div class="source-card">
+        <div class="num">i.</div>
+        <h3>ANAC</h3>
+        <p>Contratti pubblici in formato Open Contracting Data Standard. Affidamenti dal 2020 a oggi.</p>
+        <span class="badge live">live</span>
+        <span class="badge">CC-BY 4.0</span>
+      </div>
+      <div class="source-card">
+        <div class="num">ii.</div>
+        <h3>BDAP-MOP</h3>
+        <p>Ragioneria Generale dello Stato — Monitoraggio Opere Pubbliche. Lavori pubblici programmati e in corso.</p>
+        <span class="badge live">live</span>
+        <span class="badge">IODL 2.0</span>
+      </div>
+      <div class="source-card">
+        <div class="num">iii.</div>
+        <h3>SIOPE</h3>
+        <p>MEF/RGS — Sistema Informativo Operazioni Enti Pubblici. Flussi di cassa annuali, voce per voce.</p>
+        <span class="badge live">live</span>
+        <span class="badge">IODL 2.0</span>
+      </div>
+      <div class="source-card">
+        <div class="num">iv.</div>
+        <h3>Italia Domani</h3>
+        <p>Sistema ReGiS — progetti del Piano Nazionale di Ripresa e Resilienza con il comune come Soggetto Attuatore.</p>
+        <span class="badge live">live</span>
+        <span class="badge">CC-BY 4.0</span>
+      </div>
+      <div class="source-card">
+        <div class="num">v.</div>
+        <h3>ISTAT · Demografia</h3>
+        <p>Popolazione residente per età e sesso (POSAS). Anagrafica ufficiale dei comuni italiani.</p>
+        <span class="badge live">live</span>
+        <span class="badge">CC-BY 3.0 IT</span>
+      </div>
+      <div class="source-card">
+        <div class="num">vi.</div>
+        <h3>ISTAT · Profilo</h3>
+        <p>Censimento permanente della popolazione: istruzione, lavoro, famiglie, mobilità, cittadinanza.</p>
+        <span class="badge live">live</span>
+        <span class="badge">CC-BY 3.0 IT</span>
+      </div>
+      <div class="source-card">
+        <div class="num">vii.</div>
+        <h3>ISTAT · Turismo</h3>
+        <p>Capacità ricettiva comunale (alberghieri ed extra) e flussi turistici provinciali (arrivi, presenze).</p>
+        <span class="badge live">live</span>
+        <span class="badge">CC-BY 3.0 IT</span>
+      </div>
+      <div class="source-card">
+        <div class="num">viii.</div>
+        <h3>ISPRA</h3>
+        <p>Profilo ambientale: consumo di suolo (SNPA 2025), rischio idrogeologico (IdroGEO), rifiuti urbani (Catasto Rifiuti), qualità dell'aria (SNPA - rete monitoraggio).</p>
+        <span class="badge live">live</span>
+        <span class="badge">CC-BY 4.0</span>
+      </div>
+      <div class="source-card">
+        <div class="num">ix.</div>
+        <h3>MIUR · Scuole</h3>
+        <p>Anagrafe Scuole Statali (DS0400SCUANAGRAFESTAT). ~50.000 scuole in 6.657 comuni. Esclude PA Trento, Bolzano e Aosta che pubblicano dataset separati.</p>
+        <span class="badge live">live</span>
+        <span class="badge">CC-BY 4.0</span>
+      </div>
+      <div class="source-card">
+        <div class="num">x.</div>
+        <h3>ISTAT · ACI · Veicoli</h3>
+        <p>Parco veicoli per classe Euro (ISTAT 41_993, 7.896 comuni), incidenti stradali con morti e feriti (ISTAT 41_983, 6.339 comuni), nuove iscrizioni per alimentazione (ACI LOD, 7.847 comuni).</p>
+        <span class="badge live">live</span>
+        <span class="badge">CC-BY 4.0</span>
+      </div>
+      <div class="source-card" data-source-card="MEF">
+        <div class="num">x.</div>
+        <h3>MEF · Dipartimento delle Finanze</h3>
+        <p>Dichiarazioni dei redditi IRPEF su base comunale 2020&ndash;2024: numero contribuenti, reddito medio, distribuzione per 8 fasce di reddito (da &le;0 a &gt;120k), tipologie (lavoro dipendente, pensione, autonomo, fabbricati), addizionale comunale e imposta netta media. Aggiornamento annuale ad aprile.</p>
+        <span class="badge live">live</span>
+        <span class="badge">CC BY 3.0</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ABOUT ============ -->
+<section class="about">
+  <div class="wrap">
+    <div class="about-grid">
+      <h2>Perché<br><em>questo</em><br>cruscotto.</h2>
+      <div class="about-content">
+        <p>
+          I dati sui comuni italiani esistono, sono aperti, sono enormi. Bilanci,
+          opere, contratti, PNRR, demografia, profilo socioeconomico, turismo:
+          ogni dominio ha la sua fonte ufficiale, il suo portale, il suo schema.
+          Eppure metterli insieme per <em>uno specifico comune</em> richiede
+          settimane di lavoro tecnico. Dodici dataset diversi, dodici codici diversi, dodici chiavi di lettura.
+        </p>
+        <p>
+          Cruscotto Italia <strong>ricompone</strong> queste dodici fonti per codice
+          ISTAT del comune, unifica gli identificativi (CIG, CUP, codice fiscale
+          ente, denominazione) e presenta una vista unica. Tutto il codice è
+          <strong>open source</strong> con licenza AGPL-3.0, tutti i dati sono
+          già pubblici sotto licenze CC-BY 4.0 o IODL 2.0.
+        </p>
+        <p>
+          Cruscotto Italia mette a disposizione una vista unitaria utile a chiunque
+          debba consultare dati comunali: <em>amministrazioni</em> che vogliono
+          confrontare il proprio territorio con altri, professionisti
+          dell'informazione, ricercatori, e cittadini interessati a conoscere il
+          proprio comune attraverso dati ufficiali.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<!-- ============ FOOTER ============ -->
+<footer>
+  <div class="wrap">
+    <div class="colophon">
+      <strong>Cruscotto Italia</strong><br>
+      Iniziativa basata sui dati pubblici del Catalogo Nazionale
+      <a href="https://www.dati.gov.it" target="_blank" rel="noopener">dati.gov.it</a>.<br>
+      Open data CC-BY 4.0 e IODL 2.0 · Codice AGPL-3.0
+    </div>
+    <div>
+      <h3>Progetto</h3>
+      <ul>
+        <li><a href="/about.html">About</a></li>
+        <li><a href="https://github.com/piersoft/cruscotto-italia">GitHub</a></li>
+        <li><a href="/accessibilita.html">Accessibilità</a></li>
+      </ul>
+    </div>
+    <div>
+      <h3>Contatti</h3>
+      <ul>
+        <li><a href="https://www.dati.gov.it" target="_blank" rel="noopener">dati.gov.it</a></li>
+        <li><a href="mailto:dati@agid.gov.it">dati@agid.gov.it</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="wrap" style="display:block;margin-top:32px;padding-top:16px;border-top:1px solid #333">
+    <div class="footer-bottom">
+      <span>v2026.05.07.1 · Build cruscotto-italia 0.1.0</span>
+      <span>AGPL-3.0 · 2026 piersoft</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+// ===========================================================================
+// Client JSON-RPC al backend del cruscotto
+// ===========================================================================
+const MCP_ENDPOINT = window.location.hostname === 'localhost'
+  ? 'http://localhost:8787/mcp'
+  : 'https://cruscotto-italia-mcp.datigovit.workers.dev/mcp';
+
+async function mcpCall(toolName, args) {
+  const res = await fetch(MCP_ENDPOINT, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      jsonrpc: '2.0',
+      id: Date.now(),
+      method: 'tools/call',
+      params: { name: toolName, arguments: args }
+    })
+  });
+  if (!res.ok) throw new Error(`MCP error ${res.status}`);
+  const data = await res.json();
+  if (data.error) throw new Error(data.error.message);
+  // Result format: { content: [{ type: 'text', text: '<json>' }] }
+  return JSON.parse(data.result.content[0].text);
+}
+
+// ===========================================================================
+// Search comune autocomplete
+// ===========================================================================
+const input = document.getElementById('comune-search');
+const suggBox = document.getElementById('suggestions');
+let activeIndex = -1;
+let currentResults = [];
+let debounceTimer = null;
+
+function renderSuggestions(results) {
+  currentResults = results;
+  if (!results || results.length === 0) {
+    suggBox.innerHTML = '<div class="suggestion" style="cursor:default;color:var(--ink-mute);font-style:italic">Nessun comune trovato.</div>';
+    suggBox.classList.add('open');
+    return;
+  }
+  suggBox.innerHTML = results.map((c, i) => `
+    <div class="suggestion" data-istat="${c.istat_code}" data-index="${i}" role="option">
+      <span class="suggestion-name">${c.denominazione}</span>
+      <span class="suggestion-meta">${c.provincia} · ${c.regione}${c.codice_ipa ? ' · ' + c.codice_ipa : ''}</span>
+    </div>
+  `).join('');
+  suggBox.classList.add('open');
+  input.setAttribute('aria-expanded', 'true');
+  activeIndex = -1;
+}
+
+function closeSuggestions() {
+  suggBox.classList.remove('open');
+  input.setAttribute('aria-expanded', 'false');
+  activeIndex = -1;
+}
+
+function navigateToComune(istatCode) {
+  window.location.href = `/comune.html?istat=${istatCode}`;
+}
+
+input.addEventListener('input', () => {
+  const q = input.value.trim();
+  clearTimeout(debounceTimer);
+  if (q.length < 2) { closeSuggestions(); return; }
+  debounceTimer = setTimeout(async () => {
+    try {
+      const r = await mcpCall('search_comune', { query: q, limit: 8 });
+      renderSuggestions(r.results || []);
+    } catch (err) {
+      console.error('search error:', err);
+      suggBox.innerHTML = `<div class="suggestion" style="color:var(--accent);cursor:default">⚠️ Servizio non raggiungibile: ${err.message}</div>`;
+      suggBox.classList.add('open');
+    }
+  }, 200);
+});
+
+input.addEventListener('keydown', (e) => {
+  if (!suggBox.classList.contains('open')) return;
+  const items = suggBox.querySelectorAll('.suggestion[data-istat]');
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    activeIndex = Math.min(items.length - 1, activeIndex + 1);
+    items.forEach((it, i) => it.classList.toggle('active', i === activeIndex));
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    activeIndex = Math.max(0, activeIndex - 1);
+    items.forEach((it, i) => it.classList.toggle('active', i === activeIndex));
+  } else if (e.key === 'Enter') {
+    e.preventDefault();
+    const target = activeIndex >= 0 ? items[activeIndex] : items[0];
+    if (target) navigateToComune(target.dataset.istat);
+  } else if (e.key === 'Escape') {
+    closeSuggestions();
+    input.blur();
+  }
+});
+
+suggBox.addEventListener('click', (e) => {
+  const sugg = e.target.closest('.suggestion[data-istat]');
+  if (sugg) navigateToComune(sugg.dataset.istat);
+});
+
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.search-box')) closeSuggestions();
+});
+</script>
+
+</body>
+</html>

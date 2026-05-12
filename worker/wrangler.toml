@@ -1,0 +1,45 @@
+name = "cruscotto-italia-mcp"
+main = "src/index.ts"
+compatibility_date = "2026-05-01"
+compatibility_flags = ["nodejs_compat"]
+workers_dev = true
+preview_urls = true
+
+# Custom domain
+routes = [
+  { pattern = "cruscotto-italia-mcp.piersoftckan.biz", custom_domain = true }
+]
+
+# R2 bucket per i Parquet
+[[r2_buckets]]
+binding = "DATA"
+bucket_name = "cruscotto-italia-data"
+preview_bucket_name = "cruscotto-italia-data-preview"
+
+# KV per cache delle query frequenti
+[[kv_namespaces]]
+binding = "CACHE"
+id = "9251e463afc3406b83f81e555a6e12b7"
+preview_id = "57a470d2e41d4e519a532e42713e9382"
+
+# Rate limiting binding nativo Cloudflare
+[[ratelimits]]
+name = "MCP_RATE_LIMITER"
+namespace_id = "1001"
+simple = { limit = 60, period = 60 }
+
+# Variables (non-secret)
+[vars]
+LOG_LEVEL = "info"
+CACHE_TTL_SECONDS = "3600"
+RATE_LIMIT_RPM = "60"
+
+# Observability
+[observability]
+enabled = true
+
+# Production env (overrides)
+[env.production]
+name = "cruscotto-italia-mcp-prod"
+[env.production.vars]
+LOG_LEVEL = "warn"

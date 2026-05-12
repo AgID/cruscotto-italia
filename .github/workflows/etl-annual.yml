@@ -1,0 +1,191 @@
+name: ETL · Annual
+
+# Cadenza annuale per fonti che aggiornano una volta l'anno.
+# Tre window distinte sull'anno per allinearsi alle pubblicazioni upstream:
+#   - 1° febbraio:  demografia (ISTAT POSAS popolazione 1° gennaio) + profilo (Censimento)
+#   - 1° aprile:    turismo (ISTAT TUR_1 + TUR_7)
+#   - 1° luglio:    territorio (ISPRA Suolo + IdroGEO + Rifiuti)
+#
+# Ognuno termina con dashboard rebuild + cache purge worker.
+# Cron tutti alle 04:00 UTC = 05:00/06:00 ora di Roma (DST).
+
+on:
+  schedule:
+    - cron: '0 4 1 2 *'   # 1° febbraio
+    - cron: '0 4 1 4 *'   # 1° aprile
+    - cron: '0 4 1 7 *'   # 1° luglio
+  workflow_dispatch:
+    inputs:
+      window:
+        description: 'Quale finestra eseguire'
+        required: true
+        type: choice
+        default: 'all'
+        options:
+          - all
+          - february
+          - april
+          - july
+
+env:
+  R2_ACCOUNT_ID:        ${{ secrets.R2_ACCOUNT_ID }}
+  R2_ACCESS_KEY_ID:     ${{ secrets.R2_ACCESS_KEY_ID }}
+  R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+  R2_BUCKET:            cruscotto-italia-data
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # WINDOW 1: FEBBRAIO — demografia + profilo
+  # ---------------------------------------------------------------------------
+  demografia:
+    name: ETL · Demografia (ISTAT POSAS)
+    runs-on: [self-hosted, linux, aruba]
+    if: ${{ github.event.schedule == '0 4 1 2 *' || github.event.inputs.window == 'february' || github.event.inputs.window == 'all' }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: etl/requirements.txt
+      - run: pip install -r etl/requirements.txt
+      - name: Run Demografia ETL
+        run: python -m etl.sources.demografia --target=r2
+
+  profilo:
+    name: ETL · Profilo (Censimento permanente ISTAT)
+    runs-on: [self-hosted, linux, aruba]
+    if: ${{ github.event.schedule == '0 4 1 2 *' || github.event.inputs.window == 'february' || github.event.inputs.window == 'all' }}
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: etl/requirements.txt
+      - run: pip install -r etl/requirements.txt
+      - name: Run Profilo ETL
+        run: python -m etl.sources.istat_profilo --target=r2
+
+  aria:
+    name: ETL · Aria (ISPRA SNPA qualità aria - PM10/PM2.5/NO2)
+    runs-on: [self-hosted, linux, aruba]
+    if: ${{ github.event.schedule == '0 4 1 2 *' || github.event.inputs.window == 'february' || github.event.inputs.window == 'all' }}
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: etl/requirements.txt
+      - run: pip install -r etl/requirements.txt
+      - name: Run Aria ETL
+        run: python -m etl.sources.aria --target=r2
+
+  # ---------------------------------------------------------------------------
+  # WINDOW 2: APRILE — turismo
+  # ---------------------------------------------------------------------------
+  turismo:
+    name: ETL · Turismo (ISTAT TUR_1 + TUR_7)
+    runs-on: [self-hosted, linux, aruba]
+    if: ${{ github.event.schedule == '0 4 1 4 *' || github.event.inputs.window == 'april' || github.event.inputs.window == 'all' }}
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: etl/requirements.txt
+      - run: pip install -r etl/requirements.txt
+      - name: Run Turismo ETL
+        run: python -m etl.sources.istat_turismo --target=r2
+
+  # ---------------------------------------------------------------------------
+  # WINDOW 3: LUGLIO — territorio
+  # ---------------------------------------------------------------------------
+  territorio:
+    name: ETL · Territorio (ISPRA Suolo + IdroGEO + Rifiuti)
+    runs-on: [self-hosted, linux, aruba]
+    if: ${{ github.event.schedule == '0 4 1 7 *' || github.event.inputs.window == 'july' || github.event.inputs.window == 'all' }}
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: etl/requirements.txt
+      - run: pip install -r etl/requirements.txt
+      - name: Run Territorio ETL
+        run: python -m etl.sources.territorio --target=r2
+
+  veicoli:
+    name: ETL · Veicoli e incidenti (ISTAT 41_993 + 41_983 + ACI LOD)
+    runs-on: [self-hosted, linux, aruba]
+    if: ${{ github.event.schedule == '0 4 1 7 *' || github.event.inputs.window == 'july' || github.event.inputs.window == 'all' }}
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: etl/requirements.txt
+      - run: pip install -r etl/requirements.txt
+      - name: Run Veicoli ETL
+        run: python -m etl.sources.veicoli --target=r2
+
+  # ---------------------------------------------------------------------------
+  # Dashboard rebuild parte dopo TUTTI i job ETL della finestra (qualsiasi
+  # essa sia). always() + check almeno un success: lo stesso pattern di
+  # weekly/monthly. Job che non sono partiti hanno result == 'skipped'.
+  redditi:
+    name: ETL · MEF Redditi IRPEF (dichiarazioni comunali a.i. 2020-2024)
+    runs-on: [self-hosted, linux, aruba]
+    if: ${{ github.event.schedule == '0 4 1 4 *' || github.event.inputs.window == 'april' || github.event.inputs.window == 'all' }}
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: etl/requirements.txt
+      - run: pip install -r etl/requirements.txt
+      - name: Run Redditi ETL
+        run: python -m etl.sources.redditi
+
+  dashboard:
+    name: ETL · Dashboard rebuild (single-fetch shard)
+    runs-on: [self-hosted, linux, aruba]
+    needs: [demografia, profilo, aria, turismo, territorio, veicoli, redditi]
+    if: ${{ always() && (needs.demografia.result == 'success' || needs.profilo.result == 'success' || needs.aria.result == 'success' || needs.turismo.result == 'success' || needs.territorio.result == 'success' || needs.veicoli.result == 'success' || needs.redditi.result == 'success') }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: etl/requirements.txt
+      - run: pip install -r etl/requirements.txt
+      - name: Run Dashboard ETL
+        run: python -m etl.sources.dashboard --target=r2
+
+  # ---------------------------------------------------------------------------
+  notify:
+    name: Notify worker (cache purge)
+    needs: [dashboard]
+    if: ${{ always() && needs.dashboard.result == 'success' }}
+    runs-on: [self-hosted, linux, aruba]
+    steps:
+      - name: Purge worker cache
+        run: |
+          curl -sS -X POST "https://cruscotto-italia-mcp.datigovit.workers.dev/admin/cache/purge" \
+            -H "Authorization: Bearer ${{ secrets.WORKER_ADMIN_TOKEN }}" \
+            -H "Content-Type: application/json" \
+          || echo "Cache purge endpoint non disponibile (non-critical)"

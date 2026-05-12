@@ -1,0 +1,31 @@
+{
+  "name": "cruscotto-italia-mcp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "MCP server federating Italian public spending data sources",
+  "license": "AGPL-3.0",
+  "author": "piersoft <info@piersoft.it>",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@duckdb/duckdb-wasm": "^1.29.0",
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250101.0",
+    "@types/node": "^22.0.0",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0",
+    "wrangler": "^4.86.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

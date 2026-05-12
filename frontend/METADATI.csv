@@ -1,0 +1,171 @@
+sezione,campo,descrizione,unita,fonte,periodo,url_fonte,licenza_fonte
+_meta,_etl_version,Versione del pipeline ETL che ha generato lo shard,testo,Cruscotto Italia,corrente,{{SITE_URL}},CC BY 4.0
+_meta,_generated_at,Timestamp ISO 8601 di generazione dello shard,datetime,Cruscotto Italia,corrente,{{SITE_URL}},CC BY 4.0
+_meta,_missing,Lista delle sezioni dati assenti per questo comune,lista,Cruscotto Italia,corrente,{{SITE_URL}},CC BY 4.0
+anagrafica,istat_code,Codice ISTAT del comune (6 cifre),codice,ISTAT,corrente,https://www.istat.it/it/archivio/6789,CC BY 3.0 IT
+anagrafica,denominazione,Denominazione ufficiale del comune,testo,ISTAT,corrente,https://www.istat.it/it/archivio/6789,CC BY 3.0 IT
+anagrafica,provincia,Sigla provincia (2 lettere),codice,ISTAT,corrente,https://www.istat.it/it/archivio/6789,CC BY 3.0 IT
+anagrafica,regione,Nome regione amministrativa,testo,ISTAT,corrente,https://www.istat.it/it/archivio/6789,CC BY 3.0 IT
+anagrafica,codice_ipa,Codice IPA dell'ente nella PA,codice,IndicePA,corrente,https://indicepa.gov.it,CC BY 4.0
+anagrafica,codice_fiscale,Codice fiscale dell'ente comunale,codice,IndicePA,corrente,https://indicepa.gov.it,CC BY 4.0
+anagrafica,nome_categoria,Categoria IPA (Pubbliche Amministrazioni),testo,IndicePA,corrente,https://indicepa.gov.it,CC BY 4.0
+anagrafica,codice_catastale,Codice catastale Agenzia Entrate,codice,Agenzia Entrate,corrente,https://www.agenziaentrate.gov.it,CC BY 4.0
+anagrafica,kpi.popolazione,KPI aggregato popolazione totale,numero,ISTAT POSAS,1 gen anno corrente,https://demo.istat.it,CC BY 3.0 IT
+anagrafica,kpi.contratti,KPI aggregato n. contratti ANAC (può essere null),numero,ANAC,ultimo mese disponibile,https://dati.anticorruzione.it,CC BY 4.0
+anagrafica,kpi.opere,KPI aggregato n. opere pubbliche BDAP (può essere null),numero,BDAP MOP,annuale,https://bdap-opendata.rgs.mef.gov.it,IODL 2.0
+anagrafica,kpi.spese_siope,KPI aggregato n. voci spesa SIOPE (può essere null),numero,SIOPE,mensile cumulato,https://www.siope.it,CC BY 4.0
+anagrafica,kpi.coesione,KPI aggregato fondi coesione (può essere null),numero,OpenCoesione,corrente,https://opencoesione.gov.it,IODL 2.0
+demografia,popolazione_totale,Popolazione residente totale,numero,ISTAT POSAS,1 gennaio (stima),https://demo.istat.it,CC BY 3.0 IT
+demografia,maschi,Popolazione maschile residente,numero,ISTAT POSAS,1 gennaio (stima),https://demo.istat.it,CC BY 3.0 IT
+demografia,femmine,Popolazione femminile residente,numero,ISTAT POSAS,1 gennaio (stima),https://demo.istat.it,CC BY 3.0 IT
+demografia,pct_maschi,Percentuale popolazione maschile,percentuale,ISTAT POSAS,1 gennaio (stima),https://demo.istat.it,CC BY 3.0 IT
+demografia,pct_femmine,Percentuale popolazione femminile,percentuale,ISTAT POSAS,1 gennaio (stima),https://demo.istat.it,CC BY 3.0 IT
+demografia,eta_media,Età media della popolazione,anni,ISTAT POSAS,1 gennaio (stima),https://demo.istat.it,CC BY 3.0 IT
+demografia,indice_vecchiaia,Rapporto >=65 anni su 0-14 anni x100,indice,ISTAT POSAS,1 gennaio (stima),https://demo.istat.it,CC BY 3.0 IT
+demografia,indice_dipendenza,Rapporto popolazione non attiva su attiva x100,indice,ISTAT POSAS,1 gennaio (stima),https://demo.istat.it,CC BY 3.0 IT
+demografia,classi_eta,Distribuzione per classi quinquennali di età,dict,ISTAT POSAS,1 gennaio (stima),https://demo.istat.it,CC BY 3.0 IT
+demografia,piramide,Dati per istogramma piramide demografica M/F per classe,dict,ISTAT POSAS,1 gennaio (stima),https://demo.istat.it,CC BY 3.0 IT
+profilo,istruzione.terziario_n,Numero residenti 25-64 con titolo terziario,numero,ISTAT Censimento,ultimo censimento,https://esploradati.istat.it,CC BY 3.0 IT
+profilo,istruzione.terziario_pct,Percentuale residenti 25-64 con titolo terziario,percentuale,ISTAT Censimento,ultimo censimento,https://esploradati.istat.it,CC BY 3.0 IT
+profilo,istruzione.diploma_oltre_n,Numero residenti 25-64 con diploma o oltre,numero,ISTAT Censimento,ultimo censimento,https://esploradati.istat.it,CC BY 3.0 IT
+profilo,istruzione.dettaglio,Distribuzione per titolo (nessuno/elementare/media/diploma/laurea),dict,ISTAT Censimento,ultimo censimento,https://esploradati.istat.it,CC BY 3.0 IT
+profilo,lavoro.occupati_n,Numero occupati 25-64 anni,numero,ISTAT Censimento,ultimo censimento,https://esploradati.istat.it,CC BY 3.0 IT
+profilo,lavoro.in_cerca_n,Numero in cerca di occupazione 25-64 anni,numero,ISTAT Censimento,ultimo censimento,https://esploradati.istat.it,CC BY 3.0 IT
+profilo,lavoro.tasso_occupazione,Tasso di occupazione 25-64 anni,percentuale,ISTAT Censimento,ultimo censimento,https://esploradati.istat.it,CC BY 3.0 IT
+profilo,lavoro.tasso_disoccupazione,Tasso di disoccupazione 25-64 anni,percentuale,ISTAT Censimento,ultimo censimento,https://esploradati.istat.it,CC BY 3.0 IT
+profilo,lavoro.tasso_attivita,Tasso di attività 25-64 anni,percentuale,ISTAT Censimento,ultimo censimento,https://esploradati.istat.it,CC BY 3.0 IT
+profilo,famiglie.n_famiglie,Numero di famiglie residenti,numero,ISTAT Censimento,ultimo censimento,https://esploradati.istat.it,CC BY 3.0 IT
+profilo,famiglie.pop_in_famiglia,Popolazione in famiglie,numero,ISTAT Censimento,ultimo censimento,https://esploradati.istat.it,CC BY 3.0 IT
+profilo,famiglie.pop_in_convivenza,Popolazione in convivenze,numero,ISTAT Censimento,ultimo censimento,https://esploradati.istat.it,CC BY 3.0 IT
+profilo,famiglie.dim_media_famiglia,Dimensione media famiglie,numero,ISTAT Censimento,ultimo censimento,https://esploradati.istat.it,CC BY 3.0 IT
+profilo,mobilita,Dati pendolarismo (FROZEN al censimento 2019),dict,ISTAT Censimento 2019,2019,https://esploradati.istat.it,CC BY 3.0 IT
+profilo,cittadinanza,Italiani vs stranieri residenti,dict,ISTAT Censimento,ultimo censimento,https://esploradati.istat.it,CC BY 3.0 IT
+turismo,capacita_comune.totale_strutture,Numero totale strutture ricettive nel comune,numero,ISTAT Capacita ricettiva,annuale,https://esploradati.istat.it,CC BY 3.0 IT
+turismo,capacita_comune.totale_letti,Numero totale posti letto nel comune,numero,ISTAT Capacita ricettiva,annuale,https://esploradati.istat.it,CC BY 3.0 IT
+turismo,capacita_comune.totale_camere,Numero totale camere nel comune,numero,ISTAT Capacita ricettiva,annuale,https://esploradati.istat.it,CC BY 3.0 IT
+turismo,capacita_comune.indice_turisticita_per_100ab,Posti letto per 100 abitanti,indice,ISTAT,annuale,https://esploradati.istat.it,CC BY 3.0 IT
+turismo,capacita_comune.alberghi,Dettaglio strutture alberghiere (1-5 stelle + residence),dict,ISTAT Capacita ricettiva,annuale,https://esploradati.istat.it,CC BY 3.0 IT
+turismo,capacita_comune.extra_alberghiero,"Dettaglio strutture extra-alberghiere (B&B, agriturismi, ecc.)",dict,ISTAT Capacita ricettiva,annuale,https://esploradati.istat.it,CC BY 3.0 IT
+turismo,flussi_provincia,ATTENZIONE: dato provinciale NUTS3 non comunale (limite ISTAT),dict,ISTAT Movimento clienti,annuale,https://esploradati.istat.it,CC BY 3.0 IT
+turismo,flussi_provincia.arrivi_totali,Arrivi turistici nella provincia (NUTS3),numero,ISTAT,annuale,https://esploradati.istat.it,CC BY 3.0 IT
+turismo,flussi_provincia.presenze_totali,Presenze turistiche nella provincia (NUTS3),numero,ISTAT,annuale,https://esploradati.istat.it,CC BY 3.0 IT
+pnrr,kpi.n_progetti,Numero totale progetti PNRR nel comune,numero,Italia Domani ReGiS,corrente,https://italiadomani.gov.it,CC BY 4.0
+pnrr,kpi.totale_finanziamento_pnrr,Totale finanziamento PNRR (euro),euro,Italia Domani ReGiS,corrente,https://italiadomani.gov.it,CC BY 4.0
+pnrr,kpi.totale_finanziamento_globale,Totale finanziamento globale incl. cofinanziamento (euro),euro,Italia Domani ReGiS,corrente,https://italiadomani.gov.it,CC BY 4.0
+pnrr,kpi.n_concluso,Numero progetti conclusi,numero,Italia Domani ReGiS,corrente,https://italiadomani.gov.it,CC BY 4.0
+pnrr,kpi.n_in_corso,Numero progetti in corso,numero,Italia Domani ReGiS,corrente,https://italiadomani.gov.it,CC BY 4.0
+pnrr,kpi.n_missioni_distinte,Numero missioni PNRR distinte coinvolte,numero,Italia Domani ReGiS,corrente,https://italiadomani.gov.it,CC BY 4.0
+pnrr,per_missione,Aggregato finanziamenti per missione M1-M6,lista,Italia Domani ReGiS,corrente,https://italiadomani.gov.it,CC BY 4.0
+pnrr,progetti,"Lista completa progetti (cup, titolo, missione, finanziamento)",lista,Italia Domani ReGiS,corrente,https://italiadomani.gov.it,CC BY 4.0
+territorio,kpi.ar_kmq,Superficie comunale in kmq,kmq,ISPRA,corrente,https://www.isprambiente.gov.it,CC BY 4.0
+territorio,kpi.suolo_consumato_2024_pct,Percentuale suolo consumato sull'area comunale,percentuale,ISPRA SNPA,annuale,https://www.isprambiente.gov.it,CC BY 4.0
+territorio,kpi.incremento_2024_ha,Incremento consumo suolo nell'ultimo anno (ettari),ettari,ISPRA SNPA,annuale,https://www.isprambiente.gov.it,CC BY 4.0
+territorio,kpi.popolazione_frane_p3p4_pct,% popolazione in aree frane pericolosità P3+P4,percentuale,ISPRA IdroGEO,ultimo aggiornamento,https://idrogeo.isprambiente.it,CC BY 4.0
+territorio,kpi.rd_pct_ultimo_anno,Percentuale raccolta differenziata ultimo anno,percentuale,ISPRA Catasto Rifiuti,annuale,https://www.catasto-rifiuti.isprambiente.it,CC BY 4.0
+territorio,kpi.kg_per_abitante_ultimo_anno,Kg rifiuti urbani pro-capite ultimo anno,kg/ab,ISPRA Catasto Rifiuti,annuale,https://www.catasto-rifiuti.isprambiente.it,CC BY 4.0
+territorio,suolo.stock_2024,Stock consumo suolo ultimo anno (ha e %),dict,ISPRA SNPA,annuale,https://www.isprambiente.gov.it,CC BY 4.0
+territorio,suolo.serie_storica,Serie storica annuale consumo suolo,lista,ISPRA SNPA,serie storica,https://www.isprambiente.gov.it,CC BY 4.0
+territorio,rischio_idrogeologico.alluvioni,Aree e popolazione esposte ad alluvioni P1/P2/P3,dict,ISPRA IdroGEO,v5.0 (2020),https://idrogeo.isprambiente.it,CC BY 4.0
+territorio,rischio_idrogeologico.frane,Aree e popolazione esposte a frane P1/P2/P3/P4,dict,ISPRA IdroGEO,v5.0 (2020),https://idrogeo.isprambiente.it,CC BY 4.0
+territorio,rifiuti.ultimo,"Dato rifiuti urbani ultimo anno (RU, RD, kg/ab)",dict,ISPRA Catasto Rifiuti,annuale,https://www.catasto-rifiuti.isprambiente.it,CC BY 4.0
+territorio,rifiuti.serie_storica,Serie storica annuale rifiuti urbani,lista,ISPRA Catasto Rifiuti,serie storica,https://www.catasto-rifiuti.isprambiente.it,CC BY 4.0
+territorio,geo.ar_kmq,Area kmq dato cartografico OSM,kmq,OpenStreetMap,corrente,https://www.openstreetmap.org,ODbL
+territorio,geo.osmid,ID OpenStreetMap della relazione comunale,codice,OpenStreetMap,corrente,https://www.openstreetmap.org,ODbL
+territorio,geo.extent,Bounding box geografica del comune,lista,OpenStreetMap,corrente,https://www.openstreetmap.org,ODbL
+opere,n_progetti,Numero totale opere pubbliche BDAP (CHIUSI dal 2023 + ATTIVI),numero,BDAP MOP,annuale,https://bdap-opendata.rgs.mef.gov.it,IODL 2.0
+opere,progetti,"Lista completa opere (cup, descrizione, stato, costi, finanziamenti)",lista,BDAP MOP,annuale,https://bdap-opendata.rgs.mef.gov.it,IODL 2.0
+opere,progetti[].cup,Codice Unico di Progetto,codice,BDAP MOP,annuale,https://bdap-opendata.rgs.mef.gov.it,IODL 2.0
+opere,progetti[].stato,Stato opera (ATTIVO/CHIUSO),enum,BDAP MOP,annuale,https://bdap-opendata.rgs.mef.gov.it,IODL 2.0
+opere,progetti[].settore,Settore opera (es. INFRASTRUTTURE SOCIALI),enum,BDAP MOP,annuale,https://bdap-opendata.rgs.mef.gov.it,IODL 2.0
+opere,progetti[].costo_eff,Costo effettivo lavori (euro),euro,BDAP MOP,annuale,https://bdap-opendata.rgs.mef.gov.it,IODL 2.0
+opere,progetti[].costo_prev,Costo previsto lavori (euro),euro,BDAP MOP,annuale,https://bdap-opendata.rgs.mef.gov.it,IODL 2.0
+opere,progetti[].fin_statali,Finanziamenti statali (euro),euro,BDAP MOP,annuale,https://bdap-opendata.rgs.mef.gov.it,IODL 2.0
+opere,progetti[].fin_europei,Finanziamenti europei (euro),euro,BDAP MOP,annuale,https://bdap-opendata.rgs.mef.gov.it,IODL 2.0
+opere,progetti[].fin_enti_terr,Finanziamenti enti territoriali (euro),euro,BDAP MOP,annuale,https://bdap-opendata.rgs.mef.gov.it,IODL 2.0
+opere,progetti[].fin_privati,Finanziamenti privati (euro),euro,BDAP MOP,annuale,https://bdap-opendata.rgs.mef.gov.it,IODL 2.0
+opere,progetti[].fin_altri,Altri finanziamenti (euro),euro,BDAP MOP,annuale,https://bdap-opendata.rgs.mef.gov.it,IODL 2.0
+siope,anni_disponibili,Anni di rendicontazione disponibili,lista,SIOPE via CKAN BDAP,mensile cumulato,https://dati.gov.it,CC BY 4.0
+siope,anno_default,Anno predefinito mostrato dal frontend,numero,Cruscotto Italia,corrente,{{SITE_URL}},CC BY 4.0
+siope,per_anno.<anno>.parziale,True se anno in corso (dati non completi),boolean,SIOPE,corrente,https://dati.gov.it,CC BY 4.0
+siope,per_anno.<anno>.ente_siope,Denominazione ente SIOPE,testo,SIOPE,corrente,https://dati.gov.it,CC BY 4.0
+siope,per_anno.<anno>.popolazione,Popolazione di riferimento per il calcolo pro-capite,numero,SIOPE,corrente,https://dati.gov.it,CC BY 4.0
+siope,per_anno.<anno>.mesi_disponibili,Lista mesi con dati cumulati disponibili,lista,SIOPE,mensile,https://dati.gov.it,CC BY 4.0
+siope,per_anno.<anno>.ultimo_mese,Ultimo mese disponibile (YYYY/MM),data,SIOPE,mensile,https://dati.gov.it,CC BY 4.0
+siope,per_anno.<anno>.n_voci,Numero voci di spesa rendicontate,numero,SIOPE,annuale,https://dati.gov.it,CC BY 4.0
+siope,per_anno.<anno>.totale_anno,Totale spese cumulato anno (euro),euro,SIOPE,annuale,https://dati.gov.it,CC BY 4.0
+siope,per_anno.<anno>.voci,Dettaglio voci spesa con codice gestionale e importi,lista,SIOPE,annuale,https://dati.gov.it,CC BY 4.0
+scuole,anno_scolastico,Anno scolastico di riferimento (es. 2025/26),testo,MIUR,annuale settembre,https://dati.mim.gov.it,CC BY 4.0
+scuole,kpi.n_scuole,Numero totale scuole nel comune,numero,MIUR DS0400SCUANAGRAFESTAT,annuale,https://dati.mim.gov.it,CC BY 4.0
+scuole,kpi.n_sedi_direttivo,Numero sedi direttivo (istituti principali),numero,MIUR,annuale,https://dati.mim.gov.it,CC BY 4.0
+scuole,kpi.per_ordine.infanzia,Numero scuole infanzia,numero,MIUR,annuale,https://dati.mim.gov.it,CC BY 4.0
+scuole,kpi.per_ordine.primaria,Numero scuole primarie,numero,MIUR,annuale,https://dati.mim.gov.it,CC BY 4.0
+scuole,kpi.per_ordine.sec1,Numero scuole secondarie I grado,numero,MIUR,annuale,https://dati.mim.gov.it,CC BY 4.0
+scuole,kpi.per_ordine.sec2,Numero scuole secondarie II grado,numero,MIUR,annuale,https://dati.mim.gov.it,CC BY 4.0
+scuole,scuole,"Lista completa scuole con indirizzo, contatti, tipologia",lista,MIUR,annuale,https://dati.mim.gov.it,CC BY 4.0
+scuole,scuole[].codice_scuola,Codice meccanografico scuola,codice,MIUR,annuale,https://dati.mim.gov.it,CC BY 4.0
+scuole,scuole[].tipologia,Tipologia scuola (es. SCUOLA INFANZIA),enum,MIUR,annuale,https://dati.mim.gov.it,CC BY 4.0
+scuole,scuole[].indirizzo,Indirizzo scolastico,testo,MIUR,annuale,https://dati.mim.gov.it,CC BY 4.0
+scuole,scuole[].email,Email scuola,email,MIUR,annuale,https://dati.mim.gov.it,CC BY 4.0
+scuole,scuole[].sede_direttivo,True se sede direttivo,boolean,MIUR,annuale,https://dati.mim.gov.it,CC BY 4.0
+aria,_anno_dati,Anno di riferimento dei dati qualità aria,anno,ISPRA SNPA,annuale (N+2),https://www.isprambiente.gov.it,CC BY 4.0
+aria,n_stazioni,Numero stazioni di monitoraggio nel comune,numero,ISPRA SNPA,annuale,https://www.isprambiente.gov.it,CC BY 4.0
+aria,stazioni,Lista stazioni con coordinate e classificazione,lista,ISPRA SNPA,annuale,https://www.isprambiente.gov.it,CC BY 4.0
+aria,stazioni[].station_eu_code,Codice europeo stazione (es. IT1614A),codice,ISPRA SNPA,annuale,https://www.isprambiente.gov.it,CC BY 4.0
+aria,stazioni[].tipo_zona,Tipo zona (URBANA/SUBURBANA/RURALE),enum,ISPRA SNPA,annuale,https://www.isprambiente.gov.it,CC BY 4.0
+aria,stazioni[].tipo_stazione,Tipo stazione (FONDO/TRAFFICO/INDUSTRIALE),enum,ISPRA SNPA,annuale,https://www.isprambiente.gov.it,CC BY 4.0
+aria,ultimo_anno.pm10.media,Media annua PM10 (ug/m3),ug/m3,ISPRA SNPA,annuale,https://www.isprambiente.gov.it,CC BY 4.0
+aria,ultimo_anno.pm10.n_stazioni_oltre_limite_legge,Stazioni oltre limite di legge (40 ug/m3),numero,ISPRA SNPA,annuale,https://www.isprambiente.gov.it,CC BY 4.0
+aria,ultimo_anno.pm10.n_stazioni_oltre_limite_oms,Stazioni oltre limite OMS (15 ug/m3),numero,ISPRA SNPA,annuale,https://www.isprambiente.gov.it,CC BY 4.0
+aria,ultimo_anno.pm10.n_sup50_giorni_max,Giorni max con PM10 oltre 50 ug/m3,numero,ISPRA SNPA,annuale,https://www.isprambiente.gov.it,CC BY 4.0
+aria,ultimo_anno.pm25.media,Media annua PM2.5 (ug/m3),ug/m3,ISPRA SNPA,annuale,https://www.isprambiente.gov.it,CC BY 4.0
+aria,ultimo_anno.pm25.n_stazioni_oltre_limite_legge,Stazioni oltre limite legge (25 ug/m3),numero,ISPRA SNPA,annuale,https://www.isprambiente.gov.it,CC BY 4.0
+aria,ultimo_anno.pm25.n_stazioni_oltre_limite_oms,Stazioni oltre limite OMS (5 ug/m3),numero,ISPRA SNPA,annuale,https://www.isprambiente.gov.it,CC BY 4.0
+aria,ultimo_anno.no2.media,Media annua NO2 (ug/m3),ug/m3,ISPRA SNPA,annuale,https://www.isprambiente.gov.it,CC BY 4.0
+aria,ultimo_anno.no2.n_stazioni_oltre_limite_legge,Stazioni oltre limite legge (40 ug/m3),numero,ISPRA SNPA,annuale,https://www.isprambiente.gov.it,CC BY 4.0
+aria,ultimo_anno.no2.n_stazioni_oltre_limite_oms,Stazioni oltre limite OMS (10 ug/m3),numero,ISPRA SNPA,annuale,https://www.isprambiente.gov.it,CC BY 4.0
+aria,trend_decennale,Serie storica 10 anni medie PM10/PM2.5/NO2,dict,ISPRA SNPA,serie storica,https://www.isprambiente.gov.it,CC BY 4.0
+aria,stazioni_dettaglio,Dettaglio per stazione di tutti gli anni,lista,ISPRA SNPA,serie storica,https://www.isprambiente.gov.it,CC BY 4.0
+veicoli,popolazione,Popolazione di riferimento per tassi pro-capite,numero,ISTAT,annuale,https://demo.istat.it,CC BY 3.0 IT
+veicoli,parco_veicoli.autovetture,Numero autovetture circolanti,numero,ACI LOD,31 dic,https://lod.aci.it,CC BY 4.0
+veicoli,parco_veicoli.autobus,Numero autobus circolanti,numero,ACI LOD,31 dic,https://lod.aci.it,CC BY 4.0
+veicoli,parco_veicoli.motocicli,Numero motocicli circolanti,numero,ACI LOD,31 dic,https://lod.aci.it,CC BY 4.0
+veicoli,parco_veicoli.autocarri,Numero autocarri circolanti,numero,ACI LOD,31 dic,https://lod.aci.it,CC BY 4.0
+veicoli,parco_veicoli.totale,Totale veicoli circolanti,numero,ACI LOD,31 dic,https://lod.aci.it,CC BY 4.0
+veicoli,parco_veicoli.euro,Distribuzione per classe Euro (0-6),dict,ACI LOD,31 dic,https://lod.aci.it,CC BY 4.0
+veicoli,parco_veicoli.euro.pct_inquinanti,% veicoli Euro 0-3 (inquinanti),percentuale,ACI LOD,31 dic,https://lod.aci.it,CC BY 4.0
+veicoli,parco_veicoli.tasso_motorizzazione_per_1000_ab,Veicoli per 1000 abitanti,tasso,ACI LOD + ISTAT,31 dic,https://lod.aci.it,CC BY 4.0
+veicoli,incidenti.ultimo_anno.incidenti,Numero incidenti stradali con lesioni,numero,ISTAT 41_983,annuale lug,https://esploradati.istat.it,CC BY 3.0 IT
+veicoli,incidenti.ultimo_anno.morti,Numero morti in incidenti,numero,ISTAT 41_983,annuale lug,https://esploradati.istat.it,CC BY 3.0 IT
+veicoli,incidenti.ultimo_anno.feriti,Numero feriti in incidenti,numero,ISTAT 41_983,annuale lug,https://esploradati.istat.it,CC BY 3.0 IT
+veicoli,incidenti.ultimo_anno.morti_per_10k_ab,Tasso mortalità stradale per 10k abitanti,tasso,ISTAT,annuale,https://esploradati.istat.it,CC BY 3.0 IT
+veicoli,incidenti.serie_storica,Serie storica 5 anni incidenti/morti/feriti,dict,ISTAT 41_983,serie storica,https://esploradati.istat.it,CC BY 3.0 IT
+veicoli,iscrizioni.ultimo_anno,Nuove iscrizioni anno (totale + per alimentazione),dict,ACI,annuale gen,https://lod.aci.it,CC BY 4.0
+veicoli,iscrizioni.ultimo_anno.elettriche,Nuove iscrizioni veicoli elettrici,numero,ACI,annuale gen,https://lod.aci.it,CC BY 4.0
+veicoli,iscrizioni.ultimo_anno.ibride,Nuove iscrizioni veicoli ibridi,numero,ACI,annuale gen,https://lod.aci.it,CC BY 4.0
+veicoli,iscrizioni.ultimo_anno.pct_elettriche_ibride,% iscrizioni elettriche+ibride sul totale,percentuale,ACI,annuale gen,https://lod.aci.it,CC BY 4.0
+veicoli,iscrizioni.serie_storica,Serie storica 6 anni iscrizioni e quota elettriche/ibride,dict,ACI,serie storica,https://lod.aci.it,CC BY 4.0
+redditi,anni_disponibili,Anni di imposta disponibili (tipicamente 2020-2024),lista,MEF DF,annuale,https://www.finanze.gov.it/it/statistiche-fiscali/,CC BY 3.0
+redditi,anni.<anno>.contribuenti,Numero contribuenti dichiarazione IRPEF,numero,MEF Dip. Finanze,annuale,https://www.finanze.gov.it/it/statistiche-fiscali/,CC BY 3.0
+redditi,anni.<anno>.reddito_complessivo,"Reddito complessivo (totale, medio, mediano, freq)",dict,MEF DF,annuale,https://www.finanze.gov.it/it/statistiche-fiscali/,CC BY 3.0
+redditi,anni.<anno>.imposta_netta,"Imposta netta IRPEF (totale, media, freq)",dict,MEF DF,annuale,https://www.finanze.gov.it/it/statistiche-fiscali/,CC BY 3.0
+redditi,anni.<anno>.addizionale_comunale,Addizionale comunale IRPEF,dict,MEF DF,annuale,https://www.finanze.gov.it/it/statistiche-fiscali/,CC BY 3.0
+redditi,anni.<anno>.addizionale_regionale,Addizionale regionale IRPEF,dict,MEF DF,annuale,https://www.finanze.gov.it/it/statistiche-fiscali/,CC BY 3.0
+redditi,anni.<anno>.trattamento,Bonus/Trattamento integrativo (schema cambia tra 2020-22 e 2023+),dict,MEF DF,annuale,https://www.finanze.gov.it/it/statistiche-fiscali/,CC BY 3.0
+redditi,anni.<anno>.tipologie,Distribuzione per tipologia reddito (lavoro dip/auton/pensione/altro),dict,MEF DF,annuale,https://www.finanze.gov.it/it/statistiche-fiscali/,CC BY 3.0
+redditi,anni.<anno>.fasce,Distribuzione per fascia di reddito (8 fasce),dict,MEF DF,annuale,https://www.finanze.gov.it/it/statistiche-fiscali/,CC BY 3.0
+redditi,trend,"Trend 5 anni reddito medio, contribuenti, imposta media",lista,MEF DF,serie storica,https://www.finanze.gov.it/it/statistiche-fiscali/,CC BY 3.0
+anac,buyer_name,Nome stazione appaltante,testo,ANAC,ultimi 12 mesi,https://dati.anticorruzione.it,CC BY 4.0
+anac,count,Numero aggiudicazioni contratti pubblici,numero,ANAC,ultimi 12 mesi,https://dati.anticorruzione.it,CC BY 4.0
+anac,importo_totale,Importo totale aggiudicazioni (euro),euro,ANAC,ultimi 12 mesi,https://dati.anticorruzione.it,CC BY 4.0
+anac,first_award_date,Data prima aggiudicazione nel periodo,data,ANAC,ultimi 12 mesi,https://dati.anticorruzione.it,CC BY 4.0
+anac,last_award_date,Data ultima aggiudicazione nel periodo,data,ANAC,ultimi 12 mesi,https://dati.anticorruzione.it,CC BY 4.0
+anac,distinct_cpv,Numero codici CPV distinti (categorie merceologiche),numero,ANAC,ultimi 12 mesi,https://dati.anticorruzione.it,CC BY 4.0
+anac,top_cpv,"Top 5 CPV per importo (code, desc, count, importo)",lista,ANAC,ultimi 12 mesi,https://dati.anticorruzione.it,CC BY 4.0
+bdap_kpi,totale.count,Numero totale opere BDAP (storico complessivo),numero,BDAP MOP,cumulato storico,https://bdap-opendata.rgs.mef.gov.it,IODL 2.0
+bdap_kpi,totale.costo_lavori_eff,Costo effettivo lavori totale (euro),euro,BDAP MOP,cumulato,https://bdap-opendata.rgs.mef.gov.it,IODL 2.0
+bdap_kpi,totale.finanz_statali,Finanziamenti statali totali (euro),euro,BDAP MOP,cumulato,https://bdap-opendata.rgs.mef.gov.it,IODL 2.0
+bdap_kpi,totale.finanz_europei,Finanziamenti europei totali (euro),euro,BDAP MOP,cumulato,https://bdap-opendata.rgs.mef.gov.it,IODL 2.0
+bdap_kpi,totale.finanz_enti_terr,Finanziamenti enti territoriali totali (euro),euro,BDAP MOP,cumulato,https://bdap-opendata.rgs.mef.gov.it,IODL 2.0
+bdap_kpi,per_stato.CHIUSO,Aggregato opere chiuse,dict,BDAP MOP,cumulato,https://bdap-opendata.rgs.mef.gov.it,IODL 2.0
+bdap_kpi,per_stato.ATTIVO,Aggregato opere attive,dict,BDAP MOP,cumulato,https://bdap-opendata.rgs.mef.gov.it,IODL 2.0
+bdap_kpi,top_settori,"Top 5 settori per costo (settore, count, costo)",lista,BDAP MOP,cumulato,https://bdap-opendata.rgs.mef.gov.it,IODL 2.0

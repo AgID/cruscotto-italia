@@ -1,0 +1,24 @@
+[project]
+name = "cruscotto-italia-etl"
+version = "0.1.0"
+description = "ETL pipeline for cruscotto-italia"
+requires-python = ">=3.10"
+license = { text = "AGPL-3.0" }
+
+[tool.ruff]
+line-length = 110
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "RUF"]
+ignore = ["E501"]  # line length is in line-length above
+
+[tool.pytest.ini_options]
+testpaths = ["../tests/etl"]
+addopts = "-v --tb=short"
+
+[tool.mypy]
+python_version = "3.10"
+strict_optional = true
+warn_unused_ignores = true
+ignore_missing_imports = true

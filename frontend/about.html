@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Il progetto · Cruscotto Italia</title>
+<meta name="description" content="Chi ha costruito Cruscotto Italia, da quali fonti pubbliche provengono i dati, come vengono ricomposti comune per comune, e con quale frequenza vengono aggiornati.">
+<meta property="og:title" content="Il progetto · Cruscotto Italia">
+<meta property="og:description" content="Cruscotto Italia: come vengono raccolti, ricomposti e aggiornati i dati comunali a partire da dodici fonti pubbliche istituzionali. Metodologia, frequenze di aggiornamento, licenze.">
+<meta property="og:type" content="article">
+<!-- Design Italia: Titillium Web self-hosted -->
+<link rel="stylesheet" href="/css/tokens.css">
+<link rel="stylesheet" href="/css/base.css">
+<style>
+/* === ALIAS bridge: vecchi nomi -> nuovi token Design Italia === */
+:root{
+  --paper: var(--bg);
+  --paper-2: var(--bg-alt);
+  --ink-mute: var(--mute);
+  --accent: var(--blu-italia);
+  --accent-2: var(--blu-italia-dark);
+  --gold: var(--warning);
+  --rule: var(--border);
+  --serif: var(--font-sans);
+  --sans: var(--font-sans);
+  --mono: var(--font-mono);
+}
+
+/* === Override Design Italia: niente corsivo === */
+em, h1 em, h2 em, h3 em, .brand em, .section-h em {
+  font-style: normal !important;
+  color: var(--blu-italia);
+  font-weight: inherit;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  background:var(--paper);
+  color:var(--ink);
+  font-family:var(--sans);
+  font-size:16px;
+  line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+}
+.skip{position:absolute;left:-9999px;top:auto}
+.skip:focus{left:8px;top:8px;background:var(--ink);color:var(--paper);padding:8px 12px;z-index:1000}
+.wrap{max-width:1180px;margin:0 auto;padding:0 28px}
+a{color:var(--accent);text-decoration:none;border-bottom:1px solid transparent;transition:border-color .15s}
+a:hover{border-bottom-color:var(--accent)}
+
+/* ---- Masthead (identico all'index) ---- */
+.masthead{border-bottom:2px solid var(--rule);padding:24px 0 18px;background:var(--paper)}
+.masthead-row{display:flex;justify-content:space-between;align-items:flex-end;gap:24px;flex-wrap:wrap}
+.tagline{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.16em;color:var(--ink-mute);margin-bottom:6px}
+.brand{font-family:var(--serif);font-size:44px;font-weight:600;letter-spacing:-.02em;line-height:1;font-variation-settings:'opsz' 48,'SOFT' 50,'WONK' 1}
+.brand .it{font-style:italic;font-weight:400;color:var(--accent)}
+.edition{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-mute);text-align:right;line-height:1.5}
+.edition span{color:var(--ink)}
+
+/* ---- Hero pagina ---- */
+.about-hero{padding:56px 0 44px;border-bottom:1px solid var(--ink-mute)}
+.about-eyebrow{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.16em;color:var(--accent);margin-bottom:14px}
+.about-hero h1{font-family:var(--serif);font-size:52px;line-height:1.05;font-weight:400;letter-spacing:-.02em;max-width:800px;font-variation-settings:'opsz' 96,'SOFT' 30}
+.about-hero h1 em{font-style:italic;color:var(--accent)}
+.about-hero h1 strong{font-weight:700}
+.about-hero .lede{font-family:var(--serif);font-size:20px;line-height:1.55;color:var(--ink-soft);max-width:720px;margin-top:24px;font-style:italic}
+
+/* ---- Sezioni ---- */
+.about-section{padding:48px 0;border-bottom:1px solid var(--paper-2)}
+.about-section:last-of-type{border-bottom:none}
+.section-title{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.16em;color:var(--accent);margin-bottom:14px}
+.section-h{font-family:var(--serif);font-size:36px;line-height:1.1;font-weight:400;letter-spacing:-.015em;margin-bottom:24px;font-variation-settings:'opsz' 60,'SOFT' 30}
+.section-h em{font-style:italic;color:var(--accent)}
+.about-section p{font-family:var(--serif);font-size:17px;line-height:1.65;color:var(--ink-soft);max-width:740px;margin-bottom:18px}
+.about-section p strong{color:var(--ink);font-weight:600}
+.about-section p em{color:var(--ink)}
+
+/* ---- Box "Chi" ---- */
+.chi-card{display:grid;grid-template-columns:160px 1fr;gap:32px;align-items:start;background:var(--paper-2);padding:28px;margin-top:20px;border-left:3px solid var(--accent)}
+.chi-avatar{width:160px;height:160px;border-radius:14px;overflow:hidden;background:var(--ink)}.chi-avatar img{width:100%;height:100%;object-fit:cover;display:block}
+.chi-body h3{font-family:var(--serif);font-size:24px;font-weight:600;margin-bottom:6px;color:var(--ink)}
+.chi-body .handle{font-family:var(--mono);font-size:13px;color:var(--accent);margin-bottom:14px}
+.chi-body p{font-size:16px;margin-bottom:12px;max-width:none}
+.chi-links{display:flex;gap:18px;margin-top:14px;flex-wrap:wrap}
+.chi-links a{font-family:var(--mono);font-size:12px;text-transform:uppercase;letter-spacing:.08em;padding:6px 12px;border:1px solid var(--ink);color:var(--ink);border-radius:0}
+.chi-links a:hover{background:var(--ink);color:var(--paper);border-bottom-color:var(--ink)}
+
+/* ---- Tabella Fonti ---- */
+.fonti-table{width:100%;border-collapse:collapse;margin-top:24px;font-family:var(--sans);font-size:14px}
+.fonti-table thead th{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-mute);text-align:left;padding:8px 12px;border-bottom:2px solid var(--ink);font-weight:500}
+.fonti-table tbody td{padding:14px 12px;border-bottom:1px solid var(--paper-2);vertical-align:top;font-family:var(--serif);font-size:15px;color:var(--ink-soft)}
+.fonti-table tbody td:first-child{font-family:var(--mono);font-size:11px;color:var(--accent);text-transform:uppercase;letter-spacing:.06em;font-weight:600;white-space:nowrap}
+.fonti-table tbody td strong{color:var(--ink);font-weight:600;display:block;margin-bottom:2px;font-family:var(--serif);font-size:16px}
+.fonti-table tbody tr:hover{background:var(--paper-2)}
+.fonti-table .freq{font-family:var(--mono);font-size:11px;color:var(--ink-mute);text-transform:uppercase;letter-spacing:.06em;white-space:nowrap}
+
+/* ---- Metodologia step ---- */
+.metodo-steps{counter-reset:step;display:grid;grid-template-columns:repeat(2,1fr);gap:24px;margin-top:28px}
+.metodo-step{counter-increment:step;background:var(--paper-2);padding:22px 24px;border-top:3px solid var(--accent)}
+.metodo-step::before{content:counter(step,decimal-leading-zero);display:block;font-family:var(--mono);font-size:12px;color:var(--accent);font-weight:600;letter-spacing:.08em;margin-bottom:8px}
+.metodo-step h4{font-family:var(--serif);font-size:20px;font-weight:600;color:var(--ink);margin-bottom:8px;line-height:1.25}
+.metodo-step p{font-size:14px;line-height:1.55;color:var(--ink-soft);max-width:none;margin:0}
+
+/* ---- Aggiornamenti ---- */
+.aggiorna-grid{display:grid;grid-template-columns:1fr;gap:14px;margin-top:24px}
+.aggiorna-row{display:grid;grid-template-columns:200px 1fr 200px;gap:18px;align-items:baseline;padding:14px 0;border-bottom:1px solid var(--paper-2)}
+.aggiorna-cadence{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--accent);font-weight:600}
+.aggiorna-what{font-family:var(--serif);font-size:15px;color:var(--ink-soft)}
+.aggiorna-what strong{color:var(--ink);font-weight:600}
+.aggiorna-when{font-family:var(--mono);font-size:11px;color:var(--ink-mute);text-align:right;text-transform:uppercase;letter-spacing:.06em}
+.aggiorna-warning{padding:18px 22px;margin:24px 0 0;border-left:3px solid var(--gold);background:var(--paper-2);font-family:var(--serif);font-size:14px;color:var(--ink-soft);font-style:italic;max-width:740px}
+.aggiorna-warning strong{font-style:normal;color:var(--ink);font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.08em;display:block;margin-bottom:6px}
+
+/* ---- Footer (identico all'index) ---- */
+footer{background:var(--ink);color:var(--paper-2);padding:48px 0 28px;margin-top:64px;font-size:14px}
+footer .wrap{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:32px}
+footer h4{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--gold);margin-bottom:12px;font-weight:500}
+footer ul{list-style:none}
+footer li{margin-bottom:6px}
+footer a{color:var(--paper-2);border-bottom:1px solid transparent}
+footer a:hover{color:var(--paper);border-bottom-color:var(--gold)}
+footer .colophon{font-family:var(--serif);font-size:15px;line-height:1.6;color:var(--paper-2)}
+footer .colophon strong{color:var(--paper);font-weight:600}
+footer .colophon em{font-style:italic;color:var(--gold)}
+footer .colophon a{color:var(--paper);font-weight:600}
+.footer-bottom{display:flex;justify-content:space-between;font-family:var(--mono);font-size:11px;color:var(--ink-mute);text-transform:uppercase;letter-spacing:.08em}
+
+@media (max-width:780px){
+  .about-hero h1{font-size:36px}
+  .about-hero .lede{font-size:17px}
+  .section-h{font-size:28px}
+  .chi-card{grid-template-columns:1fr;gap:18px}
+  .chi-avatar{width:100px;height:100px;border-radius:10px}
+  .metodo-steps{grid-template-columns:1fr}
+  .aggiorna-row{grid-template-columns:1fr;gap:6px}
+  .aggiorna-when{text-align:left}
+  footer .wrap{grid-template-columns:1fr 1fr;gap:24px}
+  .fonti-table{font-size:13px}
+  .fonti-table thead{display:none}
+  .fonti-table tbody tr{display:block;border-bottom:1px solid var(--ink);padding:12px 0}
+  .fonti-table tbody td{display:block;border:none;padding:4px 0}
+  .fonti-table tbody td:first-child{margin-bottom:6px}
+}
+@media print{
+  body{background:white;color:black}
+  footer{background:white;color:black;border-top:2px solid black}
+  footer a{color:black}
+}
+
+/* =================================================================
+   OVERRIDE Design Italia — about.html
+   ================================================================= */
+body {
+  background-image: none !important;
+  background: var(--bg) !important;
+}
+em, h1 em, h2 em, h3 em,
+.brand .it, .section-h em,
+.about-grid h2 em {
+  font-style: normal !important;
+  font-variation-settings: normal !important;
+  color: var(--blu-italia) !important;
+}
+footer { background: var(--ink) !important; color: rgba(255,255,255,0.85) !important; }
+footer .colophon em {
+  color: rgba(255,255,255,0.6) !important;
+  font-style: normal !important;
+}
+footer h3, footer h4, footer strong {
+  color: #fff !important;
+  font-weight: var(--fw-semibold) !important;
+}
+footer a {
+  color: rgba(255,255,255,0.85) !important;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+footer a:hover { color: #fff !important; }
+</style>
+</head>
+<body>
+<a href="#main" class="skip">Salta al contenuto</a>
+
+<!-- ============ MASTHEAD ============ -->
+<!-- ============ HEADER ISTITUZIONALE ============ -->
+<div class="mini-mast">
+  <div class="wrap">
+    <div class="mini-brand-wrap">
+      <a href="/" class="mini-brand">Cruscotto <span class="it">Italia</span></a>
+      <span class="mini-brand-sub">7.918 comuni · 12 fonti istituzionali</span>
+    </div>
+  </div>
+</div>
+
+<main id="main">
+
+<!-- ============ HERO ============ -->
+<section class="about-hero">
+  <div class="wrap">
+    <div class="about-eyebrow">§ chi siamo</div>
+    <h1>Una vista unificata costruita sui <em>dati pubblici esistenti</em>.</h1>
+    <p class="lede">
+      Cruscotto Italia integra dodici dataset pubblici italiani per
+      restituire, per ogni comune, una pagina unica, leggibile e navigabile.
+      Non produce dati nuovi: ricompone quelli ufficiali già pubblicati
+      dalle istituzioni competenti, aggregandoli per codice ISTAT del comune.
+    </p>
+  </div>
+</section>
+
+<!-- ============ § CHI ============ -->
+<section class="about-section" id="chi">
+  <div class="wrap">
+    <div class="section-title">§ chi</div>
+    <h2 class="section-h">Realizzazione.</h2>
+    
+    
+
+    <p>
+      Il codice di Cruscotto Italia è interamente <strong>open source</strong>
+      con licenza AGPL-3.0. Il codice sorgente è pubblicato su
+      <a href="https://github.com/piersoft/cruscotto-italia" target="_blank" rel="noopener">GitHub</a>.
+      Tutti i dataset utilizzati sono pubblici sotto licenze CC-BY 4.0 o IODL 2.0,
+      ricomposti per codice ISTAT del comune attraverso pipeline automatiche
+      di estrazione e aggregazione.
+    </p>
+  </div>
+</section>
+
+<!-- ============ § FONTI ============ -->
+<section class="about-section" id="fonti">
+  <div class="wrap">
+    <div class="section-title">§ fonti</div>
+    <h2 class="section-h">Da dove arrivano i <em>dati</em>.</h2>
+    <p>
+      Dodici dataset, otto istituzioni. Tutto pubblico, tutto ufficiale,
+      tutto con licenze aperte. Cruscotto Italia non genera dati nuovi:
+      li scarica dalle fonti originali, li normalizza, li ricompone per
+      codice ISTAT del comune.
+    </p>
+
+    <table class="fonti-table">
+      <thead>
+        <tr>
+          <th>Fonte</th>
+          <th>Dataset</th>
+          <th>Frequenza</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>ANAC</td>
+          <td>
+            <strong>Contratti pubblici (OCDS)</strong>
+            Tutti gli affidamenti pubblici registrati nel sistema
+            dell'Autorità Nazionale Anticorruzione, dal 2020 in poi.
+          </td>
+          <td class="freq">mensile</td>
+        </tr>
+        <tr>
+          <td>BDAP-MOP</td>
+          <td>
+            <strong>Opere pubbliche</strong>
+            Banca Dati Amministrazioni Pubbliche · Monitoraggio Opere Pubbliche.
+            Lavori pubblici programmati e in corso.
+          </td>
+          <td class="freq">trimestrale</td>
+        </tr>
+        <tr>
+          <td>MEF · RGS</td>
+          <td>
+            <strong>SIOPE — flussi di cassa</strong>
+            Sistema Informativo Operazioni Enti Pubblici. Entrate e spese
+            in cassa di ogni comune, voce per voce.
+          </td>
+          <td class="freq">annuale</td>
+        </tr>
+        <tr>
+          <td>Italia Domani</td>
+          <td>
+            <strong>PNRR — Sistema ReGiS</strong>
+            Tutti i progetti del Piano Nazionale di Ripresa e Resilienza
+            in cui il comune è soggetto attuatore diretto.
+          </td>
+          <td class="freq">mensile</td>
+        </tr>
+        <tr>
+          <td>ISTAT</td>
+          <td>
+            <strong>Demografia comunale (POSAS)</strong>
+            Popolazione residente per età e sesso al 1° gennaio di ogni anno.
+          </td>
+          <td class="freq">annuale</td>
+        </tr>
+        <tr>
+          <td>ISTAT</td>
+          <td>
+            <strong>Profilo socioeconomico (Censimento permanente)</strong>
+            Istruzione, lavoro, famiglie, mobilità, cittadinanza. Dati
+            del Censimento permanente della popolazione e delle abitazioni.
+          </td>
+          <td class="freq">annuale</td>
+        </tr>
+        <tr>
+          <td>ISTAT</td>
+          <td>
+            <strong>Turismo — capacità ricettiva</strong>
+            Strutture alberghiere ed extralberghiere, posti letto e camere
+            per ogni comune.
+          </td>
+          <td class="freq">annuale</td>
+        </tr>
+        <tr>
+          <td>ISTAT</td>
+          <td>
+            <strong>Turismo — flussi (provinciale)</strong>
+            Arrivi e presenze turistiche per provincia, italiani e stranieri.
+            Dato provinciale, non comunale.
+          </td>
+          <td class="freq">annuale</td>
+        </tr>
+        <tr>
+          <td>ISPRA</td>
+          <td>
+            <strong>Profilo ambientale</strong>
+            Consumo di suolo (SNPA 2025), rischio idrogeologico (IdroGEO),
+            rifiuti urbani (Catasto Rifiuti), qualità dell'aria
+            (rete monitoraggio SNPA, PM10/PM2.5/NO₂).
+          </td>
+          <td class="freq">annuale</td>
+        </tr>
+        <tr>
+          <td>MIUR</td>
+          <td>
+            <strong>Anagrafe Scuole Statali</strong>
+            Tutte le scuole statali italiane (DS0400SCUANAGRAFESTAT).
+            ~50.000 scuole in 6.657 comuni. Esclude PA Trento, Bolzano e Aosta
+            che pubblicano dataset separati.
+          </td>
+          <td class="freq">annuale</td>
+        </tr>
+        <tr>
+          <td>ISTAT · ACI</td>
+          <td>
+            <strong>Veicoli e incidenti</strong>
+            Parco veicoli per classe Euro (ISTAT 41_993, 7.896 comuni),
+            incidenti stradali con morti e feriti (ISTAT 41_983, 6.339 comuni),
+            nuove iscrizioni per alimentazione (ACI LOD, 7.847 comuni).
+          </td>
+          <td class="freq">annuale</td>
+        </tr>
+        <tr data-fonte-row="MEF">
+          <td>MEF &middot; Dipartimento Finanze</td>
+          <td>
+            <strong>Redditi e fisco</strong>
+            Dichiarazioni IRPEF su base comunale 2020&ndash;2024:
+            numero contribuenti, reddito medio, distribuzione per fasce di reddito,
+            tipologie (lavoro dipendente, pensione, autonomo, fabbricati),
+            addizionale comunale e imposta netta media.
+          </td>
+          <td class="freq">annuale</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p style="margin-top:24px">
+      Tutte le fonti rilasciano i dati sotto licenze aperte
+      <strong>CC-BY 4.0</strong> o <strong>IODL 2.0</strong>. Cruscotto
+      Italia mantiene l'attribuzione originale e linka sempre alla
+      fonte primaria nelle pagine dei comuni.
+    </p>
+  </div>
+</section>
+
+<!-- ============ § METODOLOGIA ============ -->
+<section class="about-section" id="metodologia">
+  <div class="wrap">
+    <div class="section-title">§ metodologia</div>
+    <h2 class="section-h">Come vengono <em>ricomposti</em> i dati.</h2>
+    <p>
+      I dati pubblici italiani esistono. Sono pubblicati, sono aperti, sono
+      — quasi sempre — gratuiti. Il problema non è la disponibilità: è la
+      <em>frammentazione</em>. Per costruire la carta d'identità di un
+      singolo comune servono dodici dataset, gestiti da otto istituzioni
+      diverse, esposti su cinque portali diversi, in tre formati diversi
+      (CSV, JSON, SDMX), con tre logiche di aggiornamento diverse, e
+      indicizzati con tre granularità diverse (comunale, provinciale,
+      regionale). Nessuno, tra ISTAT, ANAC, BDAP, Italia Domani, mette a
+      disposizione una vista per comune che li metta insieme.
+    </p>
+    <p>
+      Cruscotto Italia fa esattamente <em>e solo</em> quella ricomposizione:
+      prende dodici fonti ufficiali, le riconduce tutte allo stesso
+      identificatore (il codice ISTAT comunale), e le serve come una
+      pagina sola per ognuno dei 7.918 comuni. I dati non vengono
+      modificati, integrati, corretti o stimati. Ricomposti, non rielaborati.
+    </p>
+    <p>
+      Il processo è in quattro passaggi, tutti automatizzati. Il codice è
+      <a href="https://github.com/piersoft/cruscotto-italia">su GitHub</a>,
+      sotto licenza AGPL-3.0: chiunque può leggerlo, replicarlo, criticarlo
+      o forkarlo.
+    </p>
+
+    <div class="metodo-steps">
+      <div class="metodo-step">
+        <h3>1. Estrazione</h3>
+        <p>
+          Script Python (uno per fonte) scaricano i dataset originali dai
+          portali ufficiali. Ogni fonte ha il suo formato: ISTAT espone
+          POSAS in SDMX-ML attraverso una API REST, ANAC pubblica i
+          contratti come JSON-LD su dati.anticorruzione.it, BDAP-MOP serve
+          le opere via API a paginazione, Italia Domani PNRR via dump CSV,
+          ISPRA distribuisce i dati su consumo di suolo e dissesto
+          idrogeologico in archivi ZIP per regione, mentre la rete SNPA
+          di qualità dell'aria pubblica CSV separati per inquinante
+          (PM10, PM2.5, NO₂) con un anno di latenza.
+        </p>
+        <p>
+          Gli script gestiscono le idiosincrasie di ciascun dataset:
+          encoding misti (UTF-8, latin-1, Windows-1252), date in formati
+          incoerenti, codici ISTAT a volte come stringa a volte come intero,
+          variazioni territoriali (un comune che si fonde con un altro
+          cambia codice). Una cache locale evita di ribattere i server
+          pubblici a ogni esecuzione.
+        </p>
+      </div>
+
+      <div class="metodo-step">
+        <h3>2. Normalizzazione</h3>
+        <p>
+          Ogni dataset viene "shardato" per codice ISTAT comunale: un file
+          JSON per ognuno dei 7.918 comuni, dentro una cartella per ogni
+          fonte. Lecce (075035) ha il suo file in <code>anac/075035.json</code>,
+          un altro in <code>siope/075035.json</code>, un altro ancora in
+          <code>pnrr/075035.json</code>, e così via per tutte le dodici fonti.
+        </p>
+        <p>
+          Alcuni dataset hanno granularità non-comunale: ISTAT pubblica
+          l'indagine sul turismo solo a livello provinciale, alcuni
+          indicatori del Profilo dei Comuni sono regionali. In questi casi
+          il dato viene <em>propagato</em> a tutti i comuni della provincia
+          o regione di appartenenza, con un flag esplicito
+          (<code>granularita: "provinciale"</code>) che ne indica la natura
+          non-comunale. La pagina del comune lo segnala chiaramente
+          all'utente: "Questo dato è provinciale, non comunale".
+        </p>
+      </div>
+
+      <div class="metodo-step">
+        <h3>3. Pubblicazione</h3>
+        <p>
+          Gli shard JSON vengono caricati su un object storage
+          (Cloudflare R2). Un piccolo backend (Cloudflare Worker) li serve
+          al frontend con caching edge: la prima richiesta per Lecce passa
+          da R2, le successive vengono servite dalla CDN più vicina al
+          visitatore in pochi millisecondi.
+        </p>
+        <p>
+          L'architettura è volutamente minimale: nessun database
+          relazionale, nessun server applicativo, nessun query layer.
+          Solo file JSON statici, un Worker che li compone, e una CDN.
+          Questo significa costi prossimi allo zero, scalabilità lineare
+          con il traffico, e — soprattutto — la possibilità per chiunque
+          di replicare l'intero sistema in poche ore senza dover gestire
+          infrastruttura complessa.
+        </p>
+      </div>
+
+      <div class="metodo-step">
+        <h3>4. Tracciabilità</h3>
+        <p>
+          Per ogni dato mostrato nel cruscotto è disponibile la fonte
+          primaria con link diretto. Cliccando sul nome del dataset si
+          arriva al portale ufficiale che lo pubblica: dati.anticorruzione.it
+          per i contratti, openbdap.mef.gov.it per le opere,
+          italiadomani.gov.it per il PNRR, dati.istat.it per la demografia.
+        </p>
+        <p>
+          Le date di ultima estrazione sono riportate in calce a ogni
+          sezione del comune. Se la fonte ha aggiornato il proprio dataset,
+          il prossimo run ETL la sincronizza; se la fonte ha un errore,
+          quell'errore arriva fino qui — e lo si vede, perché il link al
+          dato originale è sempre a un click di distanza. Nessun dato è
+          "elaborato" oltre la riaggregazione per comune: cifre, importi,
+          conteggi sono <em>esattamente</em> quelli pubblicati dalla fonte.
+        </p>
+      </div>
+    </div>
+
+    <p style="margin-top:32px">
+      Questo è il punto: Cruscotto Italia non aggiunge nulla che non ci
+      fosse già. Toglie, semmai. Toglie la fatica di mettere insieme otto
+      portali per capire un singolo comune.
+    </p>
+  </div>
+</section>
+
+<!-- ============ § AGGIORNAMENTI ============ -->
+<section class="about-section" id="aggiornamenti">
+  <div class="wrap">
+    <div class="section-title">§ aggiornamenti</div>
+    <h2 class="section-h">Quando vengono <em>rinfrescati</em> i dati.</h2>
+    <p>
+      Ogni dataset segue la sua cadenza naturale: ANAC pubblica i
+      contratti ogni mese, ISTAT i dati di popolazione una volta
+      all'anno. Cruscotto Italia rispetta queste cadenze senza
+      forzarle, e mostra sempre la data dell'ultima estrazione
+      a fianco dei dati visualizzati.
+    </p>
+
+    <div class="aggiorna-grid">
+      <div class="aggiorna-row">
+        <div class="aggiorna-cadence">Settimanale</div>
+        <div class="aggiorna-what">
+          <strong>ANAC contratti</strong> — nuovi affidamenti registrati
+          nel sistema dell'Autorità Anticorruzione.
+        </div>
+        <div class="aggiorna-when">ogni lunedì</div>
+      </div>
+      <div class="aggiorna-row">
+        <div class="aggiorna-cadence">Mensile</div>
+        <div class="aggiorna-what">
+          <strong>PNRR Italia Domani</strong> — snapshot del sistema
+          ReGiS, progetti del Piano Nazionale di Ripresa e Resilienza.
+        </div>
+        <div class="aggiorna-when">26 di ogni mese</div>
+      </div>
+      <div class="aggiorna-row">
+        <div class="aggiorna-cadence">Trimestrale</div>
+        <div class="aggiorna-what">
+          <strong>BDAP opere pubbliche</strong> — programmi e stati
+          avanzamento dei lavori pubblici.
+        </div>
+        <div class="aggiorna-when">marzo · giugno · settembre · dicembre</div>
+      </div>
+      <div class="aggiorna-row">
+        <div class="aggiorna-cadence">Annuale</div>
+        <div class="aggiorna-what">
+          <strong>SIOPE flussi di cassa</strong> — entrate e spese
+          dei comuni, anno fiscale precedente.
+        </div>
+        <div class="aggiorna-when">primavera</div>
+      </div>
+      <div class="aggiorna-row">
+        <div class="aggiorna-cadence">Annuale</div>
+        <div class="aggiorna-what">
+          <strong>ISTAT demografia, profilo, turismo</strong> —
+          popolazione, censimento permanente, capacità e flussi turistici.
+        </div>
+        <div class="aggiorna-when">tutto l'anno, secondo rilascio ISTAT</div>
+      </div>
+      <div class="aggiorna-row">
+        <div class="aggiorna-cadence">Annuale</div>
+        <div class="aggiorna-what">
+          <strong>ISPRA territorio e aria</strong> — consumo di suolo,
+          rischio idrogeologico, rifiuti e qualità dell'aria (PM10,
+          PM2.5, NO₂) dalla rete SNPA.
+        </div>
+        <div class="aggiorna-when">gennaio · luglio</div>
+      </div>
+    </div>
+
+    <div class="aggiorna-warning">
+      <strong>Avvertenza</strong>
+      I dati sono sempre quelli pubblicati dalle fonti ufficiali al
+      momento dell'ultima estrazione. Cruscotto Italia non corregge,
+      non integra, non stima. Se un dato è incompleto o assente nella
+      fonte, lo è anche qui — e viene segnalato esplicitamente.
+    </div>
+  </div>
+</section>
+
+</main>
+
+<!-- ============ FOOTER ============ -->
+<footer>
+  <div class="wrap">
+    <div class="colophon">
+      <strong>Cruscotto Italia</strong><br>
+      Iniziativa basata sui dati pubblici del Catalogo Nazionale
+      <a href="https://www.dati.gov.it" target="_blank" rel="noopener">dati.gov.it</a>.<br>
+      Open data CC-BY 4.0 e IODL 2.0 · Codice AGPL-3.0
+    </div>
+    <div>
+      <h3>Progetto</h3>
+      <ul>
+        <li><a href="/">Home</a></li>
+        <li><a href="https://github.com/piersoft/cruscotto-italia">GitHub</a></li>
+        <li><a href="/accessibilita.html">Accessibilità</a></li>
+      </ul>
+    </div>
+    <div>
+      <h3>Contatti</h3>
+      <ul>
+        <li><a href="https://www.dati.gov.it" target="_blank" rel="noopener">dati.gov.it</a></li>
+        <li><a href="mailto:dati@agid.gov.it">dati@agid.gov.it</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="wrap" style="display:block;margin-top:32px;padding-top:16px;border-top:1px solid #333">
+    <div class="footer-bottom">
+      <span>v2026.05.07.1 · Build cruscotto-italia 0.1.0</span>
+      <span>AGPL-3.0 · 2026 piersoft</span>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
