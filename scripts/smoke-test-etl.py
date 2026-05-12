@@ -54,10 +54,11 @@ ETL_PLAN = [
     ("territorio",     "medium",     ["--skip-idrogeo", "--skip-rifiuti"],              300),
     ("scuole",         "medium",     [],                                                360),
     ("pnrr_progetti",  "medium",     [],                                                360),
-    # anac: ANAC OCDS-IT bulk pubblica i mesi con ritardo variabile (talvolta
-    # >2 mesi). Lo script prova in cascata mesi sempre più vecchi finché ne
-    # trova uno disponibile. Gestito da run_one_anac_with_fallback.
-    ("anac",           "medium",     ["--months", "ANAC_FALLBACK"],                     360),
+    # anac: passa --years e --months come liste separate (CLI anac.py).
+    # Il bulk OCDS-IT è a URL bulk/<year>/<mm>.json (mese 1-12, NON yyyymm).
+    # Lo script prova in cascata 6 mesi indietro per gestire ritardo
+    # pubblicazione (gestito da run_one_anac).
+    ("anac",           "medium",     ["ANAC_FALLBACK"],                                 360),
     ("immobili_pa",    "medium",     ["--regione", "VALLE-D_AOSTA"],                              360),
     ("siope",          "medium",     ["--regioni", "02", "--anni", "2026"],             420),
     ("anncsu",         "medium",     ["--regioni", "VALL"],                               420),
@@ -112,8 +113,12 @@ def fmt_time(s: float) -> str:
 
 
 def run_one_anac(name, tier, extra_args, timeout_s, out_dir, log_path):
-    """Per anac, prova mesi in cascata (ritardo pubblicazione variabile)."""
-    # Lista candidati: ultimo trimestre disponibile
+    """Per anac, prova mesi in cascata (ritardo pubblicazione variabile).
+
+    anac.py vuole --years e --months come liste separate, e l'URL bulk
+    è bulk/<year>/<mm>.json con mese 1-12 (NON yyyymm).
+    """
+    # Lista (year, month) candidati: parto dal mese scorso e vado indietro
     now = time.gmtime()
     candidates = []
     y, m = now.tm_year, now.tm_mon
@@ -122,18 +127,19 @@ def run_one_anac(name, tier, extra_args, timeout_s, out_dir, log_path):
         if m == 0:
             m = 12
             y -= 1
-        candidates.append(f"{y}{m:02d}")
-    log(f"   {C['dim']}anac: provo mesi in cascata: {candidates}{C['reset']}")
+        candidates.append((y, m))
+    log(f"   {C['dim']}anac: provo (year, month) in cascata: {candidates}{C['reset']}")
 
-    other_args = [a for a in extra_args if a not in ("--months", "ANAC_FALLBACK")]
+    other_args = [a for a in extra_args if a != "ANAC_FALLBACK"]
     t0 = time.time()
     last_log = ""
-    for month in candidates:
+    for (year, month) in candidates:
         cmd = [
             sys.executable, "-m", f"etl.sources.{name}",
             "--target", "local",
             "--output-dir", str(out_dir),
-            "--months", month,
+            "--years", str(year),
+            "--months", str(month),
         ] + other_args
         try:
             with open(log_path, "w") as logf:
@@ -152,27 +158,27 @@ def run_one_anac(name, tier, extra_args, timeout_s, out_dir, log_path):
                 sample = files[0].name if files else None
                 log(f"   {C['green']}OK      {C['reset']}elapsed={fmt_time(elapsed)}  "
                     f"files={n_files}  size={total_bytes/1024:.0f}KB  sample={sample}  "
-                    f"month={month}")
+                    f"year={year} month={month:02d}")
                 return {
                     "name": name, "tier": tier, "status": "OK",
                     "exit_code": 0, "elapsed_s": round(elapsed, 1),
                     "n_files": n_files, "total_kb": round(total_bytes / 1024, 1),
-                    "sample_file": sample, "err_excerpt": f"month={month}",
+                    "sample_file": sample, "err_excerpt": f"year={year} month={month:02d}",
                     "log_path": str(log_path), "cmd": cmd,
                 }
             # se month_not_available, ritenta col precedente
             if "month_not_available" in last_log:
-                log(f"   {C['dim']}anac: {month} non disponibile, provo precedente{C['reset']}")
+                log(f"   {C['dim']}anac: {year}-{month:02d} non disponibile, provo precedente{C['reset']}")
                 continue
             # altro tipo di errore: fail subito
             break
         except subprocess.TimeoutExpired:
             elapsed = time.time() - t0
-            log(f"   {C['yell']}TIMEOUT {C['reset']}elapsed={fmt_time(elapsed)}  month={month}")
+            log(f"   {C['yell']}TIMEOUT {C['reset']}elapsed={fmt_time(elapsed)}  year={year} month={month:02d}")
             return {"name": name, "tier": tier, "status": "TIMEOUT",
                     "exit_code": -1, "elapsed_s": round(elapsed, 1),
                     "n_files": 0, "total_kb": 0, "sample_file": None,
-                    "err_excerpt": f"timeout on month {month}",
+                    "err_excerpt": f"timeout on {year}-{month:02d}",
                     "log_path": str(log_path), "cmd": cmd}
 
     # Tutti i mesi falliti
