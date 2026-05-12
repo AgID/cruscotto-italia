@@ -3903,8 +3903,10 @@ function renderAnncsuTab(d) {
       </p>
       <div class="anncsu-controls">
         <input type="text" id="anncsu-search" class="anncsu-search-input"
-               placeholder="Cerca civico (es: VIA ROMA 10)…" autocomplete="off"
-               aria-label="Cerca civico per via e numero">
+               list="anncsu-search-list"
+               placeholder="Cerca odonimo (es: VIA ROMA)…" autocomplete="off"
+               aria-label="Cerca strada per nome">
+        <datalist id="anncsu-search-list"></datalist>
         <div id="anncsu-filters" class="anncsu-filters" role="group" aria-label="Filtri metodo georef"></div>
       </div>
       <div id="anncsu-legend" class="anncsu-legend" role="group" aria-label="Legenda metodi di geo-referenziazione"></div>
@@ -3991,6 +3993,16 @@ function anncsuFlagOutliers(punti) {
 
 // Inizializza mappa Leaflet per la tab ANNCSU.
 // Lazy: chiamata solo al primo click sul tab (vedi bindTabSwitching).
+//
+// TODO opzione C (sessione futura, ~1 giorno): lazy fetch shard completo
+// anncsu_punti/<istat>.json contenente TUTTI i civici geo-ref (non solo
+// sample 1000). Attualmente Lecce mostra 1000/47917 = 2.1% dei punti reali,
+// quindi una ricerca per "VIA VITTORIO EMANUELE II" trova pochissimi
+// risultati anche se sono nei dati ANNCSU originali. Soluzione discussa:
+//   1. ETL genera shard pesante con tutti i punti (per Roma ~30MB)
+//   2. Endpoint MCP comune_anncsu_punti(istat) o R2 direct
+//   3. Frontend fetch on tab click in parallelo a render KPI
+//   4. Sample 1000 resta nel A1 per backward compat
 function initAnncsu(d) {
   if (!d || typeof L === 'undefined') return;
   const mapEl = document.getElementById('anncsu-map');
@@ -4163,7 +4175,27 @@ function initAnncsu(d) {
   // ---- 8) Search civico (VIA ROMA 10 → zoom + popup)
   const searchEl = document.getElementById('anncsu-search');
   const resultEl = document.getElementById('anncsu-search-result');
+  const listEl = document.getElementById('anncsu-search-list');
   let searchTimer = null;
+
+  // Popola datalist autocomplete con odonimi UNICI presenti nei punti del
+  // sample, ordinati per frequenza decrescente, max 200 voci.
+  // Limite noto: il sample è 1000/N punti, quindi vie sotto-rappresentate
+  // possono mancare. Vedi TODO opzione C in cima alla funzione.
+  if (listEl) {
+    const odoFreq = new Map();
+    punti.forEach(p => {
+      if (p.odo) odoFreq.set(p.odo, (odoFreq.get(p.odo) || 0) + 1);
+    });
+    const topOdonimi = [...odoFreq.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 200)
+      .map(([odo, _]) => odo);
+    listEl.innerHTML = topOdonimi
+      .map(o => `<option value="${o.replace(/"/g, '&quot;')}"></option>`)
+      .join('');
+  }
+
   if (searchEl && resultEl) {
     searchEl.addEventListener('input', () => {
       clearTimeout(searchTimer);
