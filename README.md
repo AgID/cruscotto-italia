@@ -26,6 +26,14 @@ Cerchi un comune ("Lecce") e ottieni una vista a 360° su:
 - 🏠 **Civici e strade** (ANNCSU — Agenzia delle Entrate, Open Data HVD)
 
 L'elenco completo, con licenze, frequenze di aggiornamento e link diretti alle fonti, è in [`about.html`](https://cruscotto-italia.piersoftckan.biz/about.html).
+- 🏫 **Scuole** (MIUR — Anagrafe scuole statali)
+- 🌫️ **Qualità dell'aria** (ISPRA SNPA — PM10/PM2.5/NO2)
+- 🚗 **Parco veicoli e incidenti** (ISTAT 41_993 + ACI LOD)
+- 💶 **Redditi e fisco** (MEF — Dichiarazioni IRPEF)
+- 🏛️ **Patrimonio immobiliare PA** (MEF DE — Beni Immobili Pubblici)
+- 🏠 **Civici e strade** (ANNCSU — Agenzia delle Entrate, Open Data HVD)
+
+L'elenco completo, con licenze, frequenze di aggiornamento e link diretti alle fonti, è in [`about.html`](https://cruscotto-italia.piersoftckan.biz/about.html).
 
 Tutto ricomposto sulla **spina dorsale anagrafica ISTAT comuni**.
 
