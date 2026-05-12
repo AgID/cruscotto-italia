@@ -498,8 +498,13 @@ footer a{color:rgba(255,255,255,0.85);text-decoration:none}
 .aria-chart-wrap{position:relative;height:340px;background:var(--paper-2);padding:18px;margin-bottom:24px;}
 @media (max-width:720px){.aria-chart-wrap{height:260px;padding:10px;}}
 .aria-stazioni-list{display:flex;flex-direction:column;gap:1px;background:var(--paper-2);margin-bottom:24px;}
-.aria-map-wrap{margin:0 0 24px;}
-#aria-map{height:380px;width:100%;background:var(--paper-2);border:1px solid var(--paper-2);}
+.aria-map-wrap{margin:0 0 24px;position:relative;z-index:0;}
+#aria-map{height:380px;width:100%;background:var(--paper-2);border:1px solid var(--paper-2);position:relative;z-index:0;}
+#aria-map .leaflet-pane,
+#aria-map .leaflet-top,
+#aria-map .leaflet-bottom,
+#aria-map .leaflet-control{z-index:1 !important;}
+#aria-map .leaflet-popup-pane{z-index:2 !important;}
 @media (max-width:720px){#aria-map{height:280px;}}
 .aria-map-legend{display:flex;flex-wrap:wrap;gap:18px;padding:10px 14px;background:var(--paper-2);font-family:var(--mono);font-size:11px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.08em;border-top:1px solid var(--paper);}
 .aria-leg-item{display:inline-flex;align-items:center;gap:6px;}
