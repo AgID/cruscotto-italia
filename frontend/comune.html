@@ -727,6 +727,27 @@ footer a{color:rgba(255,255,255,0.85);text-decoration:none}
 .anncsu-legend{display:flex;flex-wrap:wrap;gap:14px;margin:0 0 12px;font-family:var(--mono);font-size:10px;color:var(--ink-mute);text-transform:uppercase;letter-spacing:.05em;}
 .anncsu-legend-item{display:inline-flex;align-items:center;gap:6px;}
 .anncsu-legend-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;border:1.5px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,0.12);}
+.anncsu-controls{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;margin:0 0 12px;}
+@media (max-width:720px){.anncsu-controls{grid-template-columns:1fr;}.anncsu-controls input,.anncsu-controls .anncsu-filters{width:100%;min-width:0;box-sizing:border-box;}}
+.anncsu-search-input{font-family:var(--sans);font-size:14px;padding:8px 12px;border:1px solid var(--ink-mute);background:var(--paper);color:var(--ink);outline:none;border-radius:4px;}
+.anncsu-search-input:focus{border-color:var(--accent);box-shadow:0 0 0 2px rgba(0,102,204,0.12);}
+.anncsu-filters{display:flex;flex-wrap:wrap;gap:6px;}
+.anncsu-chip{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;min-height:28px;background:var(--paper-2);border:1px solid var(--ink-mute);border-radius:14px;font-family:var(--mono);font-size:11px;color:var(--ink);cursor:pointer;transition:all .15s ease;line-height:1;text-transform:uppercase;letter-spacing:.04em;}
+.anncsu-chip:hover{background:#fff;border-color:var(--accent);}
+.anncsu-chip:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+.anncsu-chip[aria-pressed="false"]{opacity:.4;background:transparent;}
+.anncsu-chip[aria-pressed="false"] .anncsu-chip-dot{opacity:.4;}
+.anncsu-chip-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;border:1.5px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,0.12);}
+.anncsu-chip-count{font-size:10px;color:var(--ink-mute);}
+.anncsu-search-result{font-family:var(--mono);font-size:11px;color:var(--ink-mute);margin:8px 0 0;min-height:18px;}
+.anncsu-search-result.anncsu-found{color:var(--accent);}
+.anncsu-search-result.anncsu-notfound{color:#D9364F;}
+.anncsu-charts{display:grid;grid-template-columns:1fr 1fr;gap:32px;margin:36px 0 24px;}
+@media (max-width:900px){.anncsu-charts{grid-template-columns:1fr;gap:24px;}}
+.anncsu-chart-col h3{margin-top:0;}
+.anncsu-chart-wrap{height:380px;position:relative;}
+.anncsu-chart-wrap-donut{height:320px;}
+@media (max-width:720px){.anncsu-chart-wrap{height:320px;}.anncsu-chart-wrap-donut{height:280px;}}
 .veicoli-col-h{font-family:var(--serif);font-size:18px;color:var(--ink);font-style:italic;margin:0 0 10px;border-bottom:1px solid var(--paper-2);padding-bottom:6px;}
 .veicoli-parco-stack{display:flex;height:28px;background:var(--bg-alt);border-radius:3px;overflow:hidden;margin-top:10px;}
 .veicoli-parco-seg{display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:10px;font-weight:700;color:var(--paper);text-transform:uppercase;letter-spacing:.05em;min-width:0;}
@@ -3878,12 +3899,19 @@ function renderAnncsuTab(d) {
       <p class="muted anncsu-map-note">
         Campione di ${fmtNum(punti.length)} numeri civici su ${fmtNum(k.n_civici_geo_ref || 0)} totali.
         Marker colorati per metodo di geo-referenziazione.
-        I civici in <span class="anncsu-outlier-marker">rosso</span> sono punti
+        I civici in <span class="anncsu-outlier-marker"></span> <strong>rosso</strong> sono punti
         statisticamente fuori dal centro abitato — possibili errori di
         georeferenziazione nel conferimento.
       </p>
+      <div class="anncsu-controls">
+        <input type="text" id="anncsu-search" class="anncsu-search-input"
+               placeholder="Cerca civico (es: VIA ROMA 10)…" autocomplete="off"
+               aria-label="Cerca civico per via e numero">
+        <div id="anncsu-filters" class="anncsu-filters" role="group" aria-label="Filtri metodo georef"></div>
+      </div>
       <div id="anncsu-legend" class="anncsu-legend" role="group" aria-label="Legenda metodi di geo-referenziazione"></div>
       <div id="anncsu-map" class="anncsu-map" role="region" aria-label="Mappa dei numeri civici"></div>
+      <div id="anncsu-search-result" class="anncsu-search-result" role="status" aria-live="polite"></div>
     </div>
   ` : `
     <div class="anncsu-map-wrap">
@@ -3894,6 +3922,29 @@ function renderAnncsuTab(d) {
       </p>
     </div>
   `;
+
+  // Sezione chart: sempre visibile se ci sono strade
+  const topStrade = Array.isArray(k.top_10_strade) ? k.top_10_strade : [];
+  const metodi = k.metodi_georef || {};
+  const hasMetodi = Object.values(metodi).some(v => v > 0);
+  const chartsBlock = (topStrade.length || hasMetodi) ? `
+    <div class="anncsu-charts">
+      ${topStrade.length ? `
+        <div class="anncsu-chart-col">
+          <h3 class="anncsu-h3">Top 10 strade per numero di civici</h3>
+          <div class="anncsu-chart-wrap">
+            <canvas id="anncsu-top-chart" aria-label="Top 10 strade per accessi" role="img"></canvas>
+          </div>
+        </div>` : ''}
+      ${hasMetodi ? `
+        <div class="anncsu-chart-col">
+          <h3 class="anncsu-h3">Metodi di geo-referenziazione</h3>
+          <div class="anncsu-chart-wrap anncsu-chart-wrap-donut">
+            <canvas id="anncsu-metodi-chart" aria-label="Distribuzione metodi georef" role="img"></canvas>
+          </div>
+        </div>` : ''}
+    </div>
+  ` : '';
 
   return `
     <div class="tab-pane" id="pane-anncsu">
@@ -3906,6 +3957,7 @@ function renderAnncsuTab(d) {
       </p>
       <div class="anncsu-kpis">${cardsHtml}</div>
       ${mapBlock}
+      ${chartsBlock}
     </div>
   `;
 }
@@ -4036,15 +4088,16 @@ function initAnncsu(d) {
   function redrawClusters() {
     markersLayer.clearLayers();
     const z = map.getZoom();
+    const visible = filteredPunti();
     // Cluster soglia: a zoom <15 raggruppa, oltre mostra punti singoli
     // (più alta di Immobili PA perché civici sono molto più densi)
-    if (z >= 15 || punti.length <= 60) {
-      punti.forEach(p => markersLayer.addLayer(makeDot(p)));
+    if (z >= 15 || visible.length <= 60) {
+      visible.forEach(p => markersLayer.addLayer(makeDot(p)));
       return;
     }
     // Outlier sempre visibili come marker singoli (mai clusterizzati)
-    const inliers = punti.filter(p => !p._outlier);
-    const outliers = punti.filter(p => p._outlier);
+    const inliers = visible.filter(p => !p._outlier);
+    const outliers = visible.filter(p => p._outlier);
     outliers.forEach(p => markersLayer.addLayer(makeDot(p)));
 
     // Grid clustering sugli inlier
@@ -4066,8 +4119,164 @@ function initAnncsu(d) {
     });
   }
 
+  // ---- 5) Stato filtri (Set di metodi attivi + outlier visibile)
+  // Default: tutti i metodi attivi, outlier sempre visibili
+  const activeMethods = new Set();
+  punti.forEach(p => {
+    const m = p._outlier ? 'outlier' : (p.met || 0);
+    activeMethods.add(m);
+  });
+
+  // ---- 6) Render chip filtri
+  const filtersEl = document.getElementById('anncsu-filters');
+  if (filtersEl) {
+    const counts = new Map();
+    punti.forEach(p => {
+      const k = p._outlier ? 'outlier' : (p.met || 0);
+      counts.set(k, (counts.get(k) || 0) + 1);
+    });
+    const order = [1, 2, 3, 4, 5, 0, 'outlier'];
+    const chips = order
+      .filter(k => counts.has(k))
+      .map(k => {
+        const color = (k === 'outlier') ? ANNCSU_OUTLIER_COLOR : (ANNCSU_METODO_COLORS[k] || '#9E9E9E');
+        const label = (k === 'outlier') ? 'Outlier' : (ANNCSU_METODO_LABELS[k] || 'Sconosciuto');
+        return `<button type="button" class="anncsu-chip" data-method="${k}" aria-pressed="true">
+          <span class="anncsu-chip-dot" style="background:${color}" aria-hidden="true"></span>
+          <span>${label}</span>
+          <span class="anncsu-chip-count">(${fmtNum(counts.get(k))})</span>
+        </button>`;
+      }).join('');
+    filtersEl.innerHTML = chips;
+    filtersEl.addEventListener('click', (ev) => {
+      const btn = ev.target.closest('.anncsu-chip');
+      if (!btn) return;
+      const m = btn.dataset.method;
+      const key = (m === 'outlier') ? 'outlier' : parseInt(m, 10);
+      if (activeMethods.has(key)) {
+        activeMethods.delete(key);
+        btn.setAttribute('aria-pressed', 'false');
+      } else {
+        activeMethods.add(key);
+        btn.setAttribute('aria-pressed', 'true');
+      }
+      redrawClusters();
+    });
+  }
+
+  // ---- 7) Filtro punti correnti (riusato in redrawClusters via closure)
+  function filteredPunti() {
+    return punti.filter(p => {
+      const k = p._outlier ? 'outlier' : (p.met || 0);
+      return activeMethods.has(k);
+    });
+  }
+
   redrawClusters();
   map.on('zoomend moveend', redrawClusters);
+
+  // ---- 8) Search civico (VIA ROMA 10 → zoom + popup)
+  const searchEl = document.getElementById('anncsu-search');
+  const resultEl = document.getElementById('anncsu-search-result');
+  let searchTimer = null;
+  if (searchEl && resultEl) {
+    searchEl.addEventListener('input', () => {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(() => {
+        const q = searchEl.value.trim();
+        resultEl.className = 'anncsu-search-result';
+        if (!q) { resultEl.textContent = ''; return; }
+        // Tokenize: ultima cifra (eventualmente con esponente A/B) = civico, resto = via
+        const numMatch = q.match(/(\d+)\s*([A-Za-z]?)\s*$/);
+        const civQuery = numMatch ? numMatch[1] : '';
+        const espQuery = numMatch ? (numMatch[2] || '').toUpperCase() : '';
+        const odoQuery = q.replace(/(\d+)\s*([A-Za-z]?)\s*$/, '').trim().toUpperCase();
+        const matches = punti.filter(p => {
+          const odoOk = !odoQuery || (p.odo || '').toUpperCase().includes(odoQuery);
+          const civOk = !civQuery || (p.civ || '') === civQuery;
+          const espOk = !espQuery || (p.esp || '').toUpperCase() === espQuery;
+          return odoOk && civOk && espOk;
+        });
+        if (matches.length === 0) {
+          resultEl.className = 'anncsu-search-result anncsu-notfound';
+          resultEl.textContent = `Nessun civico trovato (campione di ${fmtNum(punti.length)} su ${fmtNum(d.kpi?.n_civici_geo_ref || 0)} totali).`;
+        } else if (matches.length === 1) {
+          const p = matches[0];
+          map.setView([p.lat, p.lon], 18);
+          resultEl.className = 'anncsu-search-result anncsu-found';
+          resultEl.textContent = `Trovato: ${p.odo} ${p.civ}${p.esp || ''}.`;
+        } else {
+          // Più match: fit bounds
+          const lats2 = matches.map(p => p.lat);
+          const lons2 = matches.map(p => p.lon);
+          map.fitBounds([[Math.min(...lats2), Math.min(...lons2)], [Math.max(...lats2), Math.max(...lons2)]], { padding: [40, 40], maxZoom: 17 });
+          resultEl.className = 'anncsu-search-result anncsu-found';
+          resultEl.textContent = `${fmtNum(matches.length)} civici trovati nel campione.`;
+        }
+      }, 250);
+    });
+  }
+
+  // ---- 9) Chart 1: Top 10 strade per accessi
+  const topCanvas = document.getElementById('anncsu-top-chart');
+  const topStrade = Array.isArray(d.kpi?.top_10_strade) ? d.kpi.top_10_strade : [];
+  if (topCanvas && topStrade.length && typeof Chart !== 'undefined') {
+    const ctx = topCanvas.getContext('2d');
+    new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: topStrade.map(s => s.odo),
+        datasets: [{
+          data: topStrade.map(s => s.acc),
+          backgroundColor: 'rgba(0,102,204,0.8)',
+          borderColor: 'rgba(0,102,204,1)',
+          borderWidth: 1
+        }]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { label: (ctx) => `${fmtNum(ctx.parsed.x)} civici` } }
+        },
+        scales: {
+          x: { beginAtZero: true, ticks: { font: { family: 'var(--mono)', size: 10 }, callback: (v) => fmtNum(v) }, grid: { color: 'rgba(0,0,0,0.05)' } },
+          y: { ticks: { font: { family: 'var(--mono)', size: 10 }, autoSkip: false }, grid: { display: false } }
+        }
+      }
+    });
+  }
+
+  // ---- 10) Chart 2: Distribuzione metodi georef (donut)
+  const metCanvas = document.getElementById('anncsu-metodi-chart');
+  const metodi = d.kpi?.metodi_georef || {};
+  const metLabelToCode = { gps: 1, catasto: 2, ortofoto: 3, cartografia: 4, altro: 5 };
+  const metEntries = Object.entries(metodi).filter(([_, v]) => v > 0);
+  if (metCanvas && metEntries.length && typeof Chart !== 'undefined') {
+    const labels = metEntries.map(([k, _]) => ANNCSU_METODO_LABELS[metLabelToCode[k]] || k);
+    const colors = metEntries.map(([k, _]) => ANNCSU_METODO_COLORS[metLabelToCode[k]] || '#9E9E9E');
+    const values = metEntries.map(([_, v]) => v);
+    const total = values.reduce((a, b) => a + b, 0);
+    const ctx2 = metCanvas.getContext('2d');
+    new Chart(ctx2, {
+      type: 'doughnut',
+      data: { labels, datasets: [{ data: values, backgroundColor: colors, borderWidth: 2, borderColor: '#fff' }] },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '60%',
+        plugins: {
+          legend: { position: 'bottom', labels: { font: { family: 'var(--mono)', size: 11 }, padding: 12, usePointStyle: true, pointStyle: 'circle' } },
+          tooltip: { callbacks: { label: (ctx) => {
+            const v = ctx.parsed; const pct = (v / total * 100).toFixed(1);
+            return `${ctx.label}: ${fmtNum(v)} (${pct}%)`;
+          } } }
+        }
+      }
+    });
+  }
 }
 
 
