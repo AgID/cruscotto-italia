@@ -4276,42 +4276,47 @@ function renderSanitaCoordDisclaimer(d) {
 
   const nRicalcolate = (fk.n_coordinate_ricalcolate || 0) + (pk.n_coordinate_ricalcolate || 0);
   const nDroppate    = (fk.n_coordinate_droppate    || 0) + (pk.n_coordinate_droppate    || 0);
+  const nDuplicate   = (fk.n_coordinate_duplicate   || 0) + (pk.n_coordinate_duplicate   || 0);
   const nSenza       = (fk.n_senza_coordinate       || 0) + (pk.n_senza_coordinate       || 0);
 
   // Se tutto e' a posto (solo coord_source=mds) niente disclaimer.
-  if (nRicalcolate === 0 && nDroppate === 0 && nSenza === 0) return '';
+  if (nRicalcolate === 0 && nDroppate === 0 && nDuplicate === 0 && nSenza === 0) return '';
 
-  const totIssue = nRicalcolate + nDroppate + nSenza;
+  const totIssue = nRicalcolate + nDroppate + nDuplicate + nSenza;
   const totGeoMds = (fk.n_coordinate_mds || 0) + (pk.n_coordinate_mds || 0);
 
   return `
     <details class="sanita-coord-disclaimer">
       <summary>
         <span class="sanita-coord-icon" aria-hidden="true">ⓘ</span>
-        Qualità delle coordinate: <strong>${nRicalcolate}</strong> ricalcolate via ANNCSU${nDroppate || nSenza ? `, <strong>${nDroppate + nSenza}</strong> non geolocalizzabili` : ''}.
+        Qualità delle coordinate: <strong>${nRicalcolate}</strong> ricalcolate via ANNCSU${nDroppate || nDuplicate || nSenza ? `, <strong>${nDroppate + nDuplicate + nSenza}</strong> non geolocalizzabili` : ''}.
         <span class="sanita-coord-toggle">Dettagli ▾</span>
       </summary>
       <div class="sanita-coord-body">
         <p>
           Le coordinate geografiche di farmacie e parafarmacie provengono dagli
           <a href="https://www.dati.salute.gov.it/" target="_blank" rel="noopener">Open Data del Ministero della Salute</a>.
-          Su questo dataset abbiamo osservato un tasso di errore upstream del 5-15%:
-          farmacie il cui <code>cod_comune</code> ISTAT è corretto ma le cui
-          <code>lat</code>/<code>lon</code> puntano a indirizzi in altri comuni
-          (talvolta a centinaia di chilometri di distanza).
+          Su questo dataset abbiamo osservato due categorie di errore upstream:
+          (1) <em>coordinate fuori comune</em> — il <code>cod_comune</code> ISTAT
+          è corretto ma <code>lat</code>/<code>lon</code> puntano altrove
+          (5-15% dei record);
+          (2) <em>centroidi finti</em> — più presidi dello stesso comune
+          condividono identica coordinata (tipicamente il centro del comune)
+          invece dell'indirizzo reale.
         </p>
         <p>
-          Per migliorare la qualità geografica abbiamo incrociato il dato con
-          l'<strong>Archivio Nazionale dei Numeri Civici e Strade Urbane (ANNCSU)</strong>
-          dell'Agenzia delle Entrate. Per ogni record fuori dal centroide del comune,
-          o senza coordinate dichiarate, tentiamo un match per
-          <em>odonimo + civico</em> e sostituiamo le coordinate con quelle ANNCSU.
+          Per entrambi i casi, e per i record senza coordinate dichiarate,
+          incrociamo il dato con l'<strong>Archivio Nazionale dei Numeri Civici
+          e Strade Urbane (ANNCSU)</strong> dell'Agenzia delle Entrate:
+          tentiamo un match per <em>odonimo + civico</em> e sostituiamo le
+          coordinate con quelle ANNCSU.
         </p>
         <p>Per questo comune:</p>
         <ul class="sanita-coord-stats">
           <li><strong>${fmtNum(totGeoMds)}</strong> presidi con coordinate originali del Ministero della Salute (dentro centroide).</li>
           ${nRicalcolate > 0 ? `<li><strong>${fmtNum(nRicalcolate)}</strong> presidi con coordinate <strong>ricalcolate via ANNCSU</strong> (le coordinate originali del MdS sono comunque conservate nei campi <code>lat_raw</code>/<code>lon_raw</code> dello shard JSON).</li>` : ''}
           ${nDroppate > 0 ? `<li><strong>${fmtNum(nDroppate)}</strong> presidi con coordinate MdS fuori comune e <em>nessun match ANNCSU</em>: marker non mostrato sulla mappa, record presente nei dati con <code>coord_source: "dropped"</code>.</li>` : ''}
+          ${nDuplicate > 0 ? `<li><strong>${fmtNum(nDuplicate)}</strong> presidi con coordinate MdS in cluster duplicato (centroide finto del comune) e <em>nessun match ANNCSU</em>: marker non mostrato, <code>coord_source: "duplicate"</code>.</li>` : ''}
           ${nSenza > 0 ? `<li><strong>${fmtNum(nSenza)}</strong> presidi senza coordinate dichiarate dal MdS e <em>non geolocalizzabili via ANNCSU</em>: <code>coord_source: "no_coord"</code>.</li>` : ''}
         </ul>
         <p class="sanita-coord-footer">

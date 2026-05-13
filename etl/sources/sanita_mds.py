@@ -695,16 +695,26 @@ def _clean_and_geocode_coords(
          c) Se non ha coord MdS (None) -> tenta geocoding ANNCSU
             - Se ANNCSU trova match -> coord_source='anncsu', lat/lon ANNCSU
             - Altrimenti -> coord_source='no_coord' (resta con lat=None)
+      4. DEDUP step (post-pipeline): rileva cluster di >=3 presidi con
+         coord identica (round 4 decimali = ~11m). Sono CENTROIDI FINTI
+         (MdS pubblica spesso lat/lon comune-level invece dell'indirizzo).
+         Per ciascun presidio nel cluster:
+           - Tenta geocoding ANNCSU per ottenere coord reale dell'indirizzo
+           - Se match -> coord_source='anncsu', coord_strategy='duplicate_redirect'
+             preserva lat_raw/lon_raw del MdS
+           - Altrimenti -> coord_source='duplicate', preserva raw, nullifica
+             lat/lon (marker non mostrato sulla mappa)
 
     Filosofia: non cancelliamo dati alla fonte. Preserviamo SEMPRE i raw MdS
     (lat_raw/lon_raw) quando esistevano, indipendentemente dalla strategia.
 
     Ritorna (punti_modificati, stats) dove stats =
-      {'mds': N, 'anncsu': N, 'dropped': N, 'no_coord': N,
-       'geocode_strategies': {'exact': N, 'no_esp': N, 'odo_only': N}}
+      {'mds': N, 'anncsu': N, 'dropped': N, 'no_coord': N, 'duplicate': N,
+       'geocode_strategies': {'exact': N, 'no_esp': N, 'odo_only': N,
+                              'duplicate_redirect': N}}
     """
     stats = {
-        "mds": 0, "anncsu": 0, "dropped": 0, "no_coord": 0,
+        "mds": 0, "anncsu": 0, "dropped": 0, "no_coord": 0, "duplicate": 0,
         "geocode_strategies": Counter(),
     }
     if not punti:
@@ -784,6 +794,55 @@ def _clean_and_geocode_coords(
                 new_p["coord_source"] = "no_coord"
                 stats["no_coord"] += 1
             out.append(new_p)
+
+    # ========================================================================
+    # STEP 4: DEDUP centroide finto.
+    # Rileva cluster di >=3 presidi con coord MdS identica (round 4 dec = 11m).
+    # Sono casi dove MdS ha assegnato il centroide del comune invece di
+    # geocodificare l'indirizzo reale. Esempio Matera 077014: 16 presidi
+    # alla stessa coord (40.67084, 16.578951).
+    # Strategia: per ciascun presidio del cluster, ri-tenta ANNCSU.
+    # ========================================================================
+    SOGLIA_DUPLICATI = 3
+
+    # Solo i presidi con coord_source='mds' (gli altri sono gia' stati gestiti)
+    by_coord = {}
+    for i, p in enumerate(out):
+        if p.get("coord_source") != "mds":
+            continue
+        if p.get("lat") is None or p.get("lon") is None:
+            continue
+        key = (round(p["lat"], 4), round(p["lon"], 4))
+        by_coord.setdefault(key, []).append(i)
+
+    duplicate_groups = [(k, idxs) for k, idxs in by_coord.items() if len(idxs) >= SOGLIA_DUPLICATI]
+
+    for coord_key, idxs in duplicate_groups:
+        for i in idxs:
+            p = out[i]
+            # Preservo raw (le coord MdS attuali sono comunque "valide" ma finte)
+            p["lat_raw"] = p["lat"]
+            p["lon_raw"] = p["lon"]
+
+            # Decremento stats['mds'] perche' lo riclassifico
+            stats["mds"] -= 1
+
+            geocoded = None
+            if geocoder is not None:
+                geocoded = geocoder.geocode(istat, p.get("indirizzo", ""))
+
+            if geocoded:
+                p["lat"] = round(geocoded["lat"], 6)
+                p["lon"] = round(geocoded["lon"], 6)
+                p["coord_source"] = "anncsu"
+                p["coord_strategy"] = "duplicate_redirect"
+                stats["anncsu"] += 1
+                stats["geocode_strategies"]["duplicate_redirect"] += 1
+            else:
+                p["lat"] = None
+                p["lon"] = None
+                p["coord_source"] = "duplicate"
+                stats["duplicate"] += 1
 
     return out, stats
 
@@ -885,6 +944,7 @@ def _build_farmacie_section(
             "n_coordinate_mds":       cstats["mds"],
             "n_coordinate_ricalcolate": cstats["anncsu"],
             "n_coordinate_droppate":  cstats["dropped"],
+            "n_coordinate_duplicate": cstats["duplicate"],
             "n_senza_coordinate":     cstats["no_coord"],
             "geocode_strategie":      dict(cstats["geocode_strategies"]),
         },
@@ -918,6 +978,7 @@ def _build_parafarmacie_section(
             "n_coordinate_mds":       cstats["mds"],
             "n_coordinate_ricalcolate": cstats["anncsu"],
             "n_coordinate_droppate":  cstats["dropped"],
+            "n_coordinate_duplicate": cstats["duplicate"],
             "n_senza_coordinate":     cstats["no_coord"],
             "geocode_strategie":      dict(cstats["geocode_strategies"]),
         },
