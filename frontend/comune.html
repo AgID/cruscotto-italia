@@ -421,11 +421,41 @@ a:hover{color:var(--accent)}
   text-align:right;
 }
 .sanita-osp-toggle{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:2px;
+  padding:6px 10px;
+  border:1px solid var(--ink-mute);
+  border-radius:6px;
+  background:var(--paper);
+  transition:all .15s ease;
+  min-width:62px;
+}
+.sanita-osp-item > summary:hover .sanita-osp-toggle{
+  background:var(--accent);
+  border-color:var(--accent);
+  color:#fff;
+}
+.sanita-osp-toggle-label{
   font-family:var(--mono);
-  font-size:10px;
+  font-size:9px;
   text-transform:uppercase;
   letter-spacing:.06em;
   color:var(--ink-mute);
+  line-height:1;
+}
+.sanita-osp-item > summary:hover .sanita-osp-toggle-label{color:#fff;}
+.sanita-osp-toggle-arrow{
+  font-size:18px;
+  color:var(--accent);
+  line-height:1;
+  transition:transform .2s ease;
+}
+.sanita-osp-item > summary:hover .sanita-osp-toggle-arrow{color:#fff;}
+.sanita-osp-item[open] > summary .sanita-osp-toggle-arrow{
+  transform:rotate(180deg);
 }
 .sanita-osp-item[open] > summary{
   border-bottom:1px solid var(--ink-mute);
@@ -4344,8 +4374,8 @@ function renderSanitaOspedaliAccordion(d) {
         Clicca per espandere il dettaglio dei reparti e dei posti letto per disciplina.
       </p>
       <div class="sanita-osp-list">
-        ${stabs.map((s, i) => `
-          <details class="sanita-osp-item"${i === 0 ? ' open' : ''}>
+        ${stabs.map(s => `
+          <details class="sanita-osp-item">
             <summary>
               <div>
                 <div class="sanita-osp-name">${(s.denominazione || 'Stabilimento ospedaliero').replace(/</g,'&lt;')}</div>
@@ -4355,7 +4385,10 @@ function renderSanitaOspedaliAccordion(d) {
                 <div class="sanita-osp-pl">${fmtNum(s.totale_posti_letto || 0)}</div>
                 <span class="sanita-osp-pl-lab">posti letto</span>
               </div>
-              <div class="sanita-osp-toggle">Reparti ▾</div>
+              <div class="sanita-osp-toggle" aria-hidden="true">
+                <span class="sanita-osp-toggle-label">Reparti</span>
+                <span class="sanita-osp-toggle-arrow">▾</span>
+              </div>
             </summary>
             <div class="sanita-osp-body">
               ${s.indirizzo ? `<p class="sanita-osp-addr">${s.indirizzo.replace(/</g,'&lt;')}</p>` : ''}
