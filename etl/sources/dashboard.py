@@ -23,6 +23,7 @@ Sorgenti accorpate:
 - anncsu/<istat>.json            (ANNCSU - civici e strade urbane)
 - sanita_mds/<istat>.json        (Min. Salute - farmacie, parafarmacie, posti letto ospedalieri)
 - pun/<istat>.json               (GSE/MASE - Piattaforma Unica Nazionale punti di ricarica)
+- agcom_bbmap/<istat>.json       (AGCOM - Broadband Map, copertura banda larga)
 - lookup/anac-aggregato.json     (filtrato per CF)
 - lookup/comuni-bundle.json      (anagrafica)
 
@@ -82,6 +83,7 @@ SHARDS = [
     ("anncsu",     "anncsu/{istat}.json"),
     ("sanita_mds", "sanita_mds/{istat}.json"),
     ("pun",        "pun/{istat}.json"),
+    ("agcom_bbmap","agcom_bbmap/{istat}.json"),
 ]
 
 ETL_VERSION = "0.1.0"
