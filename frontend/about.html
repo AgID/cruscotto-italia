@@ -414,6 +414,28 @@ footer a:hover { color: #fff !important; }
           </td>
           <td class="freq">giornaliera</td>
         </tr>
+        <tr data-fonte-row="AGCOM">
+          <td>AGCOM</td>
+          <td>
+            <strong>Broadband Map (BBmap) — copertura banda larga</strong>
+            Reportistica delle consistenze dei punti raggiunti dalla rete
+            cablata, ai sensi dell'art.&nbsp;22 del Codice delle Comunicazioni
+            Elettroniche. Pubblicata dall'Autorità per le Garanzie nelle
+            Comunicazioni con indicatori di copertura FTTH DESI (metrica UE
+            ufficiale), copertura FTTH entro&nbsp;20&nbsp;m dall'abitazione,
+            famiglie residenti e raggiunte, celle 20×20&nbsp;m raggiunte da
+            FTTH/FTTC, punti dichiarati geograficamente distinti, indirizzi
+            postali raggiunti, indice di confidenza DESI. Copertura nazionale
+            completa: <strong>7.896 comuni su 7.896 (100%)</strong>. Dato
+            corrente al 31/12/2025 (rilascio 10/02/2026). Aggiornamento
+            trimestrale. Pubblicati ai sensi dell'art.&nbsp;52 c.2
+            D.Lgs&nbsp;82/2005 (CAD) come open data di default delle
+            Pubbliche Amministrazioni — CC&nbsp;BY&nbsp;4.0 con attribuzione
+            ad AGCOM. La rete dettagliata (polilinee strade FTTH/rame) resta
+            sulla mappa ufficiale AGCOM via deep-link client-side.
+          </td>
+          <td class="freq">trimestrale</td>
+        </tr>
       </tbody>
     </table>
 
@@ -462,7 +484,7 @@ footer a:hover { color: #fff !important; }
         <h3>1. Estrazione</h3>
         <p>
           Script Python (uno per fonte) scaricano i dataset originali dai
-          portali ufficiali delle 12 istituzioni integrate: ISTAT (POSAS,
+          portali ufficiali delle 13 istituzioni integrate: ISTAT (POSAS,
           censimento, turismo, incidenti) in SDMX-ML via API REST,
           ANAC i contratti come JSON-LD su dati.anticorruzione.it,
           BDAP-MOP le opere via API a paginazione,
@@ -475,7 +497,9 @@ footer a:hover { color: #fff !important; }
           l'Agenzia delle Entrate l'ANNCSU (civici e strade) in flussi mensili,
           il Ministero della Salute farmacie/parafarmacie/ospedali via Open Data IODL,
           il GSE per conto del MASE la Piattaforma Unica Nazionale dei punti
-          di ricarica elettrica via CSV nazionale firmato S3 (Cognito guest).
+          di ricarica elettrica via CSV nazionale firmato S3 (Cognito guest),
+          AGCOM la Broadband Map sulla copertura della rete cablata
+          ex art.&nbsp;22 CCE via CSV nazionale ArcGIS aggiornato trimestralmente.
         </p>
         <p>
           Gli script gestiscono le idiosincrasie di ciascun dataset:
@@ -730,6 +754,16 @@ footer a:hover { color: #fff !important; }
           (66.619 EVSE in 5.185 comuni, georeferenziati).
         </div>
         <div class="aggiorna-when">04:30 UTC</div>
+      </div>
+      <div class="aggiorna-row">
+        <div class="aggiorna-cadence">Trimestrale</div>
+        <div class="aggiorna-what">
+          <strong>AGCOM — Broadband Map (BBmap)</strong>
+          reportistica copertura banda larga (FTTH DESI, FTTH 20m,
+          famiglie raggiunte, celle 20×20m) per tutti i 7.896 comuni
+          italiani — ex art.&nbsp;22 Codice Comunicazioni Elettroniche.
+        </div>
+        <div class="aggiorna-when">~30-45 gg dopo fine trimestre</div>
       </div>
     </div>
 
