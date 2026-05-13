@@ -4813,20 +4813,46 @@ function initAnncsu(d) {
     markersLayer.clearLayers();
     const z = map.getZoom();
     const visible = filteredPunti();
+    const isSearching = searchHighlightSet.size > 0;
+
+    // RICERCA ATTIVA: mostro SOLO i match, niente cluster degli altri.
+    // L'utente sta cercando un odonimo specifico, gli altri civici sono rumore.
+    if (isSearching) {
+      const matches = visible.filter(p => searchHighlightSet.has(p));
+      // Se i match sono molti (>200) e zoom basso, clusterizzo anche loro
+      if (matches.length > 200 && z < 14) {
+        const cellSize = z < 10 ? 0.05 : z < 12 ? 0.015 : 0.005;
+        const grid = new Map();
+        matches.forEach(p => {
+          const key = `${Math.floor(p.lat / cellSize)}_${Math.floor(p.lon / cellSize)}`;
+          if (!grid.has(key)) grid.set(key, []);
+          grid.get(key).push(p);
+        });
+        grid.forEach(cellPunti => {
+          if (cellPunti.length === 1) {
+            markersLayer.addLayer(makeDot(cellPunti[0], true));
+          } else {
+            const avgLat = cellPunti.reduce((s, p) => s + p.lat, 0) / cellPunti.length;
+            const avgLon = cellPunti.reduce((s, p) => s + p.lon, 0) / cellPunti.length;
+            markersLayer.addLayer(makeCluster(avgLat, avgLon, cellPunti.length));
+          }
+        });
+      } else {
+        matches.forEach(p => markersLayer.addLayer(makeDot(p, true)));
+      }
+      return;
+    }
+
+    // RICERCA INATTIVA: comportamento standard (cluster soglia z<15)
     // Cluster soglia: a zoom <15 raggruppa, oltre mostra punti singoli
     // (più alta di Immobili PA perché civici sono molto più densi)
     if (z >= 15 || visible.length <= 60) {
-      visible.forEach(p => markersLayer.addLayer(makeDot(p, searchHighlightSet.has(p))));
+      visible.forEach(p => markersLayer.addLayer(makeDot(p, false)));
       return;
     }
-    // Highlighted dalla ricerca: sempre visibili come marker singoli (mai cluster)
     // Outlier: sempre visibili come marker singoli (mai clusterizzati)
-    const highlighted = visible.filter(p => searchHighlightSet.has(p));
-    const rest = visible.filter(p => !searchHighlightSet.has(p));
-    highlighted.forEach(p => markersLayer.addLayer(makeDot(p, true)));
-
-    const inliers = rest.filter(p => !p._outlier);
-    const outliers = rest.filter(p => p._outlier);
+    const inliers = visible.filter(p => !p._outlier);
+    const outliers = visible.filter(p => p._outlier);
     outliers.forEach(p => markersLayer.addLayer(makeDot(p, false)));
 
     // Grid clustering sugli inlier
