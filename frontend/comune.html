@@ -1402,23 +1402,26 @@ function renderComune(data) {
   window.__anncsuInited = false;
   window.__sanitaData = k.sanita_mds || null;
   window.__sanitaInited = false;
+  window.__punData = k.pun || null;
+  window.__punInited = false;
   const tabs = [
     { id: 'panoramica', label: 'Panoramica', kpi: '' },
-    { id: 'demografia', label: 'Demografia', kpi: k.popolazione != null ? fmtNum(k.popolazione) : '—' },
-    { id: 'profilo', label: 'Profilo', kpi: '<span data-tab-profilo-pct><span class="tab-spinner"></span></span>' },
-    { id: 'turismo', label: 'Turismo', kpi: '<span data-tab-turismo-idx><span class="tab-spinner"></span></span>' },
-    { id: 'scuole', label: 'Scuole', kpi: k.scuole?.kpi?.n_scuole != null ? fmtNum(k.scuole.kpi.n_scuole) : '—' },
-    { id: 'pnrr', label: 'PNRR', kpi: '<span data-tab-pnrr-count><span class="tab-spinner"></span></span>' },
-    { id: 'territorio', label: 'Territorio', kpi: '<span data-tab-territorio-pct><span class="tab-spinner"></span></span>' },
+    { id: 'anncsu', label: 'ANNCSU', kpi: k.anncsu?.kpi?.n_strade != null ? fmtNum(k.anncsu.kpi.n_strade) : '—' },
     { id: 'aria', label: 'Aria', kpi: '<span data-tab-aria-n><span class="tab-spinner"></span></span>' },
-    { id: 'veicoli', label: 'Veicoli e incidenti', kpi: (k.veicoli?.parco_veicoli?._unreliable) ? '—' : (k.veicoli?.parco_veicoli?.tasso_motorizzazione_per_1000_ab != null ? fmtNum(Math.round(k.veicoli.parco_veicoli.tasso_motorizzazione_per_1000_ab)) : '—') },
-    { id: 'opere', label: 'Opere', kpi: k.opere?.count != null ? fmtNum(k.opere.count) : '—' },
     { id: 'contratti', label: 'Contratti', kpi: fmtNum(k.contratti?.count || 0) },
-    { id: 'spese', label: 'Spese SIOPE', kpi: '<span data-tab-spese-count><span class="tab-spinner"></span></span>' },
-    { id: 'redditi', label: 'Redditi e fisco', kpi: k.redditi?.anni?.[String(k.redditi.anni_disponibili?.slice(-1)[0])]?.reddito_complessivo?.medio != null ? '€' + fmtNum(k.redditi.anni[String(k.redditi.anni_disponibili.slice(-1)[0])].reddito_complessivo.medio) : '—' },
+    { id: 'demografia', label: 'Demografia', kpi: k.popolazione != null ? fmtNum(k.popolazione) : '—' },
+    { id: 'opere', label: 'Opere', kpi: k.opere?.count != null ? fmtNum(k.opere.count) : '—' },
     { id: 'patrimonio-pa', label: 'Patrimonio PA', kpi: k.immobili_pa?.kpi?.n_totale != null ? fmtNum(k.immobili_pa.kpi.n_totale) : '—' },
+    { id: 'pnrr', label: 'PNRR', kpi: '<span data-tab-pnrr-count><span class="tab-spinner"></span></span>' },
+    { id: 'profilo', label: 'Profilo', kpi: '<span data-tab-profilo-pct><span class="tab-spinner"></span></span>' },
+    { id: 'pun', label: 'Punti di ricarica', kpi: k.pun?.kpi?.n_attivi != null ? fmtNum(k.pun.kpi.n_attivi) : '—' },
+    { id: 'redditi', label: 'Redditi e fisco', kpi: k.redditi?.anni?.[String(k.redditi.anni_disponibili?.slice(-1)[0])]?.reddito_complessivo?.medio != null ? '€' + fmtNum(k.redditi.anni[String(k.redditi.anni_disponibili.slice(-1)[0])].reddito_complessivo.medio) : '—' },
     { id: 'sanita', label: 'Sanità', kpi: k.sanita_mds?.farmacie?.kpi?.n_totale != null ? fmtNum(k.sanita_mds.farmacie.kpi.n_totale) : '—' },
-    { id: 'anncsu', label: 'ANNCSU', kpi: k.anncsu?.kpi?.n_strade != null ? fmtNum(k.anncsu.kpi.n_strade) : '—' }
+    { id: 'scuole', label: 'Scuole', kpi: k.scuole?.kpi?.n_scuole != null ? fmtNum(k.scuole.kpi.n_scuole) : '—' },
+    { id: 'spese', label: 'Spese SIOPE', kpi: '<span data-tab-spese-count><span class="tab-spinner"></span></span>' },
+    { id: 'territorio', label: 'Territorio', kpi: '<span data-tab-territorio-pct><span class="tab-spinner"></span></span>' },
+    { id: 'turismo', label: 'Turismo', kpi: '<span data-tab-turismo-idx><span class="tab-spinner"></span></span>' },
+    { id: 'veicoli', label: 'Veicoli e incidenti', kpi: (k.veicoli?.parco_veicoli?._unreliable) ? '—' : (k.veicoli?.parco_veicoli?.tasso_motorizzazione_per_1000_ab != null ? fmtNum(Math.round(k.veicoli.parco_veicoli.tasso_motorizzazione_per_1000_ab)) : '—') }
   ];
 
   document.getElementById('comune-content').innerHTML = `
@@ -1492,6 +1495,7 @@ function renderComune(data) {
       ${renderImmobiliPaTab(k.immobili_pa)}
       ${renderSanitaTab(k.sanita_mds)}
       ${renderAnncsuTab(k.anncsu)}
+      ${renderPunTab(k.pun)}
     </div>
   `;
 }
@@ -4332,6 +4336,291 @@ function initImmobiliPa(d) {
 }
 
 // ===========================================================================
+// Tab Punti di ricarica (PUN) - GSE/MASE Piattaforma Unica Nazionale
+// Single source: dashboard/<istat>.json sezione "pun" (rebuild quotidiano).
+// Marker scheme: bordo continuo=Attivo, tratteggiato=Non Attivo;
+//                fill per categoria potenza (Slow/Quick/Fast/HPC/Ultra fast).
+// ===========================================================================
+
+const PUN_CAT_COLORS = {
+  "Slow":       "#9CA3AF",  // grigio
+  "Quick":      "#0066CC",  // blu Italia
+  "Fast":       "#A050BE",  // viola
+  "HPC":        "#E89400",  // arancio
+  "Ultra fast": "#D9364F"   // rosso
+};
+
+// Ordine canonico per render legenda e doughnut
+const PUN_CAT_ORDER = ["Slow", "Quick", "Fast", "HPC", "Ultra fast"];
+
+function renderPunTab(d) {
+  if (!d || !d.kpi || d.kpi.n_totale == null) {
+    return `
+      <div class="tab-pane" id="pane-pun">
+        <div class="section-title">§ Punti di ricarica</div>
+        <h2 class="section-h">Nessun punto di ricarica <em>per veicoli elettrici</em>.</h2>
+        <p class="muted">La Piattaforma Unica Nazionale del GSE/MASE non riporta colonnine EV per questo comune.
+        Sono coperti <strong>5.185 comuni su 7.896</strong> (65,7%) e l'aggiornamento è quotidiano:
+        se nuove installazioni vengono registrate al GSE compariranno qui entro 24 ore.</p>
+      </div>`;
+  }
+  const k = d.kpi;
+  const potTot = (k.potenza_tot_kw != null) ? k.potenza_tot_kw : 0;
+  const potMw = potTot / 1000;
+  const pctAtt = (k.pct_attivi != null) ? k.pct_attivi : null;
+  const pctDc = (k.n_totale > 0 && k.n_dc != null) ? (k.n_dc / k.n_totale * 100) : null;
+  const hpcUf = (k.mix_potenza?.HPC || 0) + (k.mix_potenza?.["Ultra fast"] || 0);
+  const pctHpcUf = (k.n_totale > 0) ? (hpcUf / k.n_totale * 100) : null;
+
+  return `
+    <div class="tab-pane" id="pane-pun">
+      <div class="section-title">§ Punti di ricarica</div>
+      <h2 class="section-h">${fmtNum(k.n_totale)} punti di ricarica EVSE, di cui <em>${fmtNum(k.n_attivi || 0)} attivi</em>.</h2>
+      <p class="section-sub">
+        Infrastrutture di ricarica per veicoli elettrici registrate alla
+        <a href="https://www.piattaformaunicanazionale.it/idr" target="_blank" rel="noopener">Piattaforma Unica Nazionale</a>
+        del GSE / Ministero dell'Ambiente. Dato aggiornato quotidianamente.
+      </p>
+      <div class="tab-kpis">
+        <div class="tab-kpi">
+          <div class="lab">Totale punti</div>
+          <div class="val">${fmtNum(k.n_totale)}</div>
+          <div class="sub">EVSE registrati</div>
+        </div>
+        <div class="tab-kpi">
+          <div class="lab">Attivi</div>
+          <div class="val">${fmtNum(k.n_attivi || 0)}</div>
+          <div class="sub">${pctAtt != null ? pctAtt.toFixed(1) + '% del totale' : 'in servizio'}</div>
+        </div>
+        <div class="tab-kpi ${(k.n_non_attivi || 0) > 0 ? '' : 'tbd'}">
+          <div class="lab">Non attivi</div>
+          <div class="val">${fmtNum(k.n_non_attivi || 0)}</div>
+          <div class="sub">fuori servizio o in installazione</div>
+        </div>
+        <div class="tab-kpi">
+          <div class="lab">Potenza totale</div>
+          <div class="val">${potMw >= 1 ? potMw.toFixed(1) + ' MW' : Math.round(potTot) + ' kW'}</div>
+          <div class="sub">somma potenze erogabili</div>
+        </div>
+        <div class="tab-kpi">
+          <div class="lab">DC fast</div>
+          <div class="val">${fmtNum(k.n_dc || 0)}</div>
+          <div class="sub">${pctDc != null ? pctDc.toFixed(1) + '% in corrente continua' : 'corrente continua'}</div>
+        </div>
+        <div class="tab-kpi ${hpcUf > 0 ? '' : 'tbd'}">
+          <div class="lab">HPC + Ultra fast</div>
+          <div class="val">${fmtNum(hpcUf)}</div>
+          <div class="sub">${pctHpcUf != null ? pctHpcUf.toFixed(1) + '% (≥ 150 kW)' : 'punti ad alta potenza'}</div>
+        </div>
+        <div class="tab-kpi">
+          <div class="lab">AC standard</div>
+          <div class="val">${fmtNum(k.n_ac || 0)}</div>
+          <div class="sub">corrente alternata</div>
+        </div>
+      </div>
+
+      <div class="veicoli-grid">
+        <div>
+          <h3 class="veicoli-col-h">Mappa (${fmtNum((d.punti || []).length)} punti)</h3>
+          <div id="pun-map-main" class="impa-map" role="region" aria-label="Mappa punti di ricarica veicoli elettrici"></div>
+          <div class="impa-filters" id="pun-filters-main" role="group" aria-label="Filtri categoria potenza e stato">
+            ${renderPunFilters(k.mix_potenza || {})}
+          </div>
+          <div class="veicoli-euro-note">
+            Bordo <strong>continuo</strong> = Attivo, bordo <strong>tratteggiato</strong> = Non attivo.
+            Cluster auto-aggregati a basso zoom.
+          </div>
+        </div>
+        <div>
+          <h3 class="veicoli-col-h">Mix per categoria di potenza</h3>
+          <div class="impa-chart-wrap">
+            <canvas id="pun-mix-chart" aria-label="Distribuzione punti per categoria di potenza" role="img"></canvas>
+          </div>
+          <div class="veicoli-euro-note">
+            Slow ≤7 kW · Quick 7-22 kW · Fast 22-50 kW · HPC 50-150 kW · Ultra fast &gt;150 kW
+          </div>
+        </div>
+      </div>
+
+      <p class="muted" style="font-family:var(--mono);font-size:11px;margin-top:18px;">
+        Fonte: <a href="https://www.piattaformaunicanazionale.it/idr" target="_blank" rel="noopener">Piattaforma Unica Nazionale (GSE / Ministero dell'Ambiente)</a>.
+        Licenza CC BY 4.0 ex art. 52 c.2 D.Lgs 82/2005 (CAD) — open by default.
+      </p>
+    </div>`;
+}
+
+// Chip filtri: 5 categorie potenza + "Tutti"; toggle stato secondario.
+function renderPunFilters(mixPotenza) {
+  const entries = PUN_CAT_ORDER
+    .map(cat => [cat, mixPotenza[cat] || 0])
+    .filter(([cat, count]) => count > 0);
+  if (!entries.length) return '';
+  const chips = entries.map(([cat, count]) => {
+    const color = PUN_CAT_COLORS[cat] || '#9E9E9E';
+    return `<button type="button" class="impa-chip" data-pun-cat="${cat}" aria-pressed="true">
+      <span class="impa-chip-dot" style="background:${color}" aria-hidden="true"></span>
+      <span class="impa-chip-label">${cat}</span>
+      <span class="impa-chip-count">${fmtNum(count)}</span>
+    </button>`;
+  }).join('');
+  return `<button type="button" class="impa-chip impa-chip-all" data-pun-cat="__all__" aria-pressed="true">Tutti</button>${chips}`;
+}
+
+function initPun(d) {
+  if (!d || !d.punti) return;
+  const punti = d.punti || [];
+  const mapEl = document.getElementById('pun-map-main');
+  if (!mapEl || typeof L === 'undefined') return;
+
+  if (!punti.length) {
+    mapEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted);font-family:var(--mono);font-size:12px;">Nessun punto di ricarica geo-referenziato.</div>';
+    return;
+  }
+  // ---- 1) Bounding box dei punti
+  const lats = punti.map(p => p.lat);
+  const lons = punti.map(p => p.lon);
+  const bounds = L.latLngBounds([[Math.min(...lats), Math.min(...lons)], [Math.max(...lats), Math.max(...lons)]]);
+
+  // ---- 2) Mappa Leaflet + tile OSM
+  const map = L.map('pun-map-main', { scrollWheelZoom: false, zoomControl: true }).fitBounds(bounds, { padding: [20, 20] });
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+  }).addTo(map);
+
+  // ---- 3) Stato filtri: Set di categorie potenza attive
+  const activeCats = new Set(PUN_CAT_ORDER.filter(c => punti.some(p => p.potenza_categoria === c)));
+
+  // ---- 4) Layer markers e redraw cluster grid-based
+  const markersLayer = L.layerGroup().addTo(map);
+
+  function makeDot(p) {
+    const cat = p.potenza_categoria || 'Slow';
+    const color = PUN_CAT_COLORS[cat] || '#9CA3AF';
+    const attivo = (p.stato === 'Attivo');
+    // Opzione C: bordo continuo=Attivo, tratteggiato=Non Attivo. Stesso fill per categoria.
+    const options = {
+      radius: 6,
+      fillColor: color,
+      color: attivo ? '#1a1a1a' : color,
+      weight: attivo ? 1.8 : 1.5,
+      opacity: 1,
+      fillOpacity: attivo ? 0.9 : 0.55
+    };
+    if (!attivo) options.dashArray = '3,3';
+    const m = L.circleMarker([p.lat, p.lon], options);
+    const popupHtml = `
+      <div style="font-family:var(--ui);font-size:12px;min-width:200px">
+        <div style="font-weight:600;color:${color};margin-bottom:4px">
+          ${cat} &middot; ${attivo ? 'Attivo' : 'Non attivo'}
+        </div>
+        ${p.indirizzo ? `<div><b>Indirizzo:</b> ${p.indirizzo}${p.cap ? ' (' + p.cap + ')' : ''}</div>` : ''}
+        ${p.potenza_w != null ? `<div><b>Potenza:</b> ${(p.potenza_w / 1000).toFixed(1)} kW</div>` : ''}
+        ${p.corrente ? `<div><b>Corrente:</b> ${p.corrente}</div>` : ''}
+        ${p.tipo_parcheggio ? `<div><b>Parcheggio:</b> ${p.tipo_parcheggio}</div>` : ''}
+        ${p.restrizioni ? `<div style="color:var(--mute);margin-top:4px;font-size:11px"><b>Restrizioni:</b> ${p.restrizioni}</div>` : ''}
+        ${p.id_evse ? `<div style="font-family:var(--mono);font-size:10px;color:var(--mute);margin-top:6px">ID EVSE: ${p.id_evse}</div>` : ''}
+      </div>
+    `;
+    m.bindPopup(popupHtml);
+    return m;
+  }
+
+  function makeCluster(lat, lon, count) {
+    const html = `<div style="background:#0066CC;color:#fff;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-family:var(--ui);font-weight:700;font-size:13px;box-shadow:0 2px 4px rgba(0,0,0,0.3);border:2px solid #fff">${count}</div>`;
+    return L.marker([lat, lon], {
+      icon: L.divIcon({ html, className: 'pun-cluster', iconSize: [32, 32], iconAnchor: [16, 16] })
+    });
+  }
+
+  function redrawClusters() {
+    markersLayer.clearLayers();
+    const z = map.getZoom();
+    const visible = punti.filter(p => activeCats.has(p.potenza_categoria || 'Slow'));
+    if (z >= 14 || visible.length <= 50) {
+      visible.forEach(p => markersLayer.addLayer(makeDot(p)));
+      return;
+    }
+    const cellSize = z < 10 ? 0.05 : z < 12 ? 0.015 : 0.005;
+    const grid = new Map();
+    visible.forEach(p => {
+      const key = `${Math.floor(p.lat / cellSize)}_${Math.floor(p.lon / cellSize)}`;
+      if (!grid.has(key)) grid.set(key, []);
+      grid.get(key).push(p);
+    });
+    grid.forEach(cellPunti => {
+      if (cellPunti.length === 1) {
+        markersLayer.addLayer(makeDot(cellPunti[0]));
+      } else {
+        const avgLat = cellPunti.reduce((s, p) => s + p.lat, 0) / cellPunti.length;
+        const avgLon = cellPunti.reduce((s, p) => s + p.lon, 0) / cellPunti.length;
+        markersLayer.addLayer(makeCluster(avgLat, avgLon, cellPunti.length));
+      }
+    });
+  }
+  redrawClusters();
+  map.on('zoomend moveend', redrawClusters);
+
+  // ---- 5) Listener chip filtri categoria potenza
+  const filtersEl = document.getElementById('pun-filters-main');
+  if (filtersEl) {
+    filtersEl.addEventListener('click', (ev) => {
+      const btn = ev.target.closest('.impa-chip');
+      if (!btn) return;
+      const cat = btn.dataset.punCat;
+      if (cat === '__all__') {
+        activeCats.clear();
+        PUN_CAT_ORDER.forEach(c => { if (punti.some(p => p.potenza_categoria === c)) activeCats.add(c); });
+        filtersEl.querySelectorAll('.impa-chip').forEach(b => b.setAttribute('aria-pressed', 'true'));
+      } else {
+        if (activeCats.has(cat)) {
+          activeCats.delete(cat);
+          btn.setAttribute('aria-pressed', 'false');
+        } else {
+          activeCats.add(cat);
+          btn.setAttribute('aria-pressed', 'true');
+        }
+        const allBtn = filtersEl.querySelector('.impa-chip-all');
+        if (allBtn) {
+          const totalCats = PUN_CAT_ORDER.filter(c => punti.some(p => p.potenza_categoria === c)).length;
+          allBtn.setAttribute('aria-pressed', activeCats.size === totalCats ? 'true' : 'false');
+        }
+      }
+      redrawClusters();
+    });
+  }
+
+  // ---- 6) Doughnut Chart.js mix categoria di potenza
+  const canvas = document.getElementById('pun-mix-chart');
+  if (canvas && window.Chart && d.kpi && d.kpi.mix_potenza) {
+    const entries = PUN_CAT_ORDER
+      .map(cat => [cat, d.kpi.mix_potenza[cat] || 0])
+      .filter(([k, v]) => v > 0);
+    const labels = entries.map(([k]) => k);
+    const data = entries.map(([, v]) => v);
+    const colors = entries.map(([k]) => PUN_CAT_COLORS[k] || '#9CA3AF');
+    new Chart(canvas.getContext('2d'), {
+      type: 'doughnut',
+      data: {
+        labels,
+        datasets: [{ data, backgroundColor: colors, borderWidth: 2, borderColor: '#fff' }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '55%',
+        plugins: {
+          legend: { position: 'bottom', labels: { font: { family: 'var(--ui)', size: 11 }, padding: 8, boxWidth: 12 } },
+          tooltip: {
+            callbacks: { label: (ctx) => `${ctx.label}: ${fmtNum(ctx.parsed)} punti` }
+          }
+        }
+      }
+    });
+  }
+}
+
+// ===========================================================================
 // Tab Sanità - Bundle Min. Salute (farmacie + parafarmacie + ospedali)
 // Sotto-step 4a: KPI cards + scaffolding (sezioni placeholder per mappa, accordion,
 // chart che verranno popolate nei sotto-step 4c/4d/4e).
@@ -6246,6 +6535,15 @@ function bindTabSwitching() {
         }
       }
 
+      // Lazy-init mappa Leaflet + doughnut Mix potenza Punti di ricarica al primo click
+      if (tab.dataset.tab === 'pun') {
+        if (window.__punData && !window.__punInited) {
+          // setTimeout 0: garantisce che #pun-map-main sia layout-ed nel DOM
+          setTimeout(() => initPun(window.__punData), 0);
+          window.__punInited = true;
+        }
+      }
+
       // Lazy-load tab Spese: chiamata al primo click
       if (tab.dataset.tab === 'spese') {
         const params = new URLSearchParams(window.location.search);
@@ -6944,6 +7242,7 @@ function adaptDashboardToOverview(d) {
       immobili_pa: d.immobili_pa,  // pass-through completo per renderImmobiliPaTab
       sanita_mds: d.sanita_mds,    // pass-through completo per renderSanitaTab
       anncsu: d.anncsu,  // pass-through completo per renderAnncsuTab
+      pun: d.pun,  // pass-through completo per renderPunTab
     },
   };
 }

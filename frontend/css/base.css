@@ -215,7 +215,7 @@
 }
 .tabs {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 4px;
 }
 .tab {
@@ -288,8 +288,12 @@
 /* Scroll hint nascosti: grid non scrolla */
 .tabs-scroll-hint { display: none !important; }
 .tabs-bar.has-overflow .tabs-scroll-hint { display: none !important; }
-/* Responsive: 4 col desktop+tablet -> 2 col mobile.
-   Layout per 16 tab: 4x4 desktop, 8x2 mobile (sempre righe complete). */
+/* Responsive: 6 col desktop -> 3 col tablet -> 2 col mobile.
+   Layout per 17 tab: 6x3 desktop (1 cella vuota),
+   3x6 tablet (1 cella vuota), 2x9 mobile (1 cella vuota). */
+@media (max-width: 1024px) {
+  .tabs { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
 @media (max-width: 720px) {
   .tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .tab { padding: 4px 6px; min-height: 28px; }
