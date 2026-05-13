@@ -943,6 +943,7 @@ function renderComune(data) {
     { id: 'spese', label: 'Spese SIOPE', kpi: '<span data-tab-spese-count><span class="tab-spinner"></span></span>' },
     { id: 'redditi', label: 'Redditi e fisco', kpi: k.redditi?.anni?.[String(k.redditi.anni_disponibili?.slice(-1)[0])]?.reddito_complessivo?.medio != null ? '€' + fmtNum(k.redditi.anni[String(k.redditi.anni_disponibili.slice(-1)[0])].reddito_complessivo.medio) : '—' },
     { id: 'patrimonio-pa', label: 'Patrimonio PA', kpi: k.immobili_pa?.kpi?.n_totale != null ? fmtNum(k.immobili_pa.kpi.n_totale) : '—' },
+    { id: 'sanita', label: 'Sanità', kpi: k.sanita_mds?.farmacie?.kpi?.n_totale != null ? fmtNum(k.sanita_mds.farmacie.kpi.n_totale) : '—' },
     { id: 'anncsu', label: 'ANNCSU', kpi: k.anncsu?.kpi?.n_strade != null ? fmtNum(k.anncsu.kpi.n_strade) : '—' }
   ];
 
@@ -1015,6 +1016,7 @@ function renderComune(data) {
       ${renderVeicoliTab(k.veicoli)}
       ${renderRedditiTab(k.redditi)}
       ${renderImmobiliPaTab(k.immobili_pa)}
+      ${renderSanitaTab(k.sanita_mds)}
       ${renderAnncsuTab(k.anncsu)}
     </div>
   `;
@@ -3856,6 +3858,82 @@ function initImmobiliPa(d) {
 }
 
 // ===========================================================================
+// Tab Sanità - Bundle Min. Salute (farmacie + parafarmacie + ospedali)
+// Sotto-step 4a: KPI cards + scaffolding (sezioni placeholder per mappa, accordion,
+// chart che verranno popolate nei sotto-step 4c/4d/4e).
+// ===========================================================================
+
+function renderSanitaTab(d) {
+  // Comune senza alcuna sezione popolata
+  if (!d || (!d.farmacie && !d.parafarmacie && !d.ospedali)) {
+    return `
+      <div class="tab-pane" id="pane-sanita">
+        <div class="section-title">§ Sanità territoriale</div>
+        <h2 class="section-h">Dati <em>non disponibili</em>.</h2>
+        <p class="muted">Il comune non ha né farmacie né parafarmacie né ospedali pubblici/accreditati censiti negli Open Data del Ministero della Salute.</p>
+      </div>`;
+  }
+
+  const f = d.farmacie?.kpi || null;
+  const p = d.parafarmacie?.kpi || null;
+  const o = d.ospedali?.kpi || null;
+
+  const annoOsp = d._fonti?.ospedali?.anno_dati || 2023;
+
+  return `
+    <div class="tab-pane" id="pane-sanita">
+      <div class="section-title">§ Sanità territoriale</div>
+      <h2 class="section-h">Farmacie, parafarmacie e <em>posti letto ospedalieri</em>: presenza fisica dei presidi sanitari sul territorio.</h2>
+
+      <p class="muted" style="margin:-8px 0 18px;font-size:13px;line-height:1.55;">
+        Dati Open Data del Ministero della Salute (<a href="https://www.dati.salute.gov.it/" target="_blank" rel="noopener">dati.salute.gov.it</a>),
+        licenza <strong>IODL v2.0</strong>. Farmacie e parafarmacie aggiornate quotidianamente alla fonte;
+        posti letto ospedalieri riferiti all'anno <strong>${annoOsp}</strong> (ultimo rilascio annuale Min. Salute).
+      </p>
+
+      <div class="tab-kpis">
+        <div class="tab-kpi">
+          <div class="lab">Farmacie attive</div>
+          <div class="val">${f ? fmtNum(f.n_totale) : '—'}</div>
+          <div class="sub">${f ? (f.mix_tipologia?.Ordinaria != null ? fmtNum(f.mix_tipologia.Ordinaria) + ' ordinarie' : 'incluse stagionali') : 'nessuna nel comune'}</div>
+        </div>
+        <div class="tab-kpi">
+          <div class="lab">Parafarmacie</div>
+          <div class="val">${p ? fmtNum(p.n_totale) : '—'}</div>
+          <div class="sub">${p ? 'attive' : 'nessuna nel comune'}</div>
+        </div>
+        <div class="tab-kpi">
+          <div class="lab">Stabilimenti ospedalieri</div>
+          <div class="val">${o ? fmtNum(o.n_stabilimenti) : '—'}</div>
+          <div class="sub">${o ? fmtNum(o.n_reparti_totali) + ' reparti' : 'nessuno nel comune'}</div>
+        </div>
+        <div class="tab-kpi">
+          <div class="lab">Posti letto totali</div>
+          <div class="val">${o ? fmtNum(o.posti_letto_totali) : '—'}</div>
+          <div class="sub">${o ? 'tutte le tipologie' : '—'}</div>
+        </div>
+        <div class="tab-kpi">
+          <div class="lab">Degenza ordinaria</div>
+          <div class="val">${o ? fmtNum(o.posti_letto_ordinaria) : '—'}</div>
+          <div class="sub">${o ? 'posti letto' : '—'}</div>
+        </div>
+        <div class="tab-kpi">
+          <div class="lab">Day Hospital + Surgery</div>
+          <div class="val">${o ? fmtNum(o.posti_letto_day_hospital + o.posti_letto_day_surgery) : '—'}</div>
+          <div class="sub">${o ? 'ambulatoriale ad alta intensità' : '—'}</div>
+        </div>
+      </div>
+
+      <!-- Sotto-step 4c: mappa Leaflet unificata (3 layer: farmacie / parafarmacie / ospedali) -->
+      <!-- Sotto-step 4d: accordion stabilimenti ospedalieri con discipline -->
+      <!-- Sotto-step 4e: chart mix_discipline (bar horizontal top 10) -->
+      <div class="muted" style="text-align:center;padding:60px 20px;font-style:italic;border:1px dashed var(--ink-mute);border-radius:8px;margin:24px 0;">
+        Mappa interattiva, dettaglio stabilimenti e mix discipline in arrivo nei prossimi sotto-step.
+      </div>
+    </div>`;
+}
+
+// ===========================================================================
 // Tab ANNCSU - Archivio Nazionale Numeri Civici e Strade Urbane
 // Sotto-step 3a: KPI cards only. La mappa Leaflet e i chart arrivano in 3b/3c.
 // ===========================================================================
@@ -5498,6 +5576,7 @@ function adaptDashboardToOverview(d) {
       veicoli: d.veicoli,  // pass-through completo per renderVeicoliTab
       redditi: d.redditi,  // pass-through completo per renderRedditiTab
       immobili_pa: d.immobili_pa,  // pass-through completo per renderImmobiliPaTab
+      sanita_mds: d.sanita_mds,    // pass-through completo per renderSanitaTab
       anncsu: d.anncsu,  // pass-through completo per renderAnncsuTab
     },
   };
