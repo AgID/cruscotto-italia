@@ -9,7 +9,7 @@ import type { ToolDefinition } from "./index.js";
 
 export const mcpInfo: ToolDefinition = {
   description:
-    "Returns server metadata, version, and data freshness for each integrated source (ANAC, BDAP-MOP, SIOPE, Italia Domani PNRR, ISTAT, ISPRA, MIUR, ACI, MEF Federalismo Fiscale, MEF Patrimonio Immobiliare PA, Agenzia delle Entrate/ISTAT ANNCSU, Ministero della Salute Open Data, GSE/MASE Piattaforma Unica Nazionale punti di ricarica).",
+    "Returns server metadata, version, and data freshness for each integrated source (ANAC, BDAP-MOP, SIOPE, Italia Domani PNRR, ISTAT, ISPRA, MIUR, ACI, MEF Federalismo Fiscale, MEF Patrimonio Immobiliare PA, Agenzia delle Entrate/ISTAT ANNCSU, Ministero della Salute Open Data, GSE/MASE Piattaforma Unica Nazionale punti di ricarica, AGCOM Broadband Map).",
   inputSchema: {
     type: "object",
     properties: {},
@@ -25,10 +25,10 @@ export const mcpInfo: ToolDefinition = {
     }
     return {
       service: "cruscotto-italia-mcp",
-      version: "0.7.0",
+      version: "0.8.0",
       protocol: "MCP 2024-11-05",
-      datasets: 16,
-      institutions: 12,
+      datasets: 17,
+      institutions: 13,
       municipalities: 7918,
       sources: {
         anac: {
@@ -114,6 +114,13 @@ export const mcpInfo: ToolDefinition = {
           license: "CC BY 4.0 ex art. 52 c.2 D.Lgs 82/2005 (CAD) - open by default",
           datasets: [
             "Piattaforma Unica Nazionale dei punti di ricarica per veicoli elettrici (PUN - GSE/MASE): infrastrutture di ricarica EVSE con stato attivo/non attivo, georeferenziazione, indirizzo, CAP, potenza erogabile (Slow/Quick/Fast/HPC/Ultra fast), potenza massima in W, tipologia di corrente (AC/DC), tipologia parcheggio, restrizioni, servizi nelle vicinanze, orario di apertura. 66.619 PdR totali su 5.185 comuni (65,7% copertura). Aggiornamento quotidiano (~03:00 UTC).",
+          ],
+        },
+        agcom: {
+          canonical: "https://geo.agcom.it/reportistica/",
+          license: "CC BY 4.0 ex art. 52 c.2 D.Lgs 82/2005 (CAD) - open by default",
+          datasets: [
+            "AGCOM Broadband Map (BBmap) - reportistica delle consistenze dei punti geografici raggiunti dalla rete cablata, ai sensi dell'art. 22 Codice delle Comunicazioni Elettroniche: copertura FTTH DESI %, copertura FTTH entro 20m, famiglie residenti e raggiunte, celle 20x20m raggiunte da FTTH/FTTC, punti dichiarati geograficamente distinti, indirizzi postali raggiunti, indice di confidenza DESI. Copertura nazionale 7.896/7.896 comuni (100%). Aggiornamento trimestrale, dato corrente al 31/12/2025.",
           ],
         },
       },
