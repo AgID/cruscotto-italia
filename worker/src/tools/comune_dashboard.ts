@@ -26,6 +26,11 @@
  *                                   per stabilimento e disciplina. Licenza
  *                                   IODL v2.0. Aggiornamento farmacie/parafarm.
  *                                   quotidiano, ospedali annuale.)
+ *   - pun/<istat>.json             (GSE/MASE - Piattaforma Unica Nazionale
+ *                                   punti di ricarica per veicoli elettrici.
+ *                                   Licenza CC BY 4.0 ex art. 52 c.2 CAD
+ *                                   (open by default). 66.619 PdR su 5.185
+ *                                   comuni (65,7%). Aggiornamento quotidiano.)
  *   - lookup/anac-aggregato.json[<cf>] (contratti)
  *
  * Schema output (passa-attraverso del file R2):
@@ -118,6 +123,29 @@
  *                                       //   Capping: nessuno (Roma worst-case ~270KB).
  *                                       //   Coverage comuni: farmacie 91.9%,
  *                                       //   parafarmacie 27.3%, ospedali 9.3%.
+ *     "pun":         { ... } | null    // GSE/MASE - Piattaforma Unica Nazionale
+ *                                       //   punti di ricarica per veicoli elettrici:
+ *                                       //   { _data_last_modified: "ISO-8601",
+ *                                       //     kpi: { n_totale, n_attivi,
+ *                                       //            n_non_attivi, pct_attivi,
+ *                                       //            n_ac, n_dc,
+ *                                       //            potenza_tot_kw,
+ *                                       //            mix_potenza:
+ *                                       //              {Slow, Quick, Fast,
+ *                                       //               HPC, "Ultra fast"} },
+ *                                       //     punti: [{ id_evse, lat, lon,
+ *                                       //               indirizzo, cap, stato,
+ *                                       //               tipo_parcheggio,
+ *                                       //               potenza_categoria,
+ *                                       //               potenza_w, corrente,
+ *                                       //               restrizioni,
+ *                                       //               servizi_vicini,
+ *                                       //               orario }, ...]
+ *                                       //     // no capping per ora
+ *                                       //   }
+ *                                       //   Coverage: 5185/7896 comuni (65,7%),
+ *                                       //   66619 PdR totali. Aggiornamento
+ *                                       //   quotidiano via GSE S3 (Cognito guest).
  *   }
  *
  * NB sulla cache:
@@ -167,11 +195,12 @@ interface DashboardShard {
   opere: unknown | null;
   siope: unknown | null;
   anac: unknown | null;
+  pun: unknown | null;
 }
 
 export const comuneDashboard: ToolDefinition = {
   description:
-    "Vista completa di un comune italiano in una sola chiamata: anagrafica, demografia, profilo censimento, turismo, progetti PNRR, territorio (ISPRA Suolo/IdroGEO/Rifiuti), qualità dell'aria (ISPRA SNPA: PM10/PM2.5/NO2 con stazioni), opere pubbliche (BDAP-MOP), spese (SIOPE multi-anno con per_anno e anno_default), contratti (ANAC), scuole (MIUR), veicoli e incidenti (ISTAT 41_993 parco PRA per classe Euro + ISTAT 41_983 incidenti stradali con morti/feriti + ACI LOD nuove iscrizioni per alimentazione), redditi e fisco (MEF Dipartimento delle Finanze: dichiarazioni IRPEF su base comunale a.i. 2020-2024 con numero contribuenti, reddito medio, distribuzione per 8 fasce di reddito, tipologie dipendente/pensione/autonomo/fabbricati, addizionale comunale e imposta netta media). Tool da preferire per qualsiasi domanda generale su un comune ('mostrami Bergamo', 'dati di Milano'). Richiede istat_code (6 cifre, es. '075035'). Se hai solo il nome, chiama prima search_comune per ottenerlo. Accetta anche denominazione ma è meno affidabile sui casi di omonimia/fusione. Include anche la sezione immobili_pa con beni immobili pubblici detenuti dalle PA (MEF DE 2022, dichiarazioni al 31/12/2022): KPI aggregati (fabbricati/terreni, vincolo culturale, uso a terzi, superficie totale, mix categoria) e fino a 500 punti georeferenziati con tipologia e categoria semantica. Sezione anncsu (Agenzia delle Entrate + ISTAT - Archivio Nazionale Numeri Civici e Strade Urbane, snapshot mensile) con KPI sul numero di odonimi e civici, percentuale di georeferenziazione, bilinguismo, numerazione storica rosso/nero (Firenze, Genova), top 10 strade per accessi e distribuzione metodi di geo-referenziazione (GPS, catasto, ortofoto, cartografia). Punti sample (1000) georeferenziati per la mappa; per il dataset completo dei civici di un comune (Lecce 47.917, Roma 515.815, ecc.) fai una richiesta HTTP GET a /data/anncsu_full/<istat>.json sullo stesso host del Worker. Sezione sanita_mds (Ministero della Salute - Open Data IODL v2.0) con il bundle sanità territoriale: farmacie attive (cod_comune ISTAT nativo, ~20.800 attive in 7.258 comuni, 91.9% copertura, dato quotidiano), parafarmacie (~7.200 attive in 2.158 comuni), e posti letto per stabilimento ospedaliero (dato annuale anno 2023: 1.272 stabilimenti in 736 comuni, ~213.000 posti letto totali tra degenza ordinaria, day hospital, day surgery, pagamento, con discipline complete per stabilimento). KPI per ciascuna sezione, punti geo-referenziati per la mappa, mix per tipologia farmacia (Ordinaria/Dispensario/Succursale/Stagionale) e per disciplina ospedaliera.",
+    "Vista completa di un comune italiano in una sola chiamata: anagrafica, demografia, profilo censimento, turismo, progetti PNRR, territorio (ISPRA Suolo/IdroGEO/Rifiuti), qualità dell'aria (ISPRA SNPA: PM10/PM2.5/NO2 con stazioni), opere pubbliche (BDAP-MOP), spese (SIOPE multi-anno con per_anno e anno_default), contratti (ANAC), scuole (MIUR), veicoli e incidenti (ISTAT 41_993 parco PRA per classe Euro + ISTAT 41_983 incidenti stradali con morti/feriti + ACI LOD nuove iscrizioni per alimentazione), redditi e fisco (MEF Dipartimento delle Finanze: dichiarazioni IRPEF su base comunale a.i. 2020-2024 con numero contribuenti, reddito medio, distribuzione per 8 fasce di reddito, tipologie dipendente/pensione/autonomo/fabbricati, addizionale comunale e imposta netta media). Tool da preferire per qualsiasi domanda generale su un comune ('mostrami Bergamo', 'dati di Milano'). Richiede istat_code (6 cifre, es. '075035'). Se hai solo il nome, chiama prima search_comune per ottenerlo. Accetta anche denominazione ma è meno affidabile sui casi di omonimia/fusione. Include anche la sezione immobili_pa con beni immobili pubblici detenuti dalle PA (MEF DE 2022, dichiarazioni al 31/12/2022): KPI aggregati (fabbricati/terreni, vincolo culturale, uso a terzi, superficie totale, mix categoria) e fino a 500 punti georeferenziati con tipologia e categoria semantica. Sezione anncsu (Agenzia delle Entrate + ISTAT - Archivio Nazionale Numeri Civici e Strade Urbane, snapshot mensile) con KPI sul numero di odonimi e civici, percentuale di georeferenziazione, bilinguismo, numerazione storica rosso/nero (Firenze, Genova), top 10 strade per accessi e distribuzione metodi di geo-referenziazione (GPS, catasto, ortofoto, cartografia). Punti sample (1000) georeferenziati per la mappa; per il dataset completo dei civici di un comune (Lecce 47.917, Roma 515.815, ecc.) fai una richiesta HTTP GET a /data/anncsu_full/<istat>.json sullo stesso host del Worker. Sezione sanita_mds (Ministero della Salute - Open Data IODL v2.0) con il bundle sanità territoriale: farmacie attive (cod_comune ISTAT nativo, ~20.800 attive in 7.258 comuni, 91.9% copertura, dato quotidiano), parafarmacie (~7.200 attive in 2.158 comuni), e posti letto per stabilimento ospedaliero (dato annuale anno 2023: 1.272 stabilimenti in 736 comuni, ~213.000 posti letto totali tra degenza ordinaria, day hospital, day surgery, pagamento, con discipline complete per stabilimento). KPI per ciascuna sezione, punti geo-referenziati per la mappa, mix per tipologia farmacia (Ordinaria/Dispensario/Succursale/Stagionale) e per disciplina ospedaliera. Sezione pun (GSE/MASE - Piattaforma Unica Nazionale punti di ricarica per veicoli elettrici, licenza CC BY 4.0 ex art. 52 c.2 CAD - open by default) con i punti di ricarica EVSE installati nel comune: KPI (n_totale, n_attivi, n_non_attivi, pct_attivi, n_ac/n_dc, potenza_tot_kw, mix_potenza per categoria Slow/Quick/Fast/HPC/Ultra fast) e lista punti georeferenziati con id_evse, indirizzo, CAP, stato (Attivo/Non Attivo), potenza in W, tipologia di corrente AC/DC, tipologia parcheggio, restrizioni, servizi nelle vicinanze, orario. 66.619 PdR su 5.185 comuni (65,7% copertura), aggiornamento quotidiano via GSE S3.",
   inputSchema: {
     type: "object",
     properties: {

@@ -11,7 +11,7 @@ export async function handleInfo(_req: Request, _env: Env): Promise<Response> {
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>Cruscotto Italia · MCP Server</title>
-<meta name="description" content="Server Model Context Protocol che federa tredici dataset pubblici sui comuni italiani. Connettilo a Claude.ai (web e mobile), Claude Desktop, ChatGPT o client MCP generici.">
+<meta name="description" content="Server Model Context Protocol che federa sedici dataset pubblici sui comuni italiani. Connettilo a Claude.ai (web e mobile), Claude Desktop, ChatGPT o client MCP generici.">
 <!-- Design Italia: stessi token e font del frontend Cruscotto Italia -->
 <link rel="stylesheet" href="https://cruscotto-italia.piersoftckan.biz/css/tokens.css">
 <link rel="stylesheet" href="https://cruscotto-italia.piersoftckan.biz/css/base.css">
@@ -222,7 +222,7 @@ pre code {
   <div class="wrap">
     <div class="mini-brand-wrap">
       <a href="https://cruscotto-italia.piersoftckan.biz" class="mini-brand">Cruscotto <span class="it">Italia</span></a>
-      <span class="mini-brand-sub">MCP Server · 15 fonti istituzionali</span>
+      <span class="mini-brand-sub">MCP Server · 16 fonti istituzionali</span>
     </div>
   </div>
 </div>
@@ -231,7 +231,7 @@ pre code {
 
   <div class="eyebrow">§ MCP Server · v0.6</div>
   <h1>Cruscotto Italia <em>MCP</em>.</h1>
-  <p class="lead">Server <a href="https://modelcontextprotocol.io" target="_blank" rel="noopener">Model Context Protocol</a> che federa quindici dataset pubblici sui comuni italiani (ANAC, BDAP-MOP, SIOPE, PNRR, ISPRA Suolo/IdroGEO/Rifiuti, ISPRA SNPA qualità aria, ISTAT POSAS/Censimento/Veicoli/Incidenti, MIUR scuole, ACI nuove iscrizioni, MEF Federalismo Fiscale, MEF Patrimonio Immobiliare, Agenzia delle Entrate ANNCSU civici e strade, Ministero della Salute farmacie/parafarmacie/posti letto ospedalieri). Connettilo al tuo client LLM per interrogare i dati ufficiali con linguaggio naturale.</p>
+  <p class="lead">Server <a href="https://modelcontextprotocol.io" target="_blank" rel="noopener">Model Context Protocol</a> che federa sedici dataset pubblici sui comuni italiani (ANAC, BDAP-MOP, SIOPE, PNRR, ISPRA Suolo/IdroGEO/Rifiuti, ISPRA SNPA qualità aria, ISTAT POSAS/Censimento/Veicoli/Incidenti, MIUR scuole, ACI nuove iscrizioni, MEF Federalismo Fiscale, MEF Patrimonio Immobiliare, Agenzia delle Entrate ANNCSU civici e strade, Ministero della Salute farmacie/parafarmacie/posti letto ospedalieri, GSE/MASE Piattaforma Unica Nazionale punti di ricarica veicoli elettrici). Connettilo al tuo client LLM per interrogare i dati ufficiali con linguaggio naturale.</p>
 
   <h2>Come <em>connetterlo</em></h2>
 
@@ -270,7 +270,7 @@ pre code {
   <h3>Skill <em>opzionale</em> per Claude</h3>
   <p>Per ottenere risposte pi&ugrave; mirate quando l'utente chiede dati su uno o pi&ugrave; comuni italiani, &egrave; disponibile una <em>skill</em> Claude che documenta l'uso del connettore: inventario dei tool, schema completo di <code>comune_dashboard</code> (incluse sezioni <code>immobili_pa</code>, <code>anncsu</code> e <code>sanita_mds</code> per farmacie, parafarmacie e posti letto ospedalieri), endpoint REST <code>/data/anncsu_full/&lt;istat&gt;.json</code>, pattern operativi e <em>caveat</em> per sezione.</p>
   <p>Scarica il pacchetto e caricalo nelle <em>Skills</em> di Claude (UI o API):</p>
-  <p><a href="/skills/cruscotto-italia-workflow-v1.1.zip" download><strong>cruscotto-italia-workflow-v1.1.zip</strong></a> &mdash; allineata a MCP v0.6.0 (15 dataset, 11 istituzioni)</p>
+  <p><a href="/skills/cruscotto-italia-workflow-v1.1.zip" download><strong>cruscotto-italia-workflow-v1.1.zip</strong></a> &mdash; allineata a MCP v0.7.0 (16 dataset, 12 istituzioni)</p>
 
   <h3>ChatGPT (Custom GPT)</h3>
   <p>Nei custom GPT con supporto MCP, aggiungi un nuovo server con URL <code>https://cruscotto-italia-mcp.piersoftckan.biz/mcp</code> e tipo JSON-RPC 2.0. Nessuna autenticazione richiesta.</p>
@@ -283,10 +283,10 @@ pre code {
 
   <h2>Tool <em>disponibili</em></h2>
   <p>10 strumenti MCP. <code>search_comune</code> va sempre chiamato per primo quando l'utente fornisce un nome di comune, per ottenere il codice ISTAT.</p>
-  <p>Storia: la prima generazione di tool era a granularità per fonte (uno per dataset). Per ridurre la latenza (6+ chiamate per una panoramica) e' stato introdotto <code>comune_dashboard</code>: single-fetch che restituisce tutte le 15 fonti aggregate. Le nuove fonti integrate dopo la v0.4 (aria SNPA, scuole MIUR, veicoli, redditi MEF, immobili PA, ANNCSU, sanita' MdS) sono esposte <strong>solo</strong> via <code>comune_dashboard</code>. I tool dedicati restano per backward compatibility e per casi in cui serve solo una sezione.</p>
+  <p>Storia: la prima generazione di tool era a granularità per fonte (uno per dataset). Per ridurre la latenza (6+ chiamate per una panoramica) e' stato introdotto <code>comune_dashboard</code>: single-fetch che restituisce tutte le 16 fonti aggregate. Le nuove fonti integrate dopo la v0.4 (aria SNPA, scuole MIUR, veicoli, redditi MEF, immobili PA, ANNCSU, sanita' MdS, PUN GSE) sono esposte <strong>solo</strong> via <code>comune_dashboard</code>. I tool dedicati restano per backward compatibility e per casi in cui serve solo una sezione.</p>
 
   <div class="tools">
-    <div class="tool-row"><div class="tool-name">mcp_info</div><div class="tool-desc">Metadata del server: versione, sorgenti integrate (15), freshness di ogni dataset.</div></div>
+    <div class="tool-row"><div class="tool-name">mcp_info</div><div class="tool-desc">Metadata del server: versione, sorgenti integrate (16), freshness di ogni dataset.</div></div>
     <div class="tool-row"><div class="tool-name">search_comune</div><div class="tool-desc">Risolve un nome di comune in codice ISTAT a 6 cifre. Da chiamare per primo quando hai solo il nome.</div></div>
     <div class="tool-row"><div class="tool-name">comune_dashboard</div><div class="tool-desc"><strong>Tool unificato consigliato.</strong> Vista completa in una sola chiamata: anagrafica, demografia (POSAS), profilo (Censimento ISTAT), turismo, PNRR, territorio (ISPRA Suolo, IdroGEO, Rifiuti), aria (ISPRA SNPA: PM10/PM2.5/NO2), opere pubbliche (BDAP-MOP), contratti ANAC aggregati, spese SIOPE multi-anno, scuole (MIUR), veicoli e incidenti (ISTAT + ACI), redditi e fisco (MEF IRPEF), patrimonio immobiliare PA (MEF DE), ANNCSU (civici e strade Agenzia Entrate), sanita' territoriale (Ministero Salute: farmacie, parafarmacie, posti letto ospedalieri).</div></div>
     <div class="tool-row"><div class="tool-name">comune_demografia</div><div class="tool-desc">Popolazione per età e sesso (POSAS al 1 gennaio 2026), piramide demografica, indici di vecchiaia e dipendenza. Granularità maggiore della sezione demografia di <code>comune_dashboard</code>.</div></div>
@@ -308,6 +308,7 @@ pre code {
     <div class="tool-row"><div class="tool-name">.immobili_pa</div><div class="tool-desc">Beni immobili pubblici (MEF DE 2022): KPI aggregati su fabbricati/terreni con vincolo culturale e uso a terzi + fino a 500 punti georeferenziati con categoria.</div></div>
     <div class="tool-row"><div class="tool-name">.anncsu</div><div class="tool-desc">Civici e strade certificati Agenzia Entrate (HVD UE 2023/138): KPI odonimi, civici, % georeferenziazione, bilinguismo, distribuzione metodi. Sample 1000 punti. Per il dataset completo: <code>GET /data/anncsu_full/&lt;istat&gt;.json</code> (Roma 515.815 civici, Lecce 47.917).</div></div>
     <div class="tool-row"><div class="tool-name">.sanita_mds</div><div class="tool-desc">Bundle sanità territoriale Ministero della Salute (IODL v2.0): farmacie (~20.800 attive, dato quotidiano), parafarmacie (~7.200), posti letto ospedalieri 2023 (1.272 stabilimenti, ~213.000 PL). Geocoding incrociato con ANNCSU per coord MdS errate (campi lat_raw/lon_raw + coord_source: mds/anncsu/dropped/no_coord).</div></div>
+    <div class="tool-row"><div class="tool-name">.pun</div><div class="tool-desc">Punti di ricarica veicoli elettrici (GSE/MASE Piattaforma Unica Nazionale): 66.619 PdR EVSE su 5.185 comuni (65,7% copertura), aggiornamento quotidiano. KPI per stato (Attivo/Non Attivo), tipologia corrente (AC/DC), categoria potenza (Slow/Quick/Fast/HPC/Ultra fast), potenza totale kW e mix. Punti georeferenziati con indirizzo, CAP, orario, restrizioni. Licenza CC BY 4.0 ex art. 52 c.2 CAD (open by default).</div></div>
   </div>
 
   <h2>Esempi di <em>prompt</em></h2>
@@ -323,6 +324,8 @@ pre code {
   <div class="example"><strong>Sanita' territoriale</strong>Quante farmacie attive ci sono a Matera e qual è il rapporto abitanti/farmacia? Confronta con Potenza.</div>
 
   <div class="example"><strong>Civici e indirizzi</strong>Quanti civici certificati ANNCSU ci sono in via Roma a Lecce, e con quale metodo di georeferenziazione sono stati rilevati?</div>
+
+  <div class="example"><strong>Mobilità elettrica</strong>Quanti punti di ricarica attivi ci sono a Milano e qual è la percentuale di colonnine HPC/Ultra fast? Confronta con Roma e Torino.</div>
 
   <h2>Note <em>tecniche</em></h2>
   <p>Endpoint MCP: <code>POST /mcp</code> · Health check: <code>GET /health</code> · Rate limit: 60 richieste al minuto · Cache: 1 ora · Trasporto: JSON-RPC 2.0 over HTTP.</p>

@@ -9,7 +9,7 @@ import type { ToolDefinition } from "./index.js";
 
 export const mcpInfo: ToolDefinition = {
   description:
-    "Returns server metadata, version, and data freshness for each integrated source (ANAC, BDAP-MOP, SIOPE, Italia Domani PNRR, ISTAT, ISPRA, MIUR, ACI, MEF Federalismo Fiscale, MEF Patrimonio Immobiliare PA, Agenzia delle Entrate/ISTAT ANNCSU, Ministero della Salute Open Data).",
+    "Returns server metadata, version, and data freshness for each integrated source (ANAC, BDAP-MOP, SIOPE, Italia Domani PNRR, ISTAT, ISPRA, MIUR, ACI, MEF Federalismo Fiscale, MEF Patrimonio Immobiliare PA, Agenzia delle Entrate/ISTAT ANNCSU, Ministero della Salute Open Data, GSE/MASE Piattaforma Unica Nazionale punti di ricarica).",
   inputSchema: {
     type: "object",
     properties: {},
@@ -25,10 +25,10 @@ export const mcpInfo: ToolDefinition = {
     }
     return {
       service: "cruscotto-italia-mcp",
-      version: "0.6.0",
+      version: "0.7.0",
       protocol: "MCP 2024-11-05",
-      datasets: 15,
-      institutions: 11,
+      datasets: 16,
+      institutions: 12,
       municipalities: 7918,
       sources: {
         anac: {
@@ -107,6 +107,13 @@ export const mcpInfo: ToolDefinition = {
             "Farmacie italiane (anagrafica + geolocalizzazione, ~20.800 attive in 7.258 comuni, aggiornamento quotidiano)",
             "Parafarmacie italiane (anagrafica + geolocalizzazione, ~7.200 attive in 2.158 comuni, aggiornamento quotidiano)",
             "Posti letto per stabilimento ospedaliero e disciplina (anno 2023: 1.272 stabilimenti in 736 comuni, ~213.000 posti letto totali con dettaglio per disciplina; aggiornamento annuale)",
+          ],
+        },
+        gse_pun: {
+          canonical: "https://www.piattaformaunicanazionale.it/idr",
+          license: "CC BY 4.0 ex art. 52 c.2 D.Lgs 82/2005 (CAD) - open by default",
+          datasets: [
+            "Piattaforma Unica Nazionale dei punti di ricarica per veicoli elettrici (PUN - GSE/MASE): infrastrutture di ricarica EVSE con stato attivo/non attivo, georeferenziazione, indirizzo, CAP, potenza erogabile (Slow/Quick/Fast/HPC/Ultra fast), potenza massima in W, tipologia di corrente (AC/DC), tipologia parcheggio, restrizioni, servizi nelle vicinanze, orario di apertura. 66.619 PdR totali su 5.185 comuni (65,7% copertura). Aggiornamento quotidiano (~03:00 UTC).",
           ],
         },
       },
