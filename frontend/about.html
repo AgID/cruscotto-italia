@@ -97,6 +97,7 @@ a:hover{border-bottom-color:var(--accent)}
 /* ---- Metodologia step ---- */
 .metodo-steps{counter-reset:step;display:grid;grid-template-columns:repeat(2,1fr);gap:24px;margin-top:28px}
 .metodo-step{counter-increment:step;background:var(--paper-2);padding:22px 24px;border-top:3px solid var(--accent)}
+.metodo-step:last-child:nth-child(odd){grid-column:1 / -1}
 .metodo-step::before{content:counter(step,decimal-leading-zero);display:block;font-family:var(--mono);font-size:12px;color:var(--accent);font-weight:600;letter-spacing:.08em;margin-bottom:8px}
 .metodo-step h4{font-family:var(--serif);font-size:20px;font-weight:600;color:var(--ink);margin-bottom:8px;line-height:1.25}
 .metodo-step p{font-size:14px;line-height:1.55;color:var(--ink-soft);max-width:none;margin:0}
@@ -434,7 +435,7 @@ footer a:hover { color: #fff !important; }
       modificati, integrati, corretti o stimati. Ricomposti, non rielaborati.
     </p>
     <p>
-      Il processo è in quattro passaggi, tutti automatizzati. Il codice è
+      Il processo è in cinque passaggi, tutti automatizzati. Il codice è
       <a href="https://github.com/piersoft/cruscotto-italia">su GitHub</a>,
       sotto licenza AGPL-3.0: chiunque può leggerlo, replicarlo, criticarlo
       o forkarlo.
@@ -445,14 +446,18 @@ footer a:hover { color: #fff !important; }
         <h3>1. Estrazione</h3>
         <p>
           Script Python (uno per fonte) scaricano i dataset originali dai
-          portali ufficiali. Ogni fonte ha il suo formato: ISTAT espone
-          POSAS in SDMX-ML attraverso una API REST, ANAC pubblica i
-          contratti come JSON-LD su dati.anticorruzione.it, BDAP-MOP serve
-          le opere via API a paginazione, Italia Domani PNRR via dump CSV,
-          ISPRA distribuisce i dati su consumo di suolo e dissesto
-          idrogeologico in archivi ZIP per regione, mentre la rete SNPA
-          di qualità dell'aria pubblica CSV separati per inquinante
-          (PM10, PM2.5, NO₂) con un anno di latenza.
+          portali ufficiali delle 11 istituzioni integrate: ISTAT (POSAS,
+          censimento, turismo, incidenti) in SDMX-ML via API REST,
+          ANAC i contratti come JSON-LD su dati.anticorruzione.it,
+          BDAP-MOP le opere via API a paginazione,
+          Italia Domani il PNRR via dump CSV,
+          ISPRA consumo di suolo e rischio idrogeologico in archivi ZIP regionali,
+          la rete SNPA la qualità dell'aria in CSV per inquinante (PM10, PM2.5, NO₂),
+          MIUR le scuole statali via API, ACI le immatricolazioni come Linked Open Data,
+          il MEF Dipartimento delle Finanze i redditi IRPEF in CSV bulk,
+          il MEF Dipartimento dell'Economia il censimento dei beni immobili pubblici,
+          l'Agenzia delle Entrate l'ANNCSU (civici e strade) in flussi mensili,
+          il Ministero della Salute farmacie/parafarmacie/ospedali via Open Data IODL.
         </p>
         <p>
           Gli script gestiscono le idiosincrasie di ciascun dataset:
@@ -522,6 +527,57 @@ footer a:hover { color: #fff !important; }
           dato originale è sempre a un click di distanza. Nessun dato è
           "elaborato" oltre la riaggregazione per comune: cifre, importi,
           conteggi sono <em>esattamente</em> quelli pubblicati dalla fonte.
+        </p>
+        <p>
+          <strong>Quando il dato è sbagliato alla fonte.</strong>
+          Alcuni dataset upstream hanno problemi noti — per esempio,
+          le coordinate geografiche delle farmacie pubblicate dal Ministero
+          della Salute, che nel 5-15% dei casi puntano fuori dal comune
+          dichiarato oppure assegnano lo stesso centroide a più presidi.
+          In questi casi Cruscotto Italia non corregge silenziosamente
+          né nasconde il problema: incrocia con l'ANNCSU (Agenzia delle
+          Entrate) per recuperare la posizione corretta dell'indirizzo,
+          ma se il match non è possibile lo dichiara apertamente con un
+          badge "coordinate non affidabili". Il dato grezzo originale
+          resta sempre disponibile (campi <code>lat_raw</code> /
+          <code>lon_raw</code>) per audit.
+        </p>
+      </div>
+
+      <div class="metodo-step">
+        <h3>5. Accesso</h3>
+        <p>
+          I dati ricomposti sono accessibili in tre modi diversi, ognuno
+          adatto a un uso diverso.
+        </p>
+        <p>
+          <strong>Sito web.</strong> Ogni comune ha la sua pagina
+          (<code>/c/&lt;codice-istat&gt;</code>) con 16 tab tematiche
+          navigabili: demografia, contratti, opere, PNRR, scuole,
+          territorio, aria, veicoli, redditi, patrimonio PA, sanità,
+          civici. È il modo più immediato per un cittadino, un giornalista
+          o un amministratore.
+        </p>
+        <p>
+          <strong>Download ZIP.</strong> Da ogni pagina comune si può
+          scaricare un archivio con tutti i dati di quel comune in formato
+          JSON, accompagnato da <code>METADATI.csv</code> (legenda dei
+          campi), <code>LICENSE.txt</code> (attribuzioni) e
+          <code>README.txt</code>. È il modo per chi vuole portarsi i
+          dati altrove — un foglio Excel, uno script di analisi, una
+          tesi universitaria.
+        </p>
+        <p>
+          <strong>API MCP per assistenti AI.</strong> Cruscotto Italia
+          espone un endpoint pubblico Model Context Protocol
+          (<code>cruscotto-italia-mcp.piersoftckan.biz</code>) che
+          permette a chatbot come Claude o ChatGPT di interrogare
+          direttamente i dati di qualunque comune con domande in
+          linguaggio naturale: <em>"dammi i contratti di Bologna del
+          2025"</em>, <em>"confronta la qualità dell'aria di Milano e
+          Torino"</em>, <em>"quanti civici ha Lecce"</em>. È il modo
+          per chi sta costruendo applicazioni intelligenti sopra i dati
+          pubblici italiani.
         </p>
       </div>
     </div>
