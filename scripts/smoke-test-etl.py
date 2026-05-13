@@ -62,6 +62,10 @@ ETL_PLAN = [
     ("immobili_pa",    "medium",     ["--regione", "VALLE-D_AOSTA"],                              360),
     ("siope",          "medium",     ["--regioni", "02", "--anni", "2026"],             420),
     ("anncsu",         "medium",     ["--regioni", "VALL"],                               420),
+    # sanita_mds: scarica 3 CSV nazionali Min. Salute (~16 MB totali),
+    # ETL veloce CPU-wise (~5s) ma rete-bound. NON ha filtri regionali.
+    # Discovery URL dinamico da page-data.json.
+    ("sanita_mds",     "medium",     [],                                                300),
 
     # --------- SLOW ---------
     ("bdap",           "slow",       [],                                                900),
