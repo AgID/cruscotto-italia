@@ -267,6 +267,11 @@ pre code {
 }</code></pre>
   <p>Riavvia Claude Desktop. Il file di configurazione si trova in <code>~/Library/Application Support/Claude/</code> (macOS) o <code>%APPDATA%\\Claude\\</code> (Windows).</p>
 
+  <h3>Skill <em>opzionale</em> per Claude</h3>
+  <p>Per ottenere risposte pi&ugrave; mirate quando l'utente chiede dati su uno o pi&ugrave; comuni italiani, &egrave; disponibile una <em>skill</em> Claude che documenta l'uso del connettore: inventario dei tool, schema completo di <code>comune_dashboard</code> (incluse sezioni <code>immobili_pa</code> e <code>anncsu</code>), endpoint REST <code>/data/anncsu_full/&lt;istat&gt;.json</code>, pattern operativi e <em>caveat</em> per sezione.</p>
+  <p>Scarica il pacchetto e caricalo nelle <em>Skills</em> di Claude (UI o API):</p>
+  <p><a href="/skills/cruscotto-italia-workflow-v1.0.zip" download><strong>cruscotto-italia-workflow-v1.0.zip</strong></a> &mdash; allineata a MCP v0.5.0 (14 dataset, 10 istituzioni)</p>
+
   <h3>ChatGPT (Custom GPT)</h3>
   <p>Nei custom GPT con supporto MCP, aggiungi un nuovo server con URL <code>https://cruscotto-italia-mcp.piersoftckan.biz/mcp</code> e tipo JSON-RPC 2.0. Nessuna autenticazione richiesta.</p>
 
@@ -406,6 +411,52 @@ export async function handleDataAnncsuFull(istat: string, env: Env): Promise<Res
     });
   } catch (err) {
     console.error("handleDataAnncsuFull error:", err);
+    return new Response(
+      JSON.stringify({ error: "r2_unavailable", message: String(err) }),
+      {
+        status: 503,
+        headers: {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*",
+        },
+      }
+    );
+  }
+}
+
+/**
+ * Serve un file della cartella skills/ su R2 come download zip.
+ * Path consentiti: skills/<name>.zip (validazione regex nel routing).
+ * Es: GET /skills/cruscotto-italia-workflow-v1.0.zip
+ */
+export async function handleDataSkill(filename: string, env: Env): Promise<Response> {
+  const key = `skills/${filename}`;
+  try {
+    const obj = await env.DATA.get(key);
+    if (!obj) {
+      return new Response(
+        JSON.stringify({ error: "not_found", key }),
+        {
+          status: 404,
+          headers: {
+            "Content-Type": "application/json",
+            "Access-Control-Allow-Origin": "*",
+          },
+        }
+      );
+    }
+    return new Response(obj.body, {
+      status: 200,
+      headers: {
+        "Content-Type": "application/zip",
+        "Content-Disposition": `attachment; filename="${filename}"`,
+        "Cache-Control": "public, max-age=3600",
+        "Access-Control-Allow-Origin": "*",
+        ...(obj.httpEtag ? { "ETag": obj.httpEtag } : {}),
+      },
+    });
+  } catch (err) {
+    console.error("handleDataSkill error:", err);
     return new Response(
       JSON.stringify({ error: "r2_unavailable", message: String(err) }),
       {

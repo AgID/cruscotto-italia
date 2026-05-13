@@ -12,7 +12,7 @@
  */
 
 import { handleMcp } from "./mcp.js";
-import { handleHealth, handleInfo, handleAdmin, handleDataAnncsuFull } from "./http.js";
+import { handleHealth, handleInfo, handleAdmin, handleDataAnncsuFull, handleDataSkill } from "./http.js";
 import { rateLimit } from "./lib/ratelimit.js";
 
 export interface Env {
@@ -67,6 +67,13 @@ export default {
       const annFullMatch = url.pathname.match(/^\/data\/anncsu_full\/(\d{6})\.json$/);
       if (annFullMatch && req.method === "GET") {
         return handleDataAnncsuFull(annFullMatch[1], env);
+      }
+      // Skills (file di documentazione zippati, R2 prefix 'skills/'):
+      // /skills/<name>.zip → R2 skills/<name>.zip
+      // Validazione: alfanumerico, '-', '.', con suffisso .zip (no path traversal).
+      const skillMatch = url.pathname.match(/^\/skills\/([a-zA-Z0-9._-]+\.zip)$/);
+      if (skillMatch && req.method === "GET") {
+        return handleDataSkill(skillMatch[1], env);
       }
       return new Response("Not Found", { status: 404 });
     } catch (err) {
