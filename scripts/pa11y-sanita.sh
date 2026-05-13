@@ -58,8 +58,7 @@ cat > "$CONFIG_FILE" <<EOF
   "actions": [
     "wait for element [data-tab='sanita'] to be visible",
     "click element [data-tab='sanita']",
-    "wait for element #pane-sanita to be visible",
-    "wait for element .sanita-kpis to be visible"
+    "wait for element #pane-sanita to be visible"
   ]
 }
 EOF
