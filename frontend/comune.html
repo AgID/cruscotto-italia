@@ -201,6 +201,44 @@ a:hover{color:var(--accent)}
 .pun-chart-wrap{height:320px;position:relative;}
 @media (max-width:720px){.pun-chart-wrap{height:280px;}}
 
+/* ────────────────── Tab Banda larga (AGCOM BBmap) ────────────────────
+   CTA box per deep-link alla mappa ufficiale AGCOM. Pattern 2A: pulsante
+   grande con titolo, descrizione e icona link esterno. WCAG 2.5.5 touch
+   target ≥44×44, contrast ratio ≥4.5:1. */
+.banda-larga-cta{
+  display:flex;align-items:center;gap:24px;
+  margin:28px 0 8px;padding:20px 24px;
+  background:linear-gradient(135deg, var(--paper-2) 0%, #f0f6fc 100%);
+  border:1px solid var(--ink-mute);border-radius:10px;
+}
+.banda-larga-cta-text{flex:1;min-width:0;}
+.banda-larga-cta-eyebrow{
+  font-family:var(--mono);font-size:11px;color:var(--ink-mute);
+  text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;
+}
+.banda-larga-cta-title{
+  font-family:var(--serif);font-size:20px;color:var(--ink);
+  font-weight:500;margin-bottom:4px;line-height:1.3;
+}
+.banda-larga-cta-sub{font-size:14px;color:var(--ink-mute);line-height:1.45;}
+.banda-larga-cta-btn{
+  display:inline-flex;align-items:center;gap:10px;
+  padding:14px 22px;min-height:48px;
+  background:#0066CC;color:#fff;border-radius:8px;
+  font-family:var(--sans);font-size:15px;font-weight:600;
+  text-decoration:none;transition:background .15s ease;
+  white-space:nowrap;flex-shrink:0;
+}
+.banda-larga-cta-btn:hover,.banda-larga-cta-btn:focus-visible{
+  background:#003D7A;text-decoration:none;
+}
+.banda-larga-cta-btn:focus-visible{outline:3px solid var(--accent);outline-offset:2px;}
+.banda-larga-cta-btn-ico{font-size:18px;line-height:1;}
+@media (max-width:720px){
+  .banda-larga-cta{flex-direction:column;align-items:stretch;gap:14px;padding:18px;}
+  .banda-larga-cta-btn{justify-content:center;width:100%;}
+}
+
 /* Tab Sanità: mappa Leaflet + filtri chip + marker SVG colorati */
 .sanita-map-wrap{margin:32px 0 24px;}
 .sanita-h3{font-family:var(--serif);font-size:22px;color:var(--ink);font-weight:500;margin:0 0 8px;font-style:italic;}
@@ -1352,10 +1390,13 @@ function renderComune(data) {
   window.__sanitaInited = false;
   window.__punData = k.pun || null;
   window.__punInited = false;
+  window.__bandaLargaData = k.agcom_bbmap || null;
+  window.__bandaLargaInited = false;
   const tabs = [
     { id: 'panoramica', label: 'Panoramica', kpi: '' },
     { id: 'anncsu', label: 'ANNCSU', kpi: k.anncsu?.kpi?.n_strade != null ? fmtNum(k.anncsu.kpi.n_strade) : '—' },
     { id: 'aria', label: 'Aria', kpi: '<span data-tab-aria-n><span class="tab-spinner"></span></span>' },
+    { id: 'banda-larga', label: 'Banda larga', kpi: k.agcom_bbmap?.kpi?.copertura_ftth_desi_pct != null ? Math.round(k.agcom_bbmap.kpi.copertura_ftth_desi_pct) + '%' : '—' },
     { id: 'contratti', label: 'Contratti', kpi: fmtNum(k.contratti?.count || 0) },
     { id: 'demografia', label: 'Demografia', kpi: k.popolazione != null ? fmtNum(k.popolazione) : '—' },
     { id: 'opere', label: 'Opere', kpi: k.opere?.count != null ? fmtNum(k.opere.count) : '—' },
@@ -1536,6 +1577,7 @@ function renderComune(data) {
       ${renderSanitaTab(k.sanita_mds)}
       ${renderAnncsuTab(k.anncsu)}
       ${renderPunTab(k.pun)}
+      ${renderBandaLargaTab(k.agcom_bbmap, a)}
     </div>
   `;
 }
@@ -4489,6 +4531,275 @@ function renderPunTab(d) {
     </div>`;
 }
 
+// ----------------------------------------------------------------------------
+// Tab Banda larga - AGCOM Broadband Map (BBmap), 17a fonte
+// ----------------------------------------------------------------------------
+// Single source: dashboard/<istat>.json sezione "agcom_bbmap" (rebuild
+// trimestrale). KPI di copertura banda larga FTTH/FTTC ex art. 22 CCE.
+// Le geometrie strade (FeatureServer ArcGIS, ~192k segmenti per Roma) sono
+// linkate via deep-link al Web AppBuilder ufficiale AGCOM costruito client-side.
+
+// Sceglie zoom level AGCOM in base a taglia comune (famiglie residenti):
+//   >= 200k → level 12 (Roma, Milano)
+//   >= 30k  → level 13 (capoluoghi medi)
+//   >= 3k   → level 14 (comuni medi)
+//   < 3k    → level 15 (piccoli/montani)
+function bandaLargaDeepLink(agcomBbmap, anagrafica) {
+  const baseUrl = agcomBbmap?.mappa_ufficiale?.url
+    || 'https://geo.agcom.it/agcomapps/BB4/BB4_BBwired_na_app16_4/';
+  const lat = anagrafica?.kpi?.lat ?? anagrafica?.coordinate?.lat ?? null;
+  const lon = anagrafica?.kpi?.lon ?? anagrafica?.coordinate?.lon ?? null;
+  if (lat == null || lon == null) return baseUrl;
+  const famRes = agcomBbmap?.kpi?.famiglie_residenti || 0;
+  let level = 14;
+  if (famRes >= 200000) level = 12;
+  else if (famRes >= 30000) level = 13;
+  else if (famRes < 3000) level = 15;
+  return `${baseUrl}?center=${(+lon).toFixed(6)},${(+lat).toFixed(6)}&level=${level}`;
+}
+
+// Formatta percentuale AGCOM: null → "—", altrimenti "X%" (interi)
+function fmtPctNull(v) {
+  return (v == null || v === '') ? '—' : Math.round(v) + '%';
+}
+// Formatta numero AGCOM: null → "—" (3B = em-dash + annotation per null)
+function fmtNumNull(v) {
+  return (v == null || v === '') ? '—' : fmtNum(v);
+}
+
+function renderBandaLargaTab(d, anagrafica) {
+  if (!d || !d.kpi) {
+    return `
+      <div class="tab-pane" id="pane-banda-larga">
+        <div class="section-title">§ Banda larga</div>
+        <h2 class="section-h">Dati AGCOM <em>non disponibili</em>.</h2>
+        <p class="muted">La Broadband Map AGCOM non ha pubblicato dati per questo comune.
+        AGCOM copre normalmente <strong>tutti i 7.896 comuni italiani</strong>;
+        l'assenza è probabilmente un errore di pipeline ETL transitorio.</p>
+      </div>`;
+  }
+  const k = d.kpi;
+  const famRes  = k.famiglie_residenti;
+  const famFtth = k.famiglie_ftth;
+  const famFtth20m = k.famiglie_ftth_20m;
+  const desi    = k.copertura_ftth_desi_pct;
+  const cov20m  = k.copertura_ftth_20m_pct;
+  const conf    = k.confidenza_desi_pct;
+  // Big number 1B: famiglie raggiunte / famiglie residenti (frazione narrativa)
+  const hasFraction = (famFtth != null && famRes != null && famRes > 0);
+  const pctFraction = hasFraction ? (famFtth / famRes * 100) : null;
+  // Note null (3B): se al meno un campo FTTH è null, mostro annotation
+  const anyNull = (famFtth == null || famFtth20m == null
+                 || k.punti_dichiarati_ftth == null
+                 || k.indirizzi_postali_distinti_ftth == null);
+  // Deep-link AGCOM
+  const mapUrl = bandaLargaDeepLink(d, anagrafica);
+  // Comune label (per CTA label)
+  const comNome = anagrafica?.denominazione || 'questo comune';
+  // HTML escape inline (no helper globale: encode &, <, >, ", ')
+  const comNomeEsc = String(comNome).replace(/[&<>"']/g,
+    s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));
+
+  return `
+    <div class="tab-pane" id="pane-banda-larga">
+      <div class="section-title">§ Banda larga</div>
+      <h2 class="section-h">
+        ${hasFraction
+          ? `<strong>${fmtNum(famFtth)}</strong> famiglie su <strong>${fmtNum(famRes)}</strong> sono raggiunte da <em>fibra ottica</em>.`
+          : `Copertura banda larga FTTH al <em>${fmtPctNull(desi)}</em> delle famiglie.`}
+      </h2>
+      <p class="section-sub">
+        Reportistica delle consistenze dei punti raggiunti dalla rete cablata,
+        ex art. 22 del
+        <a href="https://www.normattiva.it/uri-res/N2Ls?urn:nir:stato:decreto.legislativo:2003-08-01;259"
+           target="_blank" rel="noopener">Codice delle Comunicazioni Elettroniche</a>.
+        Fonte
+        <a href="https://geo.agcom.it/reportistica/" target="_blank" rel="noopener">AGCOM Broadband Map</a>,
+        dato corrente al ${d._data_period || '31/12/2025'}, aggiornamento trimestrale.
+      </p>
+
+      <div class="kpi-cards">
+        <div class="kpi-card">
+          <div class="kpi-card-lab">Copertura FTTH DESI</div>
+          <div class="kpi-card-val">${fmtPctNull(desi)}</div>
+          <div class="kpi-card-sub">${conf != null ? 'confidenza ' + Math.round(conf) + '%' : 'metrica UE ufficiale'}</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-card-lab">Copertura FTTH 20m</div>
+          <div class="kpi-card-val">${fmtPctNull(cov20m)}</div>
+          <div class="kpi-card-sub">fibra entro 20 m da casa</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-card-lab">Famiglie raggiunte</div>
+          <div class="kpi-card-val">${fmtNumNull(famFtth)}</div>
+          <div class="kpi-card-sub">di ${fmtNumNull(famRes)} residenti</div>
+        </div>
+        <div class="kpi-card ${famFtth20m != null && famFtth20m > 0 ? '' : 'tbd'}">
+          <div class="kpi-card-lab">Famiglie FTTH entro 20m</div>
+          <div class="kpi-card-val">${fmtNumNull(famFtth20m)}</div>
+          <div class="kpi-card-sub">${(pctFraction != null && famFtth20m != null && famRes > 0) ? Math.round(famFtth20m / famRes * 100) + '% delle residenti' : 'fibra a casa effettiva'}</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-card-lab">Indirizzi postali raggiunti</div>
+          <div class="kpi-card-val">${fmtNumNull(k.indirizzi_postali_distinti)}</div>
+          <div class="kpi-card-sub">${k.indirizzi_postali_distinti_ftth != null ? fmtNum(k.indirizzi_postali_distinti_ftth) + ' con FTTH' : 'totale civici'}</div>
+        </div>
+      </div>
+
+      ${anyNull ? `
+        <p class="muted" style="font-size:12px;margin-top:-4px;margin-bottom:16px;">
+          <em>—</em> indica <strong>dato non rilevato</strong> da AGCOM (di norma in comuni piccoli senza punti FTTH dichiarati dagli operatori).
+        </p>` : ''}
+
+      <div class="veicoli-grid">
+        <div>
+          <h3 class="veicoli-col-h">Copertura DESI vs FTTH effettiva entro 20m</h3>
+          <div class="pun-chart-wrap">
+            <canvas id="banda-larga-chart-bar" aria-label="Confronto copertura FTTH DESI e copertura FTTH entro 20m" role="img"></canvas>
+          </div>
+          <div class="veicoli-euro-note">
+            <strong>DESI</strong> = metrica UE ufficiale (copertura aggregata della rete).
+            <strong>20m</strong> = copertura più stringente, fibra che arriva entro 20&nbsp;metri
+            dall'abitazione (rappresenta la fibra "effettiva" che il cittadino può attivare).
+          </div>
+        </div>
+        <div>
+          <h3 class="veicoli-col-h">Mix tecnologico delle celle 20×20m</h3>
+          <div class="pun-chart-wrap">
+            <canvas id="banda-larga-chart-dough" aria-label="Mix tecnologie copertura celle (FTTH, FTTC, altre)" role="img"></canvas>
+          </div>
+          <div class="veicoli-euro-note">
+            <strong>FTTH</strong> = fibra fino a casa. <strong>FTTC</strong> = fibra fino al cabinet, rame ultimo miglio.
+            <strong>Altre</strong> = celle raggiunte solo da reti diverse o non FTTH/FTTC dichiarate.
+          </div>
+        </div>
+      </div>
+
+      <!-- CTA mappa AGCOM (2A: pulsante grande con CTA esteso) -->
+      <div class="banda-larga-cta" role="region" aria-label="Mappa ufficiale AGCOM Broadband Map">
+        <div class="banda-larga-cta-text">
+          <div class="banda-larga-cta-eyebrow">Mappa ufficiale AGCOM</div>
+          <div class="banda-larga-cta-title">Vedi la rete in dettaglio per <strong>${comNomeEsc}</strong></div>
+          <div class="banda-larga-cta-sub">
+            Polilinee delle strade FTTH / fibra-rame fornite dagli operatori, su sfondo cartografico.
+            La mappa si apre già centrata e zoomata su ${comNomeEsc}.
+          </div>
+        </div>
+        <a class="banda-larga-cta-btn"
+           href="${mapUrl}"
+           target="_blank" rel="noopener"
+           aria-label="Apri la mappa ufficiale AGCOM Broadband Map centrata su ${comNomeEsc} (nuova scheda)">
+          <span class="banda-larga-cta-btn-lab">Apri mappa</span>
+          <span class="banda-larga-cta-btn-ico" aria-hidden="true">↗</span>
+        </a>
+      </div>
+
+      <p class="muted" style="font-family:var(--mono);font-size:11px;margin-top:18px;">
+        Fonte: <a href="https://geo.agcom.it/reportistica/" target="_blank" rel="noopener">AGCOM Broadband Map (BBmap)</a>.
+        Licenza CC BY 4.0 ex art. 52 c.2 D.Lgs 82/2005 (CAD) — open by default. Attribuzione: Autorità per le Garanzie nelle Comunicazioni.
+      </p>
+    </div>`;
+}
+
+// Inizializza i 2 chart Chart.js della tab Banda larga (lazy-load on tab click).
+function initBandaLarga(d) {
+  if (!d || !d.kpi) return;
+  if (typeof Chart === 'undefined') return;
+  const k = d.kpi;
+
+  // Chart 1: bar — DESI vs FTTH 20m (in %)
+  const elBar = document.getElementById('banda-larga-chart-bar');
+  if (elBar) {
+    const desi   = (k.copertura_ftth_desi_pct != null) ? k.copertura_ftth_desi_pct : 0;
+    const cov20m = (k.copertura_ftth_20m_pct  != null) ? k.copertura_ftth_20m_pct  : 0;
+    try {
+      new Chart(elBar.getContext('2d'), {
+        type: 'bar',
+        data: {
+          labels: ['Copertura FTTH DESI', 'Copertura FTTH entro 20m'],
+          datasets: [{
+            label: '% famiglie',
+            data: [desi, cov20m],
+            backgroundColor: ['#0066CC', '#5C9EFF'],
+            borderColor: ['#003D7A', '#2E6EBF'],
+            borderWidth: 1,
+            maxBarThickness: 80,
+          }]
+        },
+        options: {
+          indexAxis: 'y',
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => ctx.parsed.x.toFixed(0) + '% delle famiglie residenti'
+              }
+            }
+          },
+          scales: {
+            x: {
+              beginAtZero: true, max: 100,
+              ticks: { callback: (v) => v + '%' },
+              title: { display: true, text: '% famiglie raggiunte' }
+            },
+            y: { ticks: { font: { size: 12 } } }
+          }
+        }
+      });
+    } catch (e) { /* swallow */ }
+  }
+
+  // Chart 2: doughnut — celle 20×20m: FTTH / FTTC-only / altre
+  const elDough = document.getElementById('banda-larga-chart-dough');
+  if (elDough) {
+    const cTot  = k.celle_20m_raggiunte || 0;
+    const cFtth = k.celle_20m_ftth || 0;
+    const cFttc = k.celle_20m_fttc || 0;
+    // FTTH e FTTC possono sovrapporsi (cella con entrambe le tecnologie):
+    // usiamo logica AGCOM dichiarata — FTTH ha priorità (cella con FTTH conta in FTTH),
+    // FTTC "puro" = FTTC \ FTTH, altre = celle raggiunte - max(FTTH, FTTC).
+    const ftthSolo = cFtth;
+    const fttcSolo = Math.max(0, cFttc - cFtth);
+    const altre    = Math.max(0, cTot - cFtth - fttcSolo);
+    const total    = ftthSolo + fttcSolo + altre;
+    if (total > 0) {
+      try {
+        new Chart(elDough.getContext('2d'), {
+          type: 'doughnut',
+          data: {
+            labels: ['FTTH', 'FTTC', 'Altre / non FTTH-FTTC'],
+            datasets: [{
+              data: [ftthSolo, fttcSolo, altre],
+              backgroundColor: ['#00A86B', '#E89400', '#9E9E9E'],
+              borderColor: '#fff',
+              borderWidth: 2,
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { position: 'bottom', labels: { padding: 12, boxWidth: 14 } },
+              tooltip: {
+                callbacks: {
+                  label: (ctx) => {
+                    const v = ctx.parsed;
+                    const pct = total > 0 ? (v / total * 100).toFixed(1) : '0';
+                    return `${ctx.label}: ${fmtNum(v)} celle (${pct}%)`;
+                  }
+                }
+              }
+            },
+            cutout: '55%'
+          }
+        });
+      } catch (e) { /* swallow */ }
+    }
+  }
+}
+
 // Chip filtri: 5 categorie potenza + "Tutti"; toggle stato secondario.
 function renderPunFilters(mixPotenza) {
   const entries = PUN_CAT_ORDER
@@ -6585,6 +6896,14 @@ function bindTabSwitching() {
         }
       }
 
+      // Lazy-init 2 chart Banda larga al primo click
+      if (tab.dataset.tab === 'banda-larga') {
+        if (window.__bandaLargaData && !window.__bandaLargaInited) {
+          setTimeout(() => initBandaLarga(window.__bandaLargaData), 0);
+          window.__bandaLargaInited = true;
+        }
+      }
+
       // Lazy-load tab Spese: chiamata al primo click
       if (tab.dataset.tab === 'spese') {
         const params = new URLSearchParams(window.location.search);
@@ -7308,6 +7627,7 @@ function adaptDashboardToOverview(d) {
       sanita_mds: d.sanita_mds,    // pass-through completo per renderSanitaTab
       anncsu: d.anncsu,  // pass-through completo per renderAnncsuTab
       pun: d.pun,  // pass-through completo per renderPunTab
+      agcom_bbmap: d.agcom_bbmap,  // pass-through completo per renderBandaLargaTab
       // Pass-through aggiuntivi (servono alla Panoramica home per i KPI di sintesi):
       profilo: d.profilo,
       turismo: d.turismo,
