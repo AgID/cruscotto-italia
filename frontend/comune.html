@@ -4655,6 +4655,19 @@ function renderSanitaSearchBlock(d) {
   `;
 }
 
+function _buildSanitaPopupHtml(p) {
+  // Popup ricco condiviso tra mappa principale e mini-mappa del search box.
+  // Schema p: { nome, meta, indirizzo, cap, kind?, pl?, nDisc?, _approx? }
+  return `
+    <div class="sanita-popup">
+      <span class="sanita-popup-name">${(p.nome || '—').replace(/</g,'&lt;')}</span>
+      ${p.meta ? `<span class="sanita-popup-meta">${p.meta}</span>` : ''}
+      ${p.indirizzo ? `<span class="sanita-popup-addr">${p.indirizzo.replace(/</g,'&lt;')}${p.cap ? ' · ' + p.cap : ''}</span>` : ''}
+      ${p.kind === 'ospedale' ? `<span class="sanita-popup-pl">${fmtNum(p.pl)} posti letto · ${p.nDisc} discipline</span>` : ''}
+      ${p._approx ? '<span class="sanita-popup-meta" style="margin-top:6px;font-style:italic;">⚠ posizione approssimata (centroide comune): il dataset del Ministero della Salute per i posti letto non include lat/lon per stabilimento.</span>' : ''}
+    </div>`;
+}
+
 function _sanitaCoordBadge(coord_source, coord_strategy) {
   // Mappa coord_source -> {label, color, icon, descr}
   const MAP = {
@@ -4782,9 +4795,15 @@ function initSanitaSearch(d) {
         const cat = isFarmacia
           ? _sanitaCategoryForFarm(presidio.tipo)
           : 'parafarm';
+        const popupData = {
+          nome: presidio.nome,
+          meta: isFarmacia ? `Farmacia · ${presidio.tipo || 'Ordinaria'}` : 'Parafarmacia',
+          indirizzo: presidio.indirizzo || '',
+          cap: presidio.cap || ''
+        };
         L.marker([presidio.lat, presidio.lon], { icon: _sanitaPinIcon(cat) })
           .addTo(map)
-          .bindPopup(`<strong>${(presidio.nome || '').replace(/</g,'&lt;')}</strong>`)
+          .bindPopup(_buildSanitaPopupHtml(popupData))
           .openPopup();
         map.setView([presidio.lat, presidio.lon], 17);
         map.on('focus', () => map.scrollWheelZoom.enable());
@@ -6653,15 +6672,7 @@ function initSanitaMap(d) {
   // Helper: crea marker singolo
   function makeMarker(p) {
     const m = L.marker([p.lat, p.lon], { icon: _sanitaPinIcon(p.cat) });
-    const popup = `
-      <div class="sanita-popup">
-        <span class="sanita-popup-name">${(p.nome || '—').replace(/</g,'&lt;')}</span>
-        <span class="sanita-popup-meta">${p.meta}</span>
-        ${p.indirizzo ? `<span class="sanita-popup-addr">${p.indirizzo.replace(/</g,'&lt;')}${p.cap ? ' · ' + p.cap : ''}</span>` : ''}
-        ${p.kind === 'ospedale' ? `<span class="sanita-popup-pl">${fmtNum(p.pl)} posti letto · ${p.nDisc} discipline</span>` : ''}
-        ${p._approx ? '<span class="sanita-popup-meta" style="margin-top:6px;font-style:italic;">⚠ posizione approssimata (centroide comune): il dataset del Ministero della Salute per i posti letto non include lat/lon per stabilimento.</span>' : ''}
-      </div>`;
-    m.bindPopup(popup);
+    m.bindPopup(_buildSanitaPopupHtml(p));
     return m;
   }
 
