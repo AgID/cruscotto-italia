@@ -4362,7 +4362,7 @@ function renderSanitaTab(d) {
       <p class="muted" style="margin:-8px 0 18px;font-size:13px;line-height:1.55;">
         Dati Open Data del Ministero della Salute (<a href="https://www.dati.salute.gov.it/" target="_blank" rel="noopener">dati.salute.gov.it</a>),
         licenza <strong>IODL v2.0</strong>. Farmacie e parafarmacie aggiornate quotidianamente alla fonte;
-        posti letto ospedalieri riferiti all'anno <strong>${annoOsp}</strong> (ultimo rilascio annuale Min. Salute).
+        posti letto ospedalieri riferiti all'anno <strong>${annoOsp}</strong> (ultimo rilascio annuale del Ministero della Salute).
       </p>
 
       <div class="tab-kpis sanita-kpis">
@@ -4401,11 +4401,13 @@ function renderSanitaTab(d) {
       <!-- Chart top 10 discipline (4e): sintesi grafica subito sotto le KPI -->
       ${renderSanitaDiscChartBlock(d)}
 
+      <!-- Search box farmacie/parafarmacie con dettaglio inline (4f) -->
+      <!-- Posizionato PRIMA della mappa: l'utente che vuole una farmacia specifica
+           non deve scrollare la mappa; chi vuole esplorare visivamente scrolla giu'. -->
+      ${renderSanitaSearchBlock(d)}
+
       <!-- Mappa unificata: farmacie + parafarmacie + ospedali su unica vista geografica -->
       ${renderSanitaMapBlock(d)}
-
-      <!-- Search box farmacie/parafarmacie con dettaglio inline (4f) -->
-      ${renderSanitaSearchBlock(d)}
 
       <!-- Accordion stabilimenti ospedalieri (4d): drill-down dettagliato in fondo -->
       ${renderSanitaOspedaliAccordion(d)}
@@ -4462,13 +4464,13 @@ function renderSanitaCoordDisclaimer(d) {
         <p>Per questo comune:</p>
         <ul class="sanita-coord-stats">
           <li><strong>${fmtNum(totGeoMds)}</strong> presidi con coordinate originali del Ministero della Salute (dentro centroide).</li>
-          ${nRicalcolate > 0 ? `<li><strong>${fmtNum(nRicalcolate)}</strong> presidi con coordinate <strong>ricalcolate via ANNCSU</strong> (le coordinate originali del MdS sono comunque conservate nei campi <code>lat_raw</code>/<code>lon_raw</code> dello shard JSON).</li>` : ''}
-          ${nDroppate > 0 ? `<li><strong>${fmtNum(nDroppate)}</strong> presidi con coordinate MdS fuori comune e <em>nessun match ANNCSU</em>: marker non mostrato sulla mappa, record presente nei dati con <code>coord_source: "dropped"</code>.</li>` : ''}
-          ${nDuplicate > 0 ? `<li><strong>${fmtNum(nDuplicate)}</strong> presidi con coordinate MdS in cluster duplicato (centroide finto del comune) e <em>nessun match ANNCSU</em>: marker non mostrato, <code>coord_source: "duplicate"</code>.</li>` : ''}
-          ${nSenza > 0 ? `<li><strong>${fmtNum(nSenza)}</strong> presidi senza coordinate dichiarate dal MdS e <em>non geolocalizzabili via ANNCSU</em>: <code>coord_source: "no_coord"</code>.</li>` : ''}
+          ${nRicalcolate > 0 ? `<li><strong>${fmtNum(nRicalcolate)}</strong> presidi con coordinate <strong>ricalcolate via ANNCSU</strong> (le coordinate originali del Ministero della Salute sono comunque conservate nei campi <code>lat_raw</code>/<code>lon_raw</code> dello shard JSON).</li>` : ''}
+          ${nDroppate > 0 ? `<li><strong>${fmtNum(nDroppate)}</strong> presidi con coordinate del Ministero della Salute fuori comune e <em>nessun match ANNCSU</em>: marker non mostrato sulla mappa, record presente nei dati con <code>coord_source: "dropped"</code>.</li>` : ''}
+          ${nDuplicate > 0 ? `<li><strong>${fmtNum(nDuplicate)}</strong> presidi con coordinate del Ministero della Salute in cluster duplicato (centroide finto del comune) e <em>nessun match ANNCSU</em>: marker non mostrato, <code>coord_source: "duplicate"</code>.</li>` : ''}
+          ${nSenza > 0 ? `<li><strong>${fmtNum(nSenza)}</strong> presidi senza coordinate dichiarate dal Ministero della Salute e <em>non geolocalizzabili via ANNCSU</em>: <code>coord_source: "no_coord"</code>.</li>` : ''}
         </ul>
         <p class="sanita-coord-footer">
-          Il dato grezzo MdS resta sempre disponibile nello ZIP scaricabile e via MCP (campi <code>lat_raw</code>/<code>lon_raw</code>).
+          Il dato grezzo del Ministero della Salute resta sempre disponibile nello ZIP scaricabile e via MCP (campi <code>lat_raw</code>/<code>lon_raw</code>).
           La copertura migliora ad ogni aggiornamento mensile di ANNCSU.
         </p>
       </div>
@@ -4656,10 +4658,10 @@ function renderSanitaSearchBlock(d) {
 function _sanitaCoordBadge(coord_source, coord_strategy) {
   // Mappa coord_source -> {label, color, icon, descr}
   const MAP = {
-    'mds':      { label: 'Coordinate Min. Salute',     color: '#2E7D32', icon: '✓', descr: 'Coordinate originali del Ministero della Salute (dentro il centroide del comune).' },
-    'anncsu':   { label: 'Ricalcolate via ANNCSU',     color: '#0066CC', icon: '↻', descr: 'Coordinate originali MdS erano errate o assenti; ricalcolate via incrocio Archivio Nazionale Numeri Civici (Agenzia Entrate).' },
-    'duplicate':{ label: 'Coord MdS in cluster',       color: '#A66300', icon: '⚠', descr: 'Coordinate MdS condivise da 3+ presidi (centroide finto del comune): non affidabili. Marker non mostrato sulla mappa.' },
-    'dropped':  { label: 'Coord MdS fuori comune',     color: '#CC334D', icon: '⚠', descr: 'Coordinate MdS puntavano fuori dal comune dichiarato; nessun match in ANNCSU. Marker non mostrato.' },
+    'mds':      { label: 'Coordinate Ministero della Salute',     color: '#2E7D32', icon: '✓', descr: 'Coordinate originali del Ministero della Salute (dentro il perimetro del comune).' },
+    'anncsu':   { label: 'Ricalcolate via ANNCSU',     color: '#0066CC', icon: '↻', descr: "Coordinate originali del Ministero della Salute erano errate o assenti; ricalcolate via incrocio con l'Archivio Nazionale dei Numeri Civici e delle Strade Urbane (ANNCSU - Agenzia delle Entrate)." },
+    'duplicate':{ label: 'Coordinate non affidabili',       color: '#A66300', icon: '⚠', descr: "Le coordinate del Ministero della Salute sono condivise da 3 o piu' presidi dello stesso comune (centroide finto del comune): non affidabili. Marker non mostrato sulla mappa." },
+    'dropped':  { label: 'Coordinate fuori comune',     color: '#CC334D', icon: '⚠', descr: 'Le coordinate del Ministero della Salute puntavano fuori dal comune dichiarato; nessun match trovato in ANNCSU. Marker non mostrato.' },
     'no_coord': { label: 'Coordinate non disponibili', color: '#5C6F82', icon: '✕', descr: 'Nessuna coordinata dichiarata dal Ministero della Salute e nessun match trovato in ANNCSU.' },
   };
   const m = MAP[coord_source] || MAP['no_coord'];
@@ -4700,9 +4702,9 @@ function renderSanitaPresidioDetail(presidio) {
 
         ${hasCoord ? `
         <dt>Coordinate (WGS84)</dt>
-        <dd><code>${presidio.lat}, ${presidio.lon}</code>${presidio.lat_raw != null ? ` · <span class="sanita-presidio-strategy">raw MdS: <code>${presidio.lat_raw}, ${presidio.lon_raw}</code></span>` : ''}</dd>
+        <dd><code>${presidio.lat}, ${presidio.lon}</code>${presidio.lat_raw != null ? ` · <span class="sanita-presidio-strategy">raw Ministero della Salute: <code>${presidio.lat_raw}, ${presidio.lon_raw}</code></span>` : ''}</dd>
         ` : (presidio.lat_raw != null ? `
-        <dt>Coordinate raw MdS</dt>
+        <dt>Coord. originali Ministero della Salute</dt>
         <dd><code>${presidio.lat_raw}, ${presidio.lon_raw}</code> <span class="sanita-presidio-strategy">(non visualizzate sulla mappa)</span></dd>
         ` : '')}
       </dl>
@@ -6657,7 +6659,7 @@ function initSanitaMap(d) {
         <span class="sanita-popup-meta">${p.meta}</span>
         ${p.indirizzo ? `<span class="sanita-popup-addr">${p.indirizzo.replace(/</g,'&lt;')}${p.cap ? ' · ' + p.cap : ''}</span>` : ''}
         ${p.kind === 'ospedale' ? `<span class="sanita-popup-pl">${fmtNum(p.pl)} posti letto · ${p.nDisc} discipline</span>` : ''}
-        ${p._approx ? '<span class="sanita-popup-meta" style="margin-top:6px;font-style:italic;">⚠ posizione approssimata (centroide comune): il dataset MdS posti letto non include lat/lon per stabilimento.</span>' : ''}
+        ${p._approx ? '<span class="sanita-popup-meta" style="margin-top:6px;font-style:italic;">⚠ posizione approssimata (centroide comune): il dataset del Ministero della Salute per i posti letto non include lat/lon per stabilimento.</span>' : ''}
       </div>`;
     m.bindPopup(popup);
     return m;
