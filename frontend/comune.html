@@ -208,15 +208,14 @@ a:hover{color:var(--accent)}
 .banda-larga-cta{
   display:flex;align-items:center;gap:24px;
   margin:28px 0 8px;padding:20px 24px;
-  /* background-color SOLIDO prima del gradient: axe-core non sa risolvere
-     i gradient ai fini del contrast ratio (li tratta come 'transparent'),
-     mentre il colore solido viene letto correttamente. Visivamente il
-     gradient sovrasta comunque, ma per a11y il calcolatore di contrasto
-     usa il solid layer. #F5F6F7 (--paper-2) e' il punto di partenza del
-     gradient, quindi non c'e' differenza percepita. */
-  background-color:#F5F6F7;
-  background-image:linear-gradient(135deg, var(--paper-2) 0%, #f0f6fc 100%);
-  border:1px solid var(--ink-mute);border-radius:10px;
+  /* Background solido (no gradient): axe-core 4.x non risolve i gradient
+     ai fini del contrast ratio e fallisce conservativamente anche quando
+     il contrasto reale e' ≥ 4.5:1. Sfondo solido #F5F6F7 (= --paper-2),
+     bordo blu accentuato per dare carattere al box (compensa il gradient
+     che faceva da accent visivo). */
+  background:#F5F6F7;
+  border:1px solid var(--accent);border-left:4px solid var(--accent);
+  border-radius:10px;
 }
 .banda-larga-cta-text{flex:1;min-width:0;}
 .banda-larga-cta-eyebrow{
