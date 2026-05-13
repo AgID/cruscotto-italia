@@ -40,7 +40,7 @@
 
   --ink:             #17324d;  /* testo principale, titoli */
   --ink-soft:        #2C3E50;  /* testo secondario forte */
-  --mute:            #5C6F82;  /* testo discreto, label */
+  --mute:            #455A72;  /* testo discreto, label (WCAG AA 6.56:1 vs paper-2, 7.10:1 vs paper - era #5C6F82 4.79:1 borderline su small text 10-11px) */
   --mute-soft:       #8A95A1;  /* placeholder, metadati */
 
   --bg:              #FFFFFF;  /* sfondo pagina */
