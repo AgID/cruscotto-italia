@@ -505,8 +505,9 @@ def _try_swap_name(odonimo: str) -> str:
 class _AnncsuGeocoder:
     """Geocoder che usa shard anncsu_full/<istat>.json da R2.
 
-    Pattern: cache LRU dell'indice {odonimo_norm: [(civ, esp, lat, lon)]}
-    per comune. Massimo 8 comuni in cache simultaneamente (~50MB RAM).
+    Pattern: cache dict illimitata (~5387 shard = ~100MB RAM stimati).
+    Pre-fetch parallelo via ThreadPoolExecutor(24) all'inizio del build,
+    prima di entrare nel loop sequenziale che fa il geocoding.
 
     Coverage R2 prefix `anncsu_full/`: 5387 comuni / 7896 totali (68%).
     Per i comuni non coperti, geocode() ritorna None (fallback drop).
@@ -515,32 +516,18 @@ class _AnncsuGeocoder:
     def __init__(self, r2_bucket: str, r2_client):
         self._bucket = r2_bucket
         self._r2 = r2_client
-        # 8 shard in cache (LRU). Tipica dimensione per Roma 50MB JSON,
-        # ma in pratica usiamo solo l'indice {odonimo: [...]} che e' molto piu' compatto.
-        self._cache: dict[str, dict] = {}
-        self._cache_order: list[str] = []
+        self._cache: dict[str, dict] = {}     # istat -> indice odonimi
         self._missing_shards: set[str] = set()  # negative cache (404)
         self.stats = {"shards_loaded": 0, "shards_missing": 0,
                       "geocoded_exact": 0, "geocoded_no_esp": 0,
                       "geocoded_odo_only": 0, "not_matched": 0}
 
-    def _load_index(self, istat: str) -> Optional[dict]:
-        """Carica e indicizza anncsu_full/<istat>.json da R2.
+    def _fetch_and_index(self, istat: str) -> Optional[dict]:
+        """Scarica anncsu_full/<istat>.json da R2 e costruisce indice.
 
-        Ritorna {odonimo_norm: [(civ, esp, lat, lon)]} o None se shard non esiste.
+        Ritorna {odonimo_norm: [(civ, esp, lat, lon)]} oppure None se shard
+        non esiste. Side-effect: popola self._cache o self._missing_shards.
         """
-        if istat in self._missing_shards:
-            return None
-        if istat in self._cache:
-            # LRU promote
-            try:
-                self._cache_order.remove(istat)
-            except ValueError:
-                pass
-            self._cache_order.append(istat)
-            return self._cache[istat]
-
-        # Cache miss: download da R2
         try:
             obj = self._r2.get_object(Bucket=self._bucket,
                                      Key=f"anncsu_full/{istat}.json")
@@ -557,7 +544,6 @@ class _AnncsuGeocoder:
             self._missing_shards.add(istat)
             return None
 
-        # Build indice
         idx: dict[str, list[tuple]] = {}
         for p in data.get("punti", []):
             if p.get("lat") is None or p.get("lon") is None:
@@ -569,14 +555,64 @@ class _AnncsuGeocoder:
             esp = p.get("esp")
             idx.setdefault(odo, []).append((civ, esp, p["lat"], p["lon"]))
 
-        # LRU evict
-        if len(self._cache_order) >= 8:
-            oldest = self._cache_order.pop(0)
-            del self._cache[oldest]
         self._cache[istat] = idx
-        self._cache_order.append(istat)
         self.stats["shards_loaded"] += 1
         return idx
+
+    def prefetch(self, istats: list[str], max_workers: int = 24) -> None:
+        """Pre-scarica e indicizza in parallelo gli shard ANNCSU dei comuni dati.
+
+        Pattern allineato ad aria.py/veicoli.py push_shards_r2.
+        Logga progresso ogni 200 download.
+        """
+        if not istats:
+            return
+        log.info("anncsu_prefetch_start",
+                 n_comuni=len(istats), max_workers=max_workers)
+        t0 = time.time()
+
+        loaded = 0
+        missing = 0
+        completed = 0
+        with ThreadPoolExecutor(max_workers=max_workers) as ex:
+            futures = {ex.submit(self._fetch_and_index, ist): ist
+                       for ist in istats}
+            for fut in as_completed(futures):
+                completed += 1
+                istat = futures[fut]
+                try:
+                    result = fut.result()
+                    if result is not None:
+                        loaded += 1
+                    else:
+                        missing += 1
+                except Exception as e:
+                    missing += 1
+                    log.warning("anncsu_prefetch_error",
+                                istat=istat, error=str(e))
+                if completed % 200 == 0 or completed == len(istats):
+                    elapsed = time.time() - t0
+                    rate = completed / max(elapsed, 0.1)
+                    eta = (len(istats) - completed) / max(rate, 0.1)
+                    log.info("anncsu_prefetch_progress",
+                             done=completed, total=len(istats),
+                             loaded=loaded, missing=missing,
+                             elapsed_s=round(elapsed, 1),
+                             eta_s=round(eta, 1),
+                             rate=round(rate, 1))
+
+        log.info("anncsu_prefetch_done",
+                 loaded=loaded, missing=missing,
+                 total_time_s=round(time.time() - t0, 1))
+
+    def _load_index(self, istat: str) -> Optional[dict]:
+        """Ritorna indice dalla cache. Lazy fetch fallback se non prefetched."""
+        if istat in self._missing_shards:
+            return None
+        if istat in self._cache:
+            return self._cache[istat]
+        # Fallback lazy (raro se prefetch e' stato chiamato)
+        return self._fetch_and_index(istat)
 
     def geocode(self, istat: str, indirizzo: str) -> Optional[dict]:
         """Tenta geocoding di un indirizzo MdS via ANNCSU.
@@ -930,6 +966,14 @@ def build_shards(
     )
     log.info("sanita_mds_build_shards_start", n_comuni=len(all_istats),
              geocoder_enabled=geocoder is not None)
+
+    # Pre-fetch parallelo shard ANNCSU per i comuni che hanno almeno
+    # una farmacia/parafarmacia. Evita N download seriali nel loop sequenziale.
+    if geocoder is not None:
+        prefetch_istats = sorted(
+            set(farmacie_by_istat.keys()) | set(parafarmacie_by_istat.keys())
+        )
+        geocoder.prefetch(prefetch_istats, max_workers=24)
 
     generated_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
 
