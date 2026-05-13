@@ -270,7 +270,7 @@ pre code {
   <h3>Skill <em>opzionale</em> per Claude</h3>
   <p>Per ottenere risposte pi&ugrave; mirate quando l'utente chiede dati su uno o pi&ugrave; comuni italiani, &egrave; disponibile una <em>skill</em> Claude che documenta l'uso del connettore: inventario dei tool, schema completo di <code>comune_dashboard</code> (incluse sezioni <code>immobili_pa</code>, <code>anncsu</code>, <code>sanita_mds</code> per farmacie, parafarmacie e posti letto ospedalieri, e <code>pun</code> per i punti di ricarica veicoli elettrici), endpoint REST <code>/data/anncsu_full/&lt;istat&gt;.json</code>, pattern operativi e <em>caveat</em> per sezione.</p>
   <p>Scarica il pacchetto e caricalo nelle <em>Skills</em> di Claude (UI o API):</p>
-  <p><a href="/skills/cruscotto-italia-workflow-v1.1.zip" download><strong>cruscotto-italia-workflow-v1.1.zip</strong></a> &mdash; allineata a MCP v0.7.0 (16 dataset, 12 istituzioni)</p>
+  <p><a href="/skills/cruscotto-italia-workflow-v1.2.zip" download><strong>cruscotto-italia-workflow-v1.2.zip</strong></a> &mdash; allineata a MCP v0.7.0 (16 dataset, 12 istituzioni)</p>
 
   <h3>ChatGPT (Custom GPT)</h3>
   <p>Nei custom GPT con supporto MCP, aggiungi un nuovo server con URL <code>https://cruscotto-italia-mcp.piersoftckan.biz/mcp</code> e tipo JSON-RPC 2.0. Nessuna autenticazione richiesta.</p>
