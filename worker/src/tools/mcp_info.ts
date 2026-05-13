@@ -9,7 +9,7 @@ import type { ToolDefinition } from "./index.js";
 
 export const mcpInfo: ToolDefinition = {
   description:
-    "Returns server metadata, version, and data freshness for each integrated source (ANAC, BDAP-MOP, SIOPE, Italia Domani PNRR, ISTAT, ISPRA, MIUR, ACI, MEF Federalismo Fiscale, MEF Patrimonio Immobiliare PA, Agenzia delle Entrate/ISTAT ANNCSU, Ministero della Salute Open Data, GSE/MASE Piattaforma Unica Nazionale punti di ricarica, AGCOM Broadband Map).",
+    "Returns server metadata, version, and data freshness for each integrated source (ANAC, BDAP-MOP, SIOPE, Italia Domani PNRR, ISTAT, ISPRA, MIUR, ACI, MEF Federalismo Fiscale, MEF Patrimonio Immobiliare PA, Agenzia delle Entrate/ISTAT ANNCSU, Ministero della Salute Open Data, GSE/MASE Piattaforma Unica Nazionale punti di ricarica, AGCOM Broadband Map, MIMIT Osservatorio Prezzi Carburanti).",
   inputSchema: {
     type: "object",
     properties: {},
@@ -25,10 +25,10 @@ export const mcpInfo: ToolDefinition = {
     }
     return {
       service: "cruscotto-italia-mcp",
-      version: "0.8.0",
+      version: "0.9.0",
       protocol: "MCP 2024-11-05",
-      datasets: 17,
-      institutions: 13,
+      datasets: 18,
+      institutions: 14,
       municipalities: 7918,
       sources: {
         anac: {
@@ -121,6 +121,13 @@ export const mcpInfo: ToolDefinition = {
           license: "CC BY 4.0 ex art. 52 c.2 D.Lgs 82/2005 (CAD) - open by default",
           datasets: [
             "AGCOM Broadband Map (BBmap) - reportistica delle consistenze dei punti geografici raggiunti dalla rete cablata, ai sensi dell'art. 22 Codice delle Comunicazioni Elettroniche: copertura FTTH DESI %, copertura FTTH entro 20m, famiglie residenti e raggiunte, celle 20x20m raggiunte da FTTH/FTTC, punti dichiarati geograficamente distinti, indirizzi postali raggiunti, indice di confidenza DESI. Copertura nazionale 7.896/7.896 comuni (100%). Aggiornamento trimestrale, dato corrente al 31/12/2025.",
+          ],
+        },
+        mimit_carburanti: {
+          canonical: "https://www.mimit.gov.it/it/open-data/elenco-dataset/carburanti-prezzi-praticati-e-anagrafica-degli-impianti",
+          license: "IODL 2.0",
+          datasets: [
+            "Ministero delle Imprese e del Made in Italy (MIMIT) - Osservatorio Prezzi Carburanti, dataset 'Carburanti - Prezzi praticati e anagrafica degli impianti' (art. 51 L. 99/2009): anagrafica completa degli ~23.700 impianti attivi con bandiera, gestore, tipo (Stradale/Autostradale), indirizzo geo-referenziato, e prezzi correnti per Benzina, Gasolio, GPL, Metano, HVO (oltre a premium proprietari V-Power, Hi-Q, Supreme Diesel, Blue Diesel). KPI per comune: n_impianti, mix bandiere top 5, n_pompe_bianche, prezzo medio e minimo per carburante self/serv, freshness (% prezzi aggiornati <=7gg). Aggregati nazionali e regionali pre-calcolati in carburanti/_nazionale.json. Copertura ~5.450 comuni su 7.896 (69%; i ~2.450 senza distributore sono micro-comuni montani). Aggiornamento quotidiano (CSV 'Prezzo alle 8 di mattina' MIMIT, skip automatico via hash).",
           ],
         },
       },

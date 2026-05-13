@@ -36,6 +36,14 @@
  *                                   CC BY 4.0 ex art. 52 c.2 CAD (open by
  *                                   default). 7896/7896 comuni (100%).
  *                                   Aggiornamento trimestrale.)
+ *   - carburanti/<istat>.json      (MIMIT - Osservatorio Prezzi Carburanti
+ *                                   (art. 51 L. 99/2009). Licenza IODL 2.0.
+ *                                   ~23.700 impianti su ~5.450 comuni (69%).
+ *                                   Anagrafica + prezzi correnti per Benzina,
+ *                                   Gasolio, GPL, Metano, HVO; KPI per comune;
+ *                                   aggregati nazionali in
+ *                                   carburanti/_nazionale.json (separato).
+ *                                   Aggiornamento quotidiano.)
  *   - lookup/anac-aggregato.json[<cf>] (contratti)
  *
  * Schema output (passa-attraverso del file R2):
@@ -177,6 +185,41 @@
  *                                       //   la mappa di dettaglio e' linkata via
  *                                       //   deep-link al Web AppBuilder ufficiale
  *                                       //   AGCOM costruito client-side dal frontend.
+ *     "carburanti":  { ... } | null    // MIMIT - Osservatorio Prezzi Carburanti
+ *                                       //   (art. 51 L. 99/2009), licenza IODL 2.0:
+ *                                       //   { _data_last_modified: "YYYY-MM-DD",
+ *                                       //     kpi: { n_impianti, n_stradali,
+ *                                       //            n_autostradali, n_pompe_bianche,
+ *                                       //            pct_pompe_bianche,
+ *                                       //            n_bandiere_distinte,
+ *                                       //            mix_bandiere:
+ *                                       //              {<top5 brand>:int, "Altre":int},
+ *                                       //            prezzo_medio:
+ *                                       //              { benzina_self, benzina_serv,
+ *                                       //                gasolio_self, gasolio_serv,
+ *                                       //                gpl, metano, hvo }
+ *                                       //              (null se carburante non offerto),
+ *                                       //            prezzo_min:
+ *                                       //              { benzina_self, gasolio_self }
+ *                                       //              (impianto piu' economico),
+ *                                       //            freshness_pct: % prezzi <=7gg },
+ *                                       //     punti: [{ id, name, brand, tipo,
+ *                                       //               lat, lon, indirizzo,
+ *                                       //               prezzi:
+ *                                       //                 { benzina_self?, benzina_serv?,
+ *                                       //                   gasolio_self?, gasolio_serv?,
+ *                                       //                   gpl?, metano?, hvo? },
+ *                                       //               prezzi_extra: {<premium>}?,
+ *                                       //               ultimo_aggiornamento: "YYYY-MM-DD"
+ *                                       //             }, ...]
+ *                                       //   }
+ *                                       //   Coverage: ~5.450/7.896 comuni (69%),
+ *                                       //   ~23.700 impianti totali. Aggregati
+ *                                       //   nazionali e regionali in shard separato
+ *                                       //   carburanti/_nazionale.json (fetch
+ *                                       //   lazy lato frontend). Aggiornamento
+ *                                       //   quotidiano (CSV bulk MIMIT "Prezzo
+ *                                       //   alle 8 di mattina").
  *   }
  *
  * NB sulla cache:
@@ -228,11 +271,12 @@ interface DashboardShard {
   anac: unknown | null;
   pun: unknown | null;
   agcom_bbmap: unknown | null;
+  carburanti: unknown | null;
 }
 
 export const comuneDashboard: ToolDefinition = {
   description:
-    "Vista completa di un comune italiano in una sola chiamata: anagrafica, demografia, profilo censimento, turismo, progetti PNRR, territorio (ISPRA Suolo/IdroGEO/Rifiuti), qualità dell'aria (ISPRA SNPA: PM10/PM2.5/NO2 con stazioni), opere pubbliche (BDAP-MOP), spese (SIOPE multi-anno con per_anno e anno_default), contratti (ANAC), scuole (MIUR), veicoli e incidenti (ISTAT 41_993 parco PRA per classe Euro + ISTAT 41_983 incidenti stradali con morti/feriti + ACI LOD nuove iscrizioni per alimentazione), redditi e fisco (MEF Dipartimento delle Finanze: dichiarazioni IRPEF su base comunale a.i. 2020-2024 con numero contribuenti, reddito medio, distribuzione per 8 fasce di reddito, tipologie dipendente/pensione/autonomo/fabbricati, addizionale comunale e imposta netta media). Tool da preferire per qualsiasi domanda generale su un comune ('mostrami Bergamo', 'dati di Milano'). Richiede istat_code (6 cifre, es. '075035'). Se hai solo il nome, chiama prima search_comune per ottenerlo. Accetta anche denominazione ma è meno affidabile sui casi di omonimia/fusione. Include anche la sezione immobili_pa con beni immobili pubblici detenuti dalle PA (MEF DE 2022, dichiarazioni al 31/12/2022): KPI aggregati (fabbricati/terreni, vincolo culturale, uso a terzi, superficie totale, mix categoria) e fino a 500 punti georeferenziati con tipologia e categoria semantica. Sezione anncsu (Agenzia delle Entrate + ISTAT - Archivio Nazionale Numeri Civici e Strade Urbane, snapshot mensile) con KPI sul numero di odonimi e civici, percentuale di georeferenziazione, bilinguismo, numerazione storica rosso/nero (Firenze, Genova), top 10 strade per accessi e distribuzione metodi di geo-referenziazione (GPS, catasto, ortofoto, cartografia). Punti sample (1000) georeferenziati per la mappa; per il dataset completo dei civici di un comune (Lecce 47.917, Roma 515.815, ecc.) fai una richiesta HTTP GET a /data/anncsu_full/<istat>.json sullo stesso host del Worker. Sezione sanita_mds (Ministero della Salute - Open Data IODL v2.0) con il bundle sanità territoriale: farmacie attive (cod_comune ISTAT nativo, ~20.800 attive in 7.258 comuni, 91.9% copertura, dato quotidiano), parafarmacie (~7.200 attive in 2.158 comuni), e posti letto per stabilimento ospedaliero (dato annuale anno 2023: 1.272 stabilimenti in 736 comuni, ~213.000 posti letto totali tra degenza ordinaria, day hospital, day surgery, pagamento, con discipline complete per stabilimento). KPI per ciascuna sezione, punti geo-referenziati per la mappa, mix per tipologia farmacia (Ordinaria/Dispensario/Succursale/Stagionale) e per disciplina ospedaliera. Sezione pun (GSE/MASE - Piattaforma Unica Nazionale punti di ricarica per veicoli elettrici, licenza CC BY 4.0 ex art. 52 c.2 CAD - open by default) con i punti di ricarica EVSE installati nel comune: KPI (n_totale, n_attivi, n_non_attivi, pct_attivi, n_ac/n_dc, potenza_tot_kw, mix_potenza per categoria Slow/Quick/Fast/HPC/Ultra fast) e lista punti georeferenziati con id_evse, indirizzo, CAP, stato (Attivo/Non Attivo), potenza in W, tipologia di corrente AC/DC, tipologia parcheggio, restrizioni, servizi nelle vicinanze, orario. 66.619 PdR su 5.185 comuni (65,7% copertura), aggiornamento quotidiano via GSE S3. Sezione agcom_bbmap (AGCOM - Broadband Map ex art. 22 Codice Comunicazioni Elettroniche, licenza CC BY 4.0 ex art. 52 c.2 CAD - open by default) con la copertura banda larga a livello comunale: KPI di copertura FTTH DESI %, copertura FTTH entro 20m % (più stringente), confidenza DESI %, famiglie residenti e famiglie raggiunte da FTTH (totali e a meno di 20m), celle 20x20m raggiunte da FTTH/FTTC, punti dichiarati e geograficamente distinti, indirizzi postali distinti raggiunti. Copertura nazionale completa 7.896/7.896 comuni (100%), aggiornamento trimestrale, dato corrente al 31/12/2025. Le geometrie dettagliate (polilinee strade FTTH/rame) non sono nello shard per ragioni di volume: la mappa di dettaglio è linkata via deep-link al Web AppBuilder ufficiale AGCOM costruito client-side dal frontend.",
+    "Vista completa di un comune italiano in una sola chiamata: anagrafica, demografia, profilo censimento, turismo, progetti PNRR, territorio (ISPRA Suolo/IdroGEO/Rifiuti), qualità dell'aria (ISPRA SNPA: PM10/PM2.5/NO2 con stazioni), opere pubbliche (BDAP-MOP), spese (SIOPE multi-anno con per_anno e anno_default), contratti (ANAC), scuole (MIUR), veicoli e incidenti (ISTAT 41_993 parco PRA per classe Euro + ISTAT 41_983 incidenti stradali con morti/feriti + ACI LOD nuove iscrizioni per alimentazione), redditi e fisco (MEF Dipartimento delle Finanze: dichiarazioni IRPEF su base comunale a.i. 2020-2024 con numero contribuenti, reddito medio, distribuzione per 8 fasce di reddito, tipologie dipendente/pensione/autonomo/fabbricati, addizionale comunale e imposta netta media). Tool da preferire per qualsiasi domanda generale su un comune ('mostrami Bergamo', 'dati di Milano'). Richiede istat_code (6 cifre, es. '075035'). Se hai solo il nome, chiama prima search_comune per ottenerlo. Accetta anche denominazione ma è meno affidabile sui casi di omonimia/fusione. Include anche la sezione immobili_pa con beni immobili pubblici detenuti dalle PA (MEF DE 2022, dichiarazioni al 31/12/2022): KPI aggregati (fabbricati/terreni, vincolo culturale, uso a terzi, superficie totale, mix categoria) e fino a 500 punti georeferenziati con tipologia e categoria semantica. Sezione anncsu (Agenzia delle Entrate + ISTAT - Archivio Nazionale Numeri Civici e Strade Urbane, snapshot mensile) con KPI sul numero di odonimi e civici, percentuale di georeferenziazione, bilinguismo, numerazione storica rosso/nero (Firenze, Genova), top 10 strade per accessi e distribuzione metodi di geo-referenziazione (GPS, catasto, ortofoto, cartografia). Punti sample (1000) georeferenziati per la mappa; per il dataset completo dei civici di un comune (Lecce 47.917, Roma 515.815, ecc.) fai una richiesta HTTP GET a /data/anncsu_full/<istat>.json sullo stesso host del Worker. Sezione sanita_mds (Ministero della Salute - Open Data IODL v2.0) con il bundle sanità territoriale: farmacie attive (cod_comune ISTAT nativo, ~20.800 attive in 7.258 comuni, 91.9% copertura, dato quotidiano), parafarmacie (~7.200 attive in 2.158 comuni), e posti letto per stabilimento ospedaliero (dato annuale anno 2023: 1.272 stabilimenti in 736 comuni, ~213.000 posti letto totali tra degenza ordinaria, day hospital, day surgery, pagamento, con discipline complete per stabilimento). KPI per ciascuna sezione, punti geo-referenziati per la mappa, mix per tipologia farmacia (Ordinaria/Dispensario/Succursale/Stagionale) e per disciplina ospedaliera. Sezione pun (GSE/MASE - Piattaforma Unica Nazionale punti di ricarica per veicoli elettrici, licenza CC BY 4.0 ex art. 52 c.2 CAD - open by default) con i punti di ricarica EVSE installati nel comune: KPI (n_totale, n_attivi, n_non_attivi, pct_attivi, n_ac/n_dc, potenza_tot_kw, mix_potenza per categoria Slow/Quick/Fast/HPC/Ultra fast) e lista punti georeferenziati con id_evse, indirizzo, CAP, stato (Attivo/Non Attivo), potenza in W, tipologia di corrente AC/DC, tipologia parcheggio, restrizioni, servizi nelle vicinanze, orario. 66.619 PdR su 5.185 comuni (65,7% copertura), aggiornamento quotidiano via GSE S3. Sezione agcom_bbmap (AGCOM - Broadband Map ex art. 22 Codice Comunicazioni Elettroniche, licenza CC BY 4.0 ex art. 52 c.2 CAD - open by default) con la copertura banda larga a livello comunale: KPI di copertura FTTH DESI %, copertura FTTH entro 20m % (più stringente), confidenza DESI %, famiglie residenti e famiglie raggiunte da FTTH (totali e a meno di 20m), celle 20x20m raggiunte da FTTH/FTTC, punti dichiarati e geograficamente distinti, indirizzi postali distinti raggiunti. Copertura nazionale completa 7.896/7.896 comuni (100%), aggiornamento trimestrale, dato corrente al 31/12/2025. Le geometrie dettagliate (polilinee strade FTTH/rame) non sono nello shard per ragioni di volume: la mappa di dettaglio è linkata via deep-link al Web AppBuilder ufficiale AGCOM costruito client-side dal frontend. Sezione carburanti (Ministero delle Imprese e del Made in Italy - MIMIT, Osservatorio Prezzi Carburanti ex art. 51 L. 99/2009, licenza IODL 2.0) con anagrafica completa dei distributori e prezzi praticati comunicati quotidianamente dai gestori: ~23.700 impianti in ~5.450 comuni (69% copertura; i ~2.450 senza distributore sono micro-comuni montani). KPI per comune: n_impianti totali, n_stradali e n_autostradali, n_pompe_bianche e pct_pompe_bianche, mix delle bandiere (top 5 + Altre), prezzo_medio per ciascun carburante (benzina self/serv, gasolio self/serv, GPL, metano, HVO; null se non offerto), prezzo_min per benzina_self e gasolio_self (impianto più economico nel comune), freshness_pct (% impianti con prezzo aggiornato negli ultimi 7 giorni). Punti georeferenziati con id impianto, nome, bandiera, tipo (Stradale/Autostradale), indirizzo, prezzi correnti per i 7 carburanti core e prezzi_extra opzionali per i premium proprietari (Shell V-Power, Hi-Q Diesel, Supreme Diesel, Blue Diesel, Gasolio Premium). Aggregati nazionali e regionali in shard separato (carburanti/_nazionale.json) per il calcolo lazy del delta vs media. Aggiornamento quotidiano (CSV bulk MIMIT 'Prezzo alle 8 di mattina', skip automatico via hash SHA-256).",
   inputSchema: {
     type: "object",
     properties: {
