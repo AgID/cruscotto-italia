@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>Vista comune · Cruscotto Italia</title>
-<link rel="stylesheet" href="/css/tokens.css?v=20260513d">
-<link rel="stylesheet" href="/css/base.css?v=20260513d">
+<link rel="stylesheet" href="/css/tokens.css?v=20260513e">
+<link rel="stylesheet" href="/css/base.css?v=20260513e">
 
 <style>
 /* === ALIAS bridge: vecchi nomi -> nuovi token Design Italia === */
@@ -193,116 +193,10 @@ a:hover{color:var(--accent)}
 }
 .section-h em{font-style:italic;color:var(--accent);font-variation-settings:"opsz" 72, "SOFT" 100, "WONK" 1}
 
-/* KPI per tab */
-.tab-kpis{
-  display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
-  gap:0;
-  border:2px solid var(--rule);
-  margin-bottom:32px;
-}
-.tab-kpi{
-  padding:24px;
-  border-right:1px solid var(--rule);
-  background:var(--paper);
-}
-.tab-kpi:last-child{border-right:none}
-.tab-kpi .lab{
-  font-family:var(--mono);
-  font-size:10px;
-  text-transform:uppercase;
-  letter-spacing:0.14em;
-  color:var(--ink-mute);
-  margin-bottom:8px;
-}
-.tab-kpi .val{
-  font-family:var(--serif);
-  font-size:36px;
-  font-weight:400;
-  letter-spacing:-0.02em;
-  font-variation-settings:"opsz" 72, "SOFT" 30;
-  line-height:1;
-}
-.tab-kpi.tbd .val{font-style:italic;color:var(--ink-mute)}
+/* KPI per tab: vedi blocco .kpi-cards/.kpi-card sotto (pattern uniforme).
+   Le vecchie classi .tab-kpis/.tab-kpi/.sanita-kpis sono state rimosse:
+   tutto l'HTML ora usa .kpi-cards/.kpi-card senza override per tab. */
 
-/* Tab Sanità: grid 3 col su desktop (3+3 con 6 KPI), 2 col tablet, 1 col mobile.
-   Override del default .tab-kpis che usa auto-fit minmax(200px,1fr) e con 6 voci
-   si appiattisce a 5+1 dentro un wrap da 1200px. */
-.sanita-kpis{
-  grid-template-columns:repeat(3,1fr) !important;
-}
-.sanita-kpis .tab-kpi:nth-child(3n){
-  border-right:none;
-}
-.sanita-kpis .tab-kpi:nth-child(-n+3){
-  border-bottom:1px solid var(--rule);
-}
-@media (max-width:900px){
-  .sanita-kpis{grid-template-columns:repeat(2,1fr) !important;}
-  .sanita-kpis .tab-kpi{border-right:1px solid var(--rule);border-bottom:1px solid var(--rule);}
-  .sanita-kpis .tab-kpi:nth-child(3n){border-right:1px solid var(--rule);}
-  .sanita-kpis .tab-kpi:nth-child(2n){border-right:none;}
-  .sanita-kpis .tab-kpi:nth-last-child(-n+2){border-bottom:none;}
-}
-@media (max-width:540px){
-  .sanita-kpis{grid-template-columns:1fr !important;}
-  .sanita-kpis .tab-kpi{border-right:none;border-bottom:1px solid var(--rule);}
-  .sanita-kpis .tab-kpi:last-child{border-bottom:none;}
-}
-.sanita-kpis .tab-kpi .sub{
-  font-family:var(--mono);
-  font-size:11px;
-  color:var(--ink-mute);
-  text-transform:uppercase;
-  letter-spacing:0.06em;
-  margin-top:6px;
-}
-
-/* Tab Punti di ricarica (PUN): 7 KPI in grid 7 col desktop (1 riga compatta,
-   numero 36px in cella ~170px), 4 col tablet (4+3), 2 col mobile, 1 col xs.
-   Override del default .tab-kpis (auto-fit minmax 200px) che con 7 voci farebbe
-   6+1 schiacciato in una riga da 1200px. */
-.pun-kpis{
-  grid-template-columns:repeat(7,1fr) !important;
-}
-.pun-kpis .tab-kpi{
-  padding:18px 14px;
-}
-.pun-kpis .tab-kpi .val{
-  font-size:28px;
-}
-.pun-kpis .tab-kpi:nth-child(7n){
-  border-right:none;
-}
-@media (max-width:1100px){
-  .pun-kpis{grid-template-columns:repeat(4,1fr) !important;}
-  .pun-kpis .tab-kpi{border-right:1px solid var(--rule);border-bottom:1px solid var(--rule);}
-  .pun-kpis .tab-kpi:nth-child(7n){border-right:1px solid var(--rule);}
-  .pun-kpis .tab-kpi:nth-child(4n){border-right:none;}
-  .pun-kpis .tab-kpi:nth-last-child(-n+3){border-bottom:none;}
-  .pun-kpis .tab-kpi .val{font-size:32px;}
-}
-@media (max-width:720px){
-  .pun-kpis{grid-template-columns:repeat(2,1fr) !important;}
-  .pun-kpis .tab-kpi{border-right:1px solid var(--rule);border-bottom:1px solid var(--rule);}
-  .pun-kpis .tab-kpi:nth-child(2n){border-right:none;}
-  .pun-kpis .tab-kpi:nth-last-child(-n+1){border-bottom:none;}
-  .pun-kpis .tab-kpi .val{font-size:32px;}
-}
-@media (max-width:480px){
-  .pun-kpis{grid-template-columns:1fr !important;}
-  .pun-kpis .tab-kpi{border-right:none;border-bottom:1px solid var(--rule);}
-  .pun-kpis .tab-kpi:last-child{border-bottom:none;}
-}
-.pun-kpis .tab-kpi .sub{
-  font-family:var(--mono);
-  font-size:10px;
-  color:var(--ink-mute);
-  text-transform:uppercase;
-  letter-spacing:0.06em;
-  margin-top:6px;
-  line-height:1.3;
-}
 /* Doughnut PUN: altezza ridotta vs .impa-chart-wrap (480px), allineata a mappa. */
 .pun-chart-wrap{height:320px;position:relative;}
 @media (max-width:720px){.pun-chart-wrap{height:280px;}}
@@ -807,27 +701,15 @@ footer a{color:rgba(255,255,255,0.85);text-decoration:none}
 .tab-warning{padding:14px 18px;margin:24px 0;border-left:3px solid var(--gold);background:var(--paper-2);font-family:var(--serif);font-size:14px;color:var(--ink-soft);font-style:italic;}
 
 /* ---- Tab Contratti ---- */
-.contratti-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:0;border:1px solid var(--ink-mute);margin:24px 0 56px;}
-.ck-card{padding:18px 20px;border-right:1px solid var(--ink-mute);background:var(--paper);}
-.ck-card:last-child{border-right:none;}
-.ck-lab{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:0.14em;color:var(--ink-mute);margin-bottom:8px;}
-.ck-val{font-family:var(--serif);font-size:32px;font-weight:400;letter-spacing:-0.02em;line-height:1.05;font-variation-settings:"opsz" 72, "SOFT" 30;overflow-wrap:break-word;word-break:break-word;}
-.ck-val-date{font-size:22px;font-family:var(--mono);}
-.ck-sub{font-family:var(--mono);font-size:11px;color:var(--ink-mute);margin-top:4px;}
-
-/* Mobile: 2 colonne KPI con cifre rimpicciolite per evitare overflow di numeri lunghi (es. "€38.412.087") */
+/* I KPI di contratti usano ora il pattern uniforme .kpi-cards/.kpi-card
+   (vedi sopra). Manteniamo solo l'override .kpi-card-val-date per le
+   celle che mostrano date invece di numeri (font monospace 22px). */
+.kpi-card-val-date{font-size:22px;font-family:var(--mono);}
 @media (max-width: 720px){
-  .contratti-kpis{grid-template-columns:repeat(2, 1fr);}
-  .ck-card{padding:14px 12px;border-right:1px solid var(--ink-mute);border-bottom:1px solid var(--ink-mute);}
-  .ck-card:nth-child(2n){border-right:none;}
-  .ck-card:nth-last-child(-n+2){border-bottom:none;}
-  .ck-val{font-size:22px;letter-spacing:-0.03em;}
-  .ck-val-date{font-size:16px;}
-  .ck-lab{font-size:9px;letter-spacing:0.1em;margin-bottom:6px;}
+  .kpi-card-val-date{font-size:16px;}
 }
 @media (max-width: 380px){
-  .ck-val{font-size:18px;}
-  .ck-val-date{font-size:14px;}
+  .kpi-card-val-date{font-size:14px;}
 }
 .cpv-row{display:grid;grid-template-columns:280px 1fr 180px;gap:16px;align-items:center;padding:14px 0;border-bottom:1px dotted var(--ink-mute);}
 .cpv-name{display:flex;flex-direction:column;gap:3px;}
@@ -862,8 +744,6 @@ footer a{color:rgba(255,255,255,0.85);text-decoration:none}
 .profilo-section-h{font-family:var(--serif);font-weight:300;font-size:24px;letter-spacing:-0.02em;margin:0 0 6px;color:var(--ink);}
 .profilo-section-h em{font-style:italic;color:var(--accent);}
 .profilo-section-sub{font-family:var(--serif);font-style:italic;font-size:13px;color:var(--ink-mute);margin:0 0 18px;}
-.profilo-mini-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:0;border:1px solid var(--ink-mute);margin:8px 0 20px;}
-.profilo-mini-kpis .ck-card:last-child{border-right:none;}
 .titoli-bars{display:flex;flex-direction:column;gap:10px;}
 .titolo-row{display:grid;grid-template-columns:200px 1fr 130px;gap:12px;align-items:center;}
 .titolo-label{font-family:var(--serif);font-size:13px;color:var(--ink);}
@@ -1231,13 +1111,21 @@ footer a{color:rgba(255,255,255,0.85);text-decoration:none}
 .impa-chart-wrap{height:480px;position:relative;}
 @media (max-width:720px){.impa-chart-wrap{height:420px;}}
 /* ---- Tab ANNCSU - Toponomastica (strade e civici) ---- */
-.anncsu-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:18px 0 28px;}
-@media (max-width:960px){.anncsu-kpis{grid-template-columns:repeat(2,1fr);}}
-@media (max-width:540px){.anncsu-kpis{grid-template-columns:1fr;}}
-.anncsu-kpi{padding:14px 16px;background:var(--paper-2);border:1px solid var(--ink-mute);border-left:3px solid var(--accent);}
-.anncsu-kpi-lab{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:var(--ink-mute);margin-bottom:6px;}
-.anncsu-kpi-val{font-family:var(--serif);font-size:28px;color:var(--ink);font-weight:400;line-height:1;font-variation-settings:'opsz' 60;}
-.anncsu-kpi-unit{font-family:var(--mono);font-size:11px;color:var(--ink-mute);text-transform:uppercase;letter-spacing:.06em;margin-left:8px;font-weight:400;}
+/* =========================================================================
+   PATTERN UNIFORME KPI CARDS (design + accessibilita').
+   Usato da TUTTE le tab della pagina comune. Sostituisce il vecchio
+   .tab-kpis (container unificato con bordi interni) con cards staccate,
+   bordo blu accent a sinistra. Pattern originato in tab ANNCSU.
+   ========================================================================= */
+.kpi-cards, .anncsu-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:18px 0 28px;}
+@media (max-width:960px){.kpi-cards, .anncsu-kpis{grid-template-columns:repeat(2,1fr);}}
+@media (max-width:540px){.kpi-cards, .anncsu-kpis{grid-template-columns:1fr;}}
+.kpi-card, .anncsu-kpi{padding:14px 16px;background:var(--paper-2);border:1px solid var(--ink-mute);border-left:3px solid var(--accent);}
+.kpi-card-lab, .anncsu-kpi-lab{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:var(--ink-mute);margin-bottom:6px;}
+.kpi-card-val, .anncsu-kpi-val{font-family:var(--serif);font-size:28px;color:var(--ink);font-weight:400;line-height:1;font-variation-settings:'opsz' 60;}
+.kpi-card-unit, .anncsu-kpi-unit{font-family:var(--mono);font-size:11px;color:var(--ink-mute);text-transform:uppercase;letter-spacing:.06em;margin-left:8px;font-weight:400;}
+.kpi-card-sub{font-family:var(--mono);font-size:10px;color:var(--ink-mute);text-transform:uppercase;letter-spacing:.06em;margin-top:8px;line-height:1.4;}
+.kpi-card.tbd .kpi-card-val{font-style:italic;color:var(--ink-mute);}
 .anncsu-map-wrap{margin:32px 0 24px;}
 .anncsu-h3{font-family:var(--serif);font-size:22px;color:var(--ink);font-weight:400;margin:0 0 8px;font-style:italic;}
 .anncsu-map-note{font-size:13px;line-height:1.55;margin:0 0 14px;}
@@ -1505,22 +1393,22 @@ function renderComune(data) {
       <div class="tab-pane active" id="pane-panoramica">
         <div class="section-title">§ Panoramica</div>
         <h2 class="section-h">Vista <em>360°</em> del comune.</h2>
-        <div class="tab-kpis">
-          <div class="tab-kpi"><div class="lab">Popolazione</div><div class="val">${k.popolazione != null ? fmtNum(k.popolazione) : '—'}</div></div>
-          <div class="tab-kpi ${k.contratti?.count != null ? '' : 'tbd'}">
-            <div class="lab">Contratti ANAC</div>
-            <div class="val">${k.contratti?.count != null ? fmtNum(k.contratti.count) : '—'}</div>
-            ${k.contratti?.importo_totale != null ? `<div class="sub">€${fmtNum(Math.round(k.contratti.importo_totale))}</div>` : ''}
+        <div class="kpi-cards">
+          <div class="kpi-card"><div class="kpi-card-lab">Popolazione</div><div class="kpi-card-val">${k.popolazione != null ? fmtNum(k.popolazione) : '—'}</div></div>
+          <div class="kpi-card ${k.contratti?.count != null ? '' : 'tbd'}">
+            <div class="kpi-card-lab">Contratti ANAC</div>
+            <div class="kpi-card-val">${k.contratti?.count != null ? fmtNum(k.contratti.count) : '—'}</div>
+            ${k.contratti?.importo_totale != null ? `<div class="kpi-card-sub">€${fmtNum(Math.round(k.contratti.importo_totale))}</div>` : ''}
           </div>
-          <div class="tab-kpi ${k.opere?.count != null ? '' : 'tbd'}">
-            <div class="lab">Opere BDAP</div>
-            <div class="val">${k.opere?.count != null ? fmtNum(k.opere.count) : '—'}</div>
-            ${k.opere?.costo_lavori_eff != null ? `<div class="sub">€${fmtNum(Math.round(k.opere.costo_lavori_eff))}</div>` : ''}
+          <div class="kpi-card ${k.opere?.count != null ? '' : 'tbd'}">
+            <div class="kpi-card-lab">Opere BDAP</div>
+            <div class="kpi-card-val">${k.opere?.count != null ? fmtNum(k.opere.count) : '—'}</div>
+            ${k.opere?.costo_lavori_eff != null ? `<div class="kpi-card-sub">€${fmtNum(Math.round(k.opere.costo_lavori_eff))}</div>` : ''}
           </div>
-          <div class="tab-kpi ${k.siope?.n_voci != null ? '' : 'tbd'}">
-            <div class="lab">Spese SIOPE</div>
-            <div class="val">${k.siope?.n_voci != null ? fmtNum(k.siope.n_voci) : '—'}</div>
-            ${k.siope?.totale_anno != null ? `<div class="sub">€${fmtNum(Math.round(k.siope.totale_anno))}</div>` : ''}
+          <div class="kpi-card ${k.siope?.n_voci != null ? '' : 'tbd'}">
+            <div class="kpi-card-lab">Spese SIOPE</div>
+            <div class="kpi-card-val">${k.siope?.n_voci != null ? fmtNum(k.siope.n_voci) : '—'}</div>
+            ${k.siope?.totale_anno != null ? `<div class="kpi-card-sub">€${fmtNum(Math.round(k.siope.totale_anno))}</div>` : ''}
           </div>
         </div>
       </div>
@@ -1815,26 +1703,26 @@ async function loadDemografia(istat) {
 function renderDemografiaContent(container, data) {
   const f = data.fasce_eta || {};
   container.innerHTML = `
-    <div class="contratti-kpis">
-      <div class="ck-card">
-        <div class="ck-lab">Popolazione</div>
-        <div class="ck-val">${fmtNum(data.popolazione_totale)}</div>
-        <div class="ck-sub">${fmtNum(data.maschi)} M · ${fmtNum(data.femmine)} F</div>
+    <div class="kpi-cards">
+      <div class="kpi-card">
+        <div class="kpi-card-lab">Popolazione</div>
+        <div class="kpi-card-val">${fmtNum(data.popolazione_totale)}</div>
+        <div class="kpi-card-sub">${fmtNum(data.maschi)} M · ${fmtNum(data.femmine)} F</div>
       </div>
-      <div class="ck-card">
-        <div class="ck-lab">Eta media</div>
-        <div class="ck-val">${data.eta_media}</div>
-        <div class="ck-sub">anni</div>
+      <div class="kpi-card">
+        <div class="kpi-card-lab">Eta media</div>
+        <div class="kpi-card-val">${data.eta_media}</div>
+        <div class="kpi-card-sub">anni</div>
       </div>
-      <div class="ck-card">
-        <div class="ck-lab">Indice vecchiaia</div>
-        <div class="ck-val">${data.indice_vecchiaia ?? '—'}</div>
-        <div class="ck-sub">over-65 / 0-14 × 100</div>
+      <div class="kpi-card">
+        <div class="kpi-card-lab">Indice vecchiaia</div>
+        <div class="kpi-card-val">${data.indice_vecchiaia ?? '—'}</div>
+        <div class="kpi-card-sub">over-65 / 0-14 × 100</div>
       </div>
-      <div class="ck-card">
-        <div class="ck-lab">Indice dipendenza</div>
-        <div class="ck-val">${data.indice_dipendenza ?? '—'}</div>
-        <div class="ck-sub">non-attivi / attivi × 100</div>
+      <div class="kpi-card">
+        <div class="kpi-card-lab">Indice dipendenza</div>
+        <div class="kpi-card-val">${data.indice_dipendenza ?? '—'}</div>
+        <div class="kpi-card-sub">non-attivi / attivi × 100</div>
       </div>
     </div>
 
@@ -2005,26 +1893,26 @@ function renderProfiloContent(container, data) {
   const cit = data.cittadinanza || {};
 
   container.innerHTML = `
-    <div class="contratti-kpis">
-      <div class="ck-card">
-        <div class="ck-lab">Laureati 25-64</div>
-        <div class="ck-val">${profFmtPct(istr.terziario_pct)}</div>
-        <div class="ck-sub">${profFmtN(istr.terziario_n)} su ${profFmtN(istr.pop_riferimento_25_64)}</div>
+    <div class="kpi-cards">
+      <div class="kpi-card">
+        <div class="kpi-card-lab">Laureati 25-64</div>
+        <div class="kpi-card-val">${profFmtPct(istr.terziario_pct)}</div>
+        <div class="kpi-card-sub">${profFmtN(istr.terziario_n)} su ${profFmtN(istr.pop_riferimento_25_64)}</div>
       </div>
-      <div class="ck-card">
-        <div class="ck-lab">Tasso occupazione</div>
-        <div class="ck-val">${profFmtPct(lav.tasso_occupazione)}</div>
-        <div class="ck-sub">25-64 anni</div>
+      <div class="kpi-card">
+        <div class="kpi-card-lab">Tasso occupazione</div>
+        <div class="kpi-card-val">${profFmtPct(lav.tasso_occupazione)}</div>
+        <div class="kpi-card-sub">25-64 anni</div>
       </div>
-      <div class="ck-card">
-        <div class="ck-lab">Stranieri</div>
-        <div class="ck-val">${profFmtPct(cit.stranieri_pct)}</div>
-        <div class="ck-sub">${profFmtN(cit.stranieri_n)} residenti</div>
+      <div class="kpi-card">
+        <div class="kpi-card-lab">Stranieri</div>
+        <div class="kpi-card-val">${profFmtPct(cit.stranieri_pct)}</div>
+        <div class="kpi-card-sub">${profFmtN(cit.stranieri_n)} residenti</div>
       </div>
-      <div class="ck-card">
-        <div class="ck-lab">Dim. famiglia</div>
-        <div class="ck-val">${fam.dim_media_famiglia ?? '—'}</div>
-        <div class="ck-sub">${profFmtN(fam.n_famiglie)} famiglie</div>
+      <div class="kpi-card">
+        <div class="kpi-card-lab">Dim. famiglia</div>
+        <div class="kpi-card-val">${fam.dim_media_famiglia ?? '—'}</div>
+        <div class="kpi-card-sub">${profFmtN(fam.n_famiglie)} famiglie</div>
       </div>
     </div>
 
@@ -2087,21 +1975,21 @@ function renderIstruzioneSection(istr) {
   ];
   const max = Math.max(...titoli.map(t => t.n || 0));
   return `
-    <div class="profilo-mini-kpis">
-      <div class="ck-card">
-        <div class="ck-lab">Terziario</div>
-        <div class="ck-val">${profFmtPct(istr.terziario_pct)}</div>
-        <div class="ck-sub">${profFmtN(istr.terziario_n)} laureati</div>
+    <div class="kpi-cards">
+      <div class="kpi-card">
+        <div class="kpi-card-lab">Terziario</div>
+        <div class="kpi-card-val">${profFmtPct(istr.terziario_pct)}</div>
+        <div class="kpi-card-sub">${profFmtN(istr.terziario_n)} laureati</div>
       </div>
-      <div class="ck-card">
-        <div class="ck-lab">Diploma e oltre</div>
-        <div class="ck-val">${profFmtPct(istr.diploma_oltre_pct)}</div>
-        <div class="ck-sub">${profFmtN(istr.diploma_oltre_n)} persone</div>
+      <div class="kpi-card">
+        <div class="kpi-card-lab">Diploma e oltre</div>
+        <div class="kpi-card-val">${profFmtPct(istr.diploma_oltre_pct)}</div>
+        <div class="kpi-card-sub">${profFmtN(istr.diploma_oltre_n)} persone</div>
       </div>
-      <div class="ck-card">
-        <div class="ck-lab">Solo media o meno</div>
-        <div class="ck-val">${profFmtPct(istr.max_media_pct)}</div>
-        <div class="ck-sub">${profFmtN(istr.max_media_n)} persone</div>
+      <div class="kpi-card">
+        <div class="kpi-card-lab">Solo media o meno</div>
+        <div class="kpi-card-val">${profFmtPct(istr.max_media_pct)}</div>
+        <div class="kpi-card-sub">${profFmtN(istr.max_media_n)} persone</div>
       </div>
     </div>
     <div class="titoli-bars">
@@ -2126,21 +2014,21 @@ function renderIstruzioneSection(istr) {
 
 function renderLavoroSection(lav) {
   return `
-    <div class="profilo-mini-kpis">
-      <div class="ck-card">
-        <div class="ck-lab">Tasso occupazione</div>
-        <div class="ck-val">${profFmtPct(lav.tasso_occupazione)}</div>
-        <div class="ck-sub">${profFmtN(lav.occupati_n)} occupati</div>
+    <div class="kpi-cards">
+      <div class="kpi-card">
+        <div class="kpi-card-lab">Tasso occupazione</div>
+        <div class="kpi-card-val">${profFmtPct(lav.tasso_occupazione)}</div>
+        <div class="kpi-card-sub">${profFmtN(lav.occupati_n)} occupati</div>
       </div>
-      <div class="ck-card">
-        <div class="ck-lab">Tasso disoccupazione</div>
-        <div class="ck-val">${profFmtPct(lav.tasso_disoccupazione)}</div>
-        <div class="ck-sub">${profFmtN(lav.in_cerca_n)} in cerca</div>
+      <div class="kpi-card">
+        <div class="kpi-card-lab">Tasso disoccupazione</div>
+        <div class="kpi-card-val">${profFmtPct(lav.tasso_disoccupazione)}</div>
+        <div class="kpi-card-sub">${profFmtN(lav.in_cerca_n)} in cerca</div>
       </div>
-      <div class="ck-card">
-        <div class="ck-lab">Tasso di attività</div>
-        <div class="ck-val">${profFmtPct(lav.tasso_attivita)}</div>
-        <div class="ck-sub">${profFmtN(lav.forze_lavoro_n)} forze lavoro</div>
+      <div class="kpi-card">
+        <div class="kpi-card-lab">Tasso di attività</div>
+        <div class="kpi-card-val">${profFmtPct(lav.tasso_attivita)}</div>
+        <div class="kpi-card-sub">${profFmtN(lav.forze_lavoro_n)} forze lavoro</div>
       </div>
     </div>
   `;
@@ -2148,21 +2036,21 @@ function renderLavoroSection(lav) {
 
 function renderFamiglieSection(fam) {
   return `
-    <div class="profilo-mini-kpis">
-      <div class="ck-card">
-        <div class="ck-lab">Numero famiglie</div>
-        <div class="ck-val">${profFmtN(fam.n_famiglie)}</div>
-        <div class="ck-sub">nuclei residenti</div>
+    <div class="kpi-cards">
+      <div class="kpi-card">
+        <div class="kpi-card-lab">Numero famiglie</div>
+        <div class="kpi-card-val">${profFmtN(fam.n_famiglie)}</div>
+        <div class="kpi-card-sub">nuclei residenti</div>
       </div>
-      <div class="ck-card">
-        <div class="ck-lab">Dim. media</div>
-        <div class="ck-val">${fam.dim_media_famiglia ?? '—'}</div>
-        <div class="ck-sub">persone per famiglia</div>
+      <div class="kpi-card">
+        <div class="kpi-card-lab">Dim. media</div>
+        <div class="kpi-card-val">${fam.dim_media_famiglia ?? '—'}</div>
+        <div class="kpi-card-sub">persone per famiglia</div>
       </div>
-      <div class="ck-card">
-        <div class="ck-lab">Pop. in famiglia</div>
-        <div class="ck-val">${profFmtN(fam.pop_in_famiglia)}</div>
-        <div class="ck-sub">${profFmtN(fam.pop_in_convivenza)} in convivenza</div>
+      <div class="kpi-card">
+        <div class="kpi-card-lab">Pop. in famiglia</div>
+        <div class="kpi-card-val">${profFmtN(fam.pop_in_famiglia)}</div>
+        <div class="kpi-card-sub">${profFmtN(fam.pop_in_convivenza)} in convivenza</div>
       </div>
     </div>
   `;
@@ -2170,26 +2058,26 @@ function renderFamiglieSection(fam) {
 
 function renderMobilitaSection(mob) {
   return `
-    <div class="profilo-mini-kpis">
-      <div class="ck-card">
-        <div class="ck-lab">Pendolari totali</div>
-        <div class="ck-val">${profFmtN(mob.pendolari_totale_n)}</div>
-        <div class="ck-sub">si spostano ogni giorno</div>
+    <div class="kpi-cards">
+      <div class="kpi-card">
+        <div class="kpi-card-lab">Pendolari totali</div>
+        <div class="kpi-card-val">${profFmtN(mob.pendolari_totale_n)}</div>
+        <div class="kpi-card-sub">si spostano ogni giorno</div>
       </div>
-      <div class="ck-card">
-        <div class="ck-lab">Fuori comune</div>
-        <div class="ck-val">${profFmtPct(mob.fuori_comune_pct)}</div>
-        <div class="ck-sub">${profFmtN(mob.fuori_comune_n)} persone</div>
+      <div class="kpi-card">
+        <div class="kpi-card-lab">Fuori comune</div>
+        <div class="kpi-card-val">${profFmtPct(mob.fuori_comune_pct)}</div>
+        <div class="kpi-card-sub">${profFmtN(mob.fuori_comune_n)} persone</div>
       </div>
-      <div class="ck-card">
-        <div class="ck-lab">Per lavoro</div>
-        <div class="ck-val">${profFmtPct(mob.per_lavoro_pct)}</div>
-        <div class="ck-sub">${profFmtN(mob.per_lavoro_n)} persone</div>
+      <div class="kpi-card">
+        <div class="kpi-card-lab">Per lavoro</div>
+        <div class="kpi-card-val">${profFmtPct(mob.per_lavoro_pct)}</div>
+        <div class="kpi-card-sub">${profFmtN(mob.per_lavoro_n)} persone</div>
       </div>
-      <div class="ck-card">
-        <div class="ck-lab">Per studio</div>
-        <div class="ck-val">${profFmtPct(mob.per_studio_pct)}</div>
-        <div class="ck-sub">${profFmtN(mob.per_studio_n)} persone</div>
+      <div class="kpi-card">
+        <div class="kpi-card-lab">Per studio</div>
+        <div class="kpi-card-val">${profFmtPct(mob.per_studio_pct)}</div>
+        <div class="kpi-card-sub">${profFmtN(mob.per_studio_n)} persone</div>
       </div>
     </div>
   `;
@@ -2197,21 +2085,21 @@ function renderMobilitaSection(mob) {
 
 function renderCittadinanzaSection(cit) {
   return `
-    <div class="profilo-mini-kpis">
-      <div class="ck-card">
-        <div class="ck-lab">Popolazione totale</div>
-        <div class="ck-val">${profFmtN(cit.pop_totale_n)}</div>
-        <div class="ck-sub">residenti al 31/12</div>
+    <div class="kpi-cards">
+      <div class="kpi-card">
+        <div class="kpi-card-lab">Popolazione totale</div>
+        <div class="kpi-card-val">${profFmtN(cit.pop_totale_n)}</div>
+        <div class="kpi-card-sub">residenti al 31/12</div>
       </div>
-      <div class="ck-card">
-        <div class="ck-lab">Italiani</div>
-        <div class="ck-val">${profFmtN(cit.italiani_n)}</div>
-        <div class="ck-sub">${cit.pop_totale_n ? (100 * cit.italiani_n / cit.pop_totale_n).toFixed(1) + '%' : '—'}</div>
+      <div class="kpi-card">
+        <div class="kpi-card-lab">Italiani</div>
+        <div class="kpi-card-val">${profFmtN(cit.italiani_n)}</div>
+        <div class="kpi-card-sub">${cit.pop_totale_n ? (100 * cit.italiani_n / cit.pop_totale_n).toFixed(1) + '%' : '—'}</div>
       </div>
-      <div class="ck-card">
-        <div class="ck-lab">Stranieri</div>
-        <div class="ck-val">${profFmtN(cit.stranieri_n)}</div>
-        <div class="ck-sub">${profFmtPct(cit.stranieri_pct)} sul totale</div>
+      <div class="kpi-card">
+        <div class="kpi-card-lab">Stranieri</div>
+        <div class="kpi-card-val">${profFmtN(cit.stranieri_n)}</div>
+        <div class="kpi-card-sub">${profFmtPct(cit.stranieri_pct)} sul totale</div>
       </div>
     </div>
   `;
@@ -2282,26 +2170,26 @@ function renderTurismoContent(container, data) {
   const ext = cap.extra_alberghiero || {};
 
   container.innerHTML = `
-    <div class="contratti-kpis">
-      <div class="ck-card">
-        <div class="ck-lab">Strutture totali</div>
-        <div class="ck-val">${turFmtN(cap.totale_strutture)}</div>
-        <div class="ck-sub">esercizi ricettivi 2024</div>
+    <div class="kpi-cards">
+      <div class="kpi-card">
+        <div class="kpi-card-lab">Strutture totali</div>
+        <div class="kpi-card-val">${turFmtN(cap.totale_strutture)}</div>
+        <div class="kpi-card-sub">esercizi ricettivi 2024</div>
       </div>
-      <div class="ck-card">
-        <div class="ck-lab">Posti letto</div>
-        <div class="ck-val">${turFmtN(cap.totale_letti)}</div>
-        <div class="ck-sub">${turFmtN(cap.totale_camere)} camere</div>
+      <div class="kpi-card">
+        <div class="kpi-card-lab">Posti letto</div>
+        <div class="kpi-card-val">${turFmtN(cap.totale_letti)}</div>
+        <div class="kpi-card-sub">${turFmtN(cap.totale_camere)} camere</div>
       </div>
-      <div class="ck-card">
-        <div class="ck-lab">Indice turisticità</div>
-        <div class="ck-val">${cap.indice_turisticita_per_100ab ?? '—'}</div>
-        <div class="ck-sub">letti per 100 abitanti</div>
+      <div class="kpi-card">
+        <div class="kpi-card-lab">Indice turisticità</div>
+        <div class="kpi-card-val">${cap.indice_turisticita_per_100ab ?? '—'}</div>
+        <div class="kpi-card-sub">letti per 100 abitanti</div>
       </div>
-      <div class="ck-card">
-        <div class="ck-lab">Permanenza media</div>
-        <div class="ck-val">${fl.permanenza_media ?? '—'}</div>
-        <div class="ck-sub">notti per arrivo (prov.)</div>
+      <div class="kpi-card">
+        <div class="kpi-card-lab">Permanenza media</div>
+        <div class="kpi-card-val">${fl.permanenza_media ?? '—'}</div>
+        <div class="kpi-card-sub">notti per arrivo (prov.)</div>
       </div>
     </div>
 
@@ -2362,21 +2250,21 @@ function renderCapacitaSection(cap, alb, ext) {
   const extMaxLetti = Math.max(...extCats.map(c => ext[c.k]?.letti || 0)) || 1;
 
   return `
-    <div class="profilo-mini-kpis">
-      <div class="ck-card">
-        <div class="ck-lab">Alberghieri</div>
-        <div class="ck-val">${turFmtN(albStrutt)}</div>
-        <div class="ck-sub">${turFmtN(albLetti)} posti letto</div>
+    <div class="kpi-cards">
+      <div class="kpi-card">
+        <div class="kpi-card-lab">Alberghieri</div>
+        <div class="kpi-card-val">${turFmtN(albStrutt)}</div>
+        <div class="kpi-card-sub">${turFmtN(albLetti)} posti letto</div>
       </div>
-      <div class="ck-card">
-        <div class="ck-lab">Extra-alberghieri</div>
-        <div class="ck-val">${turFmtN(extStrutt)}</div>
-        <div class="ck-sub">${turFmtN(extLetti)} posti letto</div>
+      <div class="kpi-card">
+        <div class="kpi-card-lab">Extra-alberghieri</div>
+        <div class="kpi-card-val">${turFmtN(extStrutt)}</div>
+        <div class="kpi-card-sub">${turFmtN(extLetti)} posti letto</div>
       </div>
-      <div class="ck-card">
-        <div class="ck-lab">Camere totali</div>
-        <div class="ck-val">${turFmtN(cap.totale_camere)}</div>
-        <div class="ck-sub">solo strutture alberghiere</div>
+      <div class="kpi-card">
+        <div class="kpi-card-lab">Camere totali</div>
+        <div class="kpi-card-val">${turFmtN(cap.totale_camere)}</div>
+        <div class="kpi-card-sub">solo strutture alberghiere</div>
       </div>
     </div>
 
@@ -2442,26 +2330,26 @@ function renderFlussiSection(fl) {
   const prStrPct = pr_tot ? (100 * pr_str / pr_tot) : 0;
 
   return `
-    <div class="profilo-mini-kpis">
-      <div class="ck-card">
-        <div class="ck-lab">Arrivi annuali</div>
-        <div class="ck-val">${turFmtN(ar_tot)}</div>
-        <div class="ck-sub">${turFmtN(ar_ita)} ITA · ${turFmtN(ar_str)} STR</div>
+    <div class="kpi-cards">
+      <div class="kpi-card">
+        <div class="kpi-card-lab">Arrivi annuali</div>
+        <div class="kpi-card-val">${turFmtN(ar_tot)}</div>
+        <div class="kpi-card-sub">${turFmtN(ar_ita)} ITA · ${turFmtN(ar_str)} STR</div>
       </div>
-      <div class="ck-card">
-        <div class="ck-lab">Presenze (notti)</div>
-        <div class="ck-val">${turFmtN(pr_tot)}</div>
-        <div class="ck-sub">${turFmtN(pr_ita)} ITA · ${turFmtN(pr_str)} STR</div>
+      <div class="kpi-card">
+        <div class="kpi-card-lab">Presenze (notti)</div>
+        <div class="kpi-card-val">${turFmtN(pr_tot)}</div>
+        <div class="kpi-card-sub">${turFmtN(pr_ita)} ITA · ${turFmtN(pr_str)} STR</div>
       </div>
-      <div class="ck-card">
-        <div class="ck-lab">Permanenza media</div>
-        <div class="ck-val">${fl.permanenza_media ?? '—'}</div>
-        <div class="ck-sub">notti per arrivo</div>
+      <div class="kpi-card">
+        <div class="kpi-card-lab">Permanenza media</div>
+        <div class="kpi-card-val">${fl.permanenza_media ?? '—'}</div>
+        <div class="kpi-card-sub">notti per arrivo</div>
       </div>
-      <div class="ck-card">
-        <div class="ck-lab">Turisti stranieri</div>
-        <div class="ck-val">${turFmtPct(fl.stranieri_pct)}</div>
-        <div class="ck-sub">sul totale arrivi</div>
+      <div class="kpi-card">
+        <div class="kpi-card-lab">Turisti stranieri</div>
+        <div class="kpi-card-val">${turFmtPct(fl.stranieri_pct)}</div>
+        <div class="kpi-card-sub">sul totale arrivi</div>
       </div>
     </div>
 
@@ -2589,26 +2477,26 @@ function renderPnrrContent(container, data) {
       Vengono mostrati solo i progetti PNRR dove il <em>Comune</em> è <em>Soggetto Attuatore</em> diretto. Non sono inclusi i progetti realizzati nel territorio comunale da altri enti (Regione, Ministeri, GSE, Aziende Sanitarie, Soprintendenze, Università): il dataset Italia Domani non fornisce una mappatura affidabile progetto-territorio.
     </div>
 
-    <div class="contratti-kpis">
-      <div class="ck-card">
-        <div class="ck-lab">Progetti totali</div>
-        <div class="ck-val">${fmtNum(k.n_progetti || 0)}</div>
-        <div class="ck-sub">attuati dal Comune</div>
+    <div class="kpi-cards">
+      <div class="kpi-card">
+        <div class="kpi-card-lab">Progetti totali</div>
+        <div class="kpi-card-val">${fmtNum(k.n_progetti || 0)}</div>
+        <div class="kpi-card-sub">attuati dal Comune</div>
       </div>
-      <div class="ck-card">
-        <div class="ck-lab">Finanziamento PNRR</div>
-        <div class="ck-val">${pnrrFmtEur(k.totale_finanziamento_pnrr)}</div>
-        <div class="ck-sub">${pnrrFmtEurFull(k.totale_finanziamento_pnrr)}</div>
+      <div class="kpi-card">
+        <div class="kpi-card-lab">Finanziamento PNRR</div>
+        <div class="kpi-card-val">${pnrrFmtEur(k.totale_finanziamento_pnrr)}</div>
+        <div class="kpi-card-sub">${pnrrFmtEurFull(k.totale_finanziamento_pnrr)}</div>
       </div>
-      <div class="ck-card">
-        <div class="ck-lab">Stato avanzamento</div>
-        <div class="ck-val">${k.n_concluso || 0} / ${k.n_in_corso || 0}</div>
-        <div class="ck-sub">conclusi · in corso</div>
+      <div class="kpi-card">
+        <div class="kpi-card-lab">Stato avanzamento</div>
+        <div class="kpi-card-val">${k.n_concluso || 0} / ${k.n_in_corso || 0}</div>
+        <div class="kpi-card-sub">conclusi · in corso</div>
       </div>
-      <div class="ck-card">
-        <div class="ck-lab">Missioni distinte</div>
-        <div class="ck-val">${k.n_missioni_distinte || 0}</div>
-        <div class="ck-sub">${(k.missioni_principali || []).join(' · ')}</div>
+      <div class="kpi-card">
+        <div class="kpi-card-lab">Missioni distinte</div>
+        <div class="kpi-card-val">${k.n_missioni_distinte || 0}</div>
+        <div class="kpi-card-sub">${(k.missioni_principali || []).join(' · ')}</div>
       </div>
     </div>
 
@@ -2697,28 +2585,28 @@ function renderPnrrRow(p, idx) {
       <div class="pnrr-row-detail">
         <div class="pnrr-row-detail-grid">
           <div class="pnrr-detail-item">
-            <div class="lab">Submisura</div>
-            <div class="val">${p.submisura || '—'}${p.submisura_descrizione ? '<br><em style="font-size:12px;color:var(--ink-mute)">' + p.submisura_descrizione + '</em>' : ''}</div>
+            <div class="kpi-card-lab">Submisura</div>
+            <div class="kpi-card-val">${p.submisura || '—'}${p.submisura_descrizione ? '<br><em style="font-size:12px;color:var(--ink-mute)">' + p.submisura_descrizione + '</em>' : ''}</div>
           </div>
           <div class="pnrr-detail-item">
-            <div class="lab">Finanziamento totale</div>
-            <div class="val">${pnrrFmtEurFull(p.finanziamento_totale)} <span style="color:var(--ink-mute);font-size:11px">(di cui PNRR ${pnrrFmtEurFull(p.finanziamento_pnrr)})</span></div>
+            <div class="kpi-card-lab">Finanziamento totale</div>
+            <div class="kpi-card-val">${pnrrFmtEurFull(p.finanziamento_totale)} <span style="color:var(--ink-mute);font-size:11px">(di cui PNRR ${pnrrFmtEurFull(p.finanziamento_pnrr)})</span></div>
           </div>
           <div class="pnrr-detail-item">
-            <div class="lab">Fase attuale</div>
-            <div class="val">${p.fase_iter || '—'}<br><em style="font-size:11px;color:var(--ink-mute)">${p.stato_fase_iter || ''}</em></div>
+            <div class="kpi-card-lab">Fase attuale</div>
+            <div class="kpi-card-val">${p.fase_iter || '—'}<br><em style="font-size:11px;color:var(--ink-mute)">${p.stato_fase_iter || ''}</em></div>
           </div>
           <div class="pnrr-detail-item">
-            <div class="lab">Inizio (previsto / effettivo)</div>
-            <div class="val">${pnrrFmtData(p.data_inizio_prevista)} / ${pnrrFmtData(p.data_inizio_effettiva)}</div>
+            <div class="kpi-card-lab">Inizio (previsto / effettivo)</div>
+            <div class="kpi-card-val">${pnrrFmtData(p.data_inizio_prevista)} / ${pnrrFmtData(p.data_inizio_effettiva)}</div>
           </div>
           <div class="pnrr-detail-item">
-            <div class="lab">Fine (prevista / effettiva)</div>
-            <div class="val">${pnrrFmtData(p.data_fine_prevista)} / ${pnrrFmtData(p.data_fine_effettiva)}</div>
+            <div class="kpi-card-lab">Fine (prevista / effettiva)</div>
+            <div class="kpi-card-val">${pnrrFmtData(p.data_fine_prevista)} / ${pnrrFmtData(p.data_fine_effettiva)}</div>
           </div>
           <div class="pnrr-detail-item">
-            <div class="lab">Settore CUP</div>
-            <div class="val">${p.settore || '—'}<br><em style="font-size:11px;color:var(--ink-mute)">${p.natura || ''}</em></div>
+            <div class="kpi-card-lab">Settore CUP</div>
+            <div class="kpi-card-val">${p.settore || '—'}<br><em style="font-size:11px;color:var(--ink-mute)">${p.natura || ''}</em></div>
           </div>
         </div>
         <div class="pnrr-row-detail-sintesi">
@@ -2816,26 +2704,26 @@ function renderTerritorioContent(data) {
   const geo = data.geo;
 
   const kpiHtml = `
-    <div class="contratti-kpis">
-      <div class="ck-card">
-        <div class="ck-lab">Suolo consumato</div>
-        <div class="ck-val">${k.suolo_consumato_2024_pct != null ? k.suolo_consumato_2024_pct.toFixed(2) + '%' : '—'}</div>
-        <div class="ck-sub">2024 (ISPRA)</div>
+    <div class="kpi-cards">
+      <div class="kpi-card">
+        <div class="kpi-card-lab">Suolo consumato</div>
+        <div class="kpi-card-val">${k.suolo_consumato_2024_pct != null ? k.suolo_consumato_2024_pct.toFixed(2) + '%' : '—'}</div>
+        <div class="kpi-card-sub">2024 (ISPRA)</div>
       </div>
-      <div class="ck-card">
-        <div class="ck-lab">Nuovo cemento</div>
-        <div class="ck-val">${k.incremento_2024_ha != null ? '+' + fmtNum(k.incremento_2024_ha, 1) + ' ha' : '—'}</div>
-        <div class="ck-sub">2023 → 2024</div>
+      <div class="kpi-card">
+        <div class="kpi-card-lab">Nuovo cemento</div>
+        <div class="kpi-card-val">${k.incremento_2024_ha != null ? '+' + fmtNum(k.incremento_2024_ha, 1) + ' ha' : '—'}</div>
+        <div class="kpi-card-sub">2023 → 2024</div>
       </div>
-      <div class="ck-card">
-        <div class="ck-lab">Pop. a rischio frane</div>
-        <div class="ck-val">${k.popolazione_frane_p3p4_pct != null ? k.popolazione_frane_p3p4_pct.toFixed(2) + '%' : '—'}</div>
-        <div class="ck-sub">P3+P4 (IdroGEO)</div>
+      <div class="kpi-card">
+        <div class="kpi-card-lab">Pop. a rischio frane</div>
+        <div class="kpi-card-val">${k.popolazione_frane_p3p4_pct != null ? k.popolazione_frane_p3p4_pct.toFixed(2) + '%' : '—'}</div>
+        <div class="kpi-card-sub">P3+P4 (IdroGEO)</div>
       </div>
-      <div class="ck-card">
-        <div class="ck-lab">Raccolta differenziata</div>
-        <div class="ck-val">${k.rd_pct_ultimo_anno != null ? k.rd_pct_ultimo_anno.toFixed(1) + '%' : '—'}</div>
-        <div class="ck-sub">${k.rd_ultimo_anno || '—'} (Catasto rifiuti)</div>
+      <div class="kpi-card">
+        <div class="kpi-card-lab">Raccolta differenziata</div>
+        <div class="kpi-card-val">${k.rd_pct_ultimo_anno != null ? k.rd_pct_ultimo_anno.toFixed(1) + '%' : '—'}</div>
+        <div class="kpi-card-sub">${k.rd_ultimo_anno || '—'} (Catasto rifiuti)</div>
       </div>
     </div>
   `;
@@ -3238,23 +3126,23 @@ function renderSpeseContent(container, istat, anno) {
 
   container.innerHTML = `
     ${toggleHtml}
-    <div class="contratti-kpis">
-      <div class="ck-card">
-        <div class="ck-lab">Totale anno</div>
-        <div class="ck-val">€${fmtNum(Math.round(totale))}</div>
+    <div class="kpi-cards">
+      <div class="kpi-card">
+        <div class="kpi-card-lab">Totale anno</div>
+        <div class="kpi-card-val">€${fmtNum(Math.round(totale))}</div>
       </div>
-      <div class="ck-card">
-        <div class="ck-lab">Voci di spesa</div>
-        <div class="ck-val">${fmtNum(voci.length)}</div>
-        <div class="ck-sub">codici gestionali</div>
+      <div class="kpi-card">
+        <div class="kpi-card-lab">Voci di spesa</div>
+        <div class="kpi-card-val">${fmtNum(voci.length)}</div>
+        <div class="kpi-card-sub">codici gestionali</div>
       </div>
-      <div class="ck-card">
-        <div class="ck-lab">Voci > €1M</div>
-        <div class="ck-val">${fmtNum(voci_sopra_1m)}</div>
+      <div class="kpi-card">
+        <div class="kpi-card-lab">Voci > €1M</div>
+        <div class="kpi-card-val">${fmtNum(voci_sopra_1m)}</div>
       </div>
-      <div class="ck-card">
-        <div class="ck-lab">Ultimo aggiornamento</div>
-        <div class="ck-val ck-val-date">${ultimo_mese}</div>
+      <div class="kpi-card">
+        <div class="kpi-card-lab">Ultimo aggiornamento</div>
+        <div class="kpi-card-val kpi-card-val-date">${ultimo_mese}</div>
       </div>
     </div>
 
@@ -3464,23 +3352,23 @@ function renderContrattiTab(contratti) {
         per la copertura completa servirà l'aggregazione di altri mesi.
       </p>
 
-      <div class="contratti-kpis">
-        <div class="ck-card">
-          <div class="ck-lab">Importo medio</div>
-          <div class="ck-val">€${fmtNum(c.importo_medio || 0)}</div>
+      <div class="kpi-cards">
+        <div class="kpi-card">
+          <div class="kpi-card-lab">Importo medio</div>
+          <div class="kpi-card-val">€${fmtNum(c.importo_medio || 0)}</div>
         </div>
-        <div class="ck-card">
-          <div class="ck-lab">Categorie distinte</div>
-          <div class="ck-val">${fmtNum(c.distinct_cpv || 0)}</div>
-          <div class="ck-sub">codici CPV diversi</div>
+        <div class="kpi-card">
+          <div class="kpi-card-lab">Categorie distinte</div>
+          <div class="kpi-card-val">${fmtNum(c.distinct_cpv || 0)}</div>
+          <div class="kpi-card-sub">codici CPV diversi</div>
         </div>
-        <div class="ck-card">
-          <div class="ck-lab">Prima aggiudicazione</div>
-          <div class="ck-val ck-val-date">${fmtDate(c.first_award_date)}</div>
+        <div class="kpi-card">
+          <div class="kpi-card-lab">Prima aggiudicazione</div>
+          <div class="kpi-card-val kpi-card-val-date">${fmtDate(c.first_award_date)}</div>
         </div>
-        <div class="ck-card">
-          <div class="ck-lab">Ultima aggiudicazione</div>
-          <div class="ck-val ck-val-date">${fmtDate(c.last_award_date)}</div>
+        <div class="kpi-card">
+          <div class="kpi-card-lab">Ultima aggiudicazione</div>
+          <div class="kpi-card-val kpi-card-val-date">${fmtDate(c.last_award_date)}</div>
         </div>
       </div>
 
@@ -3668,10 +3556,10 @@ function renderScuoleTab(scuole, popolazione) {
 
   // ---- Card KPI ----
   const cardDensita = densita != null ? `
-    <div class="ck-card">
-      <div class="ck-lab">Densità scolastica</div>
-      <div class="ck-val">${densita.toFixed(2)}</div>
-      <div class="ck-sub">scuole/1.000 ab. <em>(Italia ≈ ${densitaIta.toFixed(2)})</em></div>
+    <div class="kpi-card">
+      <div class="kpi-card-lab">Densità scolastica</div>
+      <div class="kpi-card-val">${densita.toFixed(2)}</div>
+      <div class="kpi-card-sub">scuole/1.000 ab. <em>(Italia ≈ ${densitaIta.toFixed(2)})</em></div>
     </div>` : '';
 
   return `
@@ -3685,21 +3573,21 @@ function renderScuoleTab(scuole, popolazione) {
         Aosta. Non sono incluse scuole paritarie private né scuole
         dell'infanzia comunali (gestite localmente).
       </p>
-      <div class="contratti-kpis">
-        <div class="ck-card">
-          <div class="ck-lab">Scuole totali</div>
-          <div class="ck-val">${fmtNum(k.n_scuole)}</div>
-          <div class="ck-sub">${plessi} plessi · ${k.n_sedi_direttivo} con dirigenza</div>
+      <div class="kpi-cards">
+        <div class="kpi-card">
+          <div class="kpi-card-lab">Scuole totali</div>
+          <div class="kpi-card-val">${fmtNum(k.n_scuole)}</div>
+          <div class="kpi-card-sub">${plessi} plessi · ${k.n_sedi_direttivo} con dirigenza</div>
         </div>
-        <div class="ck-card">
-          <div class="ck-lab">Autonomia organizzativa</div>
-          <div class="ck-val">${ratioDirettivo.toFixed(0)}%</div>
-          <div class="ck-sub">sedi di direttivo sul totale</div>
+        <div class="kpi-card">
+          <div class="kpi-card-lab">Autonomia organizzativa</div>
+          <div class="kpi-card-val">${ratioDirettivo.toFixed(0)}%</div>
+          <div class="kpi-card-sub">sedi di direttivo sul totale</div>
         </div>
         ${cardDensita}
-        <div class="ck-card">
-          <div class="ck-lab">Anno scolastico</div>
-          <div class="ck-val ck-val-date">${annoScolastico}</div>
+        <div class="kpi-card">
+          <div class="kpi-card-lab">Anno scolastico</div>
+          <div class="kpi-card-val kpi-card-val-date">${annoScolastico}</div>
         </div>
       </div>
       <div class="settori-block">
@@ -3819,26 +3707,26 @@ function renderRedditiTab(r) {
     <div class="tab-pane" id="pane-redditi">
       <div class="section-title">§ Redditi e fisco</div>
       <h2 class="section-h">Dichiarazioni IRPEF, <em>fasce di reddito</em> e fiscalit&agrave; locale.</h2>
-      <div class="tab-kpis">
-        <div class="tab-kpi">
-          <div class="lab">Reddito medio</div>
-          <div class="val">${redditoMedioUlt != null ? '&euro;' + fmtNum(redditoMedioUlt) : '&mdash;'}</div>
-          <div class="sub">${deltaPct != null ? (deltaPct >= 0 ? '+' : '') + deltaPct.toFixed(1) + '% dal ' + annoFirst : annoUlt}</div>
+      <div class="kpi-cards">
+        <div class="kpi-card">
+          <div class="kpi-card-lab">Reddito medio</div>
+          <div class="kpi-card-val">${redditoMedioUlt != null ? '&euro;' + fmtNum(redditoMedioUlt) : '&mdash;'}</div>
+          <div class="kpi-card-sub">${deltaPct != null ? (deltaPct >= 0 ? '+' : '') + deltaPct.toFixed(1) + '% dal ' + annoFirst : annoUlt}</div>
         </div>
-        <div class="tab-kpi ${contribuenti != null ? '' : 'tbd'}">
-          <div class="lab">Contribuenti</div>
-          <div class="val">${contribuenti != null ? fmtNum(contribuenti) : '&mdash;'}</div>
-          <div class="sub">dichiaranti IRPEF ${annoUlt}</div>
+        <div class="kpi-card ${contribuenti != null ? '' : 'tbd'}">
+          <div class="kpi-card-lab">Contribuenti</div>
+          <div class="kpi-card-val">${contribuenti != null ? fmtNum(contribuenti) : '&mdash;'}</div>
+          <div class="kpi-card-sub">dichiaranti IRPEF ${annoUlt}</div>
         </div>
-        <div class="tab-kpi ${addComMedia != null ? '' : 'tbd'}">
-          <div class="lab">Addizionale comunale</div>
-          <div class="val">${addComMedia != null ? '&euro;' + fmtNum(addComMedia) : '&mdash;'}</div>
-          <div class="sub">media per contribuente</div>
+        <div class="kpi-card ${addComMedia != null ? '' : 'tbd'}">
+          <div class="kpi-card-lab">Addizionale comunale</div>
+          <div class="kpi-card-val">${addComMedia != null ? '&euro;' + fmtNum(addComMedia) : '&mdash;'}</div>
+          <div class="kpi-card-sub">media per contribuente</div>
         </div>
-        <div class="tab-kpi ${pctSub15k != null ? '' : 'tbd'}">
-          <div class="lab">Sotto 15.000 &euro;</div>
-          <div class="val">${pctSub15k != null ? pctSub15k.toFixed(1) + '%' : '&mdash;'}</div>
-          <div class="sub">redditi bassi</div>
+        <div class="kpi-card ${pctSub15k != null ? '' : 'tbd'}">
+          <div class="kpi-card-lab">Sotto 15.000 &euro;</div>
+          <div class="kpi-card-val">${pctSub15k != null ? pctSub15k.toFixed(1) + '%' : '&mdash;'}</div>
+          <div class="kpi-card-sub">redditi bassi</div>
         </div>
       </div>
 
@@ -4150,41 +4038,41 @@ function renderImmobiliPaTab(d) {
     <div class="tab-pane" id="pane-patrimonio-pa">
       <div class="section-title">§ Patrimonio PA</div>
       <h2 class="section-h">Beni immobili pubblici dichiarati al MEF, <em>fabbricati e terreni</em>, anno ${anno}.</h2>
-      <div class="tab-kpis">
-        <div class="tab-kpi">
-          <div class="lab">Totale immobili</div>
-          <div class="val">${fmtNum(k.n_totale)}</div>
-          <div class="sub">fabbricati + terreni</div>
+      <div class="kpi-cards">
+        <div class="kpi-card">
+          <div class="kpi-card-lab">Totale immobili</div>
+          <div class="kpi-card-val">${fmtNum(k.n_totale)}</div>
+          <div class="kpi-card-sub">fabbricati + terreni</div>
         </div>
-        <div class="tab-kpi">
-          <div class="lab">Fabbricati</div>
-          <div class="val">${fmtNum(k.n_fabbricati || 0)}</div>
-          <div class="sub">edifici dichiarati</div>
+        <div class="kpi-card">
+          <div class="kpi-card-lab">Fabbricati</div>
+          <div class="kpi-card-val">${fmtNum(k.n_fabbricati || 0)}</div>
+          <div class="kpi-card-sub">edifici dichiarati</div>
         </div>
-        <div class="tab-kpi">
-          <div class="lab">Terreni</div>
-          <div class="val">${fmtNum(k.n_terreni || 0)}</div>
-          <div class="sub">particelle catastali</div>
+        <div class="kpi-card">
+          <div class="kpi-card-lab">Terreni</div>
+          <div class="kpi-card-val">${fmtNum(k.n_terreni || 0)}</div>
+          <div class="kpi-card-sub">particelle catastali</div>
         </div>
-        <div class="tab-kpi ${supKm2 != null ? '' : 'tbd'}">
-          <div class="lab">Superficie totale</div>
-          <div class="val">${supKm2 != null ? supKm2.toFixed(2) + ' km&sup2;' : '&mdash;'}</div>
-          <div class="sub">somma superfici dichiarate</div>
+        <div class="kpi-card ${supKm2 != null ? '' : 'tbd'}">
+          <div class="kpi-card-lab">Superficie totale</div>
+          <div class="kpi-card-val">${supKm2 != null ? supKm2.toFixed(2) + ' km&sup2;' : '&mdash;'}</div>
+          <div class="kpi-card-sub">somma superfici dichiarate</div>
         </div>
-        <div class="tab-kpi ${k.pct_geo_referenziati != null ? '' : 'tbd'}">
-          <div class="lab">Geo-referenziati</div>
-          <div class="val">${k.pct_geo_referenziati != null ? k.pct_geo_referenziati.toFixed(1) + '%' : '&mdash;'}</div>
-          <div class="sub">con coordinate</div>
+        <div class="kpi-card ${k.pct_geo_referenziati != null ? '' : 'tbd'}">
+          <div class="kpi-card-lab">Geo-referenziati</div>
+          <div class="kpi-card-val">${k.pct_geo_referenziati != null ? k.pct_geo_referenziati.toFixed(1) + '%' : '&mdash;'}</div>
+          <div class="kpi-card-sub">con coordinate</div>
         </div>
-        <div class="tab-kpi ${k.pct_vincolo_qualsiasi != null ? '' : 'tbd'}">
-          <div class="lab">Con vincolo</div>
-          <div class="val">${k.pct_vincolo_qualsiasi != null ? k.pct_vincolo_qualsiasi.toFixed(1) + '%' : '&mdash;'}</div>
-          <div class="sub">tutela culturale/paesaggistica</div>
+        <div class="kpi-card ${k.pct_vincolo_qualsiasi != null ? '' : 'tbd'}">
+          <div class="kpi-card-lab">Con vincolo</div>
+          <div class="kpi-card-val">${k.pct_vincolo_qualsiasi != null ? k.pct_vincolo_qualsiasi.toFixed(1) + '%' : '&mdash;'}</div>
+          <div class="kpi-card-sub">tutela culturale/paesaggistica</div>
         </div>
-        <div class="tab-kpi ${k.pct_uso_terzi != null ? '' : 'tbd'}">
-          <div class="lab">Dati a terzi</div>
-          <div class="val">${k.pct_uso_terzi != null ? k.pct_uso_terzi.toFixed(1) + '%' : '&mdash;'}</div>
-          <div class="sub">in uso a soggetti terzi</div>
+        <div class="kpi-card ${k.pct_uso_terzi != null ? '' : 'tbd'}">
+          <div class="kpi-card-lab">Dati a terzi</div>
+          <div class="kpi-card-val">${k.pct_uso_terzi != null ? k.pct_uso_terzi.toFixed(1) + '%' : '&mdash;'}</div>
+          <div class="kpi-card-sub">in uso a soggetti terzi</div>
         </div>
       </div>
 
@@ -4430,41 +4318,41 @@ function renderPunTab(d) {
         <a href="https://www.piattaformaunicanazionale.it/idr" target="_blank" rel="noopener">Piattaforma Unica Nazionale</a>
         del GSE / Ministero dell'Ambiente. Dato aggiornato quotidianamente.
       </p>
-      <div class="tab-kpis pun-kpis">
-        <div class="tab-kpi">
-          <div class="lab">Totale punti</div>
-          <div class="val">${fmtNum(k.n_totale)}</div>
-          <div class="sub">EVSE registrati</div>
+      <div class="kpi-cards">
+        <div class="kpi-card">
+          <div class="kpi-card-lab">Totale punti</div>
+          <div class="kpi-card-val">${fmtNum(k.n_totale)}</div>
+          <div class="kpi-card-sub">EVSE registrati</div>
         </div>
-        <div class="tab-kpi">
-          <div class="lab">Attivi</div>
-          <div class="val">${fmtNum(k.n_attivi || 0)}</div>
-          <div class="sub">${pctAtt != null ? pctAtt.toFixed(1) + '% del totale' : 'in servizio'}</div>
+        <div class="kpi-card">
+          <div class="kpi-card-lab">Attivi</div>
+          <div class="kpi-card-val">${fmtNum(k.n_attivi || 0)}</div>
+          <div class="kpi-card-sub">${pctAtt != null ? pctAtt.toFixed(1) + '% del totale' : 'in servizio'}</div>
         </div>
-        <div class="tab-kpi ${(k.n_non_attivi || 0) > 0 ? '' : 'tbd'}">
-          <div class="lab">Non attivi</div>
-          <div class="val">${fmtNum(k.n_non_attivi || 0)}</div>
-          <div class="sub">fuori servizio o in installazione</div>
+        <div class="kpi-card ${(k.n_non_attivi || 0) > 0 ? '' : 'tbd'}">
+          <div class="kpi-card-lab">Non attivi</div>
+          <div class="kpi-card-val">${fmtNum(k.n_non_attivi || 0)}</div>
+          <div class="kpi-card-sub">fuori servizio o in installazione</div>
         </div>
-        <div class="tab-kpi">
-          <div class="lab">Potenza totale</div>
-          <div class="val">${potMw >= 1 ? potMw.toFixed(1) + ' MW' : Math.round(potTot) + ' kW'}</div>
-          <div class="sub">somma potenze erogabili</div>
+        <div class="kpi-card">
+          <div class="kpi-card-lab">Potenza totale</div>
+          <div class="kpi-card-val">${potMw >= 1 ? potMw.toFixed(1) + ' MW' : Math.round(potTot) + ' kW'}</div>
+          <div class="kpi-card-sub">somma potenze erogabili</div>
         </div>
-        <div class="tab-kpi">
-          <div class="lab">DC fast</div>
-          <div class="val">${fmtNum(k.n_dc || 0)}</div>
-          <div class="sub">${pctDc != null ? pctDc.toFixed(1) + '% in corrente continua' : 'corrente continua'}</div>
+        <div class="kpi-card">
+          <div class="kpi-card-lab">DC fast</div>
+          <div class="kpi-card-val">${fmtNum(k.n_dc || 0)}</div>
+          <div class="kpi-card-sub">${pctDc != null ? pctDc.toFixed(1) + '% in corrente continua' : 'corrente continua'}</div>
         </div>
-        <div class="tab-kpi ${hpcUf > 0 ? '' : 'tbd'}">
-          <div class="lab">HPC + Ultra fast</div>
-          <div class="val">${fmtNum(hpcUf)}</div>
-          <div class="sub">${pctHpcUf != null ? pctHpcUf.toFixed(1) + '% (≥ 150 kW)' : 'punti ad alta potenza'}</div>
+        <div class="kpi-card ${hpcUf > 0 ? '' : 'tbd'}">
+          <div class="kpi-card-lab">HPC + Ultra fast</div>
+          <div class="kpi-card-val">${fmtNum(hpcUf)}</div>
+          <div class="kpi-card-sub">${pctHpcUf != null ? pctHpcUf.toFixed(1) + '% (≥ 150 kW)' : 'punti ad alta potenza'}</div>
         </div>
-        <div class="tab-kpi">
-          <div class="lab">AC standard</div>
-          <div class="val">${fmtNum(k.n_ac || 0)}</div>
-          <div class="sub">corrente alternata</div>
+        <div class="kpi-card">
+          <div class="kpi-card-lab">AC standard</div>
+          <div class="kpi-card-val">${fmtNum(k.n_ac || 0)}</div>
+          <div class="kpi-card-sub">corrente alternata</div>
         </div>
       </div>
 
@@ -4703,36 +4591,36 @@ function renderSanitaTab(d) {
         posti letto ospedalieri riferiti all'anno <strong>${annoOsp}</strong> (ultimo rilascio annuale del Ministero della Salute).
       </p>
 
-      <div class="tab-kpis sanita-kpis">
-        <div class="tab-kpi">
-          <div class="lab">Farmacie attive</div>
-          <div class="val">${f ? fmtNum(f.n_totale) : '—'}</div>
-          <div class="sub">${f ? (f.mix_tipologia?.Ordinaria != null ? fmtNum(f.mix_tipologia.Ordinaria) + ' ordinarie' : 'incluse stagionali') : 'nessuna nel comune'}</div>
+      <div class="kpi-cards">
+        <div class="kpi-card">
+          <div class="kpi-card-lab">Farmacie attive</div>
+          <div class="kpi-card-val">${f ? fmtNum(f.n_totale) : '—'}</div>
+          <div class="kpi-card-sub">${f ? (f.mix_tipologia?.Ordinaria != null ? fmtNum(f.mix_tipologia.Ordinaria) + ' ordinarie' : 'incluse stagionali') : 'nessuna nel comune'}</div>
         </div>
-        <div class="tab-kpi">
-          <div class="lab">Parafarmacie</div>
-          <div class="val">${p ? fmtNum(p.n_totale) : '—'}</div>
-          <div class="sub">${p ? 'attive' : 'nessuna nel comune'}</div>
+        <div class="kpi-card">
+          <div class="kpi-card-lab">Parafarmacie</div>
+          <div class="kpi-card-val">${p ? fmtNum(p.n_totale) : '—'}</div>
+          <div class="kpi-card-sub">${p ? 'attive' : 'nessuna nel comune'}</div>
         </div>
-        <div class="tab-kpi">
-          <div class="lab">Stabilimenti ospedalieri</div>
-          <div class="val">${o ? fmtNum(o.n_stabilimenti) : '—'}</div>
-          <div class="sub">${o ? fmtNum(o.n_reparti_totali) + ' reparti' : 'nessuno nel comune'}</div>
+        <div class="kpi-card">
+          <div class="kpi-card-lab">Stabilimenti ospedalieri</div>
+          <div class="kpi-card-val">${o ? fmtNum(o.n_stabilimenti) : '—'}</div>
+          <div class="kpi-card-sub">${o ? fmtNum(o.n_reparti_totali) + ' reparti' : 'nessuno nel comune'}</div>
         </div>
-        <div class="tab-kpi">
-          <div class="lab">Posti letto totali</div>
-          <div class="val">${o ? fmtNum(o.posti_letto_totali) : '—'}</div>
-          <div class="sub">${o ? 'tutte le tipologie' : '—'}</div>
+        <div class="kpi-card">
+          <div class="kpi-card-lab">Posti letto totali</div>
+          <div class="kpi-card-val">${o ? fmtNum(o.posti_letto_totali) : '—'}</div>
+          <div class="kpi-card-sub">${o ? 'tutte le tipologie' : '—'}</div>
         </div>
-        <div class="tab-kpi">
-          <div class="lab">Degenza ordinaria</div>
-          <div class="val">${o ? fmtNum(o.posti_letto_ordinaria) : '—'}</div>
-          <div class="sub">${o ? 'posti letto' : '—'}</div>
+        <div class="kpi-card">
+          <div class="kpi-card-lab">Degenza ordinaria</div>
+          <div class="kpi-card-val">${o ? fmtNum(o.posti_letto_ordinaria) : '—'}</div>
+          <div class="kpi-card-sub">${o ? 'posti letto' : '—'}</div>
         </div>
-        <div class="tab-kpi">
-          <div class="lab">Day Hospital + Surgery</div>
-          <div class="val">${o ? fmtNum(o.posti_letto_day_hospital + o.posti_letto_day_surgery) : '—'}</div>
-          <div class="sub">${o ? 'posti letto' : '—'}</div>
+        <div class="kpi-card">
+          <div class="kpi-card-lab">Day Hospital + Surgery</div>
+          <div class="kpi-card-val">${o ? fmtNum(o.posti_letto_day_hospital + o.posti_letto_day_surgery) : '—'}</div>
+          <div class="kpi-card-sub">${o ? 'posti letto' : '—'}</div>
         </div>
       </div>
 
@@ -5368,9 +5256,9 @@ function renderAnncsuTab(d) {
   }
 
   const cardsHtml = cards.map(c => `
-    <div class="anncsu-kpi">
-      <div class="anncsu-kpi-lab">${c.lab}</div>
-      <div class="anncsu-kpi-val">${c.val}<span class="anncsu-kpi-unit">${c.unit}</span></div>
+    <div class="kpi-card">
+      <div class="kpi-card-lab">${c.lab}</div>
+      <div class="kpi-card-val">${c.val}<span class="kpi-card-unit">${c.unit}</span></div>
     </div>
   `).join('');
 
@@ -5445,7 +5333,7 @@ function renderAnncsuTab(d) {
         delle Strade Urbane (ANNCSU), realizzato da Agenzia delle Entrate
         e ISTAT ai sensi del DPCM 12/05/2016. Snapshot: ${snapshot || 'n.d.'}.
       </p>
-      <div class="anncsu-kpis">${cardsHtml}</div>
+      <div class="kpi-cards">${cardsHtml}</div>
       ${mapBlock}
       ${chartsBlock}
     </div>
@@ -6073,26 +5961,26 @@ function renderVeicoliTab(v) {
           ${pv._unreliable_reason}
         </div>
       ` : ''}
-      <div class="tab-kpis">
-        <div class="tab-kpi ${pv._unreliable ? 'tbd' : ''}" ${pv._unreliable ? `title="${(pv._unreliable_reason || '').replace(/"/g, '&quot;')}"` : ''}>
-          <div class="lab">Tasso motorizzazione${pv._unreliable ? ' *' : ''}</div>
-          <div class="val">${pv._unreliable ? 'n/d' : (pv.tasso_motorizzazione_per_1000_ab != null ? fmtNum(Math.round(pv.tasso_motorizzazione_per_1000_ab)) : '—')}</div>
-          <div class="sub">${pv._unreliable ? 'dato non confrontabile' : 'auto per 1.000 ab. · ' + (annoPar || '—')}</div>
+      <div class="kpi-cards">
+        <div class="kpi-card ${pv._unreliable ? 'tbd' : ''}" ${pv._unreliable ? `title="${(pv._unreliable_reason || '').replace(/"/g, '&quot;')}"` : ''}>
+          <div class="kpi-card-lab">Tasso motorizzazione${pv._unreliable ? ' *' : ''}</div>
+          <div class="kpi-card-val">${pv._unreliable ? 'n/d' : (pv.tasso_motorizzazione_per_1000_ab != null ? fmtNum(Math.round(pv.tasso_motorizzazione_per_1000_ab)) : '—')}</div>
+          <div class="kpi-card-sub">${pv._unreliable ? 'dato non confrontabile' : 'auto per 1.000 ab. · ' + (annoPar || '—')}</div>
         </div>
-        <div class="tab-kpi ${pctEuroVecchi != null ? '' : 'tbd'}">
-          <div class="lab">Auto Euro 0–3</div>
-          <div class="val">${pctEuroVecchi != null ? pctEuroVecchi.toFixed(1) + '%' : '—'}</div>
-          <div class="sub">quota parco vetusto</div>
+        <div class="kpi-card ${pctEuroVecchi != null ? '' : 'tbd'}">
+          <div class="kpi-card-lab">Auto Euro 0–3</div>
+          <div class="kpi-card-val">${pctEuroVecchi != null ? pctEuroVecchi.toFixed(1) + '%' : '—'}</div>
+          <div class="kpi-card-sub">quota parco vetusto</div>
         </div>
-        <div class="tab-kpi ${pctElIb != null ? '' : 'tbd'}">
-          <div class="lab">Nuove elettr.+ibride</div>
-          <div class="val">${pctElIb != null ? pctElIb.toFixed(1) + '%' : '—'}</div>
-          <div class="sub">iscrizioni ${annoIsc || '—'}</div>
+        <div class="kpi-card ${pctElIb != null ? '' : 'tbd'}">
+          <div class="kpi-card-lab">Nuove elettr.+ibride</div>
+          <div class="kpi-card-val">${pctElIb != null ? pctElIb.toFixed(1) + '%' : '—'}</div>
+          <div class="kpi-card-sub">iscrizioni ${annoIsc || '—'}</div>
         </div>
-        <div class="tab-kpi ${mortiFeriti != null ? '' : 'tbd'}">
-          <div class="lab">Morti + feriti strada</div>
-          <div class="val">${mortiFeriti != null ? fmtNum(mortiFeriti) : '—'}</div>
-          <div class="sub">incidenti ${annoInc || '—'}</div>
+        <div class="kpi-card ${mortiFeriti != null ? '' : 'tbd'}">
+          <div class="kpi-card-lab">Morti + feriti strada</div>
+          <div class="kpi-card-val">${mortiFeriti != null ? fmtNum(mortiFeriti) : '—'}</div>
+          <div class="kpi-card-sub">incidenti ${annoInc || '—'}</div>
         </div>
       </div>
 
