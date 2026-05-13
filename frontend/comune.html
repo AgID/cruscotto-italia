@@ -5887,12 +5887,17 @@ function initSanitaMap(d) {
   // Scroll-wheel zoom solo on focus
   map.on('focus', () => map.scrollWheelZoom.enable());
   map.on('blur',  () => map.scrollWheelZoom.disable());
+
+  // FIX: il disclaimer <details> sopra la mappa puo' causare misurazione
+  // errata del container al primo paint (Leaflet vede height=0 e non
+  // renderizza i tile). Richiedo invalidateSize() dopo il primo paint
+  // garantito da requestAnimationFrame doppio.
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      map.invalidateSize();
+    });
+  });
 }
-
-
-
-// ===========================================================================
-// Mini-search autocomplete (replica della home, adattato al box compatto)
 // ===========================================================================
 (() => {
   const miniInput = document.getElementById('quick-search');
