@@ -532,6 +532,151 @@ a:hover{color:var(--accent)}
   height:360px;
   position:relative;
 }
+
+/* Search box farmacie/parafarmacie (4f) */
+.sanita-search-wrap{margin:32px 0 24px;}
+.sanita-search-input-wrap{position:relative;margin:14px 0 0;}
+.sanita-search-input{
+  width:100%;
+  box-sizing:border-box;
+  font-family:var(--sans);
+  font-size:14px;
+  padding:10px 14px;
+  border:1px solid var(--ink-mute);
+  border-radius:4px;
+  background:var(--paper);
+  color:var(--ink);
+  outline:none;
+}
+.sanita-search-input:focus{
+  border-color:var(--accent);
+  box-shadow:0 0 0 2px rgba(0,102,204,0.12);
+}
+.sanita-search-autocomplete{
+  position:absolute;
+  top:calc(100% + 4px);
+  left:0;right:0;
+  max-height:320px;overflow-y:auto;
+  background:var(--paper);
+  border:1px solid var(--ink-mute);
+  border-radius:4px;
+  box-shadow:0 4px 12px rgba(0,0,0,0.12);
+  z-index:1000;
+  margin:0;padding:0;
+  list-style:none;
+  font-family:var(--sans);font-size:13px;
+}
+.sanita-search-autocomplete[hidden]{display:none;}
+.sanita-search-autocomplete li{
+  padding:10px 14px;
+  cursor:pointer;
+  color:var(--ink);
+  border-bottom:1px solid var(--paper-2);
+  display:flex;flex-direction:column;gap:3px;
+}
+.sanita-search-autocomplete li:last-child{border-bottom:none;}
+.sanita-search-autocomplete li:hover,
+.sanita-search-autocomplete li.sanita-search-ac-active{
+  background:var(--accent);color:#fff;
+}
+.sanita-search-autocomplete li:hover .sanita-search-ac-meta,
+.sanita-search-autocomplete li.sanita-search-ac-active .sanita-search-ac-meta{color:#fff;}
+.sanita-search-ac-name{font-weight:600;font-size:14px;}
+.sanita-search-ac-meta{
+  font-family:var(--mono);font-size:11px;
+  color:var(--ink-mute);
+}
+
+/* Dettaglio presidio selezionato */
+.sanita-search-result{margin-top:18px;}
+.sanita-presidio-card{
+  border:1px solid var(--ink-mute);
+  border-left:3px solid #2E7D32;
+  background:var(--paper);
+  border-radius:4px;
+  padding:18px 20px;
+}
+.sanita-presidio-head{margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--paper-2);}
+.sanita-presidio-name{
+  font-family:var(--serif);
+  font-size:20px;
+  color:var(--ink);
+  font-weight:500;
+  line-height:1.25;
+  font-style:italic;
+}
+.sanita-presidio-cat{
+  font-family:var(--mono);
+  font-size:11px;
+  text-transform:uppercase;
+  letter-spacing:.06em;
+  color:var(--ink-mute);
+  margin-top:6px;
+}
+.sanita-presidio-dl{
+  display:grid;
+  grid-template-columns:auto 1fr;
+  gap:10px 18px;
+  margin:0;
+  font-size:13px;
+}
+.sanita-presidio-dl dt{
+  font-family:var(--mono);
+  font-size:10px;
+  text-transform:uppercase;
+  letter-spacing:.06em;
+  color:var(--ink-mute);
+  padding-top:3px;
+  white-space:nowrap;
+}
+.sanita-presidio-dl dd{margin:0;color:var(--ink);line-height:1.5;}
+.sanita-presidio-dl dd code{
+  font-family:var(--mono);
+  font-size:12px;
+  background:rgba(0,0,0,0.04);
+  padding:1px 6px;
+  border-radius:3px;
+}
+.sanita-coord-badge{
+  display:inline-block;
+  font-family:var(--mono);
+  font-size:10px;
+  text-transform:uppercase;
+  letter-spacing:.06em;
+  color:#fff;
+  padding:3px 9px;
+  border-radius:3px;
+  font-weight:600;
+}
+.sanita-presidio-strategy{
+  font-family:var(--mono);
+  font-size:11px;
+  color:var(--ink-mute);
+  margin-left:8px;
+}
+.sanita-presidio-coord-descr{
+  font-size:12px;
+  color:var(--ink-mute);
+  margin-top:6px;
+  font-style:italic;
+  line-height:1.5;
+}
+.sanita-presidio-map{
+  margin-top:18px;
+  height:280px;
+  border-radius:4px;
+  overflow:hidden;
+  background:#eef2f5;
+  position:relative;
+  z-index:0;
+  isolation:isolate;
+}
+
+@media (max-width:720px){
+  .sanita-presidio-dl{grid-template-columns:1fr;gap:4px 0;}
+  .sanita-presidio-dl dt{padding-top:10px;}
+  .sanita-presidio-map{height:240px;}
+}
 @media (max-width:720px){
   .sanita-disc-chart-canvas-wrap{height:420px;padding:14px 10px 10px;}
 }
@@ -4259,6 +4404,9 @@ function renderSanitaTab(d) {
       <!-- Mappa unificata: farmacie + parafarmacie + ospedali su unica vista geografica -->
       ${renderSanitaMapBlock(d)}
 
+      <!-- Search box farmacie/parafarmacie con dettaglio inline (4f) -->
+      ${renderSanitaSearchBlock(d)}
+
       <!-- Accordion stabilimenti ospedalieri (4d): drill-down dettagliato in fondo -->
       ${renderSanitaOspedaliAccordion(d)}
     </div>`;
@@ -4462,6 +4610,264 @@ function renderSanitaOspedaliAccordion(d) {
       </div>
     </div>
   `;
+}
+
+// ===========================================================================
+// Sotto-step 4f: search box farmacie/parafarmacie + dettaglio inline
+// ===========================================================================
+
+function renderSanitaSearchBlock(d) {
+  const farms = d?.farmacie?.punti || [];
+  const parafarm = d?.parafarmacie?.punti || [];
+  const totale = farms.length + parafarm.length;
+  if (totale === 0) return '';
+
+  // Conteggio non-geolocalizzabili per mostrare il why
+  const fk = d.farmacie?.kpi || {};
+  const pk = d.parafarmacie?.kpi || {};
+  const nNotGeo = (fk.n_coordinate_droppate || 0)
+                + (fk.n_coordinate_duplicate || 0)
+                + (fk.n_senza_coordinate || 0)
+                + (pk.n_coordinate_droppate || 0)
+                + (pk.n_coordinate_duplicate || 0)
+                + (pk.n_senza_coordinate || 0);
+
+  return `
+    <div class="sanita-search-wrap">
+      <h3 class="sanita-h3">Cerca una farmacia o parafarmacia</h3>
+      <p class="sanita-osp-intro">
+        Ricerca tra tutti i <strong>${fmtNum(totale)}</strong> presidi del comune,
+        ${nNotGeo > 0 ? `inclusi i <strong>${fmtNum(nNotGeo)}</strong> non visibili sulla mappa per coordinate inaffidabili alla fonte.` : 'tutti georeferenziati.'}
+        Digita almeno 3 caratteri del nome o dell'indirizzo.
+      </p>
+      <div class="sanita-search-input-wrap">
+        <input type="text" id="sanita-search" class="sanita-search-input"
+               placeholder="Es. Farmacia Comunale, via Roma..."
+               autocomplete="off" role="combobox"
+               aria-expanded="false" aria-autocomplete="list"
+               aria-controls="sanita-search-autocomplete">
+        <ul id="sanita-search-autocomplete" class="sanita-search-autocomplete" role="listbox" hidden></ul>
+      </div>
+      <div id="sanita-search-result" class="sanita-search-result"></div>
+    </div>
+  `;
+}
+
+function _sanitaCoordBadge(coord_source, coord_strategy) {
+  // Mappa coord_source -> {label, color, icon, descr}
+  const MAP = {
+    'mds':      { label: 'Coordinate Min. Salute',     color: '#2E7D32', icon: '✓', descr: 'Coordinate originali del Ministero della Salute (dentro il centroide del comune).' },
+    'anncsu':   { label: 'Ricalcolate via ANNCSU',     color: '#0066CC', icon: '↻', descr: 'Coordinate originali MdS erano errate o assenti; ricalcolate via incrocio Archivio Nazionale Numeri Civici (Agenzia Entrate).' },
+    'duplicate':{ label: 'Coord MdS in cluster',       color: '#A66300', icon: '⚠', descr: 'Coordinate MdS condivise da 3+ presidi (centroide finto del comune): non affidabili. Marker non mostrato sulla mappa.' },
+    'dropped':  { label: 'Coord MdS fuori comune',     color: '#CC334D', icon: '⚠', descr: 'Coordinate MdS puntavano fuori dal comune dichiarato; nessun match in ANNCSU. Marker non mostrato.' },
+    'no_coord': { label: 'Coordinate non disponibili', color: '#5C6F82', icon: '✕', descr: 'Nessuna coordinata dichiarata dal Ministero della Salute e nessun match trovato in ANNCSU.' },
+  };
+  const m = MAP[coord_source] || MAP['no_coord'];
+  return { ...m };
+}
+
+function renderSanitaPresidioDetail(presidio) {
+  // Categoria visualizzata
+  const isFarmacia = presidio._kind === 'farmacia';
+  const catLabel = isFarmacia ? `Farmacia · ${presidio.tipo || 'Ordinaria'}` : 'Parafarmacia';
+  const accentColor = isFarmacia ? '#2E7D32' : '#EF6C00';
+
+  // Badge coord
+  const badge = _sanitaCoordBadge(presidio.coord_source, presidio.coord_strategy);
+
+  // Mini-mappa se coord disponibili
+  const hasCoord = presidio.lat != null && presidio.lon != null;
+
+  return `
+    <div class="sanita-presidio-card" style="border-left-color:${accentColor}">
+      <div class="sanita-presidio-head">
+        <div class="sanita-presidio-name">${(presidio.nome || '—').replace(/</g,'&lt;')}</div>
+        <div class="sanita-presidio-cat">${catLabel}</div>
+      </div>
+
+      <dl class="sanita-presidio-dl">
+        <dt>Indirizzo</dt>
+        <dd>${presidio.indirizzo ? presidio.indirizzo.replace(/</g,'&lt;') : '—'}${presidio.cap ? ` · ${presidio.cap}` : ''}</dd>
+
+        <dt>Stato geo-localizzazione</dt>
+        <dd>
+          <span class="sanita-coord-badge" style="background:${badge.color}">
+            <span aria-hidden="true">${badge.icon}</span> ${badge.label}
+          </span>
+          ${presidio.coord_strategy ? `<span class="sanita-presidio-strategy">strategia: <code>${presidio.coord_strategy}</code></span>` : ''}
+          <div class="sanita-presidio-coord-descr">${badge.descr}</div>
+        </dd>
+
+        ${hasCoord ? `
+        <dt>Coordinate (WGS84)</dt>
+        <dd><code>${presidio.lat}, ${presidio.lon}</code>${presidio.lat_raw != null ? ` · <span class="sanita-presidio-strategy">raw MdS: <code>${presidio.lat_raw}, ${presidio.lon_raw}</code></span>` : ''}</dd>
+        ` : (presidio.lat_raw != null ? `
+        <dt>Coordinate raw MdS</dt>
+        <dd><code>${presidio.lat_raw}, ${presidio.lon_raw}</code> <span class="sanita-presidio-strategy">(non visualizzate sulla mappa)</span></dd>
+        ` : '')}
+      </dl>
+
+      ${hasCoord ? `
+        <div id="sanita-presidio-map" class="sanita-presidio-map" role="application" aria-label="Posizione del presidio selezionato"></div>
+      ` : ''}
+    </div>
+  `;
+}
+
+function initSanitaSearch(d) {
+  const inputEl = document.getElementById('sanita-search');
+  const acEl = document.getElementById('sanita-search-autocomplete');
+  const resultEl = document.getElementById('sanita-search-result');
+  if (!inputEl || !acEl || !resultEl) return;
+
+  // Cleanup eventuale mini-mappa precedente
+  if (window.__sanitaPresidioMap) {
+    try { window.__sanitaPresidioMap.remove(); } catch(e) {}
+    window.__sanitaPresidioMap = null;
+  }
+
+  // Costruisco indice search: union farmacie + parafarmacie, ogni record
+  // arricchito con _kind per il rendering del dettaglio.
+  const farms = (d?.farmacie?.punti || []).map(p => ({ ...p, _kind: 'farmacia' }));
+  const parafarm = (d?.parafarmacie?.punti || []).map(p => ({ ...p, _kind: 'parafarmacia' }));
+  const allPresidi = [...farms, ...parafarm];
+
+  let suppressAutocomplete = false;
+  let acActive = -1;
+
+  function closeAutocomplete() {
+    acEl.hidden = true;
+    acEl.innerHTML = '';
+    acActive = -1;
+    inputEl.setAttribute('aria-expanded', 'false');
+  }
+
+  function renderAutocomplete(matches) {
+    if (matches.length === 0) { closeAutocomplete(); return; }
+    acEl.innerHTML = matches.slice(0, 8).map((p, i) => {
+      const subtitle = p.indirizzo ? p.indirizzo.replace(/</g,'&lt;') : '';
+      const kindLabel = p._kind === 'farmacia' ? 'Farm.' : 'Paraf.';
+      return `<li role="option" data-idx="${allPresidi.indexOf(p)}">
+        <span class="sanita-search-ac-name">${(p.nome || '—').replace(/</g,'&lt;')}</span>
+        <span class="sanita-search-ac-meta">${kindLabel} · ${subtitle}</span>
+      </li>`;
+    }).join('');
+    acEl.hidden = false;
+    acActive = -1;
+    inputEl.setAttribute('aria-expanded', 'true');
+  }
+
+  function selectPresidio(idx) {
+    const presidio = allPresidi[idx];
+    if (!presidio) return;
+    resultEl.innerHTML = renderSanitaPresidioDetail(presidio);
+
+    // Mini-mappa lazy se coord disponibili
+    if (presidio.lat != null && presidio.lon != null) {
+      requestAnimationFrame(() => {
+        const mapEl = document.getElementById('sanita-presidio-map');
+        if (!mapEl || typeof L === 'undefined') return;
+        if (window.__sanitaPresidioMap) {
+          try { window.__sanitaPresidioMap.remove(); } catch(e) {}
+        }
+        const map = L.map(mapEl, { scrollWheelZoom: false, zoomControl: true });
+        window.__sanitaPresidioMap = map;
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          maxZoom: 19,
+          attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        }).addTo(map);
+        const isFarmacia = presidio._kind === 'farmacia';
+        const cat = isFarmacia
+          ? _sanitaCategoryForFarm(presidio.tipo)
+          : 'parafarm';
+        L.marker([presidio.lat, presidio.lon], { icon: _sanitaPinIcon(cat) })
+          .addTo(map)
+          .bindPopup(`<strong>${(presidio.nome || '').replace(/</g,'&lt;')}</strong>`)
+          .openPopup();
+        map.setView([presidio.lat, presidio.lon], 17);
+        map.on('focus', () => map.scrollWheelZoom.enable());
+        map.on('blur',  () => map.scrollWheelZoom.disable());
+        // Doppio raf + invalidateSize per Leaflet height race condition
+        requestAnimationFrame(() => requestAnimationFrame(() => map.invalidateSize()));
+      });
+    } else {
+      // Cleanup mini-mappa eventuale precedente
+      if (window.__sanitaPresidioMap) {
+        try { window.__sanitaPresidioMap.remove(); } catch(e) {}
+        window.__sanitaPresidioMap = null;
+      }
+    }
+  }
+
+  // Click su voce autocomplete
+  acEl.addEventListener('mousedown', (ev) => {
+    const li = ev.target.closest('li[data-idx]');
+    if (!li) return;
+    ev.preventDefault();
+    const idx = parseInt(li.dataset.idx, 10);
+    const presidio = allPresidi[idx];
+    inputEl.value = presidio.nome;
+    closeAutocomplete();
+    suppressAutocomplete = true;
+    inputEl.dispatchEvent(new Event('input'));
+    inputEl.blur();
+    selectPresidio(idx);
+  });
+
+  // Click outside chiude dropdown
+  document.addEventListener('click', (ev) => {
+    if (!acEl.contains(ev.target) && ev.target !== inputEl) {
+      closeAutocomplete();
+    }
+  });
+
+  // Keyboard nav
+  inputEl.addEventListener('keydown', (ev) => {
+    if (acEl.hidden) return;
+    const items = acEl.querySelectorAll('li');
+    if (!items.length) return;
+    if (ev.key === 'ArrowDown') {
+      ev.preventDefault();
+      acActive = Math.min(acActive + 1, items.length - 1);
+      items.forEach((it, i) => it.classList.toggle('sanita-search-ac-active', i === acActive));
+      items[acActive]?.scrollIntoView({ block: 'nearest' });
+    } else if (ev.key === 'ArrowUp') {
+      ev.preventDefault();
+      acActive = Math.max(acActive - 1, 0);
+      items.forEach((it, i) => it.classList.toggle('sanita-search-ac-active', i === acActive));
+      items[acActive]?.scrollIntoView({ block: 'nearest' });
+    } else if (ev.key === 'Enter' && acActive >= 0) {
+      ev.preventDefault();
+      const idx = parseInt(items[acActive].dataset.idx, 10);
+      inputEl.value = allPresidi[idx].nome;
+      closeAutocomplete();
+      suppressAutocomplete = true;
+      inputEl.dispatchEvent(new Event('input'));
+      selectPresidio(idx);
+    } else if (ev.key === 'Escape') {
+      closeAutocomplete();
+    }
+  });
+
+  // Input -> filtra match e renderizza autocomplete
+  inputEl.addEventListener('input', () => {
+    if (suppressAutocomplete) {
+      suppressAutocomplete = false;
+      closeAutocomplete();
+      return;
+    }
+    const q = inputEl.value.trim().toLowerCase();
+    if (q.length < 3) {
+      closeAutocomplete();
+      return;
+    }
+    const matches = allPresidi.filter(p => {
+      const nome = (p.nome || '').toLowerCase();
+      const indir = (p.indirizzo || '').toLowerCase();
+      return nome.includes(q) || indir.includes(q);
+    });
+    renderAutocomplete(matches);
+  });
 }
 
 // ===========================================================================
@@ -5812,6 +6218,8 @@ function bindTabSwitching() {
             if (window.__sanitaData.ospedali) {
               initSanitaDiscChart(window.__sanitaData);
             }
+            // Search box farmacie/parafarmacie (4f)
+            initSanitaSearch(window.__sanitaData);
           }, 0);
           window.__sanitaInited = true;
         }
