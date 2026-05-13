@@ -11,17 +11,23 @@ l'intent dell'utente.
 
 ## Pacchetti disponibili
 
-- **`cruscotto-italia-workflow-v1.2.zip`** *(corrente)* — workflow del connettore MCP:
-  inventory dei 10 tool, schema completo di `comune_dashboard` (19 sezioni
-  fra cui `immobili_pa`, `anncsu`, **`sanita_mds`** e **`pun`** — punti di
-  ricarica veicoli elettrici GSE/MASE), endpoint REST non-MCP
+- **`cruscotto-italia-workflow-v1.3.zip`** *(corrente)* — workflow del connettore MCP:
+  inventory dei 10 tool, schema completo di `comune_dashboard` (20 sezioni
+  fra cui `immobili_pa`, `anncsu`, `sanita_mds`, `pun` e **`agcom_bbmap`** —
+  copertura banda larga AGCOM Broadband Map), endpoint REST non-MCP
   `/data/anncsu_full/<istat>.json`, pattern operativi multi-comune,
-  lookup civici, lookup sanità territoriale e lookup mobilità elettrica,
-  caveat per sezione (turismo NUTS3, mobilità 2019, `comune_contratti` stub,
-  aria sparsa, PNRR solo Soggetto Attuatore, posti letto ospedalieri MdS
-  fermi al 2023, **PUN copertura 65,7% comuni con aggiornamento quotidiano**).
+  lookup civici, lookup sanità territoriale, lookup mobilità elettrica
+  e lookup banda larga (incluso pattern deep-link al Web AppBuilder
+  ufficiale AGCOM), caveat per sezione (turismo NUTS3, mobilità 2019,
+  `comune_contratti` stub, aria sparsa, PNRR solo Soggetto Attuatore,
+  posti letto ospedalieri MdS fermi al 2023, PUN copertura 65,7% con
+  aggiornamento quotidiano, **AGCOM 100% copertura con aggiornamento
+  trimestrale e geometrie via deep-link esterno**).
 
-  Allineato a MCP v0.7.0 (16 dataset, 12 istituzioni, ~7.918 comuni).
+  Allineato a MCP v0.8.0 (17 dataset, 13 istituzioni, ~7.918 comuni).
+
+- **`cruscotto-italia-workflow-v1.2.zip`** *(storica)* — Allineata a MCP v0.7.0
+  (16 dataset, 12 istituzioni). 19 sezioni dashboard, con `pun` ma senza `agcom_bbmap`.
 
 - **`cruscotto-italia-workflow-v1.1.zip`** *(storica)* — Allineata a MCP v0.6.0
   (15 dataset, 11 istituzioni). 18 sezioni dashboard, senza `pun`.
