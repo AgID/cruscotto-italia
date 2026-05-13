@@ -225,6 +225,39 @@ a:hover{color:var(--accent)}
 }
 .tab-kpi.tbd .val{font-style:italic;color:var(--ink-mute)}
 
+/* Tab Sanità: grid 3 col su desktop (3+3 con 6 KPI), 2 col tablet, 1 col mobile.
+   Override del default .tab-kpis che usa auto-fit minmax(200px,1fr) e con 6 voci
+   si appiattisce a 5+1 dentro un wrap da 1200px. */
+.sanita-kpis{
+  grid-template-columns:repeat(3,1fr) !important;
+}
+.sanita-kpis .tab-kpi:nth-child(3n){
+  border-right:none;
+}
+.sanita-kpis .tab-kpi:nth-child(-n+3){
+  border-bottom:1px solid var(--rule);
+}
+@media (max-width:900px){
+  .sanita-kpis{grid-template-columns:repeat(2,1fr) !important;}
+  .sanita-kpis .tab-kpi{border-right:1px solid var(--rule);border-bottom:1px solid var(--rule);}
+  .sanita-kpis .tab-kpi:nth-child(3n){border-right:1px solid var(--rule);}
+  .sanita-kpis .tab-kpi:nth-child(2n){border-right:none;}
+  .sanita-kpis .tab-kpi:nth-last-child(-n+2){border-bottom:none;}
+}
+@media (max-width:540px){
+  .sanita-kpis{grid-template-columns:1fr !important;}
+  .sanita-kpis .tab-kpi{border-right:none;border-bottom:1px solid var(--rule);}
+  .sanita-kpis .tab-kpi:last-child{border-bottom:none;}
+}
+.sanita-kpis .tab-kpi .sub{
+  font-family:var(--mono);
+  font-size:11px;
+  color:var(--ink-mute);
+  text-transform:uppercase;
+  letter-spacing:0.06em;
+  margin-top:6px;
+}
+
 .placeholder{
   padding:64px 32px;
   text-align:center;
@@ -3891,7 +3924,7 @@ function renderSanitaTab(d) {
         posti letto ospedalieri riferiti all'anno <strong>${annoOsp}</strong> (ultimo rilascio annuale Min. Salute).
       </p>
 
-      <div class="tab-kpis">
+      <div class="tab-kpis sanita-kpis">
         <div class="tab-kpi">
           <div class="lab">Farmacie attive</div>
           <div class="val">${f ? fmtNum(f.n_totale) : '—'}</div>
@@ -3920,7 +3953,7 @@ function renderSanitaTab(d) {
         <div class="tab-kpi">
           <div class="lab">Day Hospital + Surgery</div>
           <div class="val">${o ? fmtNum(o.posti_letto_day_hospital + o.posti_letto_day_surgery) : '—'}</div>
-          <div class="sub">${o ? 'ambulatoriale ad alta intensità' : '—'}</div>
+          <div class="sub">${o ? 'posti letto' : '—'}</div>
         </div>
       </div>
 
