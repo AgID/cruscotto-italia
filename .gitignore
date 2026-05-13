@@ -25,6 +25,8 @@ venv/
 *.jsonl
 *.jsonl.gz
 *.zip
+# Eccezione: pacchetti skill Claude (documentazione versionata)
+!docs/skills/*.zip
 /tmp/
 /etl/data/
 /etl/output/
