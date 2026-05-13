@@ -25,14 +25,18 @@ Particolarita' parsing:
   - data_inizio_validita / data_fine_validita filtrano lo storico:
     attiva = end vuota o '-' o futura rispetto a OGGI
 
-Outlier coordinate:
-  - 0% farmacie fuori bbox Italia (35-47 lat, 6-19 lon)
-  - ~0.24% farmacie con coord fuori bbox provincia (~2/834 a Roma, errori MEF/MdS)
-  - Strategia: keep i punti, conteggio in kpi.n_outlier_coordinate
+Outlier coordinate e geocoding:
+  - ~5-15% farmacie con lat/lon errate alla fonte MdS (osservato Roma 2026-05-13:
+    punti del comune 058091 sparsi in tutto il Lazio).
+  - Strategia: filtro centroide robust (mediana ± 0.3°/0.15° dal centro)
+    + geocoding via ANNCSU (anncsu_full/<istat>.json su R2):
+       - outlier centroide -> tenta ANNCSU; se match: 'anncsu'; altrimenti: 'dropped'
+       - senza coord MdS -> tenta ANNCSU; se match: 'anncsu'; altrimenti: 'no_coord'
+  - lat_raw/lon_raw preservano sempre i valori MdS originali (audit trail).
 
 Schema output per shard sanita_mds/<istat>.json:
 {
-  "_etl_version": "0.1.0",
+  "_etl_version": "0.2.0",
   "_source": "Ministero della Salute - Open Data",
   "_license": "IODL v2.0",
   "_generated_at": "ISO-8601",
@@ -45,8 +49,12 @@ Schema output per shard sanita_mds/<istat>.json:
   "comune":     "ROMA",
   "provincia":  "RM",
   "regione":    "LAZIO",
-  "farmacie":     {"kpi": {...}, "punti": [...]}     | null,
-  "parafarmacie": {"kpi": {...}, "punti": [...]}     | null,
+  "farmacie":     {"kpi": {..., n_coordinate_mds, n_coordinate_ricalcolate,
+                                n_coordinate_droppate, n_senza_coordinate},
+                   "punti": [{nome, tipo, indirizzo, cap, lat, lon,
+                              coord_source: "mds"|"anncsu"|"dropped"|"no_coord",
+                              lat_raw, lon_raw, coord_strategy}]}  | null,
+  "parafarmacie": idem | null,
   "ospedali":     {"kpi": {...}, "stabilimenti": [...]} | null
 }
 
@@ -57,14 +65,18 @@ Usage:
 
 import argparse
 import csv
+import gzip
 import hashlib
 import json
 import os
+import re
 import sys
 import time
+import urllib.request
 from collections import Counter, defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
+from functools import lru_cache
 from io import StringIO
 from pathlib import Path
 from typing import Optional
@@ -80,7 +92,7 @@ log = structlog.get_logger()
 # COSTANTI / CONFIG
 # ============================================================================
 
-ETL_VERSION = "0.1.0"
+ETL_VERSION = "0.2.0"
 SOURCE_LABEL = "Ministero della Salute - Open Data"
 SOURCE_LICENSE = "IODL v2.0"
 
@@ -429,6 +441,306 @@ def parse_ospedali(csv_path: Path) -> dict[str, dict]:
 # BUILD SHARDS (composizione finale per comune)
 # ============================================================================
 
+def _norm_odonimo(s: str) -> str:
+    """Normalizza nome strada per matching ANNCSU.
+
+    Rimuove prefissi (via/viale/piazza/...), punteggiatura, spazi multipli.
+    """
+    if not s:
+        return ""
+    s = s.strip().lower()
+    s = _RE_PREFISSI.sub("", s)
+    s = _RE_PUNTI.sub(" ", s)
+    s = _RE_SPAZI.sub(" ", s).strip()
+    return s
+
+
+_PREFISSI_LIST = [
+    r"\bviale\b", r"\bvialetto\b", r"\bvia\b",
+    r"\bpiazza\b", r"\bpiazzale\b", r"\bpiazzetta\b",
+    r"\bcorso\b", r"\blargo\b", r"\bvicolo\b",
+    r"\blungotevere\b", r"\blungomare\b", r"\blungarno\b",
+    r"\bsalita\b", r"\bdiscesa\b",
+    r"\bstrada\b", r"\bstradone\b", r"\bstradella\b",
+    r"\bsentiero\b", r"\btravers[ae]\b",
+    r"\bv\.le\b", r"\bv\.\b",
+    r"\bp\.zza\b", r"\bp\.le\b", r"\bp\.\b",
+    r"\bc\.so\b", r"\bl\.go\b",
+]
+_RE_PREFISSI = re.compile("|".join(_PREFISSI_LIST), re.IGNORECASE)
+_RE_PUNTI = re.compile(r"[\.\,\;\:]+")
+_RE_SPAZI = re.compile(r"\s+")
+_RE_CIVICO = re.compile(r"\b(\d{1,4})\s*([a-zA-Z]|\/[a-zA-Z0-9]+)?\b\s*$")
+
+
+def _extract_civico(indirizzo: str) -> tuple[str, Optional[str], Optional[str]]:
+    """Estrae (odonimo_norm, civico, esp) da indirizzo MdS.
+
+    Esempi:
+      'VIA SERAFINO BELFANTI 1' -> ('serafino belfanti', '1', None)
+      'PIAZZA SAN PIETRO 12/A'  -> ('san pietro', '12', '/A')
+      'VIA ROMA 45B'            -> ('roma', '45', 'B')
+    """
+    if not indirizzo:
+        return "", None, None
+    s = indirizzo.strip()
+    m = _RE_CIVICO.search(s)
+    civico, esp = None, None
+    if m:
+        civico = m.group(1)
+        esp = m.group(2)
+        s = s[: m.start()].strip()
+    odonimo = _norm_odonimo(s)
+    return odonimo, civico, esp
+
+
+def _try_swap_name(odonimo: str) -> str:
+    """Inverte ordine token se 2 (gestisce ordine nome/cognome MdS vs ANNCSU)."""
+    toks = odonimo.split()
+    if len(toks) == 2:
+        return " ".join(reversed(toks))
+    return odonimo
+
+
+class _AnncsuGeocoder:
+    """Geocoder che usa shard anncsu_full/<istat>.json da R2.
+
+    Pattern: cache LRU dell'indice {odonimo_norm: [(civ, esp, lat, lon)]}
+    per comune. Massimo 8 comuni in cache simultaneamente (~50MB RAM).
+
+    Coverage R2 prefix `anncsu_full/`: 5387 comuni / 7896 totali (68%).
+    Per i comuni non coperti, geocode() ritorna None (fallback drop).
+    """
+
+    def __init__(self, r2_bucket: str, r2_client):
+        self._bucket = r2_bucket
+        self._r2 = r2_client
+        # 8 shard in cache (LRU). Tipica dimensione per Roma 50MB JSON,
+        # ma in pratica usiamo solo l'indice {odonimo: [...]} che e' molto piu' compatto.
+        self._cache: dict[str, dict] = {}
+        self._cache_order: list[str] = []
+        self._missing_shards: set[str] = set()  # negative cache (404)
+        self.stats = {"shards_loaded": 0, "shards_missing": 0,
+                      "geocoded_exact": 0, "geocoded_no_esp": 0,
+                      "geocoded_odo_only": 0, "not_matched": 0}
+
+    def _load_index(self, istat: str) -> Optional[dict]:
+        """Carica e indicizza anncsu_full/<istat>.json da R2.
+
+        Ritorna {odonimo_norm: [(civ, esp, lat, lon)]} o None se shard non esiste.
+        """
+        if istat in self._missing_shards:
+            return None
+        if istat in self._cache:
+            # LRU promote
+            try:
+                self._cache_order.remove(istat)
+            except ValueError:
+                pass
+            self._cache_order.append(istat)
+            return self._cache[istat]
+
+        # Cache miss: download da R2
+        try:
+            obj = self._r2.get_object(Bucket=self._bucket,
+                                     Key=f"anncsu_full/{istat}.json")
+            raw = obj["Body"].read()
+            if obj.get("ContentEncoding") == "gzip":
+                raw = gzip.decompress(raw)
+            data = json.loads(raw)
+        except self._r2.exceptions.NoSuchKey:
+            self._missing_shards.add(istat)
+            self.stats["shards_missing"] += 1
+            return None
+        except Exception as e:
+            log.warning("anncsu_shard_load_error", istat=istat, error=str(e))
+            self._missing_shards.add(istat)
+            return None
+
+        # Build indice
+        idx: dict[str, list[tuple]] = {}
+        for p in data.get("punti", []):
+            if p.get("lat") is None or p.get("lon") is None:
+                continue
+            odo = _norm_odonimo(p.get("odo", ""))
+            if not odo:
+                continue
+            civ = str(p.get("civ", "")) if p.get("civ") is not None else ""
+            esp = p.get("esp")
+            idx.setdefault(odo, []).append((civ, esp, p["lat"], p["lon"]))
+
+        # LRU evict
+        if len(self._cache_order) >= 8:
+            oldest = self._cache_order.pop(0)
+            del self._cache[oldest]
+        self._cache[istat] = idx
+        self._cache_order.append(istat)
+        self.stats["shards_loaded"] += 1
+        return idx
+
+    def geocode(self, istat: str, indirizzo: str) -> Optional[dict]:
+        """Tenta geocoding di un indirizzo MdS via ANNCSU.
+
+        Ritorna {lat, lon, strategy} oppure None se nessun match.
+        Strategie (in ordine di precisione):
+          - 'odo_civ_exact': match esatto odonimo + civico + esponente
+          - 'odo_civ_no_esp': match odonimo + civico (esponente diverso)
+          - 'odo_only': fallback su prima coord della strada (civico mancato)
+        """
+        idx = self._load_index(istat)
+        if idx is None:
+            return None
+
+        odo, civ, esp = _extract_civico(indirizzo)
+        if not odo:
+            return None
+
+        # Strategia 1: match esatto
+        cands = idx.get(odo)
+        if not cands:
+            # Strategia 2: swap nome/cognome
+            swapped = _try_swap_name(odo)
+            if swapped != odo:
+                cands = idx.get(swapped)
+
+        if not cands:
+            self.stats["not_matched"] += 1
+            return None
+
+        # Match civico esatto + esponente
+        if civ:
+            for c_civ, c_esp, lat, lon in cands:
+                if c_civ == civ and (c_esp or "") == (esp or ""):
+                    self.stats["geocoded_exact"] += 1
+                    return {"lat": lat, "lon": lon, "strategy": "odo_civ_exact"}
+            # Match civico ignorando esponente
+            for c_civ, c_esp, lat, lon in cands:
+                if c_civ == civ:
+                    self.stats["geocoded_no_esp"] += 1
+                    return {"lat": lat, "lon": lon, "strategy": "odo_civ_no_esp"}
+
+        # Fallback: prima coord della strada
+        c_civ, c_esp, lat, lon = cands[0]
+        self.stats["geocoded_odo_only"] += 1
+        return {"lat": lat, "lon": lon, "strategy": "odo_only"}
+
+
+def _clean_and_geocode_coords(
+    istat: str,
+    punti: list[dict],
+    geocoder: Optional[_AnncsuGeocoder] = None,
+) -> tuple[list[dict], dict]:
+    """Pulisce e arricchisce le coordinate dei punti MdS.
+
+    Pipeline (in ordine):
+      1. Calcolo centroide robust (mediana lat/lon dei punti geo-referenziati)
+      2. Soglia outlier:
+         - N>50 punti: 0.3 gradi (~33 km)
+         - N<=50:      0.15 gradi (~16 km)
+      3. Per ogni punto:
+         a) Se ha coord MdS valide E dentro soglia -> coord_source='mds'
+         b) Se ha coord MdS valide MA fuori soglia (outlier) -> tenta geocoding ANNCSU
+            - Se ANNCSU trova match -> coord_source='anncsu',
+              preserva lat_raw/lon_raw dell'MdS, sovrascrive lat/lon con ANNCSU
+            - Altrimenti -> coord_source='dropped', preserva lat_raw/lon_raw,
+              nullifica lat/lon
+         c) Se non ha coord MdS (None) -> tenta geocoding ANNCSU
+            - Se ANNCSU trova match -> coord_source='anncsu', lat/lon ANNCSU
+            - Altrimenti -> coord_source='no_coord' (resta con lat=None)
+
+    Filosofia: non cancelliamo dati alla fonte. Preserviamo SEMPRE i raw MdS
+    (lat_raw/lon_raw) quando esistevano, indipendentemente dalla strategia.
+
+    Ritorna (punti_modificati, stats) dove stats =
+      {'mds': N, 'anncsu': N, 'dropped': N, 'no_coord': N,
+       'geocode_strategies': {'exact': N, 'no_esp': N, 'odo_only': N}}
+    """
+    stats = {
+        "mds": 0, "anncsu": 0, "dropped": 0, "no_coord": 0,
+        "geocode_strategies": Counter(),
+    }
+    if not punti:
+        return punti, stats
+
+    coords_validi = [(p["lat"], p["lon"]) for p in punti
+                     if p.get("lat") is not None and p.get("lon") is not None]
+
+    # Centroide + soglia (solo se abbastanza punti)
+    if len(coords_validi) >= 5:
+        lats_sorted = sorted(c[0] for c in coords_validi)
+        lons_sorted = sorted(c[1] for c in coords_validi)
+        med_lat = lats_sorted[len(lats_sorted) // 2]
+        med_lon = lons_sorted[len(lons_sorted) // 2]
+        soglia = 0.3 if len(coords_validi) > 50 else 0.15
+    else:
+        med_lat = med_lon = None  # no filtro centroide
+        soglia = None
+
+    out = []
+    for p in punti:
+        new_p = dict(p)
+        raw_lat = p.get("lat")
+        raw_lon = p.get("lon")
+
+        if raw_lat is not None and raw_lon is not None:
+            # Ha coord MdS: check centroide
+            is_outlier = (
+                soglia is not None and
+                (abs(raw_lat - med_lat) > soglia or abs(raw_lon - med_lon) > soglia)
+            )
+
+            if not is_outlier:
+                # Coord MdS valide e dentro soglia
+                new_p["coord_source"] = "mds"
+                stats["mds"] += 1
+                out.append(new_p)
+                continue
+
+            # Outlier: tenta geocoding ANNCSU
+            # Preservo SEMPRE raw indipendentemente dall'esito
+            new_p["lat_raw"] = raw_lat
+            new_p["lon_raw"] = raw_lon
+
+            geocoded = None
+            if geocoder is not None:
+                geocoded = geocoder.geocode(istat, p.get("indirizzo", ""))
+
+            if geocoded:
+                new_p["lat"] = round(geocoded["lat"], 6)
+                new_p["lon"] = round(geocoded["lon"], 6)
+                new_p["coord_source"] = "anncsu"
+                new_p["coord_strategy"] = geocoded["strategy"]
+                stats["anncsu"] += 1
+                stats["geocode_strategies"][geocoded["strategy"]] += 1
+            else:
+                new_p["lat"] = None
+                new_p["lon"] = None
+                new_p["coord_source"] = "dropped"
+                stats["dropped"] += 1
+            out.append(new_p)
+
+        else:
+            # Senza coord MdS: tenta geocoding ANNCSU (no raw da preservare)
+            geocoded = None
+            if geocoder is not None:
+                geocoded = geocoder.geocode(istat, p.get("indirizzo", ""))
+
+            if geocoded:
+                new_p["lat"] = round(geocoded["lat"], 6)
+                new_p["lon"] = round(geocoded["lon"], 6)
+                new_p["coord_source"] = "anncsu"
+                new_p["coord_strategy"] = geocoded["strategy"]
+                stats["anncsu"] += 1
+                stats["geocode_strategies"][geocoded["strategy"]] += 1
+            else:
+                new_p["coord_source"] = "no_coord"
+                stats["no_coord"] += 1
+            out.append(new_p)
+
+    return out, stats
+
+
+# Backward compat: alias mantenuto per chi chiama dall'esterno (poco probabile)
 def _filter_outlier_coords(punti: list[dict]) -> tuple[list[dict], int]:
     """Filtra outlier statistici delle coordinate (preservando i raw).
 
@@ -497,12 +809,16 @@ def _filter_outlier_coords(punti: list[dict]) -> tuple[list[dict], int]:
     return out, n_droppati
 
 
-def _build_farmacie_section(punti: list[dict]) -> dict:
+def _build_farmacie_section(
+    istat: str,
+    punti: list[dict],
+    geocoder: Optional[_AnncsuGeocoder] = None,
+) -> dict:
     """KPI + punti per farmacie. Tiene tutti i punti (no sampling).
 
-    Pre-filtro outlier coordinate: vedi _filter_outlier_coords.
+    Pulisce e arricchisce coord via _clean_and_geocode_coords.
     """
-    punti, n_droppati = _filter_outlier_coords(punti)
+    punti, cstats = _clean_and_geocode_coords(istat, punti, geocoder)
     n_tot = len(punti)
     n_geo = sum(1 for p in punti if p["lat"] is not None and p["lon"] is not None)
     n_outlier_bbox = sum(
@@ -518,7 +834,11 @@ def _build_farmacie_section(punti: list[dict]) -> dict:
             "pct_geo_referenziate": round(100 * n_geo / n_tot, 1) if n_tot else 0.0,
             "mix_tipologia":       dict(sorted(mix.items(), key=lambda kv: -kv[1])),
             "n_outlier_coordinate":   n_outlier_bbox,
-            "n_coordinate_droppate":  n_droppati,
+            "n_coordinate_mds":       cstats["mds"],
+            "n_coordinate_ricalcolate": cstats["anncsu"],
+            "n_coordinate_droppate":  cstats["dropped"],
+            "n_senza_coordinate":     cstats["no_coord"],
+            "geocode_strategie":      dict(cstats["geocode_strategies"]),
         },
         "punti": [
             {k: v for k, v in p.items() if not k.startswith("_")}
@@ -527,9 +847,13 @@ def _build_farmacie_section(punti: list[dict]) -> dict:
     }
 
 
-def _build_parafarmacie_section(punti: list[dict]) -> dict:
-    """KPI + punti per parafarmacie. Pre-filtro outlier come per farmacie."""
-    punti, n_droppati = _filter_outlier_coords(punti)
+def _build_parafarmacie_section(
+    istat: str,
+    punti: list[dict],
+    geocoder: Optional[_AnncsuGeocoder] = None,
+) -> dict:
+    """KPI + punti per parafarmacie. Pre-filtro+geocoding come per farmacie."""
+    punti, cstats = _clean_and_geocode_coords(istat, punti, geocoder)
     n_tot = len(punti)
     n_geo = sum(1 for p in punti if p["lat"] is not None and p["lon"] is not None)
     n_outlier_bbox = sum(
@@ -543,7 +867,11 @@ def _build_parafarmacie_section(punti: list[dict]) -> dict:
             "n_geo_referenziate":  n_geo,
             "pct_geo_referenziate": round(100 * n_geo / n_tot, 1) if n_tot else 0.0,
             "n_outlier_coordinate":   n_outlier_bbox,
-            "n_coordinate_droppate":  n_droppati,
+            "n_coordinate_mds":       cstats["mds"],
+            "n_coordinate_ricalcolate": cstats["anncsu"],
+            "n_coordinate_droppate":  cstats["dropped"],
+            "n_senza_coordinate":     cstats["no_coord"],
+            "geocode_strategie":      dict(cstats["geocode_strategies"]),
         },
         "punti": [
             {k: v for k, v in p.items() if not k.startswith("_")}
@@ -592,6 +920,7 @@ def build_shards(
     parafarmacie_by_istat: dict[str, list[dict]],
     ospedali_by_istat: dict[str, dict],
     discovery: dict,
+    geocoder: Optional[_AnncsuGeocoder] = None,
 ) -> dict[str, dict]:
     """Costruisce shard per ogni comune che ha almeno una sezione popolata."""
     all_istats = (
@@ -599,7 +928,8 @@ def build_shards(
         | set(parafarmacie_by_istat.keys())
         | set(ospedali_by_istat.keys())
     )
-    log.info("sanita_mds_build_shards_start", n_comuni=len(all_istats))
+    log.info("sanita_mds_build_shards_start", n_comuni=len(all_istats),
+             geocoder_enabled=geocoder is not None)
 
     generated_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
 
@@ -652,13 +982,15 @@ def build_shards(
             "comune":         anag.get("comune"),
             "provincia":      anag.get("provincia"),
             "regione":        anag.get("regione"),
-            "farmacie":       _build_farmacie_section(f_punti) if f_punti else None,
-            "parafarmacie":   _build_parafarmacie_section(pf_punti) if pf_punti else None,
+            "farmacie":       _build_farmacie_section(istat, f_punti, geocoder) if f_punti else None,
+            "parafarmacie":   _build_parafarmacie_section(istat, pf_punti, geocoder) if pf_punti else None,
             "ospedali":       _build_ospedali_section(osp_blob["stabilimenti"])
                               if osp_blob else None,
         }
         shards[istat] = shard
 
+    if geocoder is not None:
+        log.info("sanita_mds_geocoder_stats", **geocoder.stats)
     log.info("sanita_mds_build_shards_done", n_shards=len(shards))
     return shards
 
@@ -852,6 +1184,9 @@ def main() -> int:
                         help="Re-download CSV ignorando la cache locale")
     parser.add_argument("--force-shard-upload", action="store_true",
                         help="Bypass md5 check, upload tutti gli shard (target=r2)")
+    parser.add_argument("--no-geocode", action="store_true",
+                        help="Disabilita geocoding ANNCSU per coord MdS errate "
+                             "(default: abilitato se ENV R2_* presenti)")
     args = parser.parse_args()
 
     output_dir = Path(args.output_dir)
@@ -883,8 +1218,25 @@ def main() -> int:
         parafarm = parse_parafarmacie(csv_paths["parafarmacie"], ref_date)
         ospedali = parse_ospedali(csv_paths["ospedali"])
 
-        # 4. Build shards
-        shards = build_shards(farmacie, parafarm, ospedali, discovery)
+        # 4. Build shards (con geocoding ANNCSU opzionale per coord MdS errate)
+        geocoder = None
+        if not args.no_geocode:
+            try:
+                import boto3 as _b3
+                _r2_client = _b3.client(
+                    "s3",
+                    endpoint_url=f"https://{os.environ['R2_ACCOUNT_ID']}.r2.cloudflarestorage.com",
+                    aws_access_key_id=os.environ["R2_ACCESS_KEY_ID"],
+                    aws_secret_access_key=os.environ["R2_SECRET_ACCESS_KEY"],
+                )
+                geocoder = _AnncsuGeocoder(r2.get_bucket(), _r2_client)
+                log.info("sanita_mds_geocoder_enabled", bucket=r2.get_bucket())
+            except KeyError as e:
+                log.warning("sanita_mds_geocoder_no_creds",
+                            missing=str(e),
+                            note="ANNCSU geocoding skipped, only centroid filter active")
+
+        shards = build_shards(farmacie, parafarm, ospedali, discovery, geocoder)
 
         # 5. Write local
         n_written = write_local(shards, shard_dir)
