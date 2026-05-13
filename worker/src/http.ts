@@ -268,9 +268,9 @@ pre code {
   <p>Riavvia Claude Desktop. Il file di configurazione si trova in <code>~/Library/Application Support/Claude/</code> (macOS) o <code>%APPDATA%\\Claude\\</code> (Windows).</p>
 
   <h3>Skill <em>opzionale</em> per Claude</h3>
-  <p>Per ottenere risposte pi&ugrave; mirate quando l'utente chiede dati su uno o pi&ugrave; comuni italiani, &egrave; disponibile una <em>skill</em> Claude che documenta l'uso del connettore: inventario dei tool, schema completo di <code>comune_dashboard</code> (incluse sezioni <code>immobili_pa</code> e <code>anncsu</code>), endpoint REST <code>/data/anncsu_full/&lt;istat&gt;.json</code>, pattern operativi e <em>caveat</em> per sezione.</p>
+  <p>Per ottenere risposte pi&ugrave; mirate quando l'utente chiede dati su uno o pi&ugrave; comuni italiani, &egrave; disponibile una <em>skill</em> Claude che documenta l'uso del connettore: inventario dei tool, schema completo di <code>comune_dashboard</code> (incluse sezioni <code>immobili_pa</code>, <code>anncsu</code> e <code>sanita_mds</code> per farmacie, parafarmacie e posti letto ospedalieri), endpoint REST <code>/data/anncsu_full/&lt;istat&gt;.json</code>, pattern operativi e <em>caveat</em> per sezione.</p>
   <p>Scarica il pacchetto e caricalo nelle <em>Skills</em> di Claude (UI o API):</p>
-  <p><a href="/skills/cruscotto-italia-workflow-v1.0.zip" download><strong>cruscotto-italia-workflow-v1.0.zip</strong></a> &mdash; allineata a MCP v0.5.0 (14 dataset, 10 istituzioni)</p>
+  <p><a href="/skills/cruscotto-italia-workflow-v1.1.zip" download><strong>cruscotto-italia-workflow-v1.1.zip</strong></a> &mdash; allineata a MCP v0.6.0 (15 dataset, 11 istituzioni)</p>
 
   <h3>ChatGPT (Custom GPT)</h3>
   <p>Nei custom GPT con supporto MCP, aggiungi un nuovo server con URL <code>https://cruscotto-italia-mcp.piersoftckan.biz/mcp</code> e tipo JSON-RPC 2.0. Nessuna autenticazione richiesta.</p>

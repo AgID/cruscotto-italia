@@ -11,14 +11,19 @@ l'intent dell'utente.
 
 ## Pacchetti disponibili
 
-- **`cruscotto-italia-workflow-v1.0.zip`** — workflow del connettore MCP:
-  inventory dei 10 tool, schema completo di `comune_dashboard` (17 sezioni
-  fra cui `immobili_pa` e `anncsu`), endpoint REST non-MCP
-  `/data/anncsu_full/<istat>.json`, pattern operativi multi-comune e
-  lookup civici, caveat per sezione (turismo NUTS3, mobilità 2019,
-  `comune_contratti` stub, aria sparsa, PNRR solo Soggetto Attuatore).
+- **`cruscotto-italia-workflow-v1.1.zip`** *(corrente)* — workflow del connettore MCP:
+  inventory dei 10 tool, schema completo di `comune_dashboard` (18 sezioni
+  fra cui `immobili_pa`, `anncsu` e **`sanita_mds`**), endpoint REST non-MCP
+  `/data/anncsu_full/<istat>.json`, pattern operativi multi-comune,
+  lookup civici e lookup sanità territoriale (farmacie/parafarmacie/ospedali),
+  caveat per sezione (turismo NUTS3, mobilità 2019, `comune_contratti` stub,
+  aria sparsa, PNRR solo Soggetto Attuatore, posti letto ospedalieri MdS fermi al 2023).
 
-  Allineato a MCP v0.5.0 (14 dataset, 10 istituzioni, ~7.918 comuni).
+  Allineato a MCP v0.6.0 (15 dataset, 11 istituzioni, ~7.918 comuni).
+
+- **`cruscotto-italia-workflow-v1.0.zip`** *(storica)* — versione iniziale.
+  Allineata a MCP v0.5.0 (14 dataset, 10 istituzioni). Manteneva 17 sezioni
+  dashboard (senza `sanita_mds`).
 
 ## Installazione lato Claude
 
