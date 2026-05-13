@@ -503,6 +503,20 @@ a:hover{color:var(--accent)}
 }
 .sanita-disc-table tr:hover td{background:var(--paper-2);}
 .sanita-disc-table td.t-tot{font-weight:600;}
+
+/* Chart discipline (4e) */
+.sanita-disc-chart-wrap{margin:32px 0 24px;}
+.sanita-disc-chart-canvas-wrap{
+  background:var(--paper);
+  border:1px solid var(--ink-mute);
+  border-radius:4px;
+  padding:18px 14px 14px;
+  height:360px;
+  position:relative;
+}
+@media (max-width:720px){
+  .sanita-disc-chart-canvas-wrap{height:420px;padding:14px 10px 10px;}
+}
 @media (max-width:720px){
   .sanita-osp-item > summary{grid-template-columns:1fr auto;gap:10px;padding:12px 14px;}
   .sanita-osp-toggle{display:none;}
@@ -4218,7 +4232,8 @@ function renderSanitaTab(d) {
       <!-- Accordion stabilimenti ospedalieri (4d) -->
       ${renderSanitaOspedaliAccordion(d)}
 
-      <!-- Sotto-step 4e: chart bar horizontal top mix_discipline -->
+      <!-- Chart top 10 discipline (4e) -->
+      ${renderSanitaDiscChartBlock(d)}
     </div>`;
 }
 
@@ -4415,6 +4430,104 @@ function renderSanitaOspedaliAccordion(d) {
       </div>
     </div>
   `;
+}
+
+// ===========================================================================
+// Sotto-step 4e: chart bar horizontal top 10 discipline (mix_discipline)
+// ===========================================================================
+
+function renderSanitaDiscChartBlock(d) {
+  const mix = d?.ospedali?.kpi?.mix_discipline;
+  if (!mix || Object.keys(mix).length < 2) return '';
+
+  return `
+    <div class="sanita-disc-chart-wrap">
+      <h3 class="sanita-h3">Distribuzione posti letto per disciplina</h3>
+      <p class="sanita-osp-intro">
+        Top 10 discipline aggregate fra tutti gli stabilimenti ospedalieri del comune (somma di ordinaria, day hospital, day surgery, pagamento).
+      </p>
+      <div class="sanita-disc-chart-canvas-wrap" role="img" aria-label="Grafico a barre orizzontali dei posti letto per disciplina">
+        <canvas id="sanita-disc-chart"></canvas>
+      </div>
+    </div>
+  `;
+}
+
+function initSanitaDiscChart(d) {
+  const canvas = document.getElementById('sanita-disc-chart');
+  if (!canvas || typeof Chart === 'undefined') return;
+
+  const mix = d?.ospedali?.kpi?.mix_discipline;
+  if (!mix) return;
+
+  // Distruggi chart esistente (cambio comune o re-render)
+  if (window.__sanitaDiscChartInstance) {
+    try { window.__sanitaDiscChartInstance.destroy(); } catch(e) {}
+    window.__sanitaDiscChartInstance = null;
+  }
+
+  // mix_discipline e' gia' ordinato per totale DESC dall'ETL
+  const entries = Object.entries(mix).slice(0, 10);
+  const labels = entries.map(([k]) => k);
+  const values = entries.map(([, v]) => v);
+
+  // Color palette: gradient rosso intenso -> rosa per le top 10
+  const colors = [
+    '#C62828','#D32F2F','#E53935','#EF5350','#F06292',
+    '#EC407A','#E91E63','#AD1457','#880E4F','#6A1B9A'
+  ];
+
+  window.__sanitaDiscChartInstance = new Chart(canvas.getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [{
+        data: values,
+        backgroundColor: labels.map((_, i) => colors[i] || '#C62828'),
+        borderWidth: 0,
+        borderRadius: 3,
+        barThickness: 18,
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            title: items => items[0].label,
+            label: ctx => `${ctx.parsed.x} posti letto`
+          }
+        }
+      },
+      scales: {
+        x: {
+          beginAtZero: true,
+          ticks: {
+            color: '#6a6259',
+            font: { family: 'var(--mono)', size: 11 }
+          },
+          grid: { color: '#eef2f5' },
+          title: {
+            display: true,
+            text: 'Posti letto totali',
+            color: '#6a6259',
+            font: { family: 'var(--mono)', size: 10, weight: 400 }
+          }
+        },
+        y: {
+          ticks: {
+            color: '#272524',
+            font: { family: 'var(--ui)', size: 12 },
+            autoSkip: false
+          },
+          grid: { display: false }
+        }
+      }
+    }
+  });
 }
 
 // ===========================================================================
@@ -5618,7 +5731,13 @@ function bindTabSwitching() {
       // Lazy-init mappa Leaflet tab Sanità al primo click
       if (tab.dataset.tab === 'sanita') {
         if (window.__sanitaData && !window.__sanitaInited) {
-          setTimeout(() => initSanitaMap(window.__sanitaData), 0);
+          setTimeout(() => {
+            initSanitaMap(window.__sanitaData);
+            // Chart discipline ospedaliere (4e): solo se ha sezione ospedali
+            if (window.__sanitaData.ospedali) {
+              initSanitaDiscChart(window.__sanitaData);
+            }
+          }, 0);
           window.__sanitaInited = true;
         }
       }
