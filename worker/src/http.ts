@@ -222,7 +222,7 @@ pre code {
   <div class="wrap">
     <div class="mini-brand-wrap">
       <a href="https://cruscotto-italia.piersoftckan.biz" class="mini-brand">Cruscotto <span class="it">Italia</span></a>
-      <span class="mini-brand-sub">MCP Server · 16 fonti istituzionali</span>
+      <span class="mini-brand-sub">MCP Server · 18 fonti istituzionali</span>
     </div>
   </div>
 </div>
@@ -268,9 +268,9 @@ pre code {
   <p>Riavvia Claude Desktop. Il file di configurazione si trova in <code>~/Library/Application Support/Claude/</code> (macOS) o <code>%APPDATA%\\Claude\\</code> (Windows).</p>
 
   <h3>Skill <em>opzionale</em> per Claude</h3>
-  <p>Per ottenere risposte pi&ugrave; mirate quando l'utente chiede dati su uno o pi&ugrave; comuni italiani, &egrave; disponibile una <em>skill</em> Claude che documenta l'uso del connettore: inventario dei tool, schema completo di <code>comune_dashboard</code> (incluse sezioni <code>immobili_pa</code>, <code>anncsu</code>, <code>sanita_mds</code> per farmacie, parafarmacie e posti letto ospedalieri, <code>pun</code> per i punti di ricarica veicoli elettrici, e <code>agcom_bbmap</code> per la copertura banda larga FTTH/FTTC), endpoint REST <code>/data/anncsu_full/&lt;istat&gt;.json</code>, pattern operativi e <em>caveat</em> per sezione.</p>
+  <p>Per ottenere risposte pi&ugrave; mirate quando l'utente chiede dati su uno o pi&ugrave; comuni italiani, &egrave; disponibile una <em>skill</em> Claude che documenta l'uso del connettore: inventario dei tool, schema completo di <code>comune_dashboard</code> (incluse sezioni <code>immobili_pa</code>, <code>anncsu</code>, <code>sanita_mds</code> per farmacie, parafarmacie e posti letto ospedalieri, <code>pun</code> per i punti di ricarica veicoli elettrici, <code>agcom_bbmap</code> per la copertura banda larga FTTH/FTTC, e <code>carburanti</code> per i distributori e prezzi MIMIT), endpoint REST <code>/data/anncsu_full/&lt;istat&gt;.json</code>, pattern operativi e <em>caveat</em> per sezione.</p>
   <p>Scarica il pacchetto e caricalo nelle <em>Skills</em> di Claude (UI o API):</p>
-  <p><a href="/skills/cruscotto-italia-workflow-v1.3.zip" download><strong>cruscotto-italia-workflow-v1.3.zip</strong></a> &mdash; allineata a MCP v0.8.0 (17 dataset, 13 istituzioni)</p>
+  <p><a href="/skills/cruscotto-italia-workflow-v1.4.zip" download><strong>cruscotto-italia-workflow-v1.4.zip</strong></a> &mdash; allineata a MCP v0.9.0 (18 dataset, 14 istituzioni)</p>
 
   <h3>ChatGPT (Custom GPT)</h3>
   <p>Nei custom GPT con supporto MCP, aggiungi un nuovo server con URL <code>https://cruscotto-italia-mcp.piersoftckan.biz/mcp</code> e tipo JSON-RPC 2.0. Nessuna autenticazione richiesta.</p>
@@ -283,10 +283,10 @@ pre code {
 
   <h2>Tool <em>disponibili</em></h2>
   <p>10 strumenti MCP. <code>search_comune</code> va sempre chiamato per primo quando l'utente fornisce un nome di comune, per ottenere il codice ISTAT.</p>
-  <p>Storia: la prima generazione di tool era a granularità per fonte (uno per dataset). Per ridurre la latenza (6+ chiamate per una panoramica) e' stato introdotto <code>comune_dashboard</code>: single-fetch che restituisce tutte le 16 fonti aggregate. Le nuove fonti integrate dopo la v0.4 (aria SNPA, scuole MIUR, veicoli, redditi MEF, immobili PA, ANNCSU, sanita' MdS, PUN GSE) sono esposte <strong>solo</strong> via <code>comune_dashboard</code>. I tool dedicati restano per backward compatibility e per casi in cui serve solo una sezione.</p>
+  <p>Storia: la prima generazione di tool era a granularità per fonte (uno per dataset). Per ridurre la latenza (6+ chiamate per una panoramica) e' stato introdotto <code>comune_dashboard</code>: single-fetch che restituisce tutte le 18 fonti aggregate. Le nuove fonti integrate dopo la v0.4 (aria SNPA, scuole MIUR, veicoli, redditi MEF, immobili PA, ANNCSU, sanita' MdS, PUN GSE, AGCOM Broadband Map, MIMIT carburanti) sono esposte <strong>solo</strong> via <code>comune_dashboard</code>. I tool dedicati restano per backward compatibility e per casi in cui serve solo una sezione.</p>
 
   <div class="tools">
-    <div class="tool-row"><div class="tool-name">mcp_info</div><div class="tool-desc">Metadata del server: versione, sorgenti integrate (16), freshness di ogni dataset.</div></div>
+    <div class="tool-row"><div class="tool-name">mcp_info</div><div class="tool-desc">Metadata del server: versione, sorgenti integrate (18), freshness di ogni dataset.</div></div>
     <div class="tool-row"><div class="tool-name">search_comune</div><div class="tool-desc">Risolve un nome di comune in codice ISTAT a 6 cifre. Da chiamare per primo quando hai solo il nome.</div></div>
     <div class="tool-row"><div class="tool-name">comune_dashboard</div><div class="tool-desc"><strong>Tool unificato consigliato.</strong> Vista completa in una sola chiamata: anagrafica, demografia (POSAS), profilo (Censimento ISTAT), turismo, PNRR, territorio (ISPRA Suolo, IdroGEO, Rifiuti), aria (ISPRA SNPA: PM10/PM2.5/NO2), opere pubbliche (BDAP-MOP), contratti ANAC aggregati, spese SIOPE multi-anno, scuole (MIUR), veicoli e incidenti (ISTAT + ACI), redditi e fisco (MEF IRPEF), patrimonio immobiliare PA (MEF DE), ANNCSU (civici e strade Agenzia Entrate), sanita' territoriale (Ministero Salute: farmacie, parafarmacie, posti letto ospedalieri), punti di ricarica veicoli elettrici (GSE/MASE Piattaforma Unica Nazionale), copertura banda larga (AGCOM Broadband Map: FTTH DESI %, FTTH 20m, famiglie raggiunte).</div></div>
     <div class="tool-row"><div class="tool-name">comune_demografia</div><div class="tool-desc">Popolazione per età e sesso (POSAS al 1 gennaio 2026), piramide demografica, indici di vecchiaia e dipendenza. Granularità maggiore della sezione demografia di <code>comune_dashboard</code>.</div></div>

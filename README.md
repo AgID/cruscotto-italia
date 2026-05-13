@@ -25,6 +25,7 @@ Cerchi un comune ("Lecce") e ottieni una vista a 360° su:
 - 🏠 **Civici e strade** (ANNCSU — Agenzia delle Entrate, Open Data HVD)
 - 💊 **Sanità territoriale** (Ministero Salute — farmacie, parafarmacie, posti letto ospedalieri)
 - ⚡ **Punti di ricarica veicoli elettrici** (GSE/MASE — Piattaforma Unica Nazionale)
+- ⛽ **Distributori carburante e prezzi** (MIMIT — Osservatorio Prezzi Carburanti)
 
 L'elenco completo, con licenze, frequenze di aggiornamento e link diretti alle fonti, è in [`about.html`](https://cruscotto-italia.piersoftckan.biz/about.html).
 
@@ -37,7 +38,7 @@ Frontend (HTML statico) → Worker (Cloudflare) → R2 (JSON shard per comune)
                               ↑
               ETL Python (GitHub Actions, cadenze multiple)
                               ↑
-  17 fonti istituzionali · 13 enti emittenti:
+  18 fonti istituzionali · 14 enti emittenti:
    ANAC · BDAP-MOP · SIOPE · Italia Domani (PNRR)
    ISTAT (POSAS, Censimento, Turismo, Veicoli, Incidenti)
    MIUR · ISPRA (Suolo/IdroGEO/Rifiuti, SNPA aria) · ACI LOD
@@ -45,6 +46,7 @@ Frontend (HTML statico) → Worker (Cloudflare) → R2 (JSON shard per comune)
    Agenzia delle Entrate (ANNCSU) · Ministero della Salute
    GSE/MASE (Piattaforma Unica Nazionale punti di ricarica)
    AGCOM (Broadband Map: copertura banda larga FTTH/FTTC)
+   MIMIT (Osservatorio Prezzi Carburanti — distributori + prezzi)
 ```
 
 Tutti i dettagli architetturali sono in [`DESIGN.md`](DESIGN.md).
@@ -61,7 +63,7 @@ Cruscotto Italia espone un server [Model Context Protocol](https://modelcontextp
 
 **Tool esposti** (10): `mcp_info`, `search_comune`, `comune_dashboard`, `comune_demografia`, `comune_profilo`, `comune_turismo`, `comune_pnrr`, `comune_territorio`, `comune_opere_dettaglio`, `comune_contratti`.
 
-Le fonti integrate dopo la v0.4 (qualità aria, scuole, veicoli, redditi, patrimonio PA, ANNCSU, sanità MdS, punti di ricarica PUN, banda larga AGCOM) sono esposte come **sezioni** dentro `comune_dashboard` invece che come tool dedicati: una singola chiamata restituisce l'aggregato completo del comune.
+Le fonti integrate dopo la v0.4 (qualità aria, scuole, veicoli, redditi, patrimonio PA, ANNCSU, sanità MdS, punti di ricarica PUN, banda larga AGCOM, distributori MIMIT) sono esposte come **sezioni** dentro `comune_dashboard` invece che come tool dedicati: una singola chiamata restituisce l'aggregato completo del comune.
 
 **Rate limit**: 60 richieste/minuto per IP.
 
@@ -73,7 +75,7 @@ Le fonti integrate dopo la v0.4 (qualità aria, scuole, veicoli, redditi, patrim
 
 ### Skill Claude opzionale
 
-Per ottenere risposte più mirate è disponibile una skill Claude che documenta l'uso del connettore (inventario dei tool, schema di `comune_dashboard` con tutte le sezioni, endpoint REST `/data/anncsu_full/<istat>.json`, pattern operativi e caveat per sezione). Scaricabile da [`/skills/cruscotto-italia-workflow-v1.3.zip`](https://cruscotto-italia-mcp.piersoftckan.biz/skills/cruscotto-italia-workflow-v1.3.zip) (allineata a MCP v0.8.0: 17 dataset, 13 istituzioni, 20 sezioni dashboard inclusa banda larga AGCOM).
+Per ottenere risposte più mirate è disponibile una skill Claude che documenta l'uso del connettore (inventario dei tool, schema di `comune_dashboard` con tutte le sezioni, endpoint REST `/data/anncsu_full/<istat>.json`, pattern operativi e caveat per sezione). Scaricabile da [`/skills/cruscotto-italia-workflow-v1.4.zip`](https://cruscotto-italia-mcp.piersoftckan.biz/skills/cruscotto-italia-workflow-v1.4.zip) (allineata a MCP v0.9.0: 18 dataset, 14 istituzioni, 21 sezioni dashboard incluse banda larga AGCOM e distributori carburanti MIMIT).
 
 ### System prompt suggerito
 
@@ -88,7 +90,7 @@ Linee guida:
 - Usa i tool specifici (comune_pnrr, comune_demografia, ecc.) solo se l'utente vuole dettagli mirati su un singolo aspetto.
 - In caso di omonimi (es. "San Teodoro" esiste in Sardegna e Sicilia) mostra all'utente i match e chiedi quale.
 - Se l'utente non specifica il comune, chiedi chiarimento prima di chiamare i tool.
-- Cita sempre la fonte dati primaria nei tuoi output (ANAC, ISTAT, BDAP-MOP, ISPRA, MEF, MIUR, ACI, Agenzia Entrate, Ministero Salute, GSE/MASE, AGCOM).
+- Cita sempre la fonte dati primaria nei tuoi output (ANAC, ISTAT, BDAP-MOP, ISPRA, MEF, MIUR, ACI, Agenzia Entrate, Ministero Salute, GSE/MASE, AGCOM, MIMIT).
 ~~~
 
 > Nota: sostituisci `~~~` con triple backtick quando copi nel system prompt.
@@ -102,6 +104,7 @@ Linee guida:
 - "Quanti punti di ricarica EV attivi ci sono a Torino e quale percentuale è HPC/Ultra fast?" — mobilità elettrica
 - "Quanti civici certificati ANNCSU ci sono in via Roma a Lecce?" — civici georeferenziati
 - "Qual è la copertura FTTH a Bergamo? Confronto con Brescia." — banda larga AGCOM
+- "Quanto costa il gasolio self a Lecce rispetto alla media nazionale?" — distributori MIMIT
 
 ### Limiti noti
 
@@ -220,6 +223,7 @@ cruscotto-italia/
 │   │   ├── sanita_mds.py       ← Ministero Salute (farmacie, ospedali, posti letto)
 │   │   ├── pun.py              ← GSE/MASE punti di ricarica veicoli elettrici
 │   │   ├── agcom_bbmap.py      ← AGCOM Broadband Map (copertura banda larga FTTH/FTTC)
+│   │   ├── carburanti.py       ← MIMIT Osservatorio Prezzi Carburanti (distributori + prezzi)
 │   │   └── dashboard.py        ← unified shard A1 (single-fetch per comune)
 │   └── lib/
 │       ├── r2.py
@@ -227,7 +231,7 @@ cruscotto-italia/
 │       └── manifest.py
 │
 ├── .github/workflows/
-│   ├── etl-daily.yml         ← cron 04:30 UTC (PUN punti ricarica + dashboard rebuild)
+│   ├── etl-daily.yml         ← cron 04:30 UTC (PUN punti ricarica + MIMIT carburanti + dashboard rebuild)
 │   ├── etl-weekly.yml        ← cron lunedì (ANAC + PNRR + dashboard)
 │   ├── etl-monthly.yml       ← cron 5° del mese (anagrafica + BDAP + SIOPE + ANNCSU + sanità + AGCOM banda larga + dashboard)
 │   ├── etl-annual.yml        ← cron 1 feb / 1 apr / 1 lug (demografia, profilo, turismo, territorio, scuole, veicoli, redditi, immobili PA)
@@ -248,7 +252,7 @@ I dati delle fonti sono sotto le rispettive licenze:
 
 - **CC BY 4.0** — la maggior parte delle fonti (ANAC, ISTAT, MIUR, ACI, ISPRA, MEF DE Patrimonio, Italia Domani PNRR)
 - **CC BY 3.0 IT** — MEF Federalismo Fiscale, alcuni dataset ISTAT storici
-- **IODL 2.0** — BDAP-MOP, BDAP-SIOPE, Ministero della Salute
+- **IODL 2.0** — BDAP-MOP, BDAP-SIOPE, Ministero della Salute, MIMIT (Osservatorio Prezzi Carburanti)
 - **CC BY 4.0 ex art. 52 c.2 D.Lgs 82/2005 (CAD)** — "open by default" per soggetti art. 2 c.2 CAD che pubblicano dati senza licenza espressa. Si applica per esempio al GSE/MASE per la Piattaforma Unica Nazionale dei punti di ricarica e ad AGCOM per la Broadband Map (copertura banda larga ex art. 22 Codice Comunicazioni Elettroniche), in coerenza con le Linee Guida Open Data AgID (Determinazione 183/2023)
 - **Open Data ai sensi del Regolamento UE 2023/138 (HVD)** — ANNCSU (Agenzia delle Entrate + ISTAT)
 

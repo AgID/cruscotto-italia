@@ -6,9 +6,16 @@ name: ETL · Daily
 #    lato GSE ogni mattina ~03:00 UTC. L'ETL include skip automatico via
 #    HEAD LastModified persistito in `pun/_meta.json`: se la fonte non e'
 #    cambiata, il job termina in ~1s senza scaricare nulla.
+#  - Carburanti (MIMIT Osservatorio Prezzi Carburanti, art. 51 L. 99/2009)
+#    I file `anagrafica_impianti_attivi.csv` e `prezzo_alle_8.csv` su
+#    `www.mimit.gov.it` vengono rigenerati ogni mattina dal Ministero
+#    (snapshot "Prezzo alle 8 di mattina" del giorno precedente). L'ETL
+#    include skip automatico via hash SHA-256 combinato dei due CSV,
+#    persistito in `carburanti/_meta.json`: se entrambi i file sono
+#    invariati, il job termina senza ricalcolo shard.
 #
-# Al termine, se l'ETL ha effettivamente prodotto aggiornamenti,
-# ricostruisce dashboard/<istat>.json e notifica la worker.
+# Al termine, se almeno un ETL upstream ha effettivamente prodotto
+# aggiornamenti, ricostruisce dashboard/<istat>.json e notifica la worker.
 #
 # Cron: ogni giorno alle 04:30 UTC = 05:30/06:30 ora di Roma (DST).
 # 04:30 UTC scelto per dare ~90 minuti di margine dopo il rigenero GSE
@@ -20,11 +27,11 @@ on:
   workflow_dispatch:
     inputs:
       sources:
-        description: 'Comma-separated list (pun,dashboard) or "all"'
+        description: 'Comma-separated list (pun,carburanti,dashboard) or "all"'
         required: false
         default: 'all'
       force:
-        description: "PUN: forza esecuzione anche se LastModified non e' cambiato. Default false."
+        description: "PUN/Carburanti: forza esecuzione anche se sorgente non e' cambiata. Default false."
         required: false
         default: 'false'
 
@@ -77,14 +84,56 @@ jobs:
           fi
 
   # ---------------------------------------------------------------------------
-  # Dashboard rebuild parte SOLO se PUN ha effettivamente prodotto aggiornamenti.
-  # Senza modifiche su R2, ricostruire il dashboard sarebbe lavoro inutile
-  # (i ~7896 unified shard sarebbero identici a quelli gia' presenti).
+  carburanti:
+    name: ETL · Carburanti (MIMIT — distributori e prezzi)
+    runs-on: [self-hosted, linux, aruba]
+    if: ${{ github.event_name == 'schedule' || contains(github.event.inputs.sources, 'carburanti') || github.event.inputs.sources == 'all' || github.event.inputs.sources == '' }}
+    timeout-minutes: 30
+    outputs:
+      ran: ${{ steps.carburanti_run.outputs.ran }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: etl/requirements.txt
+      - run: pip install -r etl/requirements.txt
+      - name: Compute --force flag
+        id: force
+        run: |
+          if [ "${{ github.event.inputs.force }}" = "true" ]; then
+            echo "flag=--force" >> $GITHUB_OUTPUT
+          else
+            echo "flag=" >> $GITHUB_OUTPUT
+          fi
+      - name: Run Carburanti ETL
+        id: carburanti_run
+        # Lo skip-by-hash e' interno all'ETL: se entrambi i CSV MIMIT sono
+        # invariati l'ETL termina con "carburanti_skip" e i job downstream
+        # non vengono triggerati.
+        run: |
+          set -o pipefail
+          python -m etl.sources.carburanti --target=r2 ${{ steps.force.outputs.flag }} \
+            2>&1 | tee /tmp/carburanti-etl.log
+          if grep -q "carburanti_skip" /tmp/carburanti-etl.log; then
+            echo "ran=false" >> $GITHUB_OUTPUT
+            echo "Carburanti skipped: hash CSV invariato."
+          else
+            echo "ran=true" >> $GITHUB_OUTPUT
+            echo "Carburanti executed: shard aggiornati."
+          fi
+
+  # ---------------------------------------------------------------------------
+  # Dashboard rebuild parte SOLO se almeno un ETL upstream (PUN o Carburanti)
+  # ha effettivamente prodotto aggiornamenti. Senza modifiche su R2, ricostruire
+  # il dashboard sarebbe lavoro inutile (i ~7896 unified shard sarebbero
+  # identici a quelli gia' presenti).
   dashboard:
     name: ETL · Dashboard rebuild (single-fetch shard)
     runs-on: [self-hosted, linux, aruba]
-    needs: [pun]
-    if: ${{ always() && needs.pun.outputs.ran == 'true' && (github.event_name == 'schedule' || contains(github.event.inputs.sources, 'dashboard') || github.event.inputs.sources == 'all' || github.event.inputs.sources == '') }}
+    needs: [pun, carburanti]
+    if: ${{ always() && (needs.pun.outputs.ran == 'true' || needs.carburanti.outputs.ran == 'true') && (github.event_name == 'schedule' || contains(github.event.inputs.sources, 'dashboard') || github.event.inputs.sources == 'all' || github.event.inputs.sources == '') }}
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4

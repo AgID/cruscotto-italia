@@ -13,7 +13,8 @@ In caso di riutilizzo, citare come segue:
   "Elaborazione su dati Cruscotto Italia, fonti originarie: ANAC,
    BDAP-MOP, SIOPE, Italia Domani, ISPRA, ISTAT, MIUR, ARPA, ACI, MEF,
    Agenzia delle Entrate, Ministero della Salute, GSE / Piattaforma
-   Unica Nazionale, AGCOM Broadband Map."
+   Unica Nazionale, AGCOM Broadband Map, MIMIT Osservatorio Prezzi
+   Carburanti."
 
 FONTI ORIGINARIE E LORO LICENZE
 -------------------------------
@@ -43,6 +44,10 @@ FONTI ORIGINARIE E LORO LICENZE
                                                        D.Lgs 82/2005
                                                        (CAD) — open
                                                        data di default
+- MIMIT (Ministero delle Imprese e del Made in
+  Italy - Osservatorio Prezzi Carburanti,
+  anagrafica impianti e prezzi praticati ex
+  art. 51 L. 99/2009) ................................ IODL 2.0
 - OpenStreetMap (cartografia) ........................ ODbL
 
 Per il dettaglio dei dataset e degli URL originari delle fonti,
