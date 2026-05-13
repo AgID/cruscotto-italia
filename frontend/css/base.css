@@ -215,7 +215,7 @@
 }
 .tabs {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 4px;
 }
 .tab {
@@ -288,10 +288,8 @@
 /* Scroll hint nascosti: grid non scrolla */
 .tabs-scroll-hint { display: none !important; }
 .tabs-bar.has-overflow .tabs-scroll-hint { display: none !important; }
-/* Responsive: 5 col desktop -> 3 col tablet -> 2 col mobile */
-@media (max-width: 1023px) {
-  .tabs { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-}
+/* Responsive: 4 col desktop+tablet -> 2 col mobile.
+   Layout per 16 tab: 4x4 desktop, 8x2 mobile (sempre righe complete). */
 @media (max-width: 720px) {
   .tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .tab { padding: 4px 6px; min-height: 28px; }
