@@ -333,21 +333,14 @@ header.masthead::after{
 .kpis-3x3{
   grid-template-columns:repeat(6, 1fr);
 }
-/* Reset bordi: ogni cella ha right+bottom; con 10 elementi (3+3+3+1)
-   l'ultima riga ha 1 sola cella (ACI, last-child). Si toglie il bottom solo
-   al last-child, e il right alle posizioni 3n (3°,6°,9°) e al last-child. */
+/* Reset bordi: ogni cella ha right+bottom; con 12 elementi (3+3+3+3)
+   l'ultima riga ha 3 celle complete (MIUR, MEF, MIN.SALUTE).
+   border-right rimosso alle posizioni 3n; border-bottom rimosso alle ultime 3 celle. */
 .kpis-3x3 .kpi{border-right:1px solid var(--rule);border-bottom:1px solid var(--rule);grid-column:span 2;}
 .kpis-3x3 .kpi:nth-child(3n){border-right:none;}
-/* ACI (last-child, 10°) è da solo sull'ultima riga: niente bottom
-   (è già la riga finale), ma SI border-right per chiudere la cella
-   contro lo spazio vuoto a destra. */
-/* ACI (last-child, 10°) da solo sull'ultima riga: si espande a piena larghezza
-   per evitare il "buco" a destra. Niente bottom (è l'ultima riga del contenitore). */
-/* Ultime 2 card (ACI 10° + MEF 11°) condividono ultima riga 50/50 */
-.kpis-3x3 .kpi:nth-last-child(-n+2){border-bottom:none;grid-column:span 3;}
-.kpis-3x3 .kpi:nth-last-child(2){border-right:1px solid var(--rule);}
-.kpis-3x3 .kpi:last-child{border-right:none;}
-/* Le cifre nei 9 KPI sono un po' più contenute */
+/* Ultima riga (gli ultimi 3 = MIUR/MEF/MIN.SALUTE) senza bottom border */
+.kpis-3x3 .kpi:nth-last-child(-n+3){border-bottom:none;}
+/* Le cifre nei 12 KPI sono un po' più contenute */
 .kpis-3x3 .kpi-value{font-size:clamp(28px,3.5vw,40px);}
 .kpis-3x3 .kpi{padding:24px 22px;}
 
@@ -356,7 +349,7 @@ header.masthead::after{
   .kpis-3x3 .kpi{border-right:1px solid var(--rule);border-bottom:1px solid var(--rule);grid-column:span 2;}
   .kpis-3x3 .kpi:nth-child(3n){border-right:1px solid var(--rule);}
   .kpis-3x3 .kpi:nth-child(2n){border-right:none;}
-  /* Con 10 elementi in 2 colonne: 5 righe da 2, l'ultima riga sono gli ultimi 2. */
+  /* Con 12 elementi in 2 colonne: 6 righe da 2, l'ultima riga sono gli ultimi 2. */
   .kpis-3x3 .kpi:nth-last-child(-n+2){border-bottom:none;}
   .kpis-3x3 .kpi-value{font-size:24px;}
   .kpis-3x3 .kpi{padding:18px 16px;}
