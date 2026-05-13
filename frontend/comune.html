@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>Vista comune · Cruscotto Italia</title>
-<link rel="stylesheet" href="/css/tokens.css?v=20260513b">
-<link rel="stylesheet" href="/css/base.css?v=20260513b">
+<link rel="stylesheet" href="/css/tokens.css?v=20260513c">
+<link rel="stylesheet" href="/css/base.css?v=20260513c">
 
 <style>
 /* === ALIAS bridge: vecchi nomi -> nuovi token Design Italia === */
@@ -257,6 +257,42 @@ a:hover{color:var(--accent)}
   letter-spacing:0.06em;
   margin-top:6px;
 }
+
+/* Tab Punti di ricarica (PUN): 7 KPI in grid 4+3 desktop, 2 col tablet, 1 col mobile.
+   Override del default .tab-kpis (auto-fit minmax 200px) che con 7 voci farebbe
+   6+1 schiacciato in una riga da 1200px. */
+.pun-kpis{
+  grid-template-columns:repeat(4,1fr) !important;
+}
+.pun-kpis .tab-kpi:nth-child(4n){
+  border-right:none;
+}
+.pun-kpis .tab-kpi:nth-child(-n+4){
+  border-bottom:1px solid var(--rule);
+}
+@media (max-width:900px){
+  .pun-kpis{grid-template-columns:repeat(2,1fr) !important;}
+  .pun-kpis .tab-kpi{border-right:1px solid var(--rule);border-bottom:1px solid var(--rule);}
+  .pun-kpis .tab-kpi:nth-child(4n){border-right:1px solid var(--rule);}
+  .pun-kpis .tab-kpi:nth-child(2n){border-right:none;}
+  .pun-kpis .tab-kpi:nth-last-child(-n+1){border-bottom:none;}
+}
+@media (max-width:540px){
+  .pun-kpis{grid-template-columns:1fr !important;}
+  .pun-kpis .tab-kpi{border-right:none;border-bottom:1px solid var(--rule);}
+  .pun-kpis .tab-kpi:last-child{border-bottom:none;}
+}
+.pun-kpis .tab-kpi .sub{
+  font-family:var(--mono);
+  font-size:11px;
+  color:var(--ink-mute);
+  text-transform:uppercase;
+  letter-spacing:0.06em;
+  margin-top:6px;
+}
+/* Doughnut PUN: altezza ridotta vs .impa-chart-wrap (480px), allineata a mappa. */
+.pun-chart-wrap{height:320px;position:relative;}
+@media (max-width:720px){.pun-chart-wrap{height:280px;}}
 
 /* Tab Sanità: mappa Leaflet + filtri chip + marker SVG colorati */
 .sanita-map-wrap{margin:32px 0 24px;}
@@ -4381,7 +4417,7 @@ function renderPunTab(d) {
         <a href="https://www.piattaformaunicanazionale.it/idr" target="_blank" rel="noopener">Piattaforma Unica Nazionale</a>
         del GSE / Ministero dell'Ambiente. Dato aggiornato quotidianamente.
       </p>
-      <div class="tab-kpis">
+      <div class="tab-kpis pun-kpis">
         <div class="tab-kpi">
           <div class="lab">Totale punti</div>
           <div class="val">${fmtNum(k.n_totale)}</div>
@@ -4433,7 +4469,7 @@ function renderPunTab(d) {
         </div>
         <div>
           <h3 class="veicoli-col-h">Mix per categoria di potenza</h3>
-          <div class="impa-chart-wrap">
+          <div class="pun-chart-wrap">
             <canvas id="pun-mix-chart" aria-label="Distribuzione punti per categoria di potenza" role="img"></canvas>
           </div>
           <div class="veicoli-euro-note">
