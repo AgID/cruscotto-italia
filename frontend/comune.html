@@ -5723,14 +5723,32 @@ function initSanitaMap(d) {
     layers[k].addTo(map);
   }
 
-  // Fit bounds su tutti i punti
+  // Fit bounds: ignoro gli outlier statistici per evitare zoom-out estremo
+  // dovuto a coordinate errate alla fonte MdS (~0.2% di tasso outlier).
+  // Calcolo mediana lat/lon e includo solo punti entro ±0.6° (~66km).
   const allMarkers = [];
   for (const k in layers) layers[k].eachLayer(m => allMarkers.push(m));
+
   if (allMarkers.length === 1) {
     map.setView([allPunti[0].lat, allPunti[0].lon], 14);
-  } else {
-    const group = L.featureGroup(allMarkers);
-    map.fitBounds(group.getBounds().pad(0.12));
+  } else if (allMarkers.length > 0) {
+    const sortedLats = allPunti.map(p => p.lat).sort((a,b) => a-b);
+    const sortedLons = allPunti.map(p => p.lon).sort((a,b) => a-b);
+    const medLat = sortedLats[Math.floor(sortedLats.length / 2)];
+    const medLon = sortedLons[Math.floor(sortedLons.length / 2)];
+    // Filtro inliers per fitBounds: entro 0.6° dalla mediana (~66km, copre
+    // anche comuni territorialmente vasti come Roma capitale).
+    const inliers = allPunti.filter(p =>
+      Math.abs(p.lat - medLat) <= 0.6 && Math.abs(p.lon - medLon) <= 0.6
+    );
+    if (inliers.length >= 2) {
+      const bounds = L.latLngBounds(inliers.map(p => [p.lat, p.lon]));
+      map.fitBounds(bounds.pad(0.12));
+    } else {
+      // fallback: tutto
+      const group = L.featureGroup(allMarkers);
+      map.fitBounds(group.getBounds().pad(0.12));
+    }
   }
 
   // Chip toggle handlers
