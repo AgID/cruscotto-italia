@@ -6701,7 +6701,7 @@ CONTENUTO DELLO ZIP
 - METADATI.csv         Legenda campi, fonti, periodi di riferimento
 - LICENSE.txt          Licenza d'uso e attribuzioni
 
-FONTI INTEGRATE (14 dataset, 10 istituzioni)
+FONTI INTEGRATE (15 dataset, 11 istituzioni)
 --------------------------------------------
 - ANAC                   Contratti pubblici (OCDS)
 - BDAP-MOP               Opere pubbliche dei comuni
@@ -6714,6 +6714,7 @@ FONTI INTEGRATE (14 dataset, 10 istituzioni)
 - MEF Dip. Finanze       Redditi IRPEF su base comunale 2020-2024
 - MEF Dip. Entrate       Censimento beni immobili pubblici 2022
 - Agenzia Entrate+ISTAT  ANNCSU — strade e numeri civici certificati
+- Ministero Salute       Farmacie, parafarmacie, posti letto ospedalieri
 
 I dati di origine sono pubblicati dalle istituzioni elencate in
 LICENSE.txt e sono disponibili sui rispettivi portali open data.
@@ -6728,6 +6729,26 @@ questo comune (Lecce ~48mila, Roma ~516mila, ecc.), interroga
 l'endpoint:
 
   https://cruscotto-italia-mcp.piersoftckan.biz/data/anncsu_full/${istat}.json
+
+NOTA SUI PRESIDI SANITARI MIN. SALUTE
+-------------------------------------
+Le sezioni "farmacie" e "parafarmacie" includono i campi "lat_raw" e
+"lon_raw" che preservano sempre le coordinate originali dichiarate
+dal Ministero della Salute. Il tasso di errore upstream osservato
+(coord fuori comune dichiarato) è del 5-15%. Per i record con
+coordinate errate o mancanti, "lat" e "lon" sono state ricalcolate
+incrociando l'odonimo+civico con l'archivio ANNCSU. Il campo
+"coord_source" indica la provenienza finale:
+  - "mds":      coordinate originali (dentro centroide comune)
+  - "anncsu":   ricalcolate via ANNCSU (specificare strategia in
+                "coord_strategy": odo_civ_exact / odo_civ_no_esp / odo_only)
+  - "dropped":  coord MdS fuori comune, no match ANNCSU (no marker)
+  - "no_coord": no coord upstream, no match ANNCSU
+
+Gli stabilimenti ospedalieri (anno 2023) non hanno lat/lon nel
+dataset MdS originale e quindi non sono georeferenziati nei punti
+individuali; per la mappa visuale del sito web vengono disposti
+attorno al centroide farmacie del comune con offset radiale.
 
 `;
       zip.file('README.txt', readme);

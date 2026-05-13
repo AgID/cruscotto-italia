@@ -215,3 +215,43 @@ anncsu,punti[].civ,Numero civico,numero,Agenzia Entrate,snapshot mensile,https:/
 anncsu,punti[].esp,Esponente alfabetico del civico (es. A/B/bis),testo,Agenzia Entrate,snapshot mensile,https://anncsu.open.agenziaentrate.gov.it/,Open Data UE 2023/138
 anncsu,punti[].quota,Quota altimetrica del singolo civico (metri s.l.m.),metri,Agenzia Entrate,snapshot mensile,https://anncsu.open.agenziaentrate.gov.it/,Open Data UE 2023/138
 anncsu,punti[].met,Codice metodo di georeferenziazione (1=GPS 2=Catasto 3=Ortofoto 4=Cartografia 5=Altro),codice,Agenzia Entrate,snapshot mensile,https://anncsu.open.agenziaentrate.gov.it/,Open Data UE 2023/138
+sanita_mds,_etl_version,Versione del pipeline ETL Sanità MdS,testo,Cruscotto Italia,corrente,{{SITE_URL}},IODL 2.0
+sanita_mds,_source,Sorgente originaria del dato,testo,Ministero della Salute - Sistema Informativo Sanitario,giornaliero (farm.) + annuale (osp.),https://www.dati.salute.gov.it/,IODL 2.0
+sanita_mds,_generated_at,Timestamp ISO 8601 generazione shard,datetime,Cruscotto Italia,corrente,{{SITE_URL}},IODL 2.0
+sanita_mds,_fonti.farmacie.anno_dati,Anno dei dati farmacie,numero,Ministero della Salute,corrente,https://www.dati.salute.gov.it/dataset/farmacie,IODL 2.0
+sanita_mds,_fonti.parafarmacie.anno_dati,Anno dei dati parafarmacie,numero,Ministero della Salute,corrente,https://www.dati.salute.gov.it/dataset/parafarmacie,IODL 2.0
+sanita_mds,_fonti.ospedali.anno_dati,Anno di riferimento dei posti letto ospedalieri (ultimo rilascio annuale MdS),numero,Ministero della Salute,annuale,https://www.dati.salute.gov.it/dataset/posti-letto,IODL 2.0
+sanita_mds,farmacie.kpi.n_totale,Numero totale di farmacie attive nel comune,numero,Ministero della Salute,giornaliero,https://www.dati.salute.gov.it/dataset/farmacie,IODL 2.0
+sanita_mds,farmacie.kpi.mix_tipologia,Distribuzione farmacie per tipologia (Ordinaria/Succursale/Dispensario/stagionale),oggetto,Ministero della Salute,giornaliero,https://www.dati.salute.gov.it/dataset/farmacie,IODL 2.0
+sanita_mds,farmacie.kpi.n_coordinate_mds,Farmacie con coordinate originali del Ministero della Salute (dentro centroide comune),numero,Cruscotto Italia,corrente,{{SITE_URL}},IODL 2.0
+sanita_mds,farmacie.kpi.n_coordinate_ricalcolate,Farmacie con coordinate ricalcolate via incrocio ANNCSU per coord MdS errate o mancanti,numero,Cruscotto Italia,corrente,{{SITE_URL}},IODL 2.0
+sanita_mds,farmacie.kpi.n_coordinate_droppate,Farmacie con coordinate MdS fuori comune dichiarato e nessun match in ANNCSU,numero,Cruscotto Italia,corrente,{{SITE_URL}},IODL 2.0
+sanita_mds,farmacie.kpi.n_senza_coordinate,Farmacie senza coordinate dichiarate e non geolocalizzabili,numero,Cruscotto Italia,corrente,{{SITE_URL}},IODL 2.0
+sanita_mds,farmacie.kpi.geocode_strategie,Distribuzione delle strategie di matching ANNCSU usate (odo_civ_exact/odo_civ_no_esp/odo_only),oggetto,Cruscotto Italia,corrente,{{SITE_URL}},IODL 2.0
+sanita_mds,farmacie.punti[].nome,Denominazione/ragione sociale della farmacia,testo,Ministero della Salute,giornaliero,https://www.dati.salute.gov.it/dataset/farmacie,IODL 2.0
+sanita_mds,farmacie.punti[].tipo,Tipologia farmacia (Ordinaria/Succursale/Dispensario/stagionale),testo,Ministero della Salute,giornaliero,https://www.dati.salute.gov.it/dataset/farmacie,IODL 2.0
+sanita_mds,farmacie.punti[].indirizzo,Indirizzo della farmacia (via e numero civico),testo,Ministero della Salute,giornaliero,https://www.dati.salute.gov.it/dataset/farmacie,IODL 2.0
+sanita_mds,farmacie.punti[].cap,Codice di Avviamento Postale,testo,Ministero della Salute,giornaliero,https://www.dati.salute.gov.it/dataset/farmacie,IODL 2.0
+sanita_mds,farmacie.punti[].lat,"Latitudine WGS84 finale (gradi decimali), originale o ricalcolata",gradi,MdS/Cruscotto,corrente,{{SITE_URL}},IODL 2.0
+sanita_mds,farmacie.punti[].lon,"Longitudine WGS84 finale (gradi decimali), originale o ricalcolata",gradi,MdS/Cruscotto,corrente,{{SITE_URL}},IODL 2.0
+sanita_mds,farmacie.punti[].lat_raw,Latitudine WGS84 originale dichiarata dal Min. Salute (preservata per audit),gradi,Ministero della Salute,giornaliero,https://www.dati.salute.gov.it/dataset/farmacie,IODL 2.0
+sanita_mds,farmacie.punti[].lon_raw,Longitudine WGS84 originale dichiarata dal Min. Salute (preservata per audit),gradi,Ministero della Salute,giornaliero,https://www.dati.salute.gov.it/dataset/farmacie,IODL 2.0
+sanita_mds,farmacie.punti[].coord_source,Provenienza delle coord finali (mds/anncsu/dropped/no_coord),testo,Cruscotto Italia,corrente,{{SITE_URL}},IODL 2.0
+sanita_mds,farmacie.punti[].coord_strategy,Strategia ANNCSU di matching usata se coord_source=anncsu,testo,Cruscotto Italia,corrente,{{SITE_URL}},IODL 2.0
+sanita_mds,parafarmacie.kpi.n_totale,Numero totale di parafarmacie attive nel comune,numero,Ministero della Salute,giornaliero,https://www.dati.salute.gov.it/dataset/parafarmacie,IODL 2.0
+sanita_mds,parafarmacie.punti[],Lista parafarmacie con stessi campi delle farmacie (nome/indirizzo/lat/lon/coord_source/...),oggetto,MdS/Cruscotto,corrente,{{SITE_URL}},IODL 2.0
+sanita_mds,ospedali.kpi.n_stabilimenti,Numero di stabilimenti ospedalieri pubblici/accreditati del comune,numero,Ministero della Salute,annuale,https://www.dati.salute.gov.it/dataset/posti-letto,IODL 2.0
+sanita_mds,ospedali.kpi.n_reparti_totali,Numero totale di reparti (somma di tutti gli stab.),numero,Ministero della Salute,annuale,https://www.dati.salute.gov.it/dataset/posti-letto,IODL 2.0
+sanita_mds,ospedali.kpi.posti_letto_totali,Numero totale posti letto (ord+pag+dh+ds),numero,Ministero della Salute,annuale,https://www.dati.salute.gov.it/dataset/posti-letto,IODL 2.0
+sanita_mds,ospedali.kpi.posti_letto_ordinaria,Posti letto in degenza ordinaria,numero,Ministero della Salute,annuale,https://www.dati.salute.gov.it/dataset/posti-letto,IODL 2.0
+sanita_mds,ospedali.kpi.posti_letto_pagamento,Posti letto in regime di pagamento,numero,Ministero della Salute,annuale,https://www.dati.salute.gov.it/dataset/posti-letto,IODL 2.0
+sanita_mds,ospedali.kpi.posti_letto_day_hospital,Posti letto Day Hospital (medici),numero,Ministero della Salute,annuale,https://www.dati.salute.gov.it/dataset/posti-letto,IODL 2.0
+sanita_mds,ospedali.kpi.posti_letto_day_surgery,Posti letto Day Surgery (chirurgici),numero,Ministero della Salute,annuale,https://www.dati.salute.gov.it/dataset/posti-letto,IODL 2.0
+sanita_mds,ospedali.kpi.mix_discipline,Distribuzione posti letto per disciplina aggregata su tutti gli stab. del comune,oggetto,Ministero della Salute,annuale,https://www.dati.salute.gov.it/dataset/posti-letto,IODL 2.0
+sanita_mds,ospedali.stabilimenti[].denominazione,Denominazione ufficiale dello stabilimento,testo,Ministero della Salute,annuale,https://www.dati.salute.gov.it/dataset/posti-letto,IODL 2.0
+sanita_mds,ospedali.stabilimenti[].codice_struttura,Codice struttura (azienda+stabilimento),testo,Ministero della Salute,annuale,https://www.dati.salute.gov.it/dataset/posti-letto,IODL 2.0
+sanita_mds,ospedali.stabilimenti[].subcodice,Subcodice stabilimento (es. 01),testo,Ministero della Salute,annuale,https://www.dati.salute.gov.it/dataset/posti-letto,IODL 2.0
+sanita_mds,ospedali.stabilimenti[].tipo_struttura,"Tipologia ospedale (a gestione diretta, AOU, IRCCS, privato accreditato...)",testo,Ministero della Salute,annuale,https://www.dati.salute.gov.it/dataset/posti-letto,IODL 2.0
+sanita_mds,ospedali.stabilimenti[].indirizzo,Indirizzo dello stabilimento,testo,Ministero della Salute,annuale,https://www.dati.salute.gov.it/dataset/posti-letto,IODL 2.0
+sanita_mds,ospedali.stabilimenti[].totale_posti_letto,Totale posti letto dello stabilimento,numero,Ministero della Salute,annuale,https://www.dati.salute.gov.it/dataset/posti-letto,IODL 2.0
+sanita_mds,ospedali.stabilimenti[].discipline,Lista discipline con dettaglio posti letto per tipo (ord/dh/ds/pag),oggetto,Ministero della Salute,annuale,https://www.dati.salute.gov.it/dataset/posti-letto,IODL 2.0
