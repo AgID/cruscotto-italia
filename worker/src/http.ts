@@ -229,7 +229,7 @@ pre code {
 
 <main class="mcp-page">
 
-  <div class="eyebrow">§ MCP Server · v0.6</div>
+  <div class="eyebrow">§ MCP Server · v0.7</div>
   <h1>Cruscotto Italia <em>MCP</em>.</h1>
   <p class="lead">Server <a href="https://modelcontextprotocol.io" target="_blank" rel="noopener">Model Context Protocol</a> che federa sedici dataset pubblici sui comuni italiani (ANAC, BDAP-MOP, SIOPE, PNRR, ISPRA Suolo/IdroGEO/Rifiuti, ISPRA SNPA qualità aria, ISTAT POSAS/Censimento/Veicoli/Incidenti, MIUR scuole, ACI nuove iscrizioni, MEF Federalismo Fiscale, MEF Patrimonio Immobiliare, Agenzia delle Entrate ANNCSU civici e strade, Ministero della Salute farmacie/parafarmacie/posti letto ospedalieri, GSE/MASE Piattaforma Unica Nazionale punti di ricarica veicoli elettrici). Connettilo al tuo client LLM per interrogare i dati ufficiali con linguaggio naturale.</p>
 
@@ -268,7 +268,7 @@ pre code {
   <p>Riavvia Claude Desktop. Il file di configurazione si trova in <code>~/Library/Application Support/Claude/</code> (macOS) o <code>%APPDATA%\\Claude\\</code> (Windows).</p>
 
   <h3>Skill <em>opzionale</em> per Claude</h3>
-  <p>Per ottenere risposte pi&ugrave; mirate quando l'utente chiede dati su uno o pi&ugrave; comuni italiani, &egrave; disponibile una <em>skill</em> Claude che documenta l'uso del connettore: inventario dei tool, schema completo di <code>comune_dashboard</code> (incluse sezioni <code>immobili_pa</code>, <code>anncsu</code> e <code>sanita_mds</code> per farmacie, parafarmacie e posti letto ospedalieri), endpoint REST <code>/data/anncsu_full/&lt;istat&gt;.json</code>, pattern operativi e <em>caveat</em> per sezione.</p>
+  <p>Per ottenere risposte pi&ugrave; mirate quando l'utente chiede dati su uno o pi&ugrave; comuni italiani, &egrave; disponibile una <em>skill</em> Claude che documenta l'uso del connettore: inventario dei tool, schema completo di <code>comune_dashboard</code> (incluse sezioni <code>immobili_pa</code>, <code>anncsu</code>, <code>sanita_mds</code> per farmacie, parafarmacie e posti letto ospedalieri, e <code>pun</code> per i punti di ricarica veicoli elettrici), endpoint REST <code>/data/anncsu_full/&lt;istat&gt;.json</code>, pattern operativi e <em>caveat</em> per sezione.</p>
   <p>Scarica il pacchetto e caricalo nelle <em>Skills</em> di Claude (UI o API):</p>
   <p><a href="/skills/cruscotto-italia-workflow-v1.1.zip" download><strong>cruscotto-italia-workflow-v1.1.zip</strong></a> &mdash; allineata a MCP v0.7.0 (16 dataset, 12 istituzioni)</p>
 
@@ -288,7 +288,7 @@ pre code {
   <div class="tools">
     <div class="tool-row"><div class="tool-name">mcp_info</div><div class="tool-desc">Metadata del server: versione, sorgenti integrate (16), freshness di ogni dataset.</div></div>
     <div class="tool-row"><div class="tool-name">search_comune</div><div class="tool-desc">Risolve un nome di comune in codice ISTAT a 6 cifre. Da chiamare per primo quando hai solo il nome.</div></div>
-    <div class="tool-row"><div class="tool-name">comune_dashboard</div><div class="tool-desc"><strong>Tool unificato consigliato.</strong> Vista completa in una sola chiamata: anagrafica, demografia (POSAS), profilo (Censimento ISTAT), turismo, PNRR, territorio (ISPRA Suolo, IdroGEO, Rifiuti), aria (ISPRA SNPA: PM10/PM2.5/NO2), opere pubbliche (BDAP-MOP), contratti ANAC aggregati, spese SIOPE multi-anno, scuole (MIUR), veicoli e incidenti (ISTAT + ACI), redditi e fisco (MEF IRPEF), patrimonio immobiliare PA (MEF DE), ANNCSU (civici e strade Agenzia Entrate), sanita' territoriale (Ministero Salute: farmacie, parafarmacie, posti letto ospedalieri).</div></div>
+    <div class="tool-row"><div class="tool-name">comune_dashboard</div><div class="tool-desc"><strong>Tool unificato consigliato.</strong> Vista completa in una sola chiamata: anagrafica, demografia (POSAS), profilo (Censimento ISTAT), turismo, PNRR, territorio (ISPRA Suolo, IdroGEO, Rifiuti), aria (ISPRA SNPA: PM10/PM2.5/NO2), opere pubbliche (BDAP-MOP), contratti ANAC aggregati, spese SIOPE multi-anno, scuole (MIUR), veicoli e incidenti (ISTAT + ACI), redditi e fisco (MEF IRPEF), patrimonio immobiliare PA (MEF DE), ANNCSU (civici e strade Agenzia Entrate), sanita' territoriale (Ministero Salute: farmacie, parafarmacie, posti letto ospedalieri), punti di ricarica veicoli elettrici (GSE/MASE Piattaforma Unica Nazionale).</div></div>
     <div class="tool-row"><div class="tool-name">comune_demografia</div><div class="tool-desc">Popolazione per età e sesso (POSAS al 1 gennaio 2026), piramide demografica, indici di vecchiaia e dipendenza. Granularità maggiore della sezione demografia di <code>comune_dashboard</code>.</div></div>
     <div class="tool-row"><div class="tool-name">comune_profilo</div><div class="tool-desc">Censimento permanente ISTAT: istruzione, lavoro, famiglie, mobilità, cittadinanza.</div></div>
     <div class="tool-row"><div class="tool-name">comune_turismo</div><div class="tool-desc">Capacità ricettiva comunale (alberghi ed extra-alberghiero) e flussi turistici provinciali.</div></div>
@@ -329,7 +329,7 @@ pre code {
 
   <h2>Note <em>tecniche</em></h2>
   <p>Endpoint MCP: <code>POST /mcp</code> · Health check: <code>GET /health</code> · Rate limit: 60 richieste al minuto · Cache: 1 ora · Trasporto: JSON-RPC 2.0 over HTTP.</p>
-  <p>Tutti i dati provengono da open data ufficiali con licenza CC-BY 4.0 o IODL 2.0. L'aggregazione per codice ISTAT è eseguita da pipeline Python che pubblicano su Cloudflare R2; il worker fa solo lookup e composizione.</p>
+  <p>Tutti i dati provengono da open data ufficiali con licenza CC-BY 4.0, IODL 2.0 o, in assenza di licenza espressa da parte di soggetti art. 2 c.2 CAD, CC BY 4.0 ai sensi del principio "open by default" di cui all'art. 52 c.2 D.Lgs 82/2005 (Codice dell'Amministrazione Digitale) e delle Linee Guida Open Data AgID (Det. 183/2023). L'aggregazione per codice ISTAT è eseguita da pipeline Python che pubblicano su Cloudflare R2; il worker fa solo lookup e composizione.</p>
 
   <footer class="mcp-footer">
     <a href="https://cruscotto-italia.piersoftckan.biz">↗ Frontend Cruscotto Italia</a>
