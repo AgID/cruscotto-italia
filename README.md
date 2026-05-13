@@ -1,12 +1,11 @@
 # Cruscotto Italia
 
-> **Repo istituzionale curato da [AgID](https://www.agid.gov.it/).** Progetto sviluppato da [Francesco Piero Paolicelli (@piersoft)](https://piersoft.it), in adozione presso AgID. Il repo originale dell'autore è [piersoft/cruscotto-italia](https://github.com/piersoft/cruscotto-italia).
-
-
 > La carta d'identità data-driven dei comuni italiani. I dataset pubblici dei principali enti istituzionali, federati e ricomposti per comune.
 
-[![Deploy Worker](https://github.com/AgID/cruscotto-italia/actions/workflows/deploy-worker.yml/badge.svg)](https://github.com/AgID/cruscotto-italia/actions/workflows/deploy-worker.yml)
-[![ETL Mensile](https://github.com/AgID/cruscotto-italia/actions/workflows/etl-monthly.yml/badge.svg)](https://github.com/AgID/cruscotto-italia/actions/workflows/etl-monthly.yml)
+[![Deploy Worker](https://github.com/piersoft/cruscotto-italia/actions/workflows/deploy-worker.yml/badge.svg)](https://github.com/piersoft/cruscotto-italia/actions/workflows/deploy-worker.yml)
+[![ETL Daily](https://github.com/piersoft/cruscotto-italia/actions/workflows/etl-daily.yml/badge.svg)](https://github.com/piersoft/cruscotto-italia/actions/workflows/etl-daily.yml)
+[![ETL Monthly](https://github.com/piersoft/cruscotto-italia/actions/workflows/etl-monthly.yml/badge.svg)](https://github.com/piersoft/cruscotto-italia/actions/workflows/etl-monthly.yml)
+[![CI lint & test](https://github.com/piersoft/cruscotto-italia/actions/workflows/ci.yml/badge.svg)](https://github.com/piersoft/cruscotto-italia/actions/workflows/ci.yml)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](LICENSE)
 
 Cerchi un comune ("Lecce") e ottieni una vista a 360° su:
@@ -24,18 +23,12 @@ Cerchi un comune ("Lecce") e ottieni una vista a 360° su:
 - 💶 **Redditi e fisco** (MEF — Dichiarazioni IRPEF)
 - 🏛️ **Patrimonio immobiliare PA** (MEF DE — Beni Immobili Pubblici)
 - 🏠 **Civici e strade** (ANNCSU — Agenzia delle Entrate, Open Data HVD)
-
-L'elenco completo, con licenze, frequenze di aggiornamento e link diretti alle fonti, è in [`about.html`](https://cruscotto-italia.piersoftckan.biz/about.html).
-- 🏫 **Scuole** (MIUR — Anagrafe scuole statali)
-- 🌫️ **Qualità dell'aria** (ISPRA SNPA — PM10/PM2.5/NO2)
-- 🚗 **Parco veicoli e incidenti** (ISTAT 41_993 + ACI LOD)
-- 💶 **Redditi e fisco** (MEF — Dichiarazioni IRPEF)
-- 🏛️ **Patrimonio immobiliare PA** (MEF DE — Beni Immobili Pubblici)
-- 🏠 **Civici e strade** (ANNCSU — Agenzia delle Entrate, Open Data HVD)
+- 💊 **Sanità territoriale** (Ministero Salute — farmacie, parafarmacie, posti letto ospedalieri)
+- ⚡ **Punti di ricarica veicoli elettrici** (GSE/MASE — Piattaforma Unica Nazionale)
 
 L'elenco completo, con licenze, frequenze di aggiornamento e link diretti alle fonti, è in [`about.html`](https://cruscotto-italia.piersoftckan.biz/about.html).
 
-Tutto ricomposto sulla **spina dorsale anagrafica ISTAT comuni**.
+Tutto ricomposto sulla **spina dorsale anagrafica ISTAT comuni** (~7.896 comuni).
 
 ## Architettura
 
@@ -44,8 +37,13 @@ Frontend (HTML statico) → Worker (Cloudflare) → R2 (JSON shard per comune)
                               ↑
               ETL Python (GitHub Actions, cadenze multiple)
                               ↑
-   ANAC · BDAP-MOP · SIOPE · Italia Domani (PNRR) · ISTAT (POSAS, Censimento, Turismo, Veicoli, Incidenti)
-   MIUR · ISPRA SNPA · ACI LOD · MEF (IRPEF, Beni Immobili) · Agenzia Entrate (ANNCSU)
+  16 fonti istituzionali · 12 enti emittenti:
+   ANAC · BDAP-MOP · SIOPE · Italia Domani (PNRR)
+   ISTAT (POSAS, Censimento, Turismo, Veicoli, Incidenti)
+   MIUR · ISPRA (Suolo/IdroGEO/Rifiuti, SNPA aria) · ACI LOD
+   MEF (Federalismo Fiscale IRPEF, Patrimonio Immobiliare PA)
+   Agenzia delle Entrate (ANNCSU) · Ministero della Salute
+   GSE/MASE (Piattaforma Unica Nazionale punti di ricarica)
 ```
 
 Tutti i dettagli architetturali sono in [`DESIGN.md`](DESIGN.md).
@@ -60,44 +58,54 @@ Cruscotto Italia espone un server [Model Context Protocol](https://modelcontextp
 
 **Endpoint pubblico**: `https://cruscotto-italia-mcp.piersoftckan.biz/mcp`
 
-**Tool esposti** (11): `mcp_info`, `search_comune`, `comune_dashboard`, `comune_demografia`, `comune_profilo`, `comune_turismo`, `comune_pnrr`, `comune_territorio`, `comune_opere_dettaglio`, `comune_spese`, `comune_contratti`.
+**Tool esposti** (10): `mcp_info`, `search_comune`, `comune_dashboard`, `comune_demografia`, `comune_profilo`, `comune_turismo`, `comune_pnrr`, `comune_territorio`, `comune_opere_dettaglio`, `comune_contratti`.
+
+Le fonti integrate dopo la v0.4 (qualità aria, scuole, veicoli, redditi, patrimonio PA, ANNCSU, sanità MdS, punti di ricarica PUN) sono esposte come **sezioni** dentro `comune_dashboard` invece che come tool dedicati: una singola chiamata restituisce l'aggregato completo del comune.
 
 **Rate limit**: 60 richieste/minuto per IP.
 
-### Configurazione su Claude.ai (Pro/Team/Enterprise)
+### Configurazione su Claude.ai (Free/Pro/Max/Team/Enterprise)
 
 1. Settings → Connettori → Aggiungi connettore personalizzato
 2. URL: `https://cruscotto-italia-mcp.piersoftckan.biz/mcp`
 3. Autenticazione: nessuna
 
+### Skill Claude opzionale
+
+Per ottenere risposte più mirate è disponibile una skill Claude che documenta l'uso del connettore (inventario dei tool, schema di `comune_dashboard` con tutte le sezioni, endpoint REST `/data/anncsu_full/<istat>.json`, pattern operativi e caveat per sezione). Scaricabile da [`/skills/cruscotto-italia-workflow-v1.1.zip`](https://cruscotto-italia-mcp.piersoftckan.biz/skills/cruscotto-italia-workflow-v1.1.zip).
+
 ### System prompt suggerito
 
 Per ottenere risposte ottimali, suggerisci a Claude (o all'agente) un system prompt come questo:
+
 ~~~
-Hai accesso al connector "Cruscotto Italia" che fornisce dati civici sui ~7900 comuni italiani.
+Hai accesso al connector "Cruscotto Italia" che fornisce dati civici sui ~7.900 comuni italiani.
 
 Linee guida:
 - Quando l'utente menziona un comune per nome, chiama PRIMA search_comune per ottenere il codice ISTAT esatto, poi usa quel codice negli altri tool.
-- Per domande generali su un comune ("dimmi di Bergamo", "dati di Milano") usa comune_dashboard: contiene tutto in una chiamata.
-- Usa i tool specifici (comune_pnrr, comune_spese, ecc.) solo se l'utente vuole dettagli mirati su un singolo aspetto.
+- Per domande generali su un comune ("dimmi di Bergamo", "dati di Milano") usa comune_dashboard: contiene tutto in una chiamata (16 sezioni: anagrafica, demografia, profilo, turismo, PNRR, territorio, aria, opere, contratti, spese, scuole, veicoli, redditi, immobili PA, ANNCSU, sanità, punti di ricarica EV).
+- Usa i tool specifici (comune_pnrr, comune_demografia, ecc.) solo se l'utente vuole dettagli mirati su un singolo aspetto.
 - In caso di omonimi (es. "San Teodoro" esiste in Sardegna e Sicilia) mostra all'utente i match e chiedi quale.
 - Se l'utente non specifica il comune, chiedi chiarimento prima di chiamare i tool.
-- Cita sempre la fonte dati primaria nei tuoi output (ANAC, ISTAT, BDAP-MOP, ISPRA, MEF/RGS, Italia Domani).
+- Cita sempre la fonte dati primaria nei tuoi output (ANAC, ISTAT, BDAP-MOP, ISPRA, MEF, MIUR, ACI, Agenzia Entrate, Ministero Salute, GSE/MASE).
 ~~~
 
-> Nota: sostituisci `~~~` con `` ``` `` (triple backtick) quando copi nel system prompt — qui usiamo `~~~` per evitare interferenze con il markdown del README.
+> Nota: sostituisci `~~~` con triple backtick quando copi nel system prompt.
 
 ### Esempi di domande supportate
 
 - "Dimmi di Lecce" — overview completa
 - "Quanti progetti PNRR ha Bergamo?" — focus PNRR
 - "Confronto demografico tra Milano e Roma" — orchestrazione cross-comune
-- "Quante scuole ci sono nel comune di San Teodoro?" — gestione omonimi
+- "Quante farmacie attive ci sono a Matera?" — sanità territoriale
+- "Quanti punti di ricarica EV attivi ci sono a Torino e quale percentuale è HPC/Ultra fast?" — mobilità elettrica
+- "Quanti civici certificati ANNCSU ci sono in via Roma a Lecce?" — civici georeferenziati
 
 ### Limiti noti
 
 - Tool ottimizzati per query **per-comune**, non per aggregati cross-comune (es. "top 10 PNRR per regione" richiede N chiamate)
 - Il MCP è in solo lettura: nessun side-effect, nessuna scrittura
+
 ## Quick start
 
 ### Prerequisiti
@@ -143,10 +151,10 @@ npm run dev   # http://localhost:8787
 cd ../frontend
 python3 -m http.server 8000   # http://localhost:8000
 
-# ETL
-cd ../etl
-pip install -r requirements.txt
-python -m sources.anagrafica --target=local  # crea Parquet locali in /tmp
+# ETL — esempio: scarica i punti di ricarica PUN in data/pun/
+cd ..
+pip install -r etl/requirements.txt
+python -m etl.sources.pun --target=local
 ```
 
 ### Deploy
@@ -154,7 +162,7 @@ python -m sources.anagrafica --target=local  # crea Parquet locali in /tmp
 ```bash
 # Worker
 cd worker
-wrangler deploy
+npm run typecheck && npm run deploy
 
 # Frontend → server Aruba self-hosted (cruscotto-italia.piersoftckan.biz)
 # Su push a main, GitHub Actions self-hosted runner sincronizza il frontend
@@ -173,8 +181,10 @@ cruscotto-italia/
 ├── worker/                   ← Cloudflare Worker (TypeScript)
 │   ├── src/
 │   │   ├── index.ts          ← entrypoint
-│   │   ├── tools/            ← un file per tool/endpoint
-│   │   └── lib/              ← duckdb, r2, cache helpers
+│   │   ├── mcp.ts            ← JSON-RPC MCP transport
+│   │   ├── http.ts           ← landing page pubblica + endpoint /data/
+│   │   ├── tools/            ← un file per tool/endpoint MCP
+│   │   └── lib/              ← duckdb, r2cache, ratelimit helpers
 │   ├── wrangler.toml
 │   ├── package.json
 │   └── tsconfig.json
@@ -182,41 +192,64 @@ cruscotto-italia/
 ├── frontend/                 ← single-file HTML (vanilla JS)
 │   ├── index.html            ← homepage
 │   ├── comune.html           ← vista comune-centric
-│   └── assets/
+│   ├── about.html            ← elenco fonti + metodologia
+│   └── vendor/               ← Chart.js, Leaflet, JSZip (SHA-384 integrity)
 │
 ├── etl/                      ← Python ETL pipeline
 │   ├── requirements.txt
+│   ├── pyproject.toml        ← ruff + mypy + pytest config
 │   ├── sources/              ← un modulo per fonte
+│   │   ├── anagrafica.py       ← spina dorsale ISTAT comuni + IPA
 │   │   ├── anac.py             ← contratti pubblici (OCDS)
 │   │   ├── bdap_mop.py         ← opere pubbliche
-│   │   ├── bdap_siope.py       ← flussi di cassa
+│   │   ├── bdap.py             ← BDAP aggregato (per ANAC lookup)
+│   │   ├── siope.py            ← SIOPE Spese multi-anno (CKAN)
 │   │   ├── pnrr_progetti.py    ← progetti PNRR (Italia Domani/ReGiS)
 │   │   ├── demografia.py       ← popolazione (POSAS)
 │   │   ├── istat_profilo.py    ← Censimento permanente
 │   │   ├── istat_turismo.py    ← capacità + flussi turistici
-│   │   └── anagrafica.py       ← spina dorsale ISTAT comuni
+│   │   ├── territorio.py       ← ISPRA Suolo, IdroGEO, Rifiuti
+│   │   ├── aria.py             ← ISPRA SNPA qualità aria (PM10/PM2.5/NO2)
+│   │   ├── scuole.py           ← MIUR anagrafe scuole statali
+│   │   ├── veicoli.py          ← ISTAT 41_993/41_983 + ACI LOD
+│   │   ├── redditi.py          ← MEF Federalismo Fiscale (IRPEF)
+│   │   ├── immobili_pa.py      ← MEF DE Beni Immobili Pubblici 2022
+│   │   ├── anncsu.py           ← ANNCSU civici e strade (Agenzia Entrate + ISTAT)
+│   │   ├── sanita_mds.py       ← Ministero Salute (farmacie, ospedali, posti letto)
+│   │   ├── pun.py              ← GSE/MASE punti di ricarica veicoli elettrici
+│   │   └── dashboard.py        ← unified shard A1 (single-fetch per comune)
 │   └── lib/
 │       ├── r2.py
 │       ├── duck.py
 │       └── manifest.py
 │
 ├── .github/workflows/
+│   ├── etl-daily.yml         ← cron 04:30 UTC (PUN punti ricarica + dashboard rebuild)
 │   ├── etl-weekly.yml        ← cron lunedì (ANAC + PNRR + dashboard)
-│   ├── etl-monthly.yml       ← cron 5° del mese (anagrafica + BDAP + SIOPE + dashboard)
-│   ├── etl-annual.yml        ← cron 1 feb / 1 apr / 1 lug (demografia, profilo, turismo, territorio)
-│   ├── deploy-worker.yml     ← su push main (Cloudflare Workers)
-│   ├── deploy-frontend.yml   ← su push main (server Aruba self-hosted)
-│   └── ci.yml                ← CI su PR
+│   ├── etl-monthly.yml       ← cron 5° del mese (anagrafica + BDAP + SIOPE + ANNCSU + sanità + dashboard)
+│   ├── etl-annual.yml        ← cron 1 feb / 1 apr / 1 lug (demografia, profilo, turismo, territorio, scuole, veicoli, redditi, immobili PA)
+│   ├── deploy-worker.yml     ← su push main → Cloudflare Workers
+│   ├── deploy-frontend.yml   ← su push main → Cloudflare Pages
+│   └── ci.yml                ← CI lint & test (ruff, mypy, pytest, tsc)
 │
 ├── docs/                     ← documentazione utente e API
-├── scripts/                  ← utility scripts
+├── scripts/                  ← utility scripts (smoke-test-etl, pa11y-*, ecc.)
 └── tests/                    ← unit tests Python (etl) e Vitest (worker)
 ```
 
 ## Licenza
 
-AGPL-3.0 — vedi [LICENSE](LICENSE). Codice copyleft, le derivate devono restare aperte.  
-I dati delle fonti sono sotto le rispettive licenze (CC-BY 4.0, IODL 2.0, ecc.) — vedi [`docs/data-licenses.md`](docs/data-licenses.md).
+AGPL-3.0 — vedi [LICENSE](LICENSE). Codice copyleft, le derivate devono restare aperte.
+
+I dati delle fonti sono sotto le rispettive licenze:
+
+- **CC BY 4.0** — la maggior parte delle fonti (ANAC, ISTAT, MIUR, ACI, ISPRA, MEF DE Patrimonio, Italia Domani PNRR)
+- **CC BY 3.0 IT** — MEF Federalismo Fiscale, alcuni dataset ISTAT storici
+- **IODL 2.0** — BDAP-MOP, BDAP-SIOPE, Ministero della Salute
+- **CC BY 4.0 ex art. 52 c.2 D.Lgs 82/2005 (CAD)** — "open by default" per soggetti art. 2 c.2 CAD che pubblicano dati senza licenza espressa. Si applica per esempio al GSE/MASE per la Piattaforma Unica Nazionale dei punti di ricarica, in coerenza con le Linee Guida Open Data AgID (Determinazione 183/2023)
+- **Open Data ai sensi del Regolamento UE 2023/138 (HVD)** — ANNCSU (Agenzia delle Entrate + ISTAT)
+
+Vedi [`docs/data-licenses.md`](docs/data-licenses.md) per il dettaglio per dataset, e [`about.html`](https://cruscotto-italia.piersoftckan.biz/about.html) per i link diretti alle fonti.
 
 ## Contribuire
 
