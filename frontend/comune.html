@@ -4938,6 +4938,13 @@ function initAnncsu(d) {
     acActive = -1;
   }
 
+  // Flag: dopo aver selezionato una voce (click/Enter), il dispatch
+  // dell'evento 'input' programmatico ri-aprirebbe l'autocomplete perché
+  // il testo selezionato matcha. Questo flag fa skippare la riapertura
+  // per UNA chiamata di input handler (la prossima reale dell'utente
+  // riaprirà normalmente).
+  let suppressAutocomplete = false;
+
   function renderAutocomplete(matches) {
     if (!acEl) return;
     if (matches.length === 0) { closeAutocomplete(); return; }
@@ -4957,8 +4964,10 @@ function initAnncsu(d) {
       ev.preventDefault();
       searchEl.value = li.dataset.val;
       closeAutocomplete();
+      suppressAutocomplete = true;     // <-- evita riapertura nel dispatch sotto
       // Trigger ricerca immediata
       searchEl.dispatchEvent(new Event('input'));
+      searchEl.blur();                 // toglie focus, UX più pulita
     });
   }
 
@@ -4989,6 +4998,7 @@ function initAnncsu(d) {
         ev.preventDefault();
         searchEl.value = items[acActive].dataset.val;
         closeAutocomplete();
+        suppressAutocomplete = true;
         searchEl.dispatchEvent(new Event('input'));
       } else if (ev.key === 'Escape') {
         closeAutocomplete();
@@ -4996,14 +5006,21 @@ function initAnncsu(d) {
     });
 
     searchEl.addEventListener('input', () => {
-      // Popola autocomplete custom solo se >=4 caratteri
+      // Popola autocomplete custom solo se >=4 caratteri.
+      // Se il flag suppressAutocomplete è settato (selezione appena fatta),
+      // chiude la dropdown ed esegue comunque la ricerca.
       if (acEl) {
-        const inputVal = searchEl.value.trim().toUpperCase();
-        if (inputVal.length >= 4) {
-          const matches = topOdonimi.filter(o => o.toUpperCase().includes(inputVal));
-          renderAutocomplete(matches);
-        } else {
+        if (suppressAutocomplete) {
+          suppressAutocomplete = false;
           closeAutocomplete();
+        } else {
+          const inputVal = searchEl.value.trim().toUpperCase();
+          if (inputVal.length >= 4) {
+            const matches = topOdonimi.filter(o => o.toUpperCase().includes(inputVal));
+            renderAutocomplete(matches);
+          } else {
+            closeAutocomplete();
+          }
         }
       }
 
