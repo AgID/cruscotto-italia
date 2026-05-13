@@ -6,6 +6,18 @@ Integrazione 15a fonte di Cruscotto Italia. Bundle 3 dataset:
   3. Posti letto    (Posti letto per stabilimento ospedaliero e disciplina_2023_0.csv,
                      ~11.6k righe disciplina, ~1.260 stabilimenti)
 
+Dipendenza ANNCSU (geocoding):
+  Questo ETL legge `anncsu_full/<istat>.json` da R2 per arricchire le
+  coordinate delle farmacie/parafarmacie con coord MdS errate o mancanti.
+  Migliore l'ANNCSU su R2, migliore la copertura coordinate. Per questo
+  motivo:
+    - etl-monthly.yml: job `sanita_mds_refresh` parte SOLO dopo `anncsu`,
+      garantendo che il geocoding usi l'ANNCSU appena aggiornato
+    - etl-weekly.yml: job `sanita_mds` (cron settimanale) usa l'ANNCSU
+      attualmente su R2 (snapshot dell'ultimo monthly run)
+  Se ANNCSU non e' disponibile per un comune (5387/7896 = 68% copertura),
+  fallback al solo filtro centroide-based + drop coord errate.
+
 Discovery URL: NON sono hardcoded. Sono parsati da
   https://www.dati.salute.gov.it/page-data/index/page-data.json
 selezionando i drupal_internal__nid:
