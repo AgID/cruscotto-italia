@@ -365,6 +365,122 @@ a:hover{color:var(--accent)}
   border-top:1px dashed #f0c674;
 }
 
+/* Accordion stabilimenti ospedalieri (4d) */
+.sanita-osp-wrap{margin:32px 0 24px;}
+.sanita-osp-intro{font-size:13px;line-height:1.55;margin:0 0 16px;color:var(--ink-mute);}
+.sanita-osp-list{display:flex;flex-direction:column;gap:8px;}
+.sanita-osp-item{
+  border:1px solid var(--ink-mute);
+  border-left:3px solid #C62828;
+  background:var(--paper);
+  border-radius:4px;
+}
+.sanita-osp-item > summary{
+  cursor:pointer;
+  list-style:none;
+  padding:14px 18px;
+  display:grid;
+  grid-template-columns:1fr auto auto;
+  gap:14px;
+  align-items:center;
+}
+.sanita-osp-item > summary::-webkit-details-marker{display:none;}
+.sanita-osp-item > summary:hover{background:var(--paper-2);}
+.sanita-osp-item > summary:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;}
+.sanita-osp-name{
+  font-family:var(--serif);
+  font-size:17px;
+  color:var(--ink);
+  font-weight:400;
+  line-height:1.25;
+}
+.sanita-osp-tipo{
+  font-family:var(--mono);
+  font-size:10px;
+  text-transform:uppercase;
+  letter-spacing:.06em;
+  color:var(--ink-mute);
+  margin-top:3px;
+}
+.sanita-osp-pl{
+  font-family:var(--serif);
+  font-size:22px;
+  color:#C62828;
+  font-weight:400;
+  text-align:right;
+  line-height:1;
+}
+.sanita-osp-pl-lab{
+  font-family:var(--mono);
+  font-size:9px;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+  color:var(--ink-mute);
+  display:block;
+  margin-top:2px;
+  text-align:right;
+}
+.sanita-osp-toggle{
+  font-family:var(--mono);
+  font-size:10px;
+  text-transform:uppercase;
+  letter-spacing:.06em;
+  color:var(--ink-mute);
+}
+.sanita-osp-item[open] > summary{
+  border-bottom:1px solid var(--ink-mute);
+  background:var(--paper-2);
+}
+.sanita-osp-body{padding:14px 18px;}
+.sanita-osp-addr{
+  font-size:12px;
+  color:var(--ink-mute);
+  margin:0 0 12px;
+  font-style:italic;
+}
+.sanita-disc-table{
+  width:100%;
+  border-collapse:collapse;
+  font-size:12px;
+  font-family:var(--ui);
+}
+.sanita-disc-table th{
+  font-family:var(--mono);
+  font-size:10px;
+  text-transform:uppercase;
+  letter-spacing:.06em;
+  color:var(--ink-mute);
+  font-weight:400;
+  text-align:right;
+  padding:6px 8px;
+  border-bottom:1px solid var(--ink-mute);
+}
+.sanita-disc-table th:first-child{text-align:left;}
+.sanita-disc-table th.t-tipo{text-align:left;}
+.sanita-disc-table td{
+  padding:5px 8px;
+  border-bottom:1px solid var(--paper-2);
+  text-align:right;
+}
+.sanita-disc-table td:first-child{text-align:left;}
+.sanita-disc-table td.t-tipo{
+  text-align:left;
+  color:var(--ink-mute);
+  font-family:var(--mono);
+  font-size:10px;
+  text-transform:uppercase;
+  letter-spacing:.04em;
+}
+.sanita-disc-table tr:hover td{background:var(--paper-2);}
+.sanita-disc-table td.t-tot{font-weight:600;}
+@media (max-width:720px){
+  .sanita-osp-item > summary{grid-template-columns:1fr auto;gap:10px;padding:12px 14px;}
+  .sanita-osp-toggle{display:none;}
+  .sanita-osp-name{font-size:15px;}
+  .sanita-osp-body{padding:12px 14px;overflow-x:auto;}
+  .sanita-disc-table{min-width:480px;}
+}
+
 .placeholder{
   padding:64px 32px;
   text-align:center;
@@ -4069,7 +4185,9 @@ function renderSanitaTab(d) {
       <!-- Mappa unificata: farmacie + parafarmacie + ospedali su unica vista geografica -->
       ${renderSanitaMapBlock(d)}
 
-      <!-- Sotto-step 4d: accordion stabilimenti ospedalieri con discipline -->
+      <!-- Accordion stabilimenti ospedalieri (4d) -->
+      ${renderSanitaOspedaliAccordion(d)}
+
       <!-- Sotto-step 4e: chart bar horizontal top mix_discipline -->
     </div>`;
 }
@@ -4187,6 +4305,83 @@ function renderSanitaMapBlock(d) {
 
       <div id="sanita-map" class="sanita-map" role="application" aria-label="Mappa dei presidi sanitari del comune"></div>
     </div>`;
+}
+
+// ===========================================================================
+// Sotto-step 4d: accordion stabilimenti ospedalieri con dettaglio discipline
+// ===========================================================================
+
+function renderSanitaOspedaliAccordion(d) {
+  const stabs = d?.ospedali?.stabilimenti;
+  if (!stabs || !stabs.length) return '';
+
+  // Tipo struttura piu' ricorrente per intro
+  const annoOsp = d._fonti?.ospedali?.anno_dati || 2023;
+
+  // Discipline ordinate per totale_posti_letto (desc) all'interno di ciascuno stab
+  function renderDiscRows(discipline) {
+    const sorted = [...(discipline || [])].sort((a, b) => (b.totale || 0) - (a.totale || 0));
+    return sorted.map(d2 => `
+      <tr>
+        <td>${(d2.descrizione || '—').replace(/</g,'&lt;')}</td>
+        <td class="t-tipo">${d2.tipo || ''}</td>
+        <td>${fmtNum(d2.n_reparti || 0)}</td>
+        <td>${fmtNum(d2.ord || 0)}</td>
+        <td>${fmtNum(d2.dh || 0)}</td>
+        <td>${fmtNum(d2.ds || 0)}</td>
+        <td>${fmtNum(d2.pag || 0)}</td>
+        <td class="t-tot">${fmtNum(d2.totale || 0)}</td>
+      </tr>
+    `).join('');
+  }
+
+  return `
+    <div class="sanita-osp-wrap">
+      <h3 class="sanita-h3">Stabilimenti ospedalieri</h3>
+      <p class="sanita-osp-intro">
+        ${stabs.length === 1 ? 'Stabilimento ospedaliero pubblico/accreditato' : `${stabs.length} stabilimenti ospedalieri pubblici/accreditati`}
+        del comune. Dato Ministero della Salute anno <strong>${annoOsp}</strong>.
+        Clicca per espandere il dettaglio dei reparti e dei posti letto per disciplina.
+      </p>
+      <div class="sanita-osp-list">
+        ${stabs.map((s, i) => `
+          <details class="sanita-osp-item"${i === 0 ? ' open' : ''}>
+            <summary>
+              <div>
+                <div class="sanita-osp-name">${(s.denominazione || 'Stabilimento ospedaliero').replace(/</g,'&lt;')}</div>
+                <div class="sanita-osp-tipo">${(s.tipo_struttura || '').replace(/</g,'&lt;')}${s.codice_struttura ? ` · cod. ${s.codice_struttura}/${s.subcodice || '01'}` : ''}</div>
+              </div>
+              <div>
+                <div class="sanita-osp-pl">${fmtNum(s.totale_posti_letto || 0)}</div>
+                <span class="sanita-osp-pl-lab">posti letto</span>
+              </div>
+              <div class="sanita-osp-toggle">Reparti ▾</div>
+            </summary>
+            <div class="sanita-osp-body">
+              ${s.indirizzo ? `<p class="sanita-osp-addr">${s.indirizzo.replace(/</g,'&lt;')}</p>` : ''}
+              <table class="sanita-disc-table" aria-label="Discipline dello stabilimento">
+                <thead>
+                  <tr>
+                    <th>Disciplina</th>
+                    <th class="t-tipo">Tipo</th>
+                    <th>Reparti</th>
+                    <th>Ordinaria</th>
+                    <th>Day H.</th>
+                    <th>Day S.</th>
+                    <th>Pagam.</th>
+                    <th>Totale</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${renderDiscRows(s.discipline)}
+                </tbody>
+              </table>
+            </div>
+          </details>
+        `).join('')}
+      </div>
+    </div>
+  `;
 }
 
 // ===========================================================================
