@@ -289,6 +289,11 @@ a:hover{color:var(--accent)}
 }
 .sanita-pin.hosp{width:28px;height:28px;}  /* Ospedali leggermente più grandi */
 
+/* Cluster marker: divIcon className override (no background dal default Leaflet) */
+.sanita-cluster{background:transparent !important;border:none !important;}
+.sanita-cluster > div{transition:transform .12s ease;}
+.sanita-cluster:hover > div{transform:scale(1.08);}
+
 /* Colori semantici: */
 .sanita-c-farm-ord{background:#2E7D32;}      /* Farmacia ordinaria - verde scuro */
 .sanita-c-farm-disp{background:#0277BD;}     /* Dispensario/Succursale - blu */
@@ -6159,17 +6164,14 @@ function initSanitaMap(d) {
     attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
   }).addTo(map);
 
-  // Layer groups per categoria (toggle via chip)
-  const layers = {
-    'farm-ord':  L.layerGroup(),
-    'farm-disp': L.layerGroup(),
-    'farm-stag': L.layerGroup(),
-    'parafarm':  L.layerGroup(),
-    'osp':       L.layerGroup()
-  };
+  // Categorie attive (default: tutte). Cluster grid-based per categoria.
+  const activeCats = new Set(['farm-ord','farm-disp','farm-stag','parafarm','osp']);
 
-  // Popola layer
-  for (const p of allPunti) {
+  // Layer container unico (clusters + singoli marker, re-draw su zoom/move)
+  const markersLayer = L.layerGroup().addTo(map);
+
+  // Helper: crea marker singolo
+  function makeMarker(p) {
     const m = L.marker([p.lat, p.lon], { icon: _sanitaPinIcon(p.cat) });
     const popup = `
       <div class="sanita-popup">
@@ -6180,29 +6182,85 @@ function initSanitaMap(d) {
         ${p._approx ? '<span class="sanita-popup-meta" style="margin-top:6px;font-style:italic;">⚠ posizione approssimata (centroide comune): il dataset MdS posti letto non include lat/lon per stabilimento.</span>' : ''}
       </div>`;
     m.bindPopup(popup);
-    layers[p.cat].addLayer(m);
+    return m;
   }
 
-  // Aggiungi tutti i layer alla mappa (chip attivi di default)
-  for (const k in layers) {
-    layers[k].addTo(map);
+  // Helper: cluster marker con count e colore della categoria dominante
+  function makeCluster(lat, lon, cellPunti) {
+    const count = cellPunti.length;
+    // Categoria dominante (per colore)
+    const catCount = {};
+    cellPunti.forEach(p => { catCount[p.cat] = (catCount[p.cat] || 0) + 1; });
+    const sortedCats = Object.entries(catCount).sort((a,b) => b[1] - a[1]);
+    const domCat = sortedCats[0][0];
+    const isMixed = sortedCats.length > 1;
+
+    // Colori cluster per categoria dominante (allineati ai marker)
+    const CAT_BG = {
+      'farm-ord':  '#2E7D32',
+      'farm-disp': '#0277BD',
+      'farm-stag': '#9E9D24',
+      'parafarm':  '#EF6C00',
+      'osp':       '#C62828',
+    };
+    const bg = isMixed ? '#5C6F82' : (CAT_BG[domCat] || '#5C6F82');
+
+    // Size proporzionale al count (32-52px)
+    const size = Math.min(52, 32 + Math.floor(Math.log2(count) * 4));
+
+    const html = `<div style="background:${bg};color:#fff;border-radius:50%;width:${size}px;height:${size}px;display:flex;align-items:center;justify-content:center;font-family:var(--ui);font-weight:700;font-size:${count >= 100 ? 13 : 14}px;box-shadow:0 2px 6px rgba(0,0,0,0.35);border:2.5px solid #fff;cursor:pointer;">${count}</div>`;
+
+    const m = L.marker([lat, lon], {
+      icon: L.divIcon({ html, className: 'sanita-cluster', iconSize: [size, size], iconAnchor: [size/2, size/2] })
+    });
+    // Click su cluster: zoom-in verso quella cella
+    m.on('click', () => {
+      map.flyToBounds(L.latLngBounds(cellPunti.map(p => [p.lat, p.lon])).pad(0.25), { maxZoom: 16 });
+    });
+    return m;
   }
 
-  // Fit bounds: ignoro gli outlier statistici per evitare zoom-out estremo
-  // dovuto a coordinate errate alla fonte MdS (~0.2% di tasso outlier).
-  // Calcolo mediana lat/lon e includo solo punti entro ±0.6° (~66km).
-  const allMarkers = [];
-  for (const k in layers) layers[k].eachLayer(m => allMarkers.push(m));
+  // Redraw: applica clustering grid-based ai punti delle categorie attive
+  function redrawClusters() {
+    markersLayer.clearLayers();
+    const z = map.getZoom();
+    const visible = allPunti.filter(p => activeCats.has(p.cat));
+    if (!visible.length) return;
 
-  if (allMarkers.length === 1) {
+    // Soglia: a zoom >=14 mostra punti singoli, sotto cluster.
+    // Anche con <=20 punti totali visibili niente cluster (poco senso).
+    if (z >= 14 || visible.length <= 20) {
+      visible.forEach(p => markersLayer.addLayer(makeMarker(p)));
+      return;
+    }
+
+    // Grid clustering: cellSize dipende dal zoom corrente
+    const cellSize = z < 10 ? 0.05 : z < 12 ? 0.012 : z < 13 ? 0.004 : 0.0018;
+    const grid = new Map();
+    visible.forEach(p => {
+      const key = `${Math.floor(p.lat / cellSize)}_${Math.floor(p.lon / cellSize)}`;
+      if (!grid.has(key)) grid.set(key, []);
+      grid.get(key).push(p);
+    });
+    grid.forEach(cellPunti => {
+      if (cellPunti.length <= 2) {
+        cellPunti.forEach(p => markersLayer.addLayer(makeMarker(p)));
+      } else {
+        const avgLat = cellPunti.reduce((s, p) => s + p.lat, 0) / cellPunti.length;
+        const avgLon = cellPunti.reduce((s, p) => s + p.lon, 0) / cellPunti.length;
+        markersLayer.addLayer(makeCluster(avgLat, avgLon, cellPunti));
+      }
+    });
+  }
+
+  // Fit bounds iniziale: ignoro gli outlier statistici per evitare zoom-out estremo.
+  if (allPunti.length === 1) {
     map.setView([allPunti[0].lat, allPunti[0].lon], 14);
-  } else if (allMarkers.length > 0) {
+  } else if (allPunti.length > 0) {
     const sortedLats = allPunti.map(p => p.lat).sort((a,b) => a-b);
     const sortedLons = allPunti.map(p => p.lon).sort((a,b) => a-b);
     const medLat = sortedLats[Math.floor(sortedLats.length / 2)];
     const medLon = sortedLons[Math.floor(sortedLons.length / 2)];
-    // Filtro inliers per fitBounds: entro 0.6° dalla mediana (~66km, copre
-    // anche comuni territorialmente vasti come Roma capitale).
     const inliers = allPunti.filter(p =>
       Math.abs(p.lat - medLat) <= 0.6 && Math.abs(p.lon - medLon) <= 0.6
     );
@@ -6210,11 +6268,14 @@ function initSanitaMap(d) {
       const bounds = L.latLngBounds(inliers.map(p => [p.lat, p.lon]));
       map.fitBounds(bounds.pad(0.12));
     } else {
-      // fallback: tutto
-      const group = L.featureGroup(allMarkers);
-      map.fitBounds(group.getBounds().pad(0.12));
+      const bounds = L.latLngBounds(allPunti.map(p => [p.lat, p.lon]));
+      map.fitBounds(bounds.pad(0.12));
     }
   }
+
+  // Render iniziale + re-render on zoom/move
+  redrawClusters();
+  map.on('zoomend moveend', redrawClusters);
 
   // Chip toggle handlers
   const chips = document.querySelectorAll('.sanita-chip[data-sanita-filter]');
@@ -6224,10 +6285,11 @@ function initSanitaMap(d) {
       const wasOn = chip.getAttribute('aria-pressed') === 'true';
       chip.setAttribute('aria-pressed', wasOn ? 'false' : 'true');
       if (wasOn) {
-        map.removeLayer(layers[cat]);
+        activeCats.delete(cat);
       } else {
-        map.addLayer(layers[cat]);
+        activeCats.add(cat);
       }
+      redrawClusters();
     });
   });
 
