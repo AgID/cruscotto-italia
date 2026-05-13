@@ -305,6 +305,66 @@ a:hover{color:var(--accent)}
 .sanita-legend{display:flex;flex-wrap:wrap;gap:14px;margin:10px 0 4px;font-family:var(--mono);font-size:10px;color:var(--ink-mute);text-transform:uppercase;letter-spacing:.05em;}
 .sanita-legend-item{display:inline-flex;align-items:center;gap:6px;}
 
+/* Disclaimer qualità coordinate (geocoding ANNCSU): collapsed di default,
+   appare solo se ci sono coord ricalcolate, droppate o no_coord. */
+.sanita-coord-disclaimer{
+  margin:0 0 18px;
+  padding:0;
+  border:1px solid #f0c674;
+  border-left:3px solid #d68910;
+  background:#fffaf3;
+  border-radius:4px;
+  font-size:13px;
+  line-height:1.55;
+}
+.sanita-coord-disclaimer > summary{
+  cursor:pointer;
+  list-style:none;
+  padding:10px 14px;
+  color:#7a5a1c;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  flex-wrap:wrap;
+}
+.sanita-coord-disclaimer > summary::-webkit-details-marker{display:none;}
+.sanita-coord-disclaimer > summary:hover{background:#fff5e1;}
+.sanita-coord-disclaimer > summary:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;}
+.sanita-coord-icon{font-size:16px;color:#d68910;flex-shrink:0;}
+.sanita-coord-toggle{
+  font-family:var(--mono);font-size:10px;text-transform:uppercase;
+  letter-spacing:.06em;margin-left:auto;color:#7a5a1c;
+}
+.sanita-coord-disclaimer[open] > summary{
+  border-bottom:1px solid #f0c674;
+  background:#fff5e1;
+}
+.sanita-coord-body{
+  padding:14px 18px 4px;
+  color:var(--ink);
+}
+.sanita-coord-body p{margin:0 0 12px;}
+.sanita-coord-body code{
+  font-family:var(--mono);
+  background:rgba(0,0,0,0.04);
+  padding:1px 5px;
+  border-radius:3px;
+  font-size:12px;
+}
+.sanita-coord-body a{color:var(--accent);}
+.sanita-coord-stats{
+  margin:0 0 12px;
+  padding:0 0 0 22px;
+}
+.sanita-coord-stats li{margin-bottom:6px;}
+.sanita-coord-footer{
+  font-style:italic;
+  color:var(--ink-mute);
+  font-size:12px;
+  padding:8px 0;
+  border-top:1px dashed #f0c674;
+}
+
 .placeholder{
   padding:64px 32px;
   text-align:center;
@@ -4018,6 +4078,62 @@ function renderSanitaTab(d) {
 // Tab Sanità - rendering blocco mappa unificata (4c)
 // ===========================================================================
 
+function renderSanitaCoordDisclaimer(d) {
+  // Aggrego stats coord da farmacie + parafarmacie. Disclaimer mostrato
+  // solo se almeno una categoria ha coord ricalcolate o droppate o senza.
+  const fk = d.farmacie?.kpi || {};
+  const pk = d.parafarmacie?.kpi || {};
+
+  const nRicalcolate = (fk.n_coordinate_ricalcolate || 0) + (pk.n_coordinate_ricalcolate || 0);
+  const nDroppate    = (fk.n_coordinate_droppate    || 0) + (pk.n_coordinate_droppate    || 0);
+  const nSenza       = (fk.n_senza_coordinate       || 0) + (pk.n_senza_coordinate       || 0);
+
+  // Se tutto e' a posto (solo coord_source=mds) niente disclaimer.
+  if (nRicalcolate === 0 && nDroppate === 0 && nSenza === 0) return '';
+
+  const totIssue = nRicalcolate + nDroppate + nSenza;
+  const totGeoMds = (fk.n_coordinate_mds || 0) + (pk.n_coordinate_mds || 0);
+
+  return `
+    <details class="sanita-coord-disclaimer">
+      <summary>
+        <span class="sanita-coord-icon" aria-hidden="true">ⓘ</span>
+        Qualità delle coordinate: <strong>${nRicalcolate}</strong> ricalcolate via ANNCSU${nDroppate || nSenza ? `, <strong>${nDroppate + nSenza}</strong> non geolocalizzabili` : ''}.
+        <span class="sanita-coord-toggle">Dettagli ▾</span>
+      </summary>
+      <div class="sanita-coord-body">
+        <p>
+          Le coordinate geografiche di farmacie e parafarmacie provengono dagli
+          <a href="https://www.dati.salute.gov.it/" target="_blank" rel="noopener">Open Data del Ministero della Salute</a>.
+          Su questo dataset abbiamo osservato un tasso di errore upstream del 5-15%:
+          farmacie il cui <code>cod_comune</code> ISTAT è corretto ma le cui
+          <code>lat</code>/<code>lon</code> puntano a indirizzi in altri comuni
+          (talvolta a centinaia di chilometri di distanza).
+        </p>
+        <p>
+          Per migliorare la qualità geografica abbiamo incrociato il dato con
+          l'<strong>Archivio Nazionale dei Numeri Civici e Strade Urbane (ANNCSU)</strong>
+          dell'Agenzia delle Entrate. Per ogni record fuori dal centroide del comune,
+          o senza coordinate dichiarate, tentiamo un match per
+          <em>odonimo + civico</em> e sostituiamo le coordinate con quelle ANNCSU.
+        </p>
+        <p>Per questo comune:</p>
+        <ul class="sanita-coord-stats">
+          <li><strong>${fmtNum(totGeoMds)}</strong> presidi con coordinate originali del Ministero della Salute (dentro centroide).</li>
+          ${nRicalcolate > 0 ? `<li><strong>${fmtNum(nRicalcolate)}</strong> presidi con coordinate <strong>ricalcolate via ANNCSU</strong> (le coordinate originali del MdS sono comunque conservate nei campi <code>lat_raw</code>/<code>lon_raw</code> dello shard JSON).</li>` : ''}
+          ${nDroppate > 0 ? `<li><strong>${fmtNum(nDroppate)}</strong> presidi con coordinate MdS fuori comune e <em>nessun match ANNCSU</em>: marker non mostrato sulla mappa, record presente nei dati con <code>coord_source: "dropped"</code>.</li>` : ''}
+          ${nSenza > 0 ? `<li><strong>${fmtNum(nSenza)}</strong> presidi senza coordinate dichiarate dal MdS e <em>non geolocalizzabili via ANNCSU</em>: <code>coord_source: "no_coord"</code>.</li>` : ''}
+        </ul>
+        <p class="sanita-coord-footer">
+          Il dato grezzo MdS resta sempre disponibile nello ZIP scaricabile e via MCP (campi <code>lat_raw</code>/<code>lon_raw</code>).
+          La copertura migliora ad ogni aggiornamento mensile di ANNCSU.
+        </p>
+      </div>
+    </details>
+  `;
+}
+
+
 function renderSanitaMapBlock(d) {
   const hasFarm = !!(d.farmacie && d.farmacie.punti && d.farmacie.punti.length);
   const hasPF   = !!(d.parafarmacie && d.parafarmacie.punti && d.parafarmacie.punti.length);
@@ -4044,6 +4160,8 @@ function renderSanitaMapBlock(d) {
         ${(nFarmOrd + nFarmDisp + nFarmStag).toLocaleString('it-IT')} farmacie e dispensari · ${nPF.toLocaleString('it-IT')} parafarmacie · ${nOsp.toLocaleString('it-IT')} stabilimenti ospedalieri georeferenziati.
         Clicca sui marker per il dettaglio. Filtra per categoria con i chip qui sotto.
       </p>
+
+      ${renderSanitaCoordDisclaimer(d)}
 
       <div class="sanita-filters" role="group" aria-label="Filtri presidi sanitari">
         <button type="button" class="sanita-chip" data-sanita-filter="farm-ord" aria-pressed="true">
