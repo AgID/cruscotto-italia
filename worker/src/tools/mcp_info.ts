@@ -9,7 +9,7 @@ import type { ToolDefinition } from "./index.js";
 
 export const mcpInfo: ToolDefinition = {
   description:
-    "Returns server metadata, version, and data freshness for each integrated source (ANAC, BDAP-MOP, SIOPE, Italia Domani PNRR, ISTAT, ISPRA, MIUR, ACI, MEF Federalismo Fiscale, MEF Patrimonio Immobiliare PA, Agenzia delle Entrate/ISTAT ANNCSU).",
+    "Returns server metadata, version, and data freshness for each integrated source (ANAC, BDAP-MOP, SIOPE, Italia Domani PNRR, ISTAT, ISPRA, MIUR, ACI, MEF Federalismo Fiscale, MEF Patrimonio Immobiliare PA, Agenzia delle Entrate/ISTAT ANNCSU, Ministero della Salute Open Data).",
   inputSchema: {
     type: "object",
     properties: {},
@@ -25,10 +25,10 @@ export const mcpInfo: ToolDefinition = {
     }
     return {
       service: "cruscotto-italia-mcp",
-      version: "0.5.0",
+      version: "0.6.0",
       protocol: "MCP 2024-11-05",
-      datasets: 14,
-      institutions: 10,
+      datasets: 15,
+      institutions: 11,
       municipalities: 7918,
       sources: {
         anac: {
@@ -98,6 +98,15 @@ export const mcpInfo: ToolDefinition = {
           license: "Open data ai sensi del Regolamento UE 2023/138 (HVD)",
           datasets: [
             "Archivio Nazionale dei Numeri Civici e delle Strade Urbane (ANNCSU): stradario e indirizzario con georeferenziazione, snapshot continuo (Agenzia delle Entrate + ISTAT)",
+          ],
+        },
+        ministero_salute: {
+          canonical: "https://www.dati.salute.gov.it/",
+          license: "IODL v2.0",
+          datasets: [
+            "Farmacie italiane (anagrafica + geolocalizzazione, ~20.800 attive in 7.258 comuni, aggiornamento quotidiano)",
+            "Parafarmacie italiane (anagrafica + geolocalizzazione, ~7.200 attive in 2.158 comuni, aggiornamento quotidiano)",
+            "Posti letto per stabilimento ospedaliero e disciplina (anno 2023: 1.272 stabilimenti in 736 comuni, ~213.000 posti letto totali con dettaglio per disciplina; aggiornamento annuale)",
           ],
         },
       },

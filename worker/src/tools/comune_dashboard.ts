@@ -21,6 +21,11 @@
  *                                   e numeri civici certificati, sample 1000
  *                                   punti geo-ref. Full su anncsu_full/ via
  *                                   endpoint dedicato /data/anncsu_full/)
+ *   - sanita_mds/<istat>.json      (Ministero Salute - farmacie e parafarmacie
+ *                                   geo-localizzate, posti letto ospedalieri
+ *                                   per stabilimento e disciplina. Licenza
+ *                                   IODL v2.0. Aggiornamento farmacie/parafarm.
+ *                                   quotidiano, ospedali annuale.)
  *   - lookup/anac-aggregato.json[<cf>] (contratti)
  *
  * Schema output (passa-attraverso del file R2):
@@ -82,6 +87,37 @@
  *                                       //             // completo fetch HTTP GET
  *                                       //             // /data/anncsu_full/<istat>.json
  *                                       //   }
+ *     "sanita_mds":  { ... } | null    // Ministero Salute - bundle sanita'
+ *                                       //   territoriale (3 dataset MdS):
+ *                                       //   { _license: "IODL v2.0",
+ *                                       //     _fonti: { farmacie, parafarmacie,
+ *                                       //               ospedali: {anno_dati: 2023} },
+ *                                       //     farmacie:     { kpi, punti } | null,
+ *                                       //     parafarmacie: { kpi, punti } | null,
+ *                                       //     ospedali:     { kpi, stabilimenti } | null
+ *                                       //   }
+ *                                       //   farmacie.kpi: { n_totale, n_geo_referenziate,
+ *                                       //                    pct_geo_referenziate,
+ *                                       //                    mix_tipologia,
+ *                                       //                    n_outlier_coordinate }
+ *                                       //   farmacie.punti: [{nome,tipo,indirizzo,cap,
+ *                                       //                     lat,lon}, ...]
+ *                                       //   parafarmacie.kpi: { n_totale, ... }
+ *                                       //   ospedali.kpi: { n_stabilimenti, n_reparti_totali,
+ *                                       //                   posti_letto_totali,
+ *                                       //                   posti_letto_ordinaria,
+ *                                       //                   posti_letto_pagamento,
+ *                                       //                   posti_letto_day_hospital,
+ *                                       //                   posti_letto_day_surgery,
+ *                                       //                   mix_discipline }
+ *                                       //   ospedali.stabilimenti: [{ codice_struttura,
+ *                                       //                              subcodice, denominazione,
+ *                                       //                              tipo_struttura, indirizzo,
+ *                                       //                              totale_posti_letto,
+ *                                       //                              discipline:[...] }, ...]
+ *                                       //   Capping: nessuno (Roma worst-case ~270KB).
+ *                                       //   Coverage comuni: farmacie 91.9%,
+ *                                       //   parafarmacie 27.3%, ospedali 9.3%.
  *   }
  *
  * NB sulla cache:
@@ -135,7 +171,7 @@ interface DashboardShard {
 
 export const comuneDashboard: ToolDefinition = {
   description:
-    "Vista completa di un comune italiano in una sola chiamata: anagrafica, demografia, profilo censimento, turismo, progetti PNRR, territorio (ISPRA Suolo/IdroGEO/Rifiuti), qualità dell'aria (ISPRA SNPA: PM10/PM2.5/NO2 con stazioni), opere pubbliche (BDAP-MOP), spese (SIOPE multi-anno con per_anno e anno_default), contratti (ANAC), scuole (MIUR), veicoli e incidenti (ISTAT 41_993 parco PRA per classe Euro + ISTAT 41_983 incidenti stradali con morti/feriti + ACI LOD nuove iscrizioni per alimentazione), redditi e fisco (MEF Dipartimento delle Finanze: dichiarazioni IRPEF su base comunale a.i. 2020-2024 con numero contribuenti, reddito medio, distribuzione per 8 fasce di reddito, tipologie dipendente/pensione/autonomo/fabbricati, addizionale comunale e imposta netta media). Tool da preferire per qualsiasi domanda generale su un comune ('mostrami Bergamo', 'dati di Milano'). Richiede istat_code (6 cifre, es. '075035'). Se hai solo il nome, chiama prima search_comune per ottenerlo. Accetta anche denominazione ma è meno affidabile sui casi di omonimia/fusione. Include anche la sezione immobili_pa con beni immobili pubblici detenuti dalle PA (MEF DE 2022, dichiarazioni al 31/12/2022): KPI aggregati (fabbricati/terreni, vincolo culturale, uso a terzi, superficie totale, mix categoria) e fino a 500 punti georeferenziati con tipologia e categoria semantica. Sezione anncsu (Agenzia delle Entrate + ISTAT - Archivio Nazionale Numeri Civici e Strade Urbane, snapshot mensile) con KPI sul numero di odonimi e civici, percentuale di georeferenziazione, bilinguismo, numerazione storica rosso/nero (Firenze, Genova), top 10 strade per accessi e distribuzione metodi di geo-referenziazione (GPS, catasto, ortofoto, cartografia). Punti sample (1000) georeferenziati per la mappa; per il dataset completo dei civici di un comune (Lecce 47.917, Roma 515.815, ecc.) fai una richiesta HTTP GET a /data/anncsu_full/<istat>.json sullo stesso host del Worker.",
+    "Vista completa di un comune italiano in una sola chiamata: anagrafica, demografia, profilo censimento, turismo, progetti PNRR, territorio (ISPRA Suolo/IdroGEO/Rifiuti), qualità dell'aria (ISPRA SNPA: PM10/PM2.5/NO2 con stazioni), opere pubbliche (BDAP-MOP), spese (SIOPE multi-anno con per_anno e anno_default), contratti (ANAC), scuole (MIUR), veicoli e incidenti (ISTAT 41_993 parco PRA per classe Euro + ISTAT 41_983 incidenti stradali con morti/feriti + ACI LOD nuove iscrizioni per alimentazione), redditi e fisco (MEF Dipartimento delle Finanze: dichiarazioni IRPEF su base comunale a.i. 2020-2024 con numero contribuenti, reddito medio, distribuzione per 8 fasce di reddito, tipologie dipendente/pensione/autonomo/fabbricati, addizionale comunale e imposta netta media). Tool da preferire per qualsiasi domanda generale su un comune ('mostrami Bergamo', 'dati di Milano'). Richiede istat_code (6 cifre, es. '075035'). Se hai solo il nome, chiama prima search_comune per ottenerlo. Accetta anche denominazione ma è meno affidabile sui casi di omonimia/fusione. Include anche la sezione immobili_pa con beni immobili pubblici detenuti dalle PA (MEF DE 2022, dichiarazioni al 31/12/2022): KPI aggregati (fabbricati/terreni, vincolo culturale, uso a terzi, superficie totale, mix categoria) e fino a 500 punti georeferenziati con tipologia e categoria semantica. Sezione anncsu (Agenzia delle Entrate + ISTAT - Archivio Nazionale Numeri Civici e Strade Urbane, snapshot mensile) con KPI sul numero di odonimi e civici, percentuale di georeferenziazione, bilinguismo, numerazione storica rosso/nero (Firenze, Genova), top 10 strade per accessi e distribuzione metodi di geo-referenziazione (GPS, catasto, ortofoto, cartografia). Punti sample (1000) georeferenziati per la mappa; per il dataset completo dei civici di un comune (Lecce 47.917, Roma 515.815, ecc.) fai una richiesta HTTP GET a /data/anncsu_full/<istat>.json sullo stesso host del Worker. Sezione sanita_mds (Ministero della Salute - Open Data IODL v2.0) con il bundle sanità territoriale: farmacie attive (cod_comune ISTAT nativo, ~20.800 attive in 7.258 comuni, 91.9% copertura, dato quotidiano), parafarmacie (~7.200 attive in 2.158 comuni), e posti letto per stabilimento ospedaliero (dato annuale anno 2023: 1.272 stabilimenti in 736 comuni, ~213.000 posti letto totali tra degenza ordinaria, day hospital, day surgery, pagamento, con discipline complete per stabilimento). KPI per ciascuna sezione, punti geo-referenziati per la mappa, mix per tipologia farmacia (Ordinaria/Dispensario/Succursale/Stagionale) e per disciplina ospedaliera.",
   inputSchema: {
     type: "object",
     properties: {
