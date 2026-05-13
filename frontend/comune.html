@@ -4226,14 +4226,14 @@ function renderSanitaTab(d) {
         </div>
       </div>
 
+      <!-- Chart top 10 discipline (4e): sintesi grafica subito sotto le KPI -->
+      ${renderSanitaDiscChartBlock(d)}
+
       <!-- Mappa unificata: farmacie + parafarmacie + ospedali su unica vista geografica -->
       ${renderSanitaMapBlock(d)}
 
-      <!-- Accordion stabilimenti ospedalieri (4d) -->
+      <!-- Accordion stabilimenti ospedalieri (4d): drill-down dettagliato in fondo -->
       ${renderSanitaOspedaliAccordion(d)}
-
-      <!-- Chart top 10 discipline (4e) -->
-      ${renderSanitaDiscChartBlock(d)}
     </div>`;
 }
 
