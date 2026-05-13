@@ -7837,7 +7837,7 @@ CONTENUTO DELLO ZIP
 - METADATI.csv         Legenda campi, fonti, periodi di riferimento
 - LICENSE.txt          Licenza d'uso e attribuzioni
 
-FONTI INTEGRATE (16 dataset, 12 istituzioni)
+FONTI INTEGRATE (17 dataset, 13 istituzioni)
 --------------------------------------------
 - ANAC                              Contratti pubblici (OCDS)
 - BDAP-MOP                          Opere pubbliche dei comuni
@@ -7852,6 +7852,7 @@ FONTI INTEGRATE (16 dataset, 12 istituzioni)
 - Agenzia delle Entrate + ISTAT     ANNCSU — strade e numeri civici certificati
 - Ministero della Salute            Farmacie, parafarmacie, posti letto ospedalieri
 - GSE / MASE                        Piattaforma Unica Nazionale (PUN) — punti di ricarica EV
+- AGCOM                             Broadband Map (BBmap) — copertura banda larga FTTH/FTTC
 
 I dati di origine sono pubblicati dalle istituzioni elencate in
 LICENSE.txt e sono disponibili sui rispettivi portali open data.
@@ -7900,6 +7901,27 @@ dell'art. 52 c.2 D.Lgs 82/2005 (CAD) come open data di default
 delle Pubbliche Amministrazioni — CC BY 4.0 con attribuzione a
 GSE / Piattaforma Unica Nazionale. Aggiornamento quotidiano
 (~03:00 UTC).
+
+NOTA SULLA COPERTURA BANDA LARGA AGCOM
+--------------------------------------
+La sezione "agcom_bbmap" contiene la reportistica delle consistenze
+dei punti raggiunti dalla rete cablata, pubblicata dall'Autorità per
+le Garanzie nelle Comunicazioni (AGCOM) ai sensi dell'art. 22 del
+Codice delle Comunicazioni Elettroniche. Il campo "kpi" include:
+copertura FTTH DESI (metrica UE ufficiale, Digital Economy and Society
+Index), copertura FTTH entro 20m dall'abitazione (metrica stringente
+"fibra effettiva"), confidenza DESI, famiglie residenti e raggiunte
+(totali + entro 20m), celle 20×20m raggiunte da FTTH/FTTC, punti
+dichiarati e geograficamente distinti, indirizzi postali raggiunti.
+Copertura nazionale completa: 7.896 comuni su 7.896 (100%). Dato
+corrente al 31/12/2025 (rilascio AGCOM 10/02/2026). Aggiornamento
+trimestrale. Pubblicato ai sensi dell'art. 52 c.2 D.Lgs 82/2005 (CAD)
+come open data di default delle PA — CC BY 4.0 con attribuzione ad
+AGCOM. Le geometrie dettagliate (polilinee strade FTTH/rame) NON sono
+incluse nel JSON: la mappa di dettaglio è disponibile sul portale
+ufficiale AGCOM (https://geo.agcom.it/agcomapps/BB4/BB4_BBwired_na_app16_4/),
+linkata da Cruscotto Italia via deep-link con centro e zoom calcolati
+in base alla taglia del comune.
 
 `;
       zip.file('README.txt', readme);

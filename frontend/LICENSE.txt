@@ -13,7 +13,7 @@ In caso di riutilizzo, citare come segue:
   "Elaborazione su dati Cruscotto Italia, fonti originarie: ANAC,
    BDAP-MOP, SIOPE, Italia Domani, ISPRA, ISTAT, MIUR, ARPA, ACI, MEF,
    Agenzia delle Entrate, Ministero della Salute, GSE / Piattaforma
-   Unica Nazionale."
+   Unica Nazionale, AGCOM Broadband Map."
 
 FONTI ORIGINARIE E LORO LICENZE
 -------------------------------
@@ -32,6 +32,13 @@ FONTI ORIGINARIE E LORO LICENZE
 - Ministero della Salute (Farmacie, parafarm., osp.) . IODL 2.0
 - GSE / MASE (Piattaforma Unica Nazionale PUN -
   punti di ricarica veicoli elettrici) ............... CC BY 4.0 ex
+                                                       art. 52 c.2
+                                                       D.Lgs 82/2005
+                                                       (CAD) — open
+                                                       data di default
+- AGCOM (Broadband Map - copertura banda larga
+  FTTH/FTTC ex art. 22 Codice Comunicazioni
+  Elettroniche) ...................................... CC BY 4.0 ex
                                                        art. 52 c.2
                                                        D.Lgs 82/2005
                                                        (CAD) — open

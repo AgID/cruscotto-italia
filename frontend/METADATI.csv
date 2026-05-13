@@ -283,3 +283,29 @@ pun,punti[].corrente,"Tipologia di corrente (""AC"" o ""DC"")",codice,GSE / MASE
 pun,punti[].restrizioni,"Restrizioni di accesso (vocabolario OCPI separato da ""- "": EV_ONLY, PLUGGED, DISABLED, CUSTOMERS, MOTORCYCLES, CARSHARING, TAXI; null se senza restrizioni)",codice,GSE / MASE,quotidiana,https://www.piattaformaunicanazionale.it/idr,CC BY 4.0 ex art. 52 c.2 CAD
 pun,punti[].servizi_vicini,"Servizi nelle vicinanze (vocabolario OCPI separato da ""- "": RESTAURANT, CAFE, HOTEL, MALL, SUPERMARKET, RECREATION_AREA, NATURE, PARKING; null se non dichiarato)",codice,GSE / MASE,quotidiana,https://www.piattaformaunicanazionale.it/idr,CC BY 4.0 ex art. 52 c.2 CAD
 pun,punti[].orario,"Orario di apertura (""Aperto 24/7"" oppure stringa giorno-per-giorno formato ""lunedi:HH:MM-HH:MM,martedi:HH:MM-HH:MM,...""; null se non dichiarato)",testo,GSE / MASE,quotidiana,https://www.piattaformaunicanazionale.it/idr,CC BY 4.0 ex art. 52 c.2 CAD
+agcom_bbmap,_etl_version,Versione dello script ETL Cruscotto che ha generato lo shard,testo,Cruscotto Italia,corrente,{{SITE_URL}},CC BY 4.0
+agcom_bbmap,_source,Nome canonico della fonte istituzionale,testo,Cruscotto Italia,corrente,{{SITE_URL}},CC BY 4.0
+agcom_bbmap,_source_url,URL del portale ufficiale della fonte,testo,Cruscotto Italia,corrente,https://geo.agcom.it/reportistica/,CC BY 4.0 ex art. 52 c.2 CAD
+agcom_bbmap,_license,Riferimento normativo della licenza open data,testo,Cruscotto Italia,corrente,{{SITE_URL}},CC BY 4.0 ex art. 52 c.2 CAD
+agcom_bbmap,_data_period,"Data di riferimento del dato AGCOM (es. """"31/12/2025"""")",testo,AGCOM,trimestrale,https://geo.agcom.it/reportistica/,CC BY 4.0 ex art. 52 c.2 CAD
+agcom_bbmap,_generated_at,Timestamp ISO 8601 di generazione dello shard,datetime,Cruscotto Italia,corrente,{{SITE_URL}},CC BY 4.0
+agcom_bbmap,kpi.copertura_ftth_desi_pct,"Copertura FTTH secondo metodologia DESI della Commissione Europea (percentuale, 0-100)",percentuale,AGCOM,trimestrale,https://geo.agcom.it/reportistica/,CC BY 4.0 ex art. 52 c.2 CAD
+agcom_bbmap,kpi.copertura_ftth_20m_pct,"Copertura FTTH """"effettiva"""" entro 20 metri dall'abitazione (percentuale stringente, 0-100)",percentuale,AGCOM,trimestrale,https://geo.agcom.it/reportistica/,CC BY 4.0 ex art. 52 c.2 CAD
+agcom_bbmap,kpi.confidenza_desi_pct,"Indice di confidenza AGCOM sul dato DESI (0-100); sotto 70% dato debole, sopra 90% dato robusto",percentuale,AGCOM,trimestrale,https://geo.agcom.it/reportistica/,CC BY 4.0 ex art. 52 c.2 CAD
+agcom_bbmap,kpi.famiglie_residenti,Stima famiglie residenti nel comune (base ISTAT) - denominatore delle percentuali,numero,AGCOM,trimestrale,https://geo.agcom.it/reportistica/,CC BY 4.0 ex art. 52 c.2 CAD
+agcom_bbmap,kpi.famiglie_ftth,Famiglie raggiunte da FTTH (fibra ottica fino a casa) a qualsiasi distanza,numero,AGCOM,trimestrale,https://geo.agcom.it/reportistica/,CC BY 4.0 ex art. 52 c.2 CAD
+agcom_bbmap,kpi.famiglie_ftth_20m,Famiglie raggiunte da FTTH entro 20 metri dall'edificio (metrica stringente),numero,AGCOM,trimestrale,https://geo.agcom.it/reportistica/,CC BY 4.0 ex art. 52 c.2 CAD
+agcom_bbmap,kpi.celle_20m_raggiunte,Celle 20x20m del territorio coperte da almeno una rete cablata,numero,AGCOM,trimestrale,https://geo.agcom.it/reportistica/,CC BY 4.0 ex art. 52 c.2 CAD
+agcom_bbmap,kpi.celle_20m_ftth,Celle 20x20m raggiunte da FTTH (fibra fino a casa),numero,AGCOM,trimestrale,https://geo.agcom.it/reportistica/,CC BY 4.0 ex art. 52 c.2 CAD
+agcom_bbmap,kpi.celle_20m_fttc,Celle 20x20m raggiunte da FTTC (fibra al cabinet + rame ultimo miglio),numero,AGCOM,trimestrale,https://geo.agcom.it/reportistica/,CC BY 4.0 ex art. 52 c.2 CAD
+agcom_bbmap,kpi.punti_dichiarati,Punti di terminazione dichiarati dagli operatori (può contenere duplicati: ogni operatore dichiara i propri),numero,AGCOM,trimestrale,https://geo.agcom.it/reportistica/,CC BY 4.0 ex art. 52 c.2 CAD
+agcom_bbmap,kpi.punti_dichiarati_ftth,Sottoinsieme dei punti dichiarati limitato alla sola fibra FTTH,numero,AGCOM,trimestrale,https://geo.agcom.it/reportistica/,CC BY 4.0 ex art. 52 c.2 CAD
+agcom_bbmap,kpi.punti_geo_distinti,Punti deduplicati spazialmente con passo 5m (numero più affidabile di copertura),numero,AGCOM,trimestrale,https://geo.agcom.it/reportistica/,CC BY 4.0 ex art. 52 c.2 CAD
+agcom_bbmap,kpi.punti_geo_distinti_ftth,Sottoinsieme dei punti geo-distinti limitato alla sola fibra FTTH,numero,AGCOM,trimestrale,https://geo.agcom.it/reportistica/,CC BY 4.0 ex art. 52 c.2 CAD
+agcom_bbmap,kpi.indirizzi_postali_distinti,Indirizzi civici univoci raggiunti dalla rete cablata,numero,AGCOM,trimestrale,https://geo.agcom.it/reportistica/,CC BY 4.0 ex art. 52 c.2 CAD
+agcom_bbmap,kpi.indirizzi_postali_distinti_ftth,Sottoinsieme degli indirizzi postali limitato alla sola fibra FTTH,numero,AGCOM,trimestrale,https://geo.agcom.it/reportistica/,CC BY 4.0 ex art. 52 c.2 CAD
+agcom_bbmap,anagrafica_locale.regione,Nome regione come da CSV AGCOM (per debug e cross-check),testo,AGCOM,trimestrale,https://geo.agcom.it/reportistica/,CC BY 4.0 ex art. 52 c.2 CAD
+agcom_bbmap,anagrafica_locale.provincia,Nome provincia come da CSV AGCOM,testo,AGCOM,trimestrale,https://geo.agcom.it/reportistica/,CC BY 4.0 ex art. 52 c.2 CAD
+agcom_bbmap,anagrafica_locale.comune,Nome comune come da CSV AGCOM,testo,AGCOM,trimestrale,https://geo.agcom.it/reportistica/,CC BY 4.0 ex art. 52 c.2 CAD
+agcom_bbmap,mappa_ufficiale.url,URL base del Web AppBuilder AGCOM per la mappa dettagliata della rete cablata,url,AGCOM,corrente,https://geo.agcom.it/reportistica/,CC BY 4.0 ex art. 52 c.2 CAD
+agcom_bbmap,mappa_ufficiale.level,"Livello di zoom Esri suggerito (12=metropoli, 13=capoluoghi, 14=medi, 15=piccoli); null=zoom default",numero,Cruscotto Italia,corrente,{{SITE_URL}},CC BY 4.0

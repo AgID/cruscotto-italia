@@ -6,6 +6,10 @@ name: ETL · Monthly
 #  - SIOPE Spese (force refresh: --no-cache, scarica nuovi mesi pubblicati)
 #  - ANNCSU (Agenzia Entrate + ISTAT, snapshot mensile civici e strade,
 #    --full-shards genera anche shard pesanti su anncsu_full/)
+#  - AGCOM Broadband Map (BBmap, copertura banda larga ex art. 22 CCE):
+#    rilascio AGCOM è trimestrale (~30-45 gg dopo fine trimestre), ma
+#    l'ETL fa skip-by-sha incrementale: nei mesi senza nuovo rilascio
+#    il job termina in <30s con `agcom_skip reason=sha_unchanged`.
 #
 # Al termine, ricostruisce dashboard/<istat>.json.
 #
@@ -17,7 +21,7 @@ on:
   workflow_dispatch:
     inputs:
       sources:
-        description: 'Comma-separated list (anagrafica,bdap,siope,anncsu,sanita_mds_refresh,dashboard) or "all"'
+        description: 'Comma-separated list (anagrafica,bdap,siope,anncsu,sanita_mds_refresh,agcom_bbmap,dashboard) or "all"'
         required: false
         default: 'all'
       siope_no_cache:
@@ -142,15 +146,39 @@ jobs:
         run: python -m etl.sources.sanita_mds --target=r2 --force-shard-upload
 
   # ---------------------------------------------------------------------------
-  # Dashboard rebuild parte SOLO quando i 4 ETL upstream sono finiti.
+  # AGCOM Broadband Map (BBmap): copertura banda larga FTTH/FTTC per comune,
+  # ex art. 22 Codice Comunicazioni Elettroniche. Rilascio AGCOM è trimestrale
+  # (~30-45 gg dopo fine trimestre), ma l'ETL ha skip-by-sha incrementale su
+  # agcom_bbmap/_meta.json: il job gira ogni mese e nei mesi senza nuovo CSV
+  # AGCOM termina in <30s con `agcom_skip reason=sha_unchanged`.
+  # CSV bulk nazionale (~775 KB), copertura 7896/7896 comuni (100%).
+  # Licenza CC BY 4.0 ex art. 52 c.2 D.Lgs 82/2005 (CAD).
+  agcom_bbmap:
+    name: ETL · AGCOM Broadband Map (copertura banda larga, skip-by-sha)
+    runs-on: [self-hosted, linux, aruba]
+    if: ${{ github.event_name == 'schedule' || contains(github.event.inputs.sources, 'agcom_bbmap') || github.event.inputs.sources == 'all' || github.event.inputs.sources == '' }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: etl/requirements.txt
+      - run: pip install -r etl/requirements.txt
+      - name: Run AGCOM Broadband Map ETL (skip se sha CSV invariato)
+        run: python -m etl.sources.agcom_bbmap --target=r2
+
+  # ---------------------------------------------------------------------------
+  # Dashboard rebuild parte SOLO quando i 5 ETL upstream sono finiti.
   # Sufficiente che almeno UNO sia andato in success (perché il dashboard.py
   # legge tutti gli shard esistenti su R2 e compone — non dipende dal nuovo
   # output di un singolo ETL).
   dashboard:
     name: ETL · Dashboard rebuild (single-fetch shard)
     runs-on: [self-hosted, linux, aruba]
-    needs: [anagrafica, bdap, siope, anncsu, sanita_mds_refresh]
-    if: ${{ always() && (needs.anagrafica.result == 'success' || needs.bdap.result == 'success' || needs.siope.result == 'success' || needs.anncsu.result == 'success' || needs.sanita_mds_refresh.result == 'success') }}
+    needs: [anagrafica, bdap, siope, anncsu, sanita_mds_refresh, agcom_bbmap]
+    if: ${{ always() && (needs.anagrafica.result == 'success' || needs.bdap.result == 'success' || needs.siope.result == 'success' || needs.anncsu.result == 'success' || needs.sanita_mds_refresh.result == 'success' || needs.agcom_bbmap.result == 'success') }}
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
