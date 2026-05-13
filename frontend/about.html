@@ -9,8 +9,8 @@
 <meta property="og:description" content="Cruscotto Italia: come vengono raccolti, ricomposti e aggiornati i dati comunali a partire da fonti pubbliche istituzionali federate. Metodologia, frequenze di aggiornamento, licenze.">
 <meta property="og:type" content="article">
 <!-- Design Italia: Titillium Web self-hosted -->
-<link rel="stylesheet" href="/css/tokens.css?v=20260513h">
-<link rel="stylesheet" href="/css/base.css?v=20260513h">
+<link rel="stylesheet" href="/css/tokens.css?v=20260513i">
+<link rel="stylesheet" href="/css/base.css?v=20260513i">
 <style>
 /* === ALIAS bridge: vecchi nomi -> nuovi token Design Italia === */
 :root{
@@ -398,6 +398,22 @@ footer a:hover { color: #fff !important; }
           </td>
           <td class="freq">giornaliera (farm./parafarm.) &middot; annuale (osp.)</td>
         </tr>
+        <tr data-fonte-row="GSE-PUN">
+          <td>GSE / MASE</td>
+          <td>
+            <strong>Piattaforma Unica Nazionale (PUN) — punti di ricarica</strong>
+            Anagrafica nazionale dei punti di ricarica per veicoli elettrici
+            (infrastrutture EVSE) gestita dal Gestore Servizi Energetici per
+            conto del Ministero dell'Ambiente e della Sicurezza Energetica.
+            66.619 punti in 5.185 comuni (giorno per giorno), con potenza,
+            tipologia di corrente (AC/DC), stato attivo/non attivo,
+            georeferenziazione completa. Dati pubblicati ai sensi
+            dell'art.&nbsp;52 c.2 D.Lgs&nbsp;82/2005 (CAD) come open data
+            di default delle Pubbliche Amministrazioni — CC&nbsp;BY&nbsp;4.0
+            con attribuzione a GSE.
+          </td>
+          <td class="freq">giornaliera</td>
+        </tr>
       </tbody>
     </table>
 
@@ -446,7 +462,7 @@ footer a:hover { color: #fff !important; }
         <h3>1. Estrazione</h3>
         <p>
           Script Python (uno per fonte) scaricano i dataset originali dai
-          portali ufficiali delle 11 istituzioni integrate: ISTAT (POSAS,
+          portali ufficiali delle 12 istituzioni integrate: ISTAT (POSAS,
           censimento, turismo, incidenti) in SDMX-ML via API REST,
           ANAC i contratti come JSON-LD su dati.anticorruzione.it,
           BDAP-MOP le opere via API a paginazione,
@@ -457,7 +473,9 @@ footer a:hover { color: #fff !important; }
           il MEF Dipartimento delle Finanze i redditi IRPEF in CSV bulk,
           il MEF Dipartimento dell'Economia il censimento dei beni immobili pubblici,
           l'Agenzia delle Entrate l'ANNCSU (civici e strade) in flussi mensili,
-          il Ministero della Salute farmacie/parafarmacie/ospedali via Open Data IODL.
+          il Ministero della Salute farmacie/parafarmacie/ospedali via Open Data IODL,
+          il GSE per conto del MASE la Piattaforma Unica Nazionale dei punti
+          di ricarica elettrica via CSV nazionale firmato S3 (Cognito guest).
         </p>
         <p>
           Gli script gestiscono le idiosincrasie di ciascun dataset:
@@ -703,6 +721,15 @@ footer a:hover { color: #fff !important; }
           (rilascio annuale).
         </div>
         <div class="aggiorna-when">giornaliera · annuale</div>
+      </div>
+      <div class="aggiorna-row">
+        <div class="aggiorna-cadence">Giornaliera</div>
+        <div class="aggiorna-what">
+          <strong>GSE / MASE — Piattaforma Unica Nazionale (PUN)</strong>
+          anagrafica dei punti di ricarica per veicoli elettrici
+          (66.619 EVSE in 5.185 comuni, georeferenziati).
+        </div>
+        <div class="aggiorna-when">04:30 UTC</div>
       </div>
     </div>
 
