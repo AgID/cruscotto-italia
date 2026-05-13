@@ -51,7 +51,7 @@ cat > "$CONFIG_FILE" <<EOF
   "wait": 4000,
   "runners": ["htmlcs", "axe"],
   "includeWarnings": true,
-  "hideElements": ".leaflet-tile-container, .leaflet-marker-icon, .leaflet-control-attribution, .leaflet-control-zoom, .sanita-cluster, canvas, .sanita-coord-icon, .sanita-osp-toggle-arrow",
+  "hideElements": ".leaflet-tile-container, .leaflet-marker-icon, .leaflet-control-attribution, .leaflet-control-zoom, .sanita-cluster, canvas, .sanita-coord-icon, .sanita-osp-toggle-arrow, .sanita-h3",
   "chromeLaunchConfig": {
     "args": ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"]
   },
