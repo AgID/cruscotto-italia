@@ -430,7 +430,7 @@ def parse_ospedali(csv_path: Path) -> dict[str, dict]:
 # ============================================================================
 
 def _filter_outlier_coords(punti: list[dict]) -> tuple[list[dict], int]:
-    """Filtra outlier statistici delle coordinate.
+    """Filtra outlier statistici delle coordinate (preservando i raw).
 
     Le coordinate del MdS hanno un tasso di errore osservato del ~5-15%
     (osservazione Roma 2026-05-13: punti del comune 058091 con lat/lon
@@ -445,9 +445,16 @@ def _filter_outlier_coords(punti: list[dict]) -> tuple[list[dict], int]:
          - N<=50 (resto):                       0.15 gradi (~16 km)
          (Roma capitale e' radius ~30km dal centro, le soglie sono ampie
          per non eliminare frazioni periferiche legittime.)
-      3. Punti oltre soglia: lat/lon nullificati (record resta, perdono
-         solo le coordinate). Il record sopravvive in 'punti' con nome,
-         indirizzo, CAP visibili nel popup/elenco.
+      3. Punti oltre soglia:
+         - `lat_raw` e `lon_raw` conservati con i valori MdS originali
+           (per audit, FOIA, ricerca futura, ricalcolo con altre euristiche)
+         - `lat` e `lon` settati a None (la mappa li filtra fuori)
+         - `coord_dropped` = True (flag pubblico, finisce nel JSON)
+         Il record sopravvive integralmente con nome+indirizzo+CAP.
+
+    Filosofia: non cancelliamo dati alla fonte. Documentiamo la nostra
+    decisione di filtro, ma preserviamo l'audit trail completo dello
+    snapshot upstream. Lo ZIP scaricato dall'utente contiene tutto.
 
     Ritorna (punti_modificati, n_droppati).
     """
@@ -476,11 +483,13 @@ def _filter_outlier_coords(punti: list[dict]) -> tuple[list[dict], int]:
         d_lat = abs(p["lat"] - med_lat)
         d_lon = abs(p["lon"] - med_lon)
         if d_lat > soglia or d_lon > soglia:
-            # Outlier: nullifico coord ma tengo il record
+            # Outlier: conservo i raw, nullifico lat/lon, marco con flag pubblico
             new_p = dict(p)
+            new_p["lat_raw"] = p["lat"]   # raw MdS originale
+            new_p["lon_raw"] = p["lon"]   # raw MdS originale
             new_p["lat"] = None
             new_p["lon"] = None
-            new_p["_coord_dropped"] = True  # privato, non finisce nel JSON
+            new_p["coord_dropped"] = True  # flag pubblico (no underscore)
             out.append(new_p)
             n_droppati += 1
         else:
