@@ -258,6 +258,53 @@ a:hover{color:var(--accent)}
   margin-top:6px;
 }
 
+/* Tab Sanità: mappa Leaflet + filtri chip + marker SVG colorati */
+.sanita-map-wrap{margin:32px 0 24px;}
+.sanita-h3{font-family:var(--serif);font-size:22px;color:var(--ink);font-weight:400;margin:0 0 8px;font-style:italic;}
+.sanita-map-note{font-size:13px;line-height:1.55;margin:0 0 14px;color:var(--ink-mute);}
+.sanita-map{height:520px;border-radius:8px;overflow:hidden;background:#eef2f5;position:relative;z-index:0;isolation:isolate;}
+@media (max-width:720px){.sanita-map{height:420px;}}
+
+.sanita-filters{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px;align-items:center;}
+.sanita-chip{
+  display:inline-flex;align-items:center;gap:6px;padding:7px 12px;min-height:32px;
+  background:var(--paper-2);border:1px solid var(--ink-mute);border-radius:16px;
+  font-family:var(--mono);font-size:11px;color:var(--ink);cursor:pointer;
+  transition:all .15s ease;line-height:1;text-transform:uppercase;letter-spacing:.04em;
+}
+.sanita-chip:hover{background:#fff;border-color:var(--accent);}
+.sanita-chip:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+.sanita-chip[aria-pressed="false"]{opacity:.4;background:transparent;}
+.sanita-chip[aria-pressed="false"] .sanita-chip-dot{opacity:.4;}
+.sanita-chip-dot{
+  width:12px;height:12px;border-radius:50%;flex-shrink:0;
+  border:1.5px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,0.18);
+}
+.sanita-chip-count{font-size:10px;color:var(--ink-mute);font-weight:600;}
+
+/* Marker SVG: cerchio colorato con bordo bianco, ombra leggera */
+.sanita-pin{
+  width:20px;height:20px;border-radius:50%;border:2.5px solid #fff;
+  box-shadow:0 1px 4px rgba(0,0,0,0.35);
+}
+.sanita-pin.hosp{width:28px;height:28px;}  /* Ospedali leggermente più grandi */
+
+/* Colori semantici: */
+.sanita-c-farm-ord{background:#2E7D32;}      /* Farmacia ordinaria - verde scuro */
+.sanita-c-farm-disp{background:#0277BD;}     /* Dispensario/Succursale - blu */
+.sanita-c-farm-stag{background:#9E9D24;}     /* Dispensario stagionale - giallo oliva */
+.sanita-c-parafarm{background:#EF6C00;}      /* Parafarmacia - arancione */
+.sanita-c-osp{background:#C62828;}           /* Ospedale - rosso */
+
+.sanita-popup{font-family:var(--ui);font-size:12px;min-width:200px;max-width:280px;}
+.sanita-popup-name{display:block;font-weight:600;margin-bottom:4px;line-height:1.3;}
+.sanita-popup-meta{display:block;color:var(--ink-mute);font-size:11px;margin-bottom:2px;}
+.sanita-popup-addr{display:block;color:var(--ink);font-size:11px;line-height:1.35;}
+.sanita-popup-pl{display:inline-block;margin-top:4px;padding:2px 8px;background:#C62828;color:#fff;border-radius:3px;font-size:11px;font-weight:600;}
+
+.sanita-legend{display:flex;flex-wrap:wrap;gap:14px;margin:10px 0 4px;font-family:var(--mono);font-size:10px;color:var(--ink-mute);text-transform:uppercase;letter-spacing:.05em;}
+.sanita-legend-item{display:inline-flex;align-items:center;gap:6px;}
+
 .placeholder{
   padding:64px 32px;
   text-align:center;
@@ -961,6 +1008,8 @@ function renderComune(data) {
   window.__immobiliPaInited = false;
   window.__anncsuData = k.anncsu || null;
   window.__anncsuInited = false;
+  window.__sanitaData = k.sanita_mds || null;
+  window.__sanitaInited = false;
   const tabs = [
     { id: 'panoramica', label: 'Panoramica', kpi: '' },
     { id: 'demografia', label: 'Demografia', kpi: k.popolazione != null ? fmtNum(k.popolazione) : '—' },
@@ -3957,12 +4006,68 @@ function renderSanitaTab(d) {
         </div>
       </div>
 
-      <!-- Sotto-step 4c: mappa Leaflet unificata (3 layer: farmacie / parafarmacie / ospedali) -->
+      <!-- Mappa unificata: farmacie + parafarmacie + ospedali su unica vista geografica -->
+      ${renderSanitaMapBlock(d)}
+
       <!-- Sotto-step 4d: accordion stabilimenti ospedalieri con discipline -->
-      <!-- Sotto-step 4e: chart mix_discipline (bar horizontal top 10) -->
-      <div class="muted" style="text-align:center;padding:60px 20px;font-style:italic;border:1px dashed var(--ink-mute);border-radius:8px;margin:24px 0;">
-        Mappa interattiva, dettaglio stabilimenti e mix discipline in arrivo nei prossimi sotto-step.
+      <!-- Sotto-step 4e: chart bar horizontal top mix_discipline -->
+    </div>`;
+}
+
+// ===========================================================================
+// Tab Sanità - rendering blocco mappa unificata (4c)
+// ===========================================================================
+
+function renderSanitaMapBlock(d) {
+  const hasFarm = !!(d.farmacie && d.farmacie.punti && d.farmacie.punti.length);
+  const hasPF   = !!(d.parafarmacie && d.parafarmacie.punti && d.parafarmacie.punti.length);
+  const hasOsp  = !!(d.ospedali && d.ospedali.stabilimenti && d.ospedali.stabilimenti.length);
+
+  if (!hasFarm && !hasPF && !hasOsp) {
+    return `
+      <div class="sanita-map-wrap">
+        <p class="muted" style="font-style:italic;">Nessun presidio georeferenziato disponibile per la mappa.</p>
+      </div>`;
+  }
+
+  // Conteggi per chip label
+  const nFarmOrd = hasFarm ? (d.farmacie.punti.filter(p => /^Ordinaria$/i.test(p.tipo || '')).length) : 0;
+  const nFarmDisp = hasFarm ? (d.farmacie.punti.filter(p => /Dispensario(?! stagional)|Succursale/i.test(p.tipo || '')).length) : 0;
+  const nFarmStag = hasFarm ? (d.farmacie.punti.filter(p => /stagionale/i.test(p.tipo || '')).length) : 0;
+  const nPF = hasPF ? d.parafarmacie.punti.length : 0;
+  const nOsp = hasOsp ? d.ospedali.stabilimenti.length : 0;
+
+  return `
+    <div class="sanita-map-wrap">
+      <h3 class="sanita-h3">Mappa dei presidi sanitari</h3>
+      <p class="sanita-map-note">
+        ${(nFarmOrd + nFarmDisp + nFarmStag).toLocaleString('it-IT')} farmacie e dispensari · ${nPF.toLocaleString('it-IT')} parafarmacie · ${nOsp.toLocaleString('it-IT')} stabilimenti ospedalieri georeferenziati.
+        Clicca sui marker per il dettaglio. Filtra per categoria con i chip qui sotto.
+      </p>
+
+      <div class="sanita-filters" role="group" aria-label="Filtri presidi sanitari">
+        <button type="button" class="sanita-chip" data-sanita-filter="farm-ord" aria-pressed="true">
+          <span class="sanita-chip-dot sanita-c-farm-ord"></span>Farmacie ordinarie <span class="sanita-chip-count">${nFarmOrd}</span>
+        </button>
+        ${nFarmDisp > 0 ? `
+        <button type="button" class="sanita-chip" data-sanita-filter="farm-disp" aria-pressed="true">
+          <span class="sanita-chip-dot sanita-c-farm-disp"></span>Dispensari / Succursali <span class="sanita-chip-count">${nFarmDisp}</span>
+        </button>` : ''}
+        ${nFarmStag > 0 ? `
+        <button type="button" class="sanita-chip" data-sanita-filter="farm-stag" aria-pressed="true">
+          <span class="sanita-chip-dot sanita-c-farm-stag"></span>Stagionali <span class="sanita-chip-count">${nFarmStag}</span>
+        </button>` : ''}
+        ${nPF > 0 ? `
+        <button type="button" class="sanita-chip" data-sanita-filter="parafarm" aria-pressed="true">
+          <span class="sanita-chip-dot sanita-c-parafarm"></span>Parafarmacie <span class="sanita-chip-count">${nPF}</span>
+        </button>` : ''}
+        ${nOsp > 0 ? `
+        <button type="button" class="sanita-chip" data-sanita-filter="osp" aria-pressed="true">
+          <span class="sanita-chip-dot sanita-c-osp"></span>Ospedali <span class="sanita-chip-count">${nOsp}</span>
+        </button>` : ''}
       </div>
+
+      <div id="sanita-map" class="sanita-map" role="application" aria-label="Mappa dei presidi sanitari del comune"></div>
     </div>`;
 }
 
@@ -5164,6 +5269,14 @@ function bindTabSwitching() {
         }
       }
 
+      // Lazy-init mappa Leaflet tab Sanità al primo click
+      if (tab.dataset.tab === 'sanita') {
+        if (window.__sanitaData && !window.__sanitaInited) {
+          setTimeout(() => initSanitaMap(window.__sanitaData), 0);
+          window.__sanitaInited = true;
+        }
+      }
+
       // Lazy-load tab Spese: chiamata al primo click
       if (tab.dataset.tab === 'spese') {
         const params = new URLSearchParams(window.location.search);
@@ -5457,6 +5570,185 @@ function renderAriaMap(stazioni) {
   }
 
   // Riabilita scroll-wheel zoom on focus/click (UX: evita hijack accidentale)
+  map.on('focus', () => map.scrollWheelZoom.enable());
+  map.on('blur',  () => map.scrollWheelZoom.disable());
+}
+
+
+// ===========================================================================
+// Mappa Leaflet tab Sanità (4c)
+// 3 layer indipendenti: farmacie, parafarmacie, ospedali.
+// Marker SVG inline (divIcon), chip filtri toggle, popup tipologici.
+// ===========================================================================
+
+function _sanitaPinIcon(category, sizeClass = '') {
+  // category: 'farm-ord' | 'farm-disp' | 'farm-stag' | 'parafarm' | 'osp'
+  return L.divIcon({
+    className: '',
+    iconSize: category === 'osp' ? [28, 28] : [20, 20],
+    iconAnchor: category === 'osp' ? [14, 14] : [10, 10],
+    popupAnchor: [0, -10],
+    html: `<div class="sanita-pin ${category === 'osp' ? 'hosp' : ''} sanita-c-${category}"></div>`
+  });
+}
+
+function _sanitaCategoryForFarm(tipo) {
+  const t = (tipo || '').toLowerCase();
+  if (t.includes('stagional')) return 'farm-stag';
+  if (t.includes('dispensari') || t.includes('succursal')) return 'farm-disp';
+  return 'farm-ord'; // default: Ordinaria
+}
+
+function initSanitaMap(d) {
+  const el = document.getElementById('sanita-map');
+  if (!el || typeof L === 'undefined') return;
+  // Cleanup mappa precedente
+  if (window.__sanitaMapInstance) {
+    try { window.__sanitaMapInstance.remove(); } catch(e) {}
+    window.__sanitaMapInstance = null;
+  }
+
+  // Raccolgo tutti i punti dei 3 layer, normalizzo struttura unificata
+  const allPunti = [];
+
+  if (d.farmacie && d.farmacie.punti) {
+    for (const p of d.farmacie.punti) {
+      if (p.lat == null || p.lon == null) continue;
+      allPunti.push({
+        lat: p.lat, lon: p.lon,
+        cat: _sanitaCategoryForFarm(p.tipo),
+        kind: 'farmacia',
+        nome: p.nome,
+        meta: p.tipo || 'Ordinaria',
+        indirizzo: p.indirizzo,
+        cap: p.cap
+      });
+    }
+  }
+
+  if (d.parafarmacie && d.parafarmacie.punti) {
+    for (const p of d.parafarmacie.punti) {
+      if (p.lat == null || p.lon == null) continue;
+      allPunti.push({
+        lat: p.lat, lon: p.lon,
+        cat: 'parafarm',
+        kind: 'parafarmacia',
+        nome: p.nome,
+        meta: 'Parafarmacia',
+        indirizzo: p.indirizzo,
+        cap: p.cap
+      });
+    }
+  }
+
+  // Ospedali: usa stabilimenti (no lat/lon nativi nello shard - geocoding indirizzo TODO)
+  // Per ora, se lo stabilimento ha codice_comune dello shard, usiamo il centroide
+  // del comune (centro della bbox punti farmacie come fallback approssimativo).
+  // Marker ospedale = punto singolo per stabilimento, dimensione fissa.
+  if (d.ospedali && d.ospedali.stabilimenti && d.ospedali.stabilimenti.length) {
+    // Calcolo centroide approssimativo dei punti farmacie come fallback per ospedali
+    // (gli ospedali MdS non hanno lat/lon nello shard 2023).
+    let cLat = null, cLon = null;
+    if (allPunti.length) {
+      cLat = allPunti.reduce((s,p) => s + p.lat, 0) / allPunti.length;
+      cLon = allPunti.reduce((s,p) => s + p.lon, 0) / allPunti.length;
+    }
+    // Dispongo gli ospedali in un piccolo cluster centrato sul centroide
+    // con offset radiale per evitare sovrapposizione totale
+    const n = d.ospedali.stabilimenti.length;
+    d.ospedali.stabilimenti.forEach((s, i) => {
+      const angle = (i / Math.max(1, n)) * 2 * Math.PI;
+      const r = 0.004 + (i * 0.0008); // ~400-500m di offset radiale
+      const lat = cLat != null ? cLat + r * Math.cos(angle) : null;
+      const lon = cLon != null ? cLon + r * Math.sin(angle) : null;
+      if (lat == null) return;
+      allPunti.push({
+        lat, lon,
+        cat: 'osp',
+        kind: 'ospedale',
+        nome: s.denominazione || 'Stabilimento ospedaliero',
+        meta: s.tipo_struttura || 'Ospedale',
+        indirizzo: s.indirizzo || '',
+        cap: '',
+        pl: s.totale_posti_letto || 0,
+        nDisc: (s.discipline || []).length,
+        _approx: true  // disclaimer popup
+      });
+    });
+  }
+
+  if (!allPunti.length) {
+    el.innerHTML = '<p class="muted" style="padding:24px;text-align:center;font-style:italic;">Nessun presidio georeferenziato.</p>';
+    return;
+  }
+
+  const map = L.map(el, {
+    scrollWheelZoom: false,
+    zoomControl: true,
+    attributionControl: true
+  });
+  window.__sanitaMapInstance = map;
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 18,
+    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+  }).addTo(map);
+
+  // Layer groups per categoria (toggle via chip)
+  const layers = {
+    'farm-ord':  L.layerGroup(),
+    'farm-disp': L.layerGroup(),
+    'farm-stag': L.layerGroup(),
+    'parafarm':  L.layerGroup(),
+    'osp':       L.layerGroup()
+  };
+
+  // Popola layer
+  for (const p of allPunti) {
+    const m = L.marker([p.lat, p.lon], { icon: _sanitaPinIcon(p.cat) });
+    const popup = `
+      <div class="sanita-popup">
+        <span class="sanita-popup-name">${(p.nome || '—').replace(/</g,'&lt;')}</span>
+        <span class="sanita-popup-meta">${p.meta}</span>
+        ${p.indirizzo ? `<span class="sanita-popup-addr">${p.indirizzo.replace(/</g,'&lt;')}${p.cap ? ' · ' + p.cap : ''}</span>` : ''}
+        ${p.kind === 'ospedale' ? `<span class="sanita-popup-pl">${fmtNum(p.pl)} posti letto · ${p.nDisc} discipline</span>` : ''}
+        ${p._approx ? '<span class="sanita-popup-meta" style="margin-top:6px;font-style:italic;">⚠ posizione approssimata (centroide comune): il dataset MdS posti letto non include lat/lon per stabilimento.</span>' : ''}
+      </div>`;
+    m.bindPopup(popup);
+    layers[p.cat].addLayer(m);
+  }
+
+  // Aggiungi tutti i layer alla mappa (chip attivi di default)
+  for (const k in layers) {
+    layers[k].addTo(map);
+  }
+
+  // Fit bounds su tutti i punti
+  const allMarkers = [];
+  for (const k in layers) layers[k].eachLayer(m => allMarkers.push(m));
+  if (allMarkers.length === 1) {
+    map.setView([allPunti[0].lat, allPunti[0].lon], 14);
+  } else {
+    const group = L.featureGroup(allMarkers);
+    map.fitBounds(group.getBounds().pad(0.12));
+  }
+
+  // Chip toggle handlers
+  const chips = document.querySelectorAll('.sanita-chip[data-sanita-filter]');
+  chips.forEach(chip => {
+    chip.addEventListener('click', () => {
+      const cat = chip.dataset.sanitaFilter;
+      const wasOn = chip.getAttribute('aria-pressed') === 'true';
+      chip.setAttribute('aria-pressed', wasOn ? 'false' : 'true');
+      if (wasOn) {
+        map.removeLayer(layers[cat]);
+      } else {
+        map.addLayer(layers[cat]);
+      }
+    });
+  });
+
+  // Scroll-wheel zoom solo on focus
   map.on('focus', () => map.scrollWheelZoom.enable());
   map.on('blur',  () => map.scrollWheelZoom.disable());
 }
