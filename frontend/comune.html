@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>Vista comune · Cruscotto Italia</title>
-<link rel="stylesheet" href="/css/tokens.css?v=20260513e">
-<link rel="stylesheet" href="/css/base.css?v=20260513e">
+<link rel="stylesheet" href="/css/tokens.css?v=20260513f">
+<link rel="stylesheet" href="/css/base.css?v=20260513f">
 
 <style>
 /* === ALIAS bridge: vecchi nomi -> nuovi token Design Italia === */
@@ -880,16 +880,18 @@ footer a{color:rgba(255,255,255,0.85);text-decoration:none}
 .aria-meta{display:flex;flex-wrap:wrap;gap:18px;padding:14px 18px;background:var(--paper-2);border-left:3px solid var(--accent-2);margin:0 0 28px;}
 .aria-meta-item{font-family:var(--mono);font-size:12px;color:var(--ink-soft);}
 .aria-meta-item b{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-mute);font-weight:normal;margin-bottom:2px;}
-.aria-kpi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin:0 0 36px;}
-@media (max-width:720px){.aria-kpi-grid{grid-template-columns:1fr;}}
-.aria-kpi-card{padding:20px 22px;background:var(--paper-2);border-top:3px solid var(--ink-mute);}
-.aria-kpi-card.aria-kpi-good{border-top-color:var(--chart-success);}
-.aria-kpi-card.aria-kpi-warn{border-top-color:var(--gold);}
-.aria-kpi-card.aria-kpi-bad{border-top-color:var(--accent);}
-.aria-kpi-label{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.14em;color:var(--ink-mute);margin-bottom:8px;}
-.aria-kpi-value{font-family:var(--serif);font-size:42px;font-weight:600;color:var(--ink);line-height:1;}
-.aria-kpi-unit{font-size:14px;color:var(--ink-mute);font-weight:400;margin-left:6px;font-family:var(--mono);}
-.aria-kpi-sub{font-family:var(--mono);font-size:11px;color:var(--ink-mute);margin-top:6px;}
+/* Tab Aria: i KPI usano ora il pattern uniforme .kpi-card.
+   Manteniamo solo i modificatori semantici (good/warn/bad) che cambiano
+   il colore del border-left per indicare il superamento dei limiti
+   di legge / OMS. Variante 3 colonne per i 3 inquinanti (PM10/PM2.5/NO2). */
+.aria-kpi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:18px 0 28px;}
+@media (max-width:960px){.aria-kpi-grid{grid-template-columns:repeat(2,1fr);}}
+@media (max-width:540px){.aria-kpi-grid{grid-template-columns:1fr;}}
+.aria-kpi-grid > .kpi-card.aria-kpi-good{border-left-color:var(--chart-success);}
+.aria-kpi-grid > .kpi-card.aria-kpi-warn{border-left-color:var(--gold);}
+.aria-kpi-grid > .kpi-card.aria-kpi-bad{border-left-color:var(--accent);}
+/* Sub-elementi specifici delle KPI Aria (sotto label/val/sub uniformi):
+   limiti di legge/OMS + fascia prevalente. */
 .aria-kpi-limits{display:flex;flex-direction:column;gap:4px;margin-top:14px;padding-top:12px;border-top:1px solid var(--paper);}
 .aria-lim{font-family:var(--mono);font-size:11px;color:var(--ink-soft);}
 .aria-lim-hit{color:var(--accent);font-weight:600;}
@@ -1033,11 +1035,8 @@ footer a{color:rgba(255,255,255,0.85);text-decoration:none}
 .opere-grid{display:grid;grid-template-columns:1fr 1fr;gap:48px;margin:32px 0 56px;}
 .opere-col{}
 .col-h{font-family:var(--font-mono);font-size:11px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-2);margin:0 0 20px;border-bottom:1px solid var(--ink-3);padding-bottom:10px;}
-.stato-cards{display:flex;gap:16px;flex-wrap:wrap;}
-.stato-card{flex:1;min-width:140px;border:1px solid var(--ink-3);padding:18px 20px;}
-.stato-label{font-family:var(--font-mono);font-size:11px;letter-spacing:.16em;color:var(--ink-2);text-transform:uppercase;margin-bottom:8px;}
-.stato-count{font-family:var(--font-serif);font-size:42px;line-height:1;color:var(--ink);margin-bottom:6px;}
-.stato-cost{font-family:var(--font-mono);font-size:13px;color:var(--ink-2);}
+/* Tab Opere: i KPI "per stato" (Attivo/Chiuso/In corso/Sospeso) usano ora
+   il pattern uniforme .kpi-card con variante auto-fit per N variabile. */
 #finanz-chart{max-width:100%;height:auto !important;}
 
 .settori-block{margin:32px 0 56px;}
@@ -1120,6 +1119,10 @@ footer a{color:rgba(255,255,255,0.85);text-decoration:none}
 .kpi-cards, .anncsu-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:18px 0 28px;}
 @media (max-width:960px){.kpi-cards, .anncsu-kpis{grid-template-columns:repeat(2,1fr);}}
 @media (max-width:540px){.kpi-cards, .anncsu-kpis{grid-template-columns:1fr;}}
+/* Variante: per tab con numero variabile di KPI (es. Opere per_stato, 1-4 stati).
+   Riempie naturalmente con auto-fit invece di grid fissa. */
+.kpi-cards.kpi-cards-auto{grid-template-columns:repeat(auto-fit,minmax(180px,1fr));}
+@media (max-width:540px){.kpi-cards.kpi-cards-auto{grid-template-columns:1fr;}}
 .kpi-card, .anncsu-kpi{padding:14px 16px;background:var(--paper-2);border:1px solid var(--ink-mute);border-left:3px solid var(--accent);}
 .kpi-card-lab, .anncsu-kpi-lab{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:var(--ink-mute);margin-bottom:6px;}
 .kpi-card-val, .anncsu-kpi-val{font-family:var(--serif);font-size:28px;color:var(--ink);font-weight:400;line-height:1;font-variation-settings:'opsz' 60;}
@@ -6252,10 +6255,10 @@ function renderOpereTab(opere) {
 
   // Per stato (Attivo/Chiuso/etc)
   const statoHtml = Object.entries(t.per_stato || {}).map(([stato, kpi]) => `
-    <div class="stato-card">
-      <div class="stato-label">${stato}</div>
-      <div class="stato-count">${fmtNum(kpi.count)}</div>
-      <div class="stato-cost">€${fmtNum(Math.round(kpi.costo_lavori_eff || 0))}</div>
+    <div class="kpi-card">
+      <div class="kpi-card-lab">${stato}</div>
+      <div class="kpi-card-val">${fmtNum(kpi.count)}</div>
+      <div class="kpi-card-sub">€${fmtNum(Math.round(kpi.costo_lavori_eff || 0))}</div>
     </div>
   `).join('');
 
@@ -6268,7 +6271,7 @@ function renderOpereTab(opere) {
       <div class="opere-grid">
         <div class="opere-col">
           <h3 class="col-h">Per stato</h3>
-          <div class="stato-cards">${statoHtml}</div>
+          <div class="kpi-cards kpi-cards-auto">${statoHtml}</div>
         </div>
         <div class="opere-col">
           <h3 class="col-h">Mix finanziamenti</h3>
@@ -6610,10 +6613,10 @@ function renderAriaKpiCard(key, v) {
   const lim = ARIA_LIMITS[key];
   if (!v || v.media == null) {
     return `
-      <div class="aria-kpi-card">
-        <div class="aria-kpi-label">${lim.label}</div>
-        <div class="aria-kpi-value">—</div>
-        <div class="aria-kpi-sub">nessuna stazione rileva</div>
+      <div class="kpi-card">
+        <div class="kpi-card-lab">${lim.label}</div>
+        <div class="kpi-card-val">—</div>
+        <div class="kpi-card-sub">nessuna stazione rileva</div>
       </div>
     `;
   }
@@ -6621,10 +6624,10 @@ function renderAriaKpiCard(key, v) {
   const oltreOms = v.n_stazioni_oltre_limite_oms || 0;
   const colorClass = oltreLegge > 0 ? 'aria-kpi-bad' : (oltreOms > 0 ? 'aria-kpi-warn' : 'aria-kpi-good');
   return `
-    <div class="aria-kpi-card ${colorClass}">
-      <div class="aria-kpi-label">${lim.label}</div>
-      <div class="aria-kpi-value">${v.media}<span class="aria-kpi-unit">${lim.unit}</span></div>
-      <div class="aria-kpi-sub">media annua · ${v.n_stazioni_con_dato} staz.</div>
+    <div class="kpi-card ${colorClass}">
+      <div class="kpi-card-lab">${lim.label}</div>
+      <div class="kpi-card-val">${v.media}<span class="kpi-card-unit">${lim.unit}</span></div>
+      <div class="kpi-card-sub">media annua · ${v.n_stazioni_con_dato} staz.</div>
       <div class="aria-kpi-limits">
         <span class="aria-lim ${oltreLegge>0 ? 'aria-lim-hit':''}">Legge ${lim.legge}: ${oltreLegge}/${v.n_stazioni_con_dato} oltre</span>
         <span class="aria-lim ${oltreOms>0 ? 'aria-lim-warn':''}">OMS ${lim.oms}: ${oltreOms}/${v.n_stazioni_con_dato} oltre</span>
