@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>Vista comune · Cruscotto Italia</title>
-<link rel="stylesheet" href="/css/tokens.css?v=20260513g">
-<link rel="stylesheet" href="/css/base.css?v=20260513g">
+<link rel="stylesheet" href="/css/tokens.css?v=20260513h">
+<link rel="stylesheet" href="/css/base.css?v=20260513h">
 
 <style>
 /* === ALIAS bridge: vecchi nomi -> nuovi token Design Italia === */
@@ -1129,6 +1129,12 @@ footer a{color:rgba(255,255,255,0.85);text-decoration:none}
 .kpi-card-unit, .anncsu-kpi-unit{font-family:var(--mono);font-size:11px;color:var(--ink-mute);text-transform:uppercase;letter-spacing:.06em;margin-left:8px;font-weight:400;}
 .kpi-card-sub{font-family:var(--mono);font-size:10px;color:var(--ink-mute);text-transform:uppercase;letter-spacing:.06em;margin-top:8px;line-height:1.4;}
 .kpi-card.tbd .kpi-card-val{font-style:italic;color:var(--ink-mute);}
+/* KPI cliccabili in Panoramica: scroll alla tab corrispondente.
+   Stato interattivo con focus-visible per accessibilità keyboard. */
+.kpi-card[data-go-tab]{cursor:pointer;transition:border-color .12s ease, background .12s ease, transform .12s ease;}
+.kpi-card[data-go-tab]:hover{border-color:var(--accent);background:var(--paper);}
+.kpi-card[data-go-tab]:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+.kpi-card[data-go-tab]:active{transform:translateY(1px);}
 .anncsu-map-wrap{margin:32px 0 24px;}
 .anncsu-h3{font-family:var(--serif);font-size:22px;color:var(--ink);font-weight:400;margin:0 0 8px;font-style:italic;}
 .anncsu-map-note{font-size:13px;line-height:1.55;margin:0 0 14px;}
@@ -1396,23 +1402,115 @@ function renderComune(data) {
       <div class="tab-pane active" id="pane-panoramica">
         <div class="section-title">§ Panoramica</div>
         <h2 class="section-h">Vista <em>360°</em> del comune.</h2>
+        <p class="section-sub">Sintesi delle 16 fonti istituzionali integrate. Clicca un indicatore per andare al dettaglio.</p>
         <div class="kpi-cards">
-          <div class="kpi-card"><div class="kpi-card-lab">Popolazione</div><div class="kpi-card-val">${k.popolazione != null ? fmtNum(k.popolazione) : '—'}</div></div>
-          <div class="kpi-card ${k.contratti?.count != null ? '' : 'tbd'}">
+
+          <div class="kpi-card ${k.anncsu?.kpi?.n_strade != null ? '' : 'tbd'}" data-go-tab="anncsu" tabindex="0" role="button" aria-label="Vai alla tab ANNCSU">
+            <div class="kpi-card-lab">ANNCSU</div>
+            <div class="kpi-card-val">${k.anncsu?.kpi?.n_strade != null ? fmtNum(k.anncsu.kpi.n_strade) : '—'}</div>
+            <div class="kpi-card-sub">strade certificate</div>
+          </div>
+
+          <div class="kpi-card ${k.aria?.ultimo_anno?.no2?.media != null ? '' : 'tbd'}" data-go-tab="aria" tabindex="0" role="button" aria-label="Vai alla tab Aria">
+            <div class="kpi-card-lab">Aria</div>
+            <div class="kpi-card-val">${k.aria?.ultimo_anno?.no2?.media != null ? k.aria.ultimo_anno.no2.media : '—'}<span class="kpi-card-unit">${k.aria?.ultimo_anno?.no2?.media != null ? 'μg/m³ NO₂' : ''}</span></div>
+            <div class="kpi-card-sub">${k.aria?.n_stazioni != null ? k.aria.n_stazioni + ' stazione' + (k.aria.n_stazioni === 1 ? '' : 'i') : 'nessuna stazione ISPRA-SNPA'}</div>
+          </div>
+
+          <div class="kpi-card ${k.contratti?.count != null ? '' : 'tbd'}" data-go-tab="contratti" tabindex="0" role="button" aria-label="Vai alla tab Contratti">
             <div class="kpi-card-lab">Contratti ANAC</div>
             <div class="kpi-card-val">${k.contratti?.count != null ? fmtNum(k.contratti.count) : '—'}</div>
-            ${k.contratti?.importo_totale != null ? `<div class="kpi-card-sub">€${fmtNum(Math.round(k.contratti.importo_totale))}</div>` : ''}
+            <div class="kpi-card-sub">${k.contratti?.importo_totale != null ? '€' + fmtNum(Math.round(k.contratti.importo_totale)) : 'aggiudicazioni'}</div>
           </div>
-          <div class="kpi-card ${k.opere?.count != null ? '' : 'tbd'}">
+
+          <div class="kpi-card ${k.popolazione != null ? '' : 'tbd'}" data-go-tab="demografia" tabindex="0" role="button" aria-label="Vai alla tab Demografia">
+            <div class="kpi-card-lab">Demografia</div>
+            <div class="kpi-card-val">${k.popolazione != null ? fmtNum(k.popolazione) : '—'}</div>
+            <div class="kpi-card-sub">popolazione residente</div>
+          </div>
+
+          <div class="kpi-card ${k.opere?.count != null ? '' : 'tbd'}" data-go-tab="opere" tabindex="0" role="button" aria-label="Vai alla tab Opere">
             <div class="kpi-card-lab">Opere BDAP</div>
             <div class="kpi-card-val">${k.opere?.count != null ? fmtNum(k.opere.count) : '—'}</div>
-            ${k.opere?.costo_lavori_eff != null ? `<div class="kpi-card-sub">€${fmtNum(Math.round(k.opere.costo_lavori_eff))}</div>` : ''}
+            <div class="kpi-card-sub">${k.opere?.costo_lavori_eff != null ? '€' + fmtNum(Math.round(k.opere.costo_lavori_eff)) : 'opere pubbliche'}</div>
           </div>
-          <div class="kpi-card ${k.siope?.n_voci != null ? '' : 'tbd'}">
+
+          <div class="kpi-card ${k.immobili_pa?.kpi?.n_totale != null ? '' : 'tbd'}" data-go-tab="patrimonio-pa" tabindex="0" role="button" aria-label="Vai alla tab Patrimonio PA">
+            <div class="kpi-card-lab">Patrimonio PA</div>
+            <div class="kpi-card-val">${k.immobili_pa?.kpi?.n_totale != null ? fmtNum(k.immobili_pa.kpi.n_totale) : '—'}</div>
+            <div class="kpi-card-sub">beni immobili pubblici</div>
+          </div>
+
+          <div class="kpi-card ${k.pnrr?.kpi?.n_progetti != null ? '' : 'tbd'}" data-go-tab="pnrr" tabindex="0" role="button" aria-label="Vai alla tab PNRR">
+            <div class="kpi-card-lab">PNRR</div>
+            <div class="kpi-card-val">${k.pnrr?.kpi?.n_progetti != null ? fmtNum(k.pnrr.kpi.n_progetti) : '—'}</div>
+            <div class="kpi-card-sub">${k.pnrr?.kpi?.totale_finanziamento_pnrr != null ? '€' + fmtNum(Math.round(k.pnrr.kpi.totale_finanziamento_pnrr)) : 'progetti attivi'}</div>
+          </div>
+
+          <div class="kpi-card ${k.profilo?.istruzione?.terziario_pct != null ? '' : 'tbd'}" data-go-tab="profilo" tabindex="0" role="button" aria-label="Vai alla tab Profilo">
+            <div class="kpi-card-lab">Profilo</div>
+            <div class="kpi-card-val">${k.profilo?.istruzione?.terziario_pct != null ? k.profilo.istruzione.terziario_pct.toFixed(1) : '—'}<span class="kpi-card-unit">${k.profilo?.istruzione?.terziario_pct != null ? '%' : ''}</span></div>
+            <div class="kpi-card-sub">laureati (25-64 anni)</div>
+          </div>
+
+          <div class="kpi-card ${k.pun?.kpi?.n_attivi != null ? '' : 'tbd'}" data-go-tab="pun" tabindex="0" role="button" aria-label="Vai alla tab Punti di ricarica">
+            <div class="kpi-card-lab">Punti di ricarica</div>
+            <div class="kpi-card-val">${k.pun?.kpi?.n_attivi != null ? fmtNum(k.pun.kpi.n_attivi) : '—'}</div>
+            <div class="kpi-card-sub">${k.pun?.kpi?.n_totale != null ? 'attivi su ' + fmtNum(k.pun.kpi.n_totale) : 'nessuno registrato'}</div>
+          </div>
+
+          <div class="kpi-card ${k.redditi?.anni?.[String(k.redditi.anni_disponibili?.slice(-1)[0])]?.reddito_complessivo?.medio != null ? '' : 'tbd'}" data-go-tab="redditi" tabindex="0" role="button" aria-label="Vai alla tab Redditi e fisco">
+            <div class="kpi-card-lab">Redditi e fisco</div>
+            <div class="kpi-card-val">${(() => {
+              const ad = k.redditi?.anni_disponibili;
+              const last = ad ? ad.slice(-1)[0] : null;
+              const m = last ? k.redditi?.anni?.[String(last)]?.reddito_complessivo?.medio : null;
+              return m != null ? '€' + fmtNum(m) : '—';
+            })()}</div>
+            <div class="kpi-card-sub">reddito medio MEF</div>
+          </div>
+
+          <div class="kpi-card ${k.sanita_mds?.farmacie?.kpi?.n_totale != null ? '' : 'tbd'}" data-go-tab="sanita" tabindex="0" role="button" aria-label="Vai alla tab Sanità">
+            <div class="kpi-card-lab">Sanità</div>
+            <div class="kpi-card-val">${k.sanita_mds?.farmacie?.kpi?.n_totale != null ? fmtNum(k.sanita_mds.farmacie.kpi.n_totale) : '—'}</div>
+            <div class="kpi-card-sub">farmacie attive</div>
+          </div>
+
+          <div class="kpi-card ${k.scuole?.kpi?.n_scuole != null ? '' : 'tbd'}" data-go-tab="scuole" tabindex="0" role="button" aria-label="Vai alla tab Scuole">
+            <div class="kpi-card-lab">Scuole</div>
+            <div class="kpi-card-val">${k.scuole?.kpi?.n_scuole != null ? fmtNum(k.scuole.kpi.n_scuole) : '—'}</div>
+            <div class="kpi-card-sub">plessi MIUR</div>
+          </div>
+
+          <div class="kpi-card ${k.siope?.n_voci != null ? '' : 'tbd'}" data-go-tab="spese" tabindex="0" role="button" aria-label="Vai alla tab Spese SIOPE">
             <div class="kpi-card-lab">Spese SIOPE</div>
             <div class="kpi-card-val">${k.siope?.n_voci != null ? fmtNum(k.siope.n_voci) : '—'}</div>
-            ${k.siope?.totale_anno != null ? `<div class="kpi-card-sub">€${fmtNum(Math.round(k.siope.totale_anno))}</div>` : ''}
+            <div class="kpi-card-sub">${k.siope?.totale_anno != null ? '€' + fmtNum(Math.round(k.siope.totale_anno)) : 'voci di spesa'}</div>
           </div>
+
+          <div class="kpi-card ${k.territorio?.kpi?.suolo_consumato_2024_pct != null ? '' : 'tbd'}" data-go-tab="territorio" tabindex="0" role="button" aria-label="Vai alla tab Territorio">
+            <div class="kpi-card-lab">Territorio</div>
+            <div class="kpi-card-val">${k.territorio?.kpi?.suolo_consumato_2024_pct != null ? k.territorio.kpi.suolo_consumato_2024_pct.toFixed(1) : '—'}<span class="kpi-card-unit">${k.territorio?.kpi?.suolo_consumato_2024_pct != null ? '%' : ''}</span></div>
+            <div class="kpi-card-sub">suolo consumato ISPRA</div>
+          </div>
+
+          <div class="kpi-card ${k.turismo?.capacita_comune?.totale_strutture != null ? '' : 'tbd'}" data-go-tab="turismo" tabindex="0" role="button" aria-label="Vai alla tab Turismo">
+            <div class="kpi-card-lab">Turismo</div>
+            <div class="kpi-card-val">${k.turismo?.capacita_comune?.totale_strutture != null ? fmtNum(k.turismo.capacita_comune.totale_strutture) : '—'}</div>
+            <div class="kpi-card-sub">${k.turismo?.capacita_comune?.totale_letti != null ? fmtNum(k.turismo.capacita_comune.totale_letti) + ' posti letto' : 'esercizi ricettivi'}</div>
+          </div>
+
+          <div class="kpi-card ${(k.veicoli?.parco_veicoli?.totale != null && k.veicoli?.popolazione) ? '' : 'tbd'}" data-go-tab="veicoli" tabindex="0" role="button" aria-label="Vai alla tab Veicoli">
+            <div class="kpi-card-lab">Veicoli</div>
+            <div class="kpi-card-val">${(() => {
+              const t = k.veicoli?.parco_veicoli?.totale;
+              const p = k.veicoli?.popolazione;
+              if (t == null || !p) return '—';
+              return Math.round(t / p * 1000);
+            })()}<span class="kpi-card-unit">${(k.veicoli?.parco_veicoli?.totale != null && k.veicoli?.popolazione) ? '/ 1000 ab' : ''}</span></div>
+            <div class="kpi-card-sub">tasso motorizzazione</div>
+          </div>
+
         </div>
       </div>
 
@@ -6492,6 +6590,30 @@ function bindTabSwitching() {
       }
     });
   });
+
+  // ---- KPI cliccabili della Panoramica: click-to-tab ----
+  // Le card della tab "Panoramica" hanno data-go-tab="<tab-id>".
+  // Click o Enter/Space (keyboard) attiva la tab corrispondente e scrolla
+  // il viewport in cima alla tab-bar, replicando l'esperienza tab manuale.
+  document.querySelectorAll('.kpi-card[data-go-tab]').forEach(card => {
+    const goToTab = () => {
+      const tabId = card.dataset.goTab;
+      const tabBtn = document.querySelector('.tab[data-tab="' + tabId + '"]');
+      if (tabBtn) {
+        tabBtn.click();
+        // Scroll to the tab bar (top of the navigation) for a clean view
+        const tabsBar = document.querySelector('.tabs-bar');
+        if (tabsBar) tabsBar.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    };
+    card.addEventListener('click', goToTab);
+    card.addEventListener('keydown', (ev) => {
+      if (ev.key === 'Enter' || ev.key === ' ') {
+        ev.preventDefault();
+        goToTab();
+      }
+    });
+  });
 }
 // ===========================================================================
 // Tab Aria - ISPRA SNPA Qualità dell'aria (PM10, PM2.5, NO2)
@@ -7183,6 +7305,12 @@ function adaptDashboardToOverview(d) {
       sanita_mds: d.sanita_mds,    // pass-through completo per renderSanitaTab
       anncsu: d.anncsu,  // pass-through completo per renderAnncsuTab
       pun: d.pun,  // pass-through completo per renderPunTab
+      // Pass-through aggiuntivi (servono alla Panoramica home per i KPI di sintesi):
+      profilo: d.profilo,
+      turismo: d.turismo,
+      pnrr: d.pnrr,
+      territorio: d.territorio,
+      aria: d.aria,
     },
   };
 }
