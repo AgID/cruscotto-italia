@@ -22,6 +22,7 @@ Sorgenti accorpate:
 - immobili_pa/<istat>.json       (MEF DE - Beni Immobili Pubblici 2022)
 - anncsu/<istat>.json            (ANNCSU - civici e strade urbane)
 - sanita_mds/<istat>.json        (Min. Salute - farmacie, parafarmacie, posti letto ospedalieri)
+- pun/<istat>.json               (GSE/MASE - Piattaforma Unica Nazionale punti di ricarica)
 - lookup/anac-aggregato.json     (filtrato per CF)
 - lookup/comuni-bundle.json      (anagrafica)
 
@@ -80,6 +81,7 @@ SHARDS = [
     ("immobili_pa", "immobili_pa/{istat}.json"),
     ("anncsu",     "anncsu/{istat}.json"),
     ("sanita_mds", "sanita_mds/{istat}.json"),
+    ("pun",        "pun/{istat}.json"),
 ]
 
 ETL_VERSION = "0.1.0"
