@@ -255,3 +255,31 @@ sanita_mds,ospedali.stabilimenti[].tipo_struttura,"Tipologia ospedale (a gestion
 sanita_mds,ospedali.stabilimenti[].indirizzo,Indirizzo dello stabilimento,testo,Ministero della Salute,annuale,https://www.dati.salute.gov.it/dataset/posti-letto,IODL 2.0
 sanita_mds,ospedali.stabilimenti[].totale_posti_letto,Totale posti letto dello stabilimento,numero,Ministero della Salute,annuale,https://www.dati.salute.gov.it/dataset/posti-letto,IODL 2.0
 sanita_mds,ospedali.stabilimenti[].discipline,Lista discipline con dettaglio posti letto per tipo (ord/dh/ds/pag),oggetto,Ministero della Salute,annuale,https://www.dati.salute.gov.it/dataset/posti-letto,IODL 2.0
+pun,_etl_version,Versione del pipeline ETL PUN,testo,Cruscotto Italia,corrente,{{SITE_URL}},CC BY 4.0
+pun,_source,Sorgente originaria del dato,testo,GSE / MASE - Piattaforma Unica Nazionale,quotidiana,https://www.piattaformaunicanazionale.it/idr,CC BY 4.0 ex art. 52 c.2 CAD
+pun,_source_url,URL canonico della Piattaforma Unica Nazionale,url,GSE / MASE,quotidiana,https://www.piattaformaunicanazionale.it/idr,CC BY 4.0 ex art. 52 c.2 CAD
+pun,_license,Riferimento normativo della licenza open data,testo,Cruscotto Italia,corrente,{{SITE_URL}},CC BY 4.0 ex art. 52 c.2 CAD
+pun,_data_last_modified,Timestamp ISO 8601 dell'ultimo aggiornamento del CSV upstream,datetime,GSE / MASE,quotidiana,https://www.piattaformaunicanazionale.it/idr,CC BY 4.0 ex art. 52 c.2 CAD
+pun,_generated_at,Timestamp ISO 8601 di generazione dello shard,datetime,Cruscotto Italia,corrente,{{SITE_URL}},CC BY 4.0
+pun,kpi.n_totale,Numero totale di punti di ricarica EVSE registrati nel comune,numero,GSE / MASE,quotidiana,https://www.piattaformaunicanazionale.it/idr,CC BY 4.0 ex art. 52 c.2 CAD
+pun,kpi.n_attivi,"Numero di punti con stato ""Attivo"" alla data dell'ultimo aggiornamento",numero,GSE / MASE,quotidiana,https://www.piattaformaunicanazionale.it/idr,CC BY 4.0 ex art. 52 c.2 CAD
+pun,kpi.n_non_attivi,"Numero di punti con stato ""Non Attivo"" alla data dell'ultimo aggiornamento",numero,GSE / MASE,quotidiana,https://www.piattaformaunicanazionale.it/idr,CC BY 4.0 ex art. 52 c.2 CAD
+pun,kpi.pct_attivi,Percentuale di punti attivi su totale (0-100),percentuale,GSE / MASE,quotidiana,https://www.piattaformaunicanazionale.it/idr,CC BY 4.0 ex art. 52 c.2 CAD
+pun,kpi.n_ac,Numero di punti a corrente alternata (AC),numero,GSE / MASE,quotidiana,https://www.piattaformaunicanazionale.it/idr,CC BY 4.0 ex art. 52 c.2 CAD
+pun,kpi.n_dc,Numero di punti a corrente continua (DC),numero,GSE / MASE,quotidiana,https://www.piattaformaunicanazionale.it/idr,CC BY 4.0 ex art. 52 c.2 CAD
+pun,kpi.potenza_tot_kw,Somma della potenza massima erogabile di tutti i punti del comune (kW),kW,GSE / MASE,quotidiana,https://www.piattaformaunicanazionale.it/idr,CC BY 4.0 ex art. 52 c.2 CAD
+pun,kpi.mix_potenza,"Mix per categoria potenza (Slow / Quick / Fast / HPC / Ultra fast) - oggetto chiave:conteggio",oggetto,GSE / MASE,quotidiana,https://www.piattaformaunicanazionale.it/idr,CC BY 4.0 ex art. 52 c.2 CAD
+pun,punti,Lista dettagliata dei punti di ricarica del comune,lista,GSE / MASE,quotidiana,https://www.piattaformaunicanazionale.it/idr,CC BY 4.0 ex art. 52 c.2 CAD
+pun,punti[].id_evse,Identificativo univoco EVSE assegnato da GSE,testo,GSE / MASE,quotidiana,https://www.piattaformaunicanazionale.it/idr,CC BY 4.0 ex art. 52 c.2 CAD
+pun,punti[].lat,Latitudine WGS84 (6 decimali ~11cm),coord,GSE / MASE,quotidiana,https://www.piattaformaunicanazionale.it/idr,CC BY 4.0 ex art. 52 c.2 CAD
+pun,punti[].lon,Longitudine WGS84 (6 decimali ~11cm),coord,GSE / MASE,quotidiana,https://www.piattaformaunicanazionale.it/idr,CC BY 4.0 ex art. 52 c.2 CAD
+pun,punti[].indirizzo,Indirizzo (odonimo + civico) del punto,testo,GSE / MASE,quotidiana,https://www.piattaformaunicanazionale.it/idr,CC BY 4.0 ex art. 52 c.2 CAD
+pun,punti[].cap,Codice di avviamento postale,testo,GSE / MASE,quotidiana,https://www.piattaformaunicanazionale.it/idr,CC BY 4.0 ex art. 52 c.2 CAD
+pun,punti[].stato,"Stato operativo (""Attivo"" / ""Non Attivo"")",codice,GSE / MASE,quotidiana,https://www.piattaformaunicanazionale.it/idr,CC BY 4.0 ex art. 52 c.2 CAD
+pun,punti[].tipo_parcheggio,Tipologia parcheggio (pubblico, privato, riservato...),testo,GSE / MASE,quotidiana,https://www.piattaformaunicanazionale.it/idr,CC BY 4.0 ex art. 52 c.2 CAD
+pun,punti[].potenza_categoria,"Categoria di potenza (Slow ≤7kW, Quick 7-22kW, Fast 22-50kW, HPC 50-150kW, Ultra fast >150kW)",codice,GSE / MASE,quotidiana,https://www.piattaformaunicanazionale.it/idr,CC BY 4.0 ex art. 52 c.2 CAD
+pun,punti[].potenza_w,Potenza massima erogabile in watt,W,GSE / MASE,quotidiana,https://www.piattaformaunicanazionale.it/idr,CC BY 4.0 ex art. 52 c.2 CAD
+pun,punti[].corrente,"Tipologia di corrente (""AC"" o ""DC"")",codice,GSE / MASE,quotidiana,https://www.piattaformaunicanazionale.it/idr,CC BY 4.0 ex art. 52 c.2 CAD
+pun,punti[].restrizioni,Restrizioni di accesso (testuale),testo,GSE / MASE,quotidiana,https://www.piattaformaunicanazionale.it/idr,CC BY 4.0 ex art. 52 c.2 CAD
+pun,punti[].servizi_vicini,Servizi nelle vicinanze (testuale),testo,GSE / MASE,quotidiana,https://www.piattaformaunicanazionale.it/idr,CC BY 4.0 ex art. 52 c.2 CAD
+pun,punti[].orario,Orario di apertura (testuale),testo,GSE / MASE,quotidiana,https://www.piattaformaunicanazionale.it/idr,CC BY 4.0 ex art. 52 c.2 CAD

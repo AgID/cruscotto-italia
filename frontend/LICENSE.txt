@@ -12,7 +12,8 @@ In caso di riutilizzo, citare come segue:
 
   "Elaborazione su dati Cruscotto Italia, fonti originarie: ANAC,
    BDAP-MOP, SIOPE, Italia Domani, ISPRA, ISTAT, MIUR, ARPA, ACI, MEF,
-   Agenzia delle Entrate, Ministero della Salute."
+   Agenzia delle Entrate, Ministero della Salute, GSE / Piattaforma
+   Unica Nazionale."
 
 FONTI ORIGINARIE E LORO LICENZE
 -------------------------------
@@ -29,6 +30,12 @@ FONTI ORIGINARIE E LORO LICENZE
 - Agenzia Entrate + ISTAT (ANNCSU - civici e strade) . Open Data UE
                                                        2023/138 (HVD)
 - Ministero della Salute (Farmacie, parafarm., osp.) . IODL 2.0
+- GSE / MASE (Piattaforma Unica Nazionale PUN -
+  punti di ricarica veicoli elettrici) ............... CC BY 4.0 ex
+                                                       art. 52 c.2
+                                                       D.Lgs 82/2005
+                                                       (CAD) — open
+                                                       data di default
 - OpenStreetMap (cartografia) ........................ ODbL
 
 Per il dettaglio dei dataset e degli URL originari delle fonti,

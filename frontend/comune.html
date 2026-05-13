@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>Vista comune · Cruscotto Italia</title>
-<link rel="stylesheet" href="/css/tokens.css?v=20260513i">
-<link rel="stylesheet" href="/css/base.css?v=20260513i">
+<link rel="stylesheet" href="/css/tokens.css?v=20260513j">
+<link rel="stylesheet" href="/css/base.css?v=20260513j">
 
 <style>
 /* === ALIAS bridge: vecchi nomi -> nuovi token Design Italia === */
@@ -7495,7 +7495,7 @@ CONTENUTO DELLO ZIP
 - METADATI.csv         Legenda campi, fonti, periodi di riferimento
 - LICENSE.txt          Licenza d'uso e attribuzioni
 
-FONTI INTEGRATE (15 dataset, 11 istituzioni)
+FONTI INTEGRATE (16 dataset, 12 istituzioni)
 --------------------------------------------
 - ANAC                              Contratti pubblici (OCDS)
 - BDAP-MOP                          Opere pubbliche dei comuni
@@ -7509,6 +7509,7 @@ FONTI INTEGRATE (15 dataset, 11 istituzioni)
 - MEF Dipartimento dell'Economia    Censimento beni immobili pubblici 2022
 - Agenzia delle Entrate + ISTAT     ANNCSU — strade e numeri civici certificati
 - Ministero della Salute            Farmacie, parafarmacie, posti letto ospedalieri
+- GSE / MASE                        Piattaforma Unica Nazionale (PUN) — punti di ricarica EV
 
 I dati di origine sono pubblicati dalle istituzioni elencate in
 LICENSE.txt e sono disponibili sui rispettivi portali open data.
@@ -7543,6 +7544,20 @@ Gli stabilimenti ospedalieri (anno 2023) non hanno lat/lon nel
 dataset MdS originale e quindi non sono georeferenziati nei punti
 individuali; per la mappa visuale del sito web vengono disposti
 attorno al centroide farmacie del comune con offset radiale.
+
+NOTA SUI PUNTI DI RICARICA PUN
+------------------------------
+La sezione "pun" contiene i punti di ricarica EVSE registrati sulla
+Piattaforma Unica Nazionale (PUN) gestita da GSE per conto del MASE.
+Il campo "kpi" aggrega potenza totale (kW), mix per categoria (Slow/
+Quick/Fast/HPC/Ultra fast), distribuzione AC/DC, conteggio attivi/
+non attivi. Il campo "punti" contiene un campione fino a 500 punti
+con lat, lon, indirizzo, categoria potenza, stato, tipologia
+corrente. La pubblicazione di questi dati avviene ai sensi
+dell'art. 52 c.2 D.Lgs 82/2005 (CAD) come open data di default
+delle Pubbliche Amministrazioni — CC BY 4.0 con attribuzione a
+GSE / Piattaforma Unica Nazionale. Aggiornamento quotidiano
+(~03:00 UTC).
 
 `;
       zip.file('README.txt', readme);
