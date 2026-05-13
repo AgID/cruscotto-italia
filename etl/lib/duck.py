@@ -9,9 +9,9 @@ Usage:
         con.execute("COPY x TO 'output.parquet' (FORMAT PARQUET, COMPRESSION ZSTD)")
 """
 
+from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Iterator
 
 import duckdb
 

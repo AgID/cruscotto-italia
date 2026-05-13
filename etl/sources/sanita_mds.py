@@ -84,14 +84,10 @@ import os
 import re
 import sys
 import time
-import urllib.request
 from collections import Counter, defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
-from functools import lru_cache
-from io import StringIO
 from pathlib import Path
-from typing import Optional
 
 import requests
 import structlog
@@ -224,7 +220,7 @@ def download_csv(url: str, cache_path: Path, force: bool = False) -> Path:
         return cache_path
 
     cache_path.parent.mkdir(parents=True, exist_ok=True)
-    last_err: Optional[Exception] = None
+    last_err: Exception | None = None
     for attempt in range(1, DOWNLOAD_RETRIES + 1):
         try:
             log.info("sanita_mds_download_start", url=url, attempt=attempt)
@@ -256,7 +252,7 @@ def _today() -> datetime:
     return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
-def _parse_date_it(s: str) -> Optional[datetime]:
+def _parse_date_it(s: str) -> datetime | None:
     """Parsa 'DD/MM/YYYY' italiana, None su errore."""
     s = (s or "").strip()
     if not s or s == "-":
@@ -276,7 +272,7 @@ def _is_active(end_str: str, ref_date: datetime) -> bool:
     return end >= ref_date
 
 
-def _norm_coord(s: str) -> Optional[float]:
+def _norm_coord(s: str) -> float | None:
     """Converte '45,066215' o '45.066215' in float; None se vuoto/non parseable."""
     s = (s or "").strip()
     if not s or s == "-":
@@ -296,7 +292,7 @@ def _norm_int(s: str) -> int:
         return 0
 
 
-def _in_bbox_italia(lat: Optional[float], lon: Optional[float]) -> bool:
+def _in_bbox_italia(lat: float | None, lon: float | None) -> bool:
     if lat is None or lon is None:
         return False
     return (BBOX_ITALIA_LAT[0] <= lat <= BBOX_ITALIA_LAT[1] and
@@ -485,7 +481,7 @@ _RE_SPAZI = re.compile(r"\s+")
 _RE_CIVICO = re.compile(r"\b(\d{1,4})\s*([a-zA-Z]|\/[a-zA-Z0-9]+)?\b\s*$")
 
 
-def _extract_civico(indirizzo: str) -> tuple[str, Optional[str], Optional[str]]:
+def _extract_civico(indirizzo: str) -> tuple[str, str | None, str | None]:
     """Estrae (odonimo_norm, civico, esp) da indirizzo MdS.
 
     Esempi:
@@ -534,7 +530,7 @@ class _AnncsuGeocoder:
                       "geocoded_exact": 0, "geocoded_no_esp": 0,
                       "geocoded_odo_only": 0, "not_matched": 0}
 
-    def _fetch_and_index(self, istat: str) -> Optional[dict]:
+    def _fetch_and_index(self, istat: str) -> dict | None:
         """Scarica anncsu_full/<istat>.json da R2 e costruisce indice.
 
         Ritorna {odonimo_norm: [(civ, esp, lat, lon)]} oppure None se shard
@@ -617,7 +613,7 @@ class _AnncsuGeocoder:
                  loaded=loaded, missing=missing,
                  total_time_s=round(time.time() - t0, 1))
 
-    def _load_index(self, istat: str) -> Optional[dict]:
+    def _load_index(self, istat: str) -> dict | None:
         """Ritorna indice dalla cache. Lazy fetch fallback se non prefetched."""
         if istat in self._missing_shards:
             return None
@@ -626,7 +622,7 @@ class _AnncsuGeocoder:
         # Fallback lazy (raro se prefetch e' stato chiamato)
         return self._fetch_and_index(istat)
 
-    def geocode(self, istat: str, indirizzo: str) -> Optional[dict]:
+    def geocode(self, istat: str, indirizzo: str) -> dict | None:
         """Tenta geocoding di un indirizzo MdS via ANNCSU.
 
         Ritorna {lat, lon, strategy} oppure None se nessun match.
@@ -662,7 +658,7 @@ class _AnncsuGeocoder:
                     self.stats["geocoded_exact"] += 1
                     return {"lat": lat, "lon": lon, "strategy": "odo_civ_exact"}
             # Match civico ignorando esponente
-            for c_civ, c_esp, lat, lon in cands:
+            for c_civ, _c_esp, lat, lon in cands:
                 if c_civ == civ:
                     self.stats["geocoded_no_esp"] += 1
                     return {"lat": lat, "lon": lon, "strategy": "odo_civ_no_esp"}
@@ -676,7 +672,7 @@ class _AnncsuGeocoder:
 def _clean_and_geocode_coords(
     istat: str,
     punti: list[dict],
-    geocoder: Optional[_AnncsuGeocoder] = None,
+    geocoder: _AnncsuGeocoder | None = None,
 ) -> tuple[list[dict], dict]:
     """Pulisce e arricchisce le coordinate dei punti MdS.
 
@@ -817,7 +813,7 @@ def _clean_and_geocode_coords(
 
     duplicate_groups = [(k, idxs) for k, idxs in by_coord.items() if len(idxs) >= SOGLIA_DUPLICATI]
 
-    for coord_key, idxs in duplicate_groups:
+    for _coord_key, idxs in duplicate_groups:
         for i in idxs:
             p = out[i]
             # Preservo raw (le coord MdS attuali sono comunque "valide" ma finte)
@@ -919,7 +915,7 @@ def _filter_outlier_coords(punti: list[dict]) -> tuple[list[dict], int]:
 def _build_farmacie_section(
     istat: str,
     punti: list[dict],
-    geocoder: Optional[_AnncsuGeocoder] = None,
+    geocoder: _AnncsuGeocoder | None = None,
 ) -> dict:
     """KPI + punti per farmacie. Tiene tutti i punti (no sampling).
 
@@ -958,7 +954,7 @@ def _build_farmacie_section(
 def _build_parafarmacie_section(
     istat: str,
     punti: list[dict],
-    geocoder: Optional[_AnncsuGeocoder] = None,
+    geocoder: _AnncsuGeocoder | None = None,
 ) -> dict:
     """KPI + punti per parafarmacie. Pre-filtro+geocoding come per farmacie."""
     punti, cstats = _clean_and_geocode_coords(istat, punti, geocoder)
@@ -1029,7 +1025,7 @@ def build_shards(
     parafarmacie_by_istat: dict[str, list[dict]],
     ospedali_by_istat: dict[str, dict],
     discovery: dict,
-    geocoder: Optional[_AnncsuGeocoder] = None,
+    geocoder: _AnncsuGeocoder | None = None,
 ) -> dict[str, dict]:
     """Costruisce shard per ogni comune che ha almeno una sezione popolata."""
     all_istats = (
@@ -1249,7 +1245,7 @@ def build_aggregato(shards: dict[str, dict], discovery: dict) -> dict:
     comuni_con_parafarm = 0
     comuni_con_ospedale = 0
 
-    for istat, s in shards.items():
+    for _istat, s in shards.items():
         if s.get("farmacie"):
             n_farmacie_tot += s["farmacie"]["kpi"]["n_totale"]
             comuni_con_farmacie += 1

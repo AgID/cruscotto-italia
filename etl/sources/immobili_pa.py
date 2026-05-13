@@ -60,16 +60,17 @@ import json
 import re
 import sys
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
 
 import requests
 import structlog
-from concurrent.futures import ThreadPoolExecutor, as_completed
+
+from etl.lib import r2
 
 # Riuso lookup canonica e client R2 canonico
 from etl.sources.scuole import load_cat_to_istat
-from etl.lib import r2
 
 log = structlog.get_logger()
 
@@ -186,7 +187,9 @@ def download_zip(regione: str, force: bool = False) -> Path:
 
 def parse_csv_from_zip(zip_path: Path):
     """Yield dict per ciascuna riga del CSV dentro lo ZIP."""
-    import zipfile, csv, io
+    import csv
+    import io
+    import zipfile
 
     with zipfile.ZipFile(zip_path) as zf:
         # Si assume 1 solo CSV per ZIP (confermato in verifica)
@@ -195,8 +198,7 @@ def parse_csv_from_zip(zip_path: Path):
         with zf.open(csv_name) as raw:
             text = io.TextIOWrapper(raw, encoding="iso-8859-1", newline="")
             reader = csv.DictReader(text, delimiter=";")
-            for row in reader:
-                yield row
+            yield from reader
 
 
 def build_shards(zip_path: Path, cat_to_istat: dict[str, str]) -> dict[str, dict]:
@@ -298,7 +300,7 @@ def build_shards(zip_path: Path, cat_to_istat: dict[str, str]) -> dict[str, dict
                 grouped[p["cat"]].append(p)
             sampled = []
             quota = max(1, 500 // max(1, len(grouped)))
-            for cat, ps in grouped.items():
+            for _cat, ps in grouped.items():
                 sampled.extend(ps[:quota])
             punti_validi = sampled[:500]
 
@@ -369,7 +371,7 @@ def push_to_r2_parallel(shards: dict[str, dict]) -> int:
 def main() -> int:
     p = argparse.ArgumentParser(description="ETL Immobili PA (MEF) - Fase B")
     p.add_argument("--regione", default="VALLE-D_AOSTA",
-                   choices=REGIONI_VALIDE + ["ALL"],
+                   choices=[*REGIONI_VALIDE, "ALL"],
                    help="Regione singola, oppure ALL per tutte le 20 regioni")
     p.add_argument("--target", choices=["local", "r2"], default="local",
                    help="Destinazione output: local (file system) o r2 (Cloudflare)")

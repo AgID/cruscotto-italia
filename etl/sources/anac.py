@@ -24,7 +24,6 @@ import json
 import sys
 import tempfile
 from pathlib import Path
-from typing import Iterable
 
 import duckdb
 import requests

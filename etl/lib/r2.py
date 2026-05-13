@@ -10,7 +10,6 @@ R2 is S3-compatible, accessed via boto3 with custom endpoint:
 import os
 import sys
 from pathlib import Path
-from typing import Optional
 
 import boto3
 import structlog
@@ -43,7 +42,7 @@ def get_bucket() -> str:
     return bucket
 
 
-def upload_file(local_path: Path | str, key: str, content_type: Optional[str] = None) -> None:
+def upload_file(local_path: Path | str, key: str, content_type: str | None = None) -> None:
     """Upload a single file to R2."""
     client = get_r2_client()
     extra = {}
@@ -64,7 +63,7 @@ def download_file(key: str, local_path: Path | str) -> None:
     client.download_file(get_bucket(), key, str(local_path))
 
 
-def head(key: str) -> Optional[dict]:
+def head(key: str) -> dict | None:
     """Return object metadata or None if not found."""
     client = get_r2_client()
     try:

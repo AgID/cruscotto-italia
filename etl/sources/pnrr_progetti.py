@@ -32,12 +32,11 @@ from __future__ import annotations
 import argparse
 import csv
 import json
-import os
 import sys
 import tempfile
 import unicodedata
-import urllib.request
 import urllib.error
+import urllib.request
 from collections import Counter, defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
@@ -335,8 +334,8 @@ def build_pnrr_shards(csv_path: Path,
                 "componente_descrizione": (r.get("Descrizione Componente") or "").strip(),
                 "submisura": (r.get("Codice Univoco Submisura") or "").strip(),
                 "submisura_descrizione": (r.get("Descrizione Submisura") or "").strip()[:200],
-                "finanziamento_pnrr": int(round(fin_pnrr)) if fin_pnrr else 0,
-                "finanziamento_totale": int(round(fin_tot)) if fin_tot else 0,
+                "finanziamento_pnrr": round(fin_pnrr) if fin_pnrr else 0,
+                "finanziamento_totale": round(fin_tot) if fin_tot else 0,
                 "stato_avanzamento": (r.get("Stato Avanzamento Progetto") or "").strip(),
                 "fase_iter": (r.get("Descrizione Fase Iter di Progetto") or "").strip()[:120],
                 "stato_fase_iter": (r.get("Stato Fase Iter di Progetto") or "").strip(),

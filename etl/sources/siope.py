@@ -91,22 +91,20 @@ from __future__ import annotations
 
 import argparse
 import csv
-import gzip
 import io
 import json
 import sys
 import tempfile
 import time
 from collections import defaultdict
-
-import requests
-from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
 
+import requests
 import structlog
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 from etl.lib import manifest, r2
 
@@ -509,9 +507,6 @@ def build_final_shards(
         all_istat.update(blocks.keys())
 
     anni_processati = sorted(year_blocks_by_year.keys())
-    # Default = anno chiuso piu' recente; se nessun anno chiuso, anno parziale piu' recente
-    chiusi = [a for a in anni_processati if a not in PARTIAL_YEARS]
-    anno_default = max(chiusi) if chiusi else max(anni_processati)
 
     now_iso = datetime.now(timezone.utc).isoformat(timespec="seconds")
     shards: dict[str, dict] = {}
@@ -564,9 +559,6 @@ def write_shards_local(shards: dict[str, dict], output_dir: Path) -> int:
 
 def push_to_r2_parallel(shard_dir: Path) -> int:
     """Upload parallelo siope/<istat>.json su R2."""
-    client = r2.get_r2_client()
-    bucket = r2.get_bucket()
-
     shard_files = sorted(shard_dir.glob("*.json"))
     log.info("siope_pushing", total=len(shard_files))
 

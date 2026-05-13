@@ -27,18 +27,17 @@ Usage:
   python -m etl.sources.territorio --target=local --no-cache
 """
 from __future__ import annotations
+
 import argparse
 import csv
 import json
-import os
 import sys
 import tempfile
-import urllib.request
 import urllib.error
+import urllib.request
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
-from typing import Optional
 
 import structlog
 
@@ -75,7 +74,7 @@ HTTP_USER_AGENT = (
 # ---------------------------------------------------------------------------
 # Helper: parsing numerico italiano (1.234,56 -> 1234.56)
 # ---------------------------------------------------------------------------
-def parse_it_num(s: Optional[str]) -> Optional[float]:
+def parse_it_num(s: str | None) -> float | None:
     """Parse numero con formato italiano: '1.234,56' -> 1234.56.
 
     Restituisce None per stringhe vuote, '-', 'n.d.', ecc.
@@ -92,7 +91,7 @@ def parse_it_num(s: Optional[str]) -> Optional[float]:
         return None
 
 
-def round2(x: Optional[float]) -> Optional[float]:
+def round2(x: float | None) -> float | None:
     """Arrotonda a 2 decimali se non None (gestisce float di precisione XLSX)."""
     return round(x, 2) if x is not None else None
 
@@ -226,7 +225,7 @@ def parse_suolo_xlsx(xlsx_path: Path) -> dict:
 # ===========================================================================
 # FASE B — ISPRA IdroGEO (API REST)
 # ===========================================================================
-def fetch_idrogeo_one(pro_com: int) -> Optional[dict]:
+def fetch_idrogeo_one(pro_com: int) -> dict | None:
     """Singola chiamata API IdroGEO. Ritorna None per HTTP 404 o errori."""
     url = f"{IDROGEO_API_BASE}/{pro_com}"
     req = urllib.request.Request(
@@ -383,7 +382,7 @@ def fetch_idrogeo_all(istat_codes: list[str]) -> dict:
 # FASE C — ISPRA Catasto Rifiuti (15 CSV anno per anno)
 # ===========================================================================
 def download_rifiuti_anno(anno: int, cache_dir: Path,
-                          force: bool = False) -> Optional[Path]:
+                          force: bool = False) -> Path | None:
     """Download CSV Catasto rifiuti anno. Cache locale."""
     out = cache_dir / f"rifiuti_{anno}.csv"
     if out.exists() and not force:
@@ -421,7 +420,7 @@ def parse_rifiuti_csv_anno(csv_path: Path, anno: int) -> dict:
         f.readline()  # skip riga 1 (titolo descrittivo)
         reader = csv.reader(f, delimiter=";")
         try:
-            header = next(reader)
+            next(reader)  # skip riga 2 (header colonne)
         except StopIteration:
             log.warning("rifiuti_csv_empty", anno=anno)
             return out
@@ -461,7 +460,7 @@ def parse_rifiuti_csv_anno(csv_path: Path, anno: int) -> dict:
                 n_aggregato_vede += 1
 
             # safe access per le colonne numeriche
-            def col(idx):
+            def col(idx, row=row):
                 return row[idx] if idx < len(row) else ''
             ru_t = parse_it_num(col(23))
             rd_t = parse_it_num(col(20))
@@ -549,8 +548,8 @@ def parse_rifiuti_all_anni(cache_dir: Path, force: bool = False) -> dict:
 # ===========================================================================
 # FASE D — Merge & shard
 # ===========================================================================
-def build_kpi(suolo: Optional[dict], rischio: Optional[dict],
-              rifiuti: Optional[dict], idrogeo_raw: Optional[dict] = None) -> dict:
+def build_kpi(suolo: dict | None, rischio: dict | None,
+              rifiuti: dict | None, idrogeo_raw: dict | None = None) -> dict:
     """Costruisce KPI strip riassuntivi per il frontend.
 
     ar_kmq (superficie comunale) viene da IdroGEO raw se presente, perche'

@@ -338,7 +338,7 @@ def parse_year_csv(zip_bytes: bytes, year: int) -> dict[str, dict[str, Any]]:
         if not raw_row or len(raw_row) < 8:
             continue
 
-        def g(key: str) -> str:
+        def g(key: str, raw_row=raw_row, cols=cols) -> str:
             idx = cols.get(key)
             if idx is None or idx >= len(raw_row):
                 return ""

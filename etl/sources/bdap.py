@@ -26,8 +26,8 @@ Usage:
 from __future__ import annotations
 
 import argparse
-import os
 import json
+import os
 import sys
 import tempfile
 from pathlib import Path
@@ -428,8 +428,8 @@ def main() -> int:
         if args.target == "r2":
             files.append(push_to_r2(aggr_path, "lookup/bdap-aggregato.json"))
             if shard_dir and shard_dir.exists():
-                from concurrent.futures import ThreadPoolExecutor, as_completed
                 import hashlib
+                from concurrent.futures import ThreadPoolExecutor, as_completed
                 shard_files = sorted(shard_dir.glob("*.json"))
 
                 # Strategia upload: confronta md5 locale vs ETag remoto.

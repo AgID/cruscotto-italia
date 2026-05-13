@@ -28,11 +28,10 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import sys
 import tempfile
-import urllib.request
 import urllib.error
+import urllib.request
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
@@ -217,7 +216,7 @@ def build_profilo_shards(cache_dir: Path, output_dir: Path) -> Path:
         GROUP BY istat
     """).fetchall()
     istruzione_cols = [d[0] for d in con.description]
-    istruzione_dict = {row[0]: dict(zip(istruzione_cols, row))
+    istruzione_dict = {row[0]: dict(zip(istruzione_cols, row, strict=False))
                        for row in istruzione}
     log.info("istat_istruzione_done", comuni=len(istruzione_dict))
 
@@ -257,7 +256,7 @@ def build_profilo_shards(cache_dir: Path, output_dir: Path) -> Path:
         GROUP BY istat
     """).fetchall()
     lavoro_cols = [d[0] for d in con.description]
-    lavoro_dict = {row[0]: dict(zip(lavoro_cols, row)) for row in lavoro}
+    lavoro_dict = {row[0]: dict(zip(lavoro_cols, row, strict=False)) for row in lavoro}
     log.info("istat_lavoro_done", comuni=len(lavoro_dict))
 
     # === FAMIGLIE ===
@@ -276,7 +275,7 @@ def build_profilo_shards(cache_dir: Path, output_dir: Path) -> Path:
         GROUP BY REF_AREA
     """).fetchall()
     famiglie_cols = [d[0] for d in con.description]
-    famiglie_dict = {row[0]: dict(zip(famiglie_cols, row)) for row in famiglie}
+    famiglie_dict = {row[0]: dict(zip(famiglie_cols, row, strict=False)) for row in famiglie}
     log.info("istat_famiglie_done", comuni=len(famiglie_dict))
 
     # === PENDOLARI ===
@@ -304,7 +303,7 @@ def build_profilo_shards(cache_dir: Path, output_dir: Path) -> Path:
         GROUP BY REF_AREA
     """).fetchall()
     pendolari_cols = [d[0] for d in con.description]
-    pendolari_dict = {row[0]: dict(zip(pendolari_cols, row))
+    pendolari_dict = {row[0]: dict(zip(pendolari_cols, row, strict=False))
                       for row in pendolari}
     log.info("istat_pendolari_done", comuni=len(pendolari_dict))
 
@@ -331,7 +330,7 @@ def build_profilo_shards(cache_dir: Path, output_dir: Path) -> Path:
         GROUP BY REF_AREA
     """).fetchall()
     cittadinanza_cols = [d[0] for d in con.description]
-    cittadinanza_dict = {row[0]: dict(zip(cittadinanza_cols, row))
+    cittadinanza_dict = {row[0]: dict(zip(cittadinanza_cols, row, strict=False))
                          for row in cittadinanza}
     log.info("istat_cittadinanza_done", comuni=len(cittadinanza_dict))
 
@@ -379,7 +378,7 @@ def safe_pct(num, den):
 def safe_int(v):
     if v is None:
         return None
-    return int(round(v))
+    return round(v)
 
 
 def safe_round(v, n=2):
@@ -572,7 +571,6 @@ def main() -> int:
         # 3) Upload su R2 (solo se target=r2)
         if args.target == "r2":
             uploaded = push_to_r2_parallel(shard_dir)
-            manifest_obj = manifest.load()
             manifest.update_source(
                 "istat_profilo",
                 [{"key": "profilo/*", "count": uploaded}],

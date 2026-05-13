@@ -206,7 +206,7 @@ def build_all_shards(output_dir: Path, limit: int | None = None) -> dict:
         futures = {ex.submit(_build_one, istat): istat for istat in istat_codes}
         for i, fut in enumerate(as_completed(futures), 1):
             try:
-                istat, missing = fut.result()
+                _istat, missing = fut.result()
                 stats["processed"] += 1
                 for label in missing:
                     if label == "anac":
@@ -231,9 +231,6 @@ def build_all_shards(output_dir: Path, limit: int | None = None) -> dict:
 
 def push_to_r2_parallel(shard_dir: Path) -> int:
     """Upload parallelo degli shard sotto prefix 'dashboard/'."""
-    client = r2.get_r2_client()
-    bucket = r2.get_bucket()
-
     shard_files = sorted(shard_dir.glob("*.json"))
     log.info("dashboard_pushing", total=len(shard_files))
 

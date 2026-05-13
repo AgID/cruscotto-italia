@@ -39,7 +39,6 @@ from __future__ import annotations
 import argparse
 import csv
 import hashlib
-import io
 import json
 import re
 import sys
@@ -158,7 +157,7 @@ def parse_istat_parco(csv_path: Path) -> dict[str, dict]:
             elif vt in EURO_CODES:
                 comune["euro"][EURO_CODES[vt]] = val
 
-    for istat, c in by_istat.items():
+    for _istat, c in by_istat.items():
         c["totale"] = (c["autovetture"] + c["autobus"] + c["motocicli"]
                        + c["motocarri"] + c["altri"] + c["autocarri"]
                        + c["motrici"] + c["rimorchi"])
@@ -178,7 +177,7 @@ def parse_istat_parco(csv_path: Path) -> dict[str, dict]:
 # ----------------------------------------------------------------------------
 # ISTAT 41_983 - Incidenti, morti, feriti per comune
 # ----------------------------------------------------------------------------
-def fetch_istat_incidenti(anni: list[int] = None, use_cache: bool = True) -> Path:
+def fetch_istat_incidenti(anni: list[int] | None = None, use_cache: bool = True) -> Path:
     """Scarica il CSV ISTAT 41_983 con incidenti, morti e feriti per comune
     sull'intervallo di anni indicato. Singola chiamata SDMX con range temporale.
     """
@@ -441,7 +440,7 @@ def parse_aci_iscrizioni(csv_path: Path, anno: int,
             blk["totale"] += val
 
     # Calcolo % elettriche+ibride
-    for istat, c in by_istat.items():
+    for _istat, c in by_istat.items():
         tot = c["totale"]
         if tot > 0:
             c["pct_elettriche_ibride"] = round(
@@ -773,7 +772,7 @@ def main() -> int:
                 serie_tot.append(blk.get("totale", 0))
                 serie_el.append(blk.get("elettriche", 0))
                 serie_ib.append(blk.get("ibride", 0))
-                serie_eh.append((blk.get("elettriche", 0) + blk.get("ibride", 0)))
+                serie_eh.append(blk.get("elettriche", 0) + blk.get("ibride", 0))
             iscrizioni_by_istat[istat] = {
                 "ultimo_anno": ult_blk,
                 "serie_storica": {

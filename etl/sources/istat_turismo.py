@@ -34,12 +34,11 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import re
 import sys
 import tempfile
-import urllib.request
 import urllib.error
+import urllib.request
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
@@ -378,7 +377,7 @@ def build_shard(istat, prov_nuts3, prov_nome, cap_data, fl_data, pop):
 
     def cat_int(data_type, type_acc, ateco):
         v = get_cat(data_type, type_acc, ateco)
-        return int(round(v)) if v is not None else None
+        return round(v) if v is not None else None
 
     # Totali (TYPE=ALL, ATECO=551_553 = somma alberghi+extra)
     totale_strutture = cat_int(DATA_NUM_EST, "ALL", "551_553")
@@ -436,7 +435,7 @@ def build_shard(istat, prov_nuts3, prov_nome, cap_data, fl_data, pop):
     # === FLUSSI: per provincia ===
     def fl(dt, country):
         v = fl_data.get((dt, country))
-        return int(round(v)) if v is not None else None
+        return round(v) if v is not None else None
 
     arrivi_tot = fl("AR", "WORLD")
     arrivi_ita = fl("AR", "IT")

@@ -86,7 +86,6 @@ from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
 
 import requests
 import structlog
@@ -152,7 +151,7 @@ def _md5_file(p: Path) -> str:
     return h.hexdigest()
 
 
-def _r2_md5(key: str) -> Optional[str]:
+def _r2_md5(key: str) -> str | None:
     """ETag R2 == md5 per upload single-part (i nostri ZIP <50MB lo sono)."""
     meta = r2.head(key)
     if meta is None:
@@ -364,7 +363,7 @@ def parse_strad_region(zip_path: Path) -> tuple[dict, str]:
             d["strade_by_prog"][prog] = odo
 
     # Tronca top_strade
-    for istat, d in per_istat.items():
+    for _istat, d in per_istat.items():
         d["top_strade_acc"].sort(key=lambda t: t[1], reverse=True)
         d["top_strade_acc"] = d["top_strade_acc"][:TOP_STRADE_LIMIT]
 
@@ -409,7 +408,7 @@ def parse_strad_all(strad_paths: dict[str, Path]) -> tuple[dict, str]:
 # FASE 3 - PARSE INDIR (indirizzari)
 # ----------------------------------------------------------------------
 
-def _parse_coord(s: str) -> Optional[float]:
+def _parse_coord(s: str) -> float | None:
     """Converte coordinata ANNCSU (es. '15,810056') → float o None.
 
     None se vuoto, 0, o non parsabile.
@@ -455,7 +454,7 @@ def parse_indir_region(zip_path: Path,
             "metodi": {"1": int, "2": int, "3": int, "4": int}
           }
     """
-    csv_fname, rows = _read_csv_from_zip(zip_path)
+    _csv_fname, rows = _read_csv_from_zip(zip_path)
 
     per_istat: dict[str, dict] = defaultdict(lambda: {
         "n_civici": 0,
@@ -689,7 +688,7 @@ def build_shard(istat: str, strad: dict, indir: dict,
 
 def build_all_shards(strad_data: dict, indir_data: dict,
                      snapshot_date: str, out_dir: Path,
-                     canonical_istat: Optional[set[str]] = None) -> int:
+                     canonical_istat: set[str] | None = None) -> int:
     """Genera tutti i file shard locali. Ritorna numero scritti.
 
     Args:
@@ -697,7 +696,7 @@ def build_all_shards(strad_data: dict, indir_data: dict,
             lookup canonica (ghost da fusioni/soppressioni storiche).
     """
     out_dir.mkdir(parents=True, exist_ok=True)
-    # Unione istat: STRAD ∪ INDIR (un comune potrebbe teoricamente avere
+    # Unione istat: STRAD U INDIR (un comune potrebbe teoricamente avere
     # solo strade ma 0 civici geo-ref)
     all_istat = set(strad_data.keys()) | set(indir_data.keys())
 
@@ -769,7 +768,7 @@ def build_full_shard(istat: str, strad: dict, indir: dict,
 
 def build_all_full_shards(strad_data: dict, indir_data: dict,
                           snapshot_date: str, out_dir: Path,
-                          canonical_istat: Optional[set[str]] = None) -> int:
+                          canonical_istat: set[str] | None = None) -> int:
     """Genera shard FULL nel directory locale. Pattern identico a build_all_shards."""
     out_dir.mkdir(parents=True, exist_ok=True)
     all_istat = set(strad_data.keys()) | set(indir_data.keys())

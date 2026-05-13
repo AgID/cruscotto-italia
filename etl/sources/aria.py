@@ -97,7 +97,6 @@ from __future__ import annotations
 import argparse
 import csv
 import hashlib
-import io
 import json
 import sys
 from collections import defaultdict
@@ -269,7 +268,7 @@ def parse_csv(csv_path: Path) -> list[dict]:
                 continue
 
             # Float helpers: stringa potenzialmente vuota o "NA"
-            def to_float(key: str) -> float | None:
+            def to_float(key: str, r=r) -> float | None:
                 v = r.get(key)
                 if v is None or v == "" or v.strip() == "":
                     return None
@@ -278,7 +277,7 @@ def parse_csv(csv_path: Path) -> list[dict]:
                 except (ValueError, TypeError):
                     return None
 
-            def to_int(key: str) -> int | None:
+            def to_int(key: str, r=r) -> int | None:
                 v = r.get(key)
                 if v is None or v == "" or v.strip() == "":
                     return None
@@ -389,14 +388,14 @@ def build_shards(
                 cd["dati"], ink, ANNO_RIFERIMENTO, inquinanti_summary
             )
 
-        # --- Blocco trend_decennale (medie comune × inquinante × anno) ---
+        # --- Blocco trend_decennale (medie comune x inquinante x anno) ---
         anni_trend = list(range(ANNO_RIFERIMENTO - TREND_ANNI + 1, ANNO_RIFERIMENTO + 1))
         trend_block: dict = {"anni": anni_trend}
         for ink in INQUINANTI_URLS.keys():
             trend_block[f"{ink}_media"] = []
             for a in anni_trend:
                 medie_anno = []
-                for (seu, ay), inks in cd["dati"].items():
+                for (_seu, ay), inks in cd["dati"].items():
                     if ay != a:
                         continue
                     rec = inks.get(ink)
@@ -458,7 +457,7 @@ def build_shards(
         n_written += 1
 
     # Calcolo medie nazionali finali
-    for ink, s in inquinanti_summary.items():
+    for _ink, s in inquinanti_summary.items():
         if s["valori"]:
             s["media_nazionale"] = round(sum(s["valori"]) / len(s["valori"]), 1)
         del s["valori"]  # non serve nell'output
@@ -482,7 +481,7 @@ def _aggregate_inquinante(
     n_oltre_legge = 0
     n_oltre_oms = 0
 
-    for (seu, ay), inks in dati.items():
+    for (_seu, ay), inks in dati.items():
         if ay != anno:
             continue
         rec = inks.get(inquinante)
@@ -510,7 +509,7 @@ def _aggregate_inquinante(
         return None  # type: ignore[return-value]
 
     # Note: summary["n_comuni"] ricalcolato a posteriori (non qui per evitare
-    # di contare lo stesso comune × N inquinanti)
+    # di contare lo stesso comune x N inquinanti)
     return {
         "media": round(sum(medie) / len(medie), 1) if medie else None,
         "n_stazioni_con_dato": n_stazioni_dato,
@@ -645,6 +644,7 @@ def push_to_r2(
         return files
 
     import os
+
     import boto3 as _b3
     _client = _b3.client(
         "s3",

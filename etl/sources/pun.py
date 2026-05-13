@@ -79,7 +79,6 @@ from collections import Counter, defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
 
 import boto3
 import requests
@@ -214,7 +213,7 @@ def build_istat_index(csv_path: Path) -> tuple[dict, dict]:
 
 
 def resolve_istat(citta: str, prov: str, lat: float, lon: float,
-                  by_np: dict, by_name: dict) -> Optional[str]:
+                  by_np: dict, by_name: dict) -> str | None:
     """Risolve (Città, Provincia, lat, lon) → ISTAT6 o None.
 
     Strategia:
@@ -286,14 +285,14 @@ def parse_csv(body: bytes) -> list[dict]:
     return rows
 
 
-def _clean(v) -> Optional[str]:
+def _clean(v) -> str | None:
     if v is None:
         return None
     s = str(v).strip().strip('"').strip()
     return s if s and s != " " else None
 
 
-def _to_int(v) -> Optional[int]:
+def _to_int(v) -> int | None:
     try:
         n = int(str(v).strip())
         return n if n > 0 else None
@@ -355,7 +354,7 @@ def build_shards(rows: list[dict], by_np: dict, by_name: dict,
         })
 
     # KPI per shard
-    for istat, sh in shards.items():
+    for _istat, sh in shards.items():
         punti = sh["punti"]
         n_tot = len(punti)
         n_att = sum(1 for p in punti if p["stato"] == "Attivo")
@@ -385,7 +384,7 @@ def build_shards(rows: list[dict], by_np: dict, by_name: dict,
 
 # ──────────────────────── SKIP LOGIC (R2 meta) ─────────────────────
 
-def read_last_known_lm() -> Optional[str]:
+def read_last_known_lm() -> str | None:
     try:
         client = r2.get_r2_client()
         obj = client.get_object(Bucket=r2.get_bucket(), Key=R2_META_KEY)

@@ -5,7 +5,7 @@ Pattern dataset: spd_rnd_{spe|ent|liq}_sio_reg{NN}_01_{anno}
 - ent: Entrate
 - liq: Liquidità
 
-Strategia: per anno corrente, pull di 20 regioni × {spe, ent} = 40 dataset.
+Strategia: per anno corrente, pull di 20 regioni x {spe, ent} = 40 dataset.
 Concat in un singolo Parquet `siope_{tipo}_{anno}.parquet`.
 
 STATUS: stub v0.1. Da implementare in v0.4.

@@ -31,12 +31,12 @@ from __future__ import annotations
 
 import argparse
 import json
-import zipfile
-import duckdb
 import sys
 import tempfile
+import zipfile
 from pathlib import Path
 
+import duckdb
 import requests
 import structlog
 
@@ -114,7 +114,7 @@ def pull_ipa_enti(workdir: Path) -> Path:
         if r.get("id") and "metadata" not in (r.get("name") or "").lower()
     ]
     if not data_resources:
-        raise RuntimeError(f"No data resource (only metadata) in IPA enti dataset.")
+        raise RuntimeError("No data resource (only metadata) in IPA enti dataset.")
 
     # The biggest resource is the actual data
     chosen = max(data_resources, key=lambda r: int(r.get("size") or 0))
@@ -268,7 +268,7 @@ def build_anagrafica(istat_csv: Path, ipa_csv: Path, output_dir: Path, pop_map: 
             None,
         )
         regione_col = next(
-            (c for c in cols_istat if c.lower() == "denominazione regione" or "regione" in c.lower() and "denominazione" in c.lower()),
+            (c for c in cols_istat if c.lower() == "denominazione regione" or ("regione" in c.lower() and "denominazione" in c.lower())),
             None,
         )
         codice_catastale_col = next(
@@ -432,7 +432,7 @@ def build_anagrafica(istat_csv: Path, ipa_csv: Path, output_dir: Path, pop_map: 
             ORDER BY denominazione
             LIMIT 5
         """).fetchall()
-        log.info("anagrafica_sample", rows=[dict(zip(['istat','nome','prov','reg','ipa'], r)) for r in sample])
+        log.info("anagrafica_sample", rows=[dict(zip(['istat','nome','prov','reg','ipa'], r, strict=False)) for r in sample])
 
         # ----------------------------------------------------------------
         # Build JSON lookups for the worker (no Parquet parsing in JS).
@@ -447,7 +447,7 @@ def build_anagrafica(istat_csv: Path, ipa_csv: Path, output_dir: Path, pop_map: 
                     ROW_NUMBER() OVER (
                         PARTITION BY codice_istat
                         ORDER BY
-                            CASE WHEN codice_ipa LIKE 'c\_%' ESCAPE '\\' THEN 0
+                            CASE WHEN codice_ipa LIKE 'c\\_%' ESCAPE '\\' THEN 0
                                  WHEN codice_ipa IS NOT NULL THEN 1
                                  ELSE 2 END,
                             codice_ipa
