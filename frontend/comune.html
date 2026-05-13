@@ -1577,7 +1577,7 @@ function renderComune(data) {
       ${renderSanitaTab(k.sanita_mds)}
       ${renderAnncsuTab(k.anncsu)}
       ${renderPunTab(k.pun)}
-      ${renderBandaLargaTab(k.agcom_bbmap, a)}
+      ${renderBandaLargaTab(k.agcom_bbmap, a, k.territorio)}
     </div>
   `;
 }
@@ -4544,11 +4544,30 @@ function renderPunTab(d) {
 //   >= 30k  → level 13 (capoluoghi medi)
 //   >= 3k   → level 14 (comuni medi)
 //   < 3k    → level 15 (piccoli/montani)
-function bandaLargaDeepLink(agcomBbmap, anagrafica) {
+function bandaLargaDeepLink(agcomBbmap, anagrafica, territorio) {
   const baseUrl = agcomBbmap?.mappa_ufficiale?.url
     || 'https://geo.agcom.it/agcomapps/BB4/BB4_BBwired_na_app16_4/';
-  const lat = anagrafica?.kpi?.lat ?? anagrafica?.coordinate?.lat ?? null;
-  const lon = anagrafica?.kpi?.lon ?? anagrafica?.coordinate?.lon ?? null;
+  // Le coordinate del centroide non sono in anagrafica.
+  // Fallback chain:
+  //   1. anagrafica.coordinate.{lat,lon} (futuro)
+  //   2. anagrafica.kpi.{lat,lon} (futuro)
+  //   3. centroide calcolato da territorio.geo.extent (bbox OSM)
+  let lat = anagrafica?.coordinate?.lat ?? anagrafica?.kpi?.lat ?? null;
+  let lon = anagrafica?.coordinate?.lon ?? anagrafica?.kpi?.lon ?? null;
+  if ((lat == null || lon == null) && territorio?.geo?.extent) {
+    // extent shape OSM: [[lon_min, lat_min], [lon_max, lat_max]]
+    // (verificato su Lecce: [[18.040, 40.312], [18.307, 40.506]])
+    const ext = territorio.geo.extent;
+    if (Array.isArray(ext) && ext.length === 2
+        && Array.isArray(ext[0]) && Array.isArray(ext[1])) {
+      const [lonMin, latMin] = ext[0];
+      const [lonMax, latMax] = ext[1];
+      if ([lonMin, latMin, lonMax, latMax].every(v => typeof v === 'number')) {
+        lon = (lonMin + lonMax) / 2;
+        lat = (latMin + latMax) / 2;
+      }
+    }
+  }
   if (lat == null || lon == null) return baseUrl;
   const famRes = agcomBbmap?.kpi?.famiglie_residenti || 0;
   let level = 14;
@@ -4567,7 +4586,7 @@ function fmtNumNull(v) {
   return (v == null || v === '') ? '—' : fmtNum(v);
 }
 
-function renderBandaLargaTab(d, anagrafica) {
+function renderBandaLargaTab(d, anagrafica, territorio) {
   if (!d || !d.kpi) {
     return `
       <div class="tab-pane" id="pane-banda-larga">
@@ -4593,7 +4612,7 @@ function renderBandaLargaTab(d, anagrafica) {
                  || k.punti_dichiarati_ftth == null
                  || k.indirizzi_postali_distinti_ftth == null);
   // Deep-link AGCOM
-  const mapUrl = bandaLargaDeepLink(d, anagrafica);
+  const mapUrl = bandaLargaDeepLink(d, anagrafica, territorio);
   // Comune label (per CTA label)
   const comNome = anagrafica?.denominazione || 'questo comune';
   // HTML escape inline (no helper globale: encode &, <, >, ", ')
