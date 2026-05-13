@@ -429,11 +429,74 @@ def parse_ospedali(csv_path: Path) -> dict[str, dict]:
 # BUILD SHARDS (composizione finale per comune)
 # ============================================================================
 
+def _filter_outlier_coords(punti: list[dict]) -> tuple[list[dict], int]:
+    """Filtra outlier statistici delle coordinate.
+
+    Le coordinate del MdS hanno un tasso di errore osservato del ~5-15%
+    (osservazione Roma 2026-05-13: punti del comune 058091 con lat/lon
+    sparse in tutto il Lazio - Viterbo, Frosinone, Latina, ecc.).
+    Il filtro `cod_comune` da' record corretti, ma le `lat`/`lon` di
+    quei record sono inserite male a monte.
+
+    Strategia: per ogni gruppo (gia' filtrato per istat):
+      1. Calcolo centroide robust (mediana lat/lon dei punti geo-referenziati)
+      2. Soglia distanza:
+         - N>50 punti (es. capoluoghi grandi): 0.3 gradi (~33 km)
+         - N<=50 (resto):                       0.15 gradi (~16 km)
+         (Roma capitale e' radius ~30km dal centro, le soglie sono ampie
+         per non eliminare frazioni periferiche legittime.)
+      3. Punti oltre soglia: lat/lon nullificati (record resta, perdono
+         solo le coordinate). Il record sopravvive in 'punti' con nome,
+         indirizzo, CAP visibili nel popup/elenco.
+
+    Ritorna (punti_modificati, n_droppati).
+    """
+    if not punti:
+        return punti, 0
+
+    coords = [(p["lat"], p["lon"]) for p in punti
+              if p.get("lat") is not None and p.get("lon") is not None]
+    if len(coords) < 5:
+        # Troppi pochi punti per calcolare mediana robusta: niente filtro.
+        return punti, 0
+
+    lats_sorted = sorted(c[0] for c in coords)
+    lons_sorted = sorted(c[1] for c in coords)
+    med_lat = lats_sorted[len(lats_sorted) // 2]
+    med_lon = lons_sorted[len(lons_sorted) // 2]
+
+    soglia = 0.3 if len(coords) > 50 else 0.15
+
+    n_droppati = 0
+    out = []
+    for p in punti:
+        if p.get("lat") is None or p.get("lon") is None:
+            out.append(p)
+            continue
+        d_lat = abs(p["lat"] - med_lat)
+        d_lon = abs(p["lon"] - med_lon)
+        if d_lat > soglia or d_lon > soglia:
+            # Outlier: nullifico coord ma tengo il record
+            new_p = dict(p)
+            new_p["lat"] = None
+            new_p["lon"] = None
+            new_p["_coord_dropped"] = True  # privato, non finisce nel JSON
+            out.append(new_p)
+            n_droppati += 1
+        else:
+            out.append(p)
+    return out, n_droppati
+
+
 def _build_farmacie_section(punti: list[dict]) -> dict:
-    """KPI + punti per farmacie. Tiene tutti i punti (no sampling)."""
+    """KPI + punti per farmacie. Tiene tutti i punti (no sampling).
+
+    Pre-filtro outlier coordinate: vedi _filter_outlier_coords.
+    """
+    punti, n_droppati = _filter_outlier_coords(punti)
     n_tot = len(punti)
     n_geo = sum(1 for p in punti if p["lat"] is not None and p["lon"] is not None)
-    n_outlier = sum(
+    n_outlier_bbox = sum(
         1 for p in punti
         if p["lat"] is not None and p["lon"] is not None
         and not _in_bbox_italia(p["lat"], p["lon"])
@@ -445,7 +508,8 @@ def _build_farmacie_section(punti: list[dict]) -> dict:
             "n_geo_referenziate":  n_geo,
             "pct_geo_referenziate": round(100 * n_geo / n_tot, 1) if n_tot else 0.0,
             "mix_tipologia":       dict(sorted(mix.items(), key=lambda kv: -kv[1])),
-            "n_outlier_coordinate": n_outlier,
+            "n_outlier_coordinate":   n_outlier_bbox,
+            "n_coordinate_droppate":  n_droppati,
         },
         "punti": [
             {k: v for k, v in p.items() if not k.startswith("_")}
@@ -455,9 +519,11 @@ def _build_farmacie_section(punti: list[dict]) -> dict:
 
 
 def _build_parafarmacie_section(punti: list[dict]) -> dict:
+    """KPI + punti per parafarmacie. Pre-filtro outlier come per farmacie."""
+    punti, n_droppati = _filter_outlier_coords(punti)
     n_tot = len(punti)
     n_geo = sum(1 for p in punti if p["lat"] is not None and p["lon"] is not None)
-    n_outlier = sum(
+    n_outlier_bbox = sum(
         1 for p in punti
         if p["lat"] is not None and p["lon"] is not None
         and not _in_bbox_italia(p["lat"], p["lon"])
@@ -467,7 +533,8 @@ def _build_parafarmacie_section(punti: list[dict]) -> dict:
             "n_totale":            n_tot,
             "n_geo_referenziate":  n_geo,
             "pct_geo_referenziate": round(100 * n_geo / n_tot, 1) if n_tot else 0.0,
-            "n_outlier_coordinate": n_outlier,
+            "n_outlier_coordinate":   n_outlier_bbox,
+            "n_coordinate_droppate":  n_droppati,
         },
         "punti": [
             {k: v for k, v in p.items() if not k.startswith("_")}
