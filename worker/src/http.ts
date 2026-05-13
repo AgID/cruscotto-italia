@@ -222,16 +222,16 @@ pre code {
   <div class="wrap">
     <div class="mini-brand-wrap">
       <a href="https://cruscotto-italia.piersoftckan.biz" class="mini-brand">Cruscotto <span class="it">Italia</span></a>
-      <span class="mini-brand-sub">MCP Server · 13 fonti istituzionali</span>
+      <span class="mini-brand-sub">MCP Server · 15 fonti istituzionali</span>
     </div>
   </div>
 </div>
 
 <main class="mcp-page">
 
-  <div class="eyebrow">§ MCP Server · v0.4</div>
+  <div class="eyebrow">§ MCP Server · v0.6</div>
   <h1>Cruscotto Italia <em>MCP</em>.</h1>
-  <p class="lead">Server <a href="https://modelcontextprotocol.io" target="_blank" rel="noopener">Model Context Protocol</a> che federa tredici dataset pubblici sui comuni italiani (ANAC, BDAP-MOP, SIOPE, PNRR, ISPRA, ISTAT, MIUR, ACI, MEF Federalismo Fiscale, MEF Patrimonio Immobiliare, Agenzia delle Entrate ANNCSU). Connettilo al tuo client LLM per interrogare i dati ufficiali con linguaggio naturale.</p>
+  <p class="lead">Server <a href="https://modelcontextprotocol.io" target="_blank" rel="noopener">Model Context Protocol</a> che federa quindici dataset pubblici sui comuni italiani (ANAC, BDAP-MOP, SIOPE, PNRR, ISPRA Suolo/IdroGEO/Rifiuti, ISPRA SNPA qualità aria, ISTAT POSAS/Censimento/Veicoli/Incidenti, MIUR scuole, ACI nuove iscrizioni, MEF Federalismo Fiscale, MEF Patrimonio Immobiliare, Agenzia delle Entrate ANNCSU civici e strade, Ministero della Salute farmacie/parafarmacie/posti letto ospedalieri). Connettilo al tuo client LLM per interrogare i dati ufficiali con linguaggio naturale.</p>
 
   <h2>Come <em>connetterlo</em></h2>
 
@@ -282,19 +282,32 @@ pre code {
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'</code></pre>
 
   <h2>Tool <em>disponibili</em></h2>
-  <p>10 strumenti MCP. Il tool <code>search_comune</code> va sempre chiamato per primo quando l'utente fornisce un nome di comune, per ottenere il codice ISTAT.</p>
+  <p>10 strumenti MCP. <code>search_comune</code> va sempre chiamato per primo quando l'utente fornisce un nome di comune, per ottenere il codice ISTAT.</p>
+  <p>Storia: la prima generazione di tool era a granularità per fonte (uno per dataset). Per ridurre la latenza (6+ chiamate per una panoramica) e' stato introdotto <code>comune_dashboard</code>: single-fetch che restituisce tutte le 15 fonti aggregate. Le nuove fonti integrate dopo la v0.4 (aria SNPA, scuole MIUR, veicoli, redditi MEF, immobili PA, ANNCSU, sanita' MdS) sono esposte <strong>solo</strong> via <code>comune_dashboard</code>. I tool dedicati restano per backward compatibility e per casi in cui serve solo una sezione.</p>
 
   <div class="tools">
-    <div class="tool-row"><div class="tool-name">mcp_info</div><div class="tool-desc">Metadata del server: versione, sorgenti integrate, freshness dei dati.</div></div>
-    <div class="tool-row"><div class="tool-name">search_comune</div><div class="tool-desc">Risolve un nome di comune in codice ISTAT a 6 cifre. Da chiamare per primo.</div></div>
-    <div class="tool-row"><div class="tool-name">comune_dashboard</div><div class="tool-desc">Vista completa in una sola chiamata: anagrafica, demografia, profilo, turismo, PNRR, territorio, aria, opere, contratti aggregati, SIOPE multi-anno, scuole, veicoli e incidenti, redditi IRPEF, patrimonio immobiliare PA.</div></div>
-    <div class="tool-row"><div class="tool-name">comune_demografia</div><div class="tool-desc">Popolazione per età e sesso (POSAS al 1 gennaio 2026), piramide demografica, indici di vecchiaia e dipendenza.</div></div>
+    <div class="tool-row"><div class="tool-name">mcp_info</div><div class="tool-desc">Metadata del server: versione, sorgenti integrate (15), freshness di ogni dataset.</div></div>
+    <div class="tool-row"><div class="tool-name">search_comune</div><div class="tool-desc">Risolve un nome di comune in codice ISTAT a 6 cifre. Da chiamare per primo quando hai solo il nome.</div></div>
+    <div class="tool-row"><div class="tool-name">comune_dashboard</div><div class="tool-desc"><strong>Tool unificato consigliato.</strong> Vista completa in una sola chiamata: anagrafica, demografia (POSAS), profilo (Censimento ISTAT), turismo, PNRR, territorio (ISPRA Suolo, IdroGEO, Rifiuti), aria (ISPRA SNPA: PM10/PM2.5/NO2), opere pubbliche (BDAP-MOP), contratti ANAC aggregati, spese SIOPE multi-anno, scuole (MIUR), veicoli e incidenti (ISTAT + ACI), redditi e fisco (MEF IRPEF), patrimonio immobiliare PA (MEF DE), ANNCSU (civici e strade Agenzia Entrate), sanita' territoriale (Ministero Salute: farmacie, parafarmacie, posti letto ospedalieri).</div></div>
+    <div class="tool-row"><div class="tool-name">comune_demografia</div><div class="tool-desc">Popolazione per età e sesso (POSAS al 1 gennaio 2026), piramide demografica, indici di vecchiaia e dipendenza. Granularità maggiore della sezione demografia di <code>comune_dashboard</code>.</div></div>
     <div class="tool-row"><div class="tool-name">comune_profilo</div><div class="tool-desc">Censimento permanente ISTAT: istruzione, lavoro, famiglie, mobilità, cittadinanza.</div></div>
     <div class="tool-row"><div class="tool-name">comune_turismo</div><div class="tool-desc">Capacità ricettiva comunale (alberghi ed extra-alberghiero) e flussi turistici provinciali.</div></div>
     <div class="tool-row"><div class="tool-name">comune_pnrr</div><div class="tool-desc">Progetti PNRR dove il comune è soggetto attuatore: missioni, finanziamento, stato avanzamento.</div></div>
     <div class="tool-row"><div class="tool-name">comune_territorio</div><div class="tool-desc">Profilo ambientale: consumo di suolo (ISPRA), rischio idrogeologico (IdroGEO), raccolta differenziata (Catasto rifiuti). Per qualità dell'aria usa <code>comune_dashboard</code> sezione <code>aria</code>.</div></div>
     <div class="tool-row"><div class="tool-name">comune_opere_dettaglio</div><div class="tool-desc">Lista completa delle opere pubbliche BDAP-MOP del comune con CUP, costi, finanziamenti, stato.</div></div>
     <div class="tool-row"><div class="tool-name">comune_contratti</div><div class="tool-desc"><span class="stub">stub v0.2</span>Lista dettagliata contratti per CIG. ETL ANAC OCDS non ancora implementato — usa <code>comune_dashboard</code> per dati ANAC aggregati.</div></div>
+  </div>
+
+  <h3>Sezioni accessibili solo via <code>comune_dashboard</code></h3>
+  <p>Le fonti integrate dopo la v0.4 non hanno tool dedicato. Sono esposte come <em>sezioni</em> dentro la risposta di <code>comune_dashboard</code>. Per interrogarle, chiama <code>comune_dashboard(istat_code)</code> e leggi la chiave corrispondente:</p>
+  <div class="tools">
+    <div class="tool-row"><div class="tool-name">.aria</div><div class="tool-desc">Stazioni qualità dell'aria ISPRA SNPA (PM10, PM2.5, NO2): tipo zona/stazione, EU code, ultima rilevazione.</div></div>
+    <div class="tool-row"><div class="tool-name">.scuole</div><div class="tool-desc">Anagrafe scuole MIUR: numero plessi, ordine/grado, indirizzi.</div></div>
+    <div class="tool-row"><div class="tool-name">.veicoli</div><div class="tool-desc">Parco veicoli ISTAT 41_993 (classe Euro), nuove iscrizioni ACI LOD per alimentazione, incidenti ISTAT 41_983 (morti/feriti).</div></div>
+    <div class="tool-row"><div class="tool-name">.redditi</div><div class="tool-desc">Dichiarazioni IRPEF su base comunale (MEF Dipartimento Finanze, a.i. 2020-2024): n. contribuenti, reddito medio, 8 fasce, addizionale, imposta netta.</div></div>
+    <div class="tool-row"><div class="tool-name">.immobili_pa</div><div class="tool-desc">Beni immobili pubblici (MEF DE 2022): KPI aggregati su fabbricati/terreni con vincolo culturale e uso a terzi + fino a 500 punti georeferenziati con categoria.</div></div>
+    <div class="tool-row"><div class="tool-name">.anncsu</div><div class="tool-desc">Civici e strade certificati Agenzia Entrate (HVD UE 2023/138): KPI odonimi, civici, % georeferenziazione, bilinguismo, distribuzione metodi. Sample 1000 punti. Per il dataset completo: <code>GET /data/anncsu_full/&lt;istat&gt;.json</code> (Roma 515.815 civici, Lecce 47.917).</div></div>
+    <div class="tool-row"><div class="tool-name">.sanita_mds</div><div class="tool-desc">Bundle sanità territoriale Ministero della Salute (IODL v2.0): farmacie (~20.800 attive, dato quotidiano), parafarmacie (~7.200), posti letto ospedalieri 2023 (1.272 stabilimenti, ~213.000 PL). Geocoding incrociato con ANNCSU per coord MdS errate (campi lat_raw/lon_raw + coord_source: mds/anncsu/dropped/no_coord).</div></div>
   </div>
 
   <h2>Esempi di <em>prompt</em></h2>
@@ -305,7 +318,11 @@ pre code {
 
   <div class="example"><strong>Ricerca tematica</strong>Quali sono i 5 comuni con più progetti PNRR sulla missione M2 (Rivoluzione verde) tra Catanzaro, Cosenza, Crotone, Reggio Calabria e Vibo Valentia?</div>
 
-  <div class="example"><strong>Analisi finanziaria</strong>Quanto ha speso il comune di Ponte San Pietro nel 2025 per voci legate al personale? Mostra le top-10 voci SIOPE.</div>
+  <div class="example"><strong>Analisi finanziaria</strong>Quanto ha speso il comune di Lecce nel 2025 per voci legate al personale? Mostra le top-10 voci SIOPE.</div>
+
+  <div class="example"><strong>Sanita' territoriale</strong>Quante farmacie attive ci sono a Matera e qual è il rapporto abitanti/farmacia? Confronta con Potenza.</div>
+
+  <div class="example"><strong>Civici e indirizzi</strong>Quanti civici certificati ANNCSU ci sono in via Roma a Lecce, e con quale metodo di georeferenziazione sono stati rilevati?</div>
 
   <h2>Note <em>tecniche</em></h2>
   <p>Endpoint MCP: <code>POST /mcp</code> · Health check: <code>GET /health</code> · Rate limit: 60 richieste al minuto · Cache: 1 ora · Trasporto: JSON-RPC 2.0 over HTTP.</p>
