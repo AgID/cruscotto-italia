@@ -141,5 +141,7 @@ In caso di sospetto compromesso: revoca immediatamente su Cloudflare, ruota il s
 
 ## 6. Riferimenti
 
-- Workflow definitions in .github/workflows/
+- Workflow definitions in `.github/workflows/`
+- Architettura completa in `docs/INFRASTRUCTURE.md`
+- Secret locali al server (htpasswd, env files, PAT GitHub embedded, TLS) in `docs/SERVER-INFRA.md`
 - Documento handoff migrazione AgID (storia del progetto): MIGRAZIONE_AGID_HANDOFF.md, fornito separatamente al team AgID, non versionato in questo repo

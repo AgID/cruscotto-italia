@@ -241,6 +241,7 @@ Configurazione TLS gestita da Certbot (Let's Encrypt R12). Già conforme: TLS 1.
 ## 6. Riferimenti
 
 - `docs/SECRETS.md` — inventario operativo dei 6 secrets GitHub Actions
+- `docs/SERVER-INFRA.md` — setup operativo lato server (nginx, cron, htpasswd, env files): runbook riproducibile per migrazione o disaster recovery
 - `.env.example` — template variabili d'ambiente locali
 - Workflow GitHub Actions in `.github/workflows/`
 - `README.md` — descrizione progetto e overview architetturale

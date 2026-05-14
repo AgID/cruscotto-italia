@@ -140,6 +140,7 @@ In locale, le credenziali vivono come `export VAR=...` in `~/.bashrc` (o equival
 
 - [`docs/SECRETS.md`](docs/SECRETS.md) — inventario dei 6 GitHub Secrets + procedure per crearli su Cloudflare + rotazione e revoca + setup locale via `~/.bashrc`
 - [`docs/INFRASTRUCTURE.md`](docs/INFRASTRUCTURE.md) — architettura completa, pre-flight checklist setup, note operative deploy/maintenance
+- [`docs/SERVER-INFRA.md`](docs/SERVER-INFRA.md) — setup operativo lato server (nginx, htpasswd, cron, env files, secret locali): guida riproducibile per migrazione o disaster recovery
 
 ### Setup locale
 
