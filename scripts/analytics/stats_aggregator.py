@@ -298,8 +298,15 @@ def aggregate(log_paths: list[Path], exclude_test: bool = False,
                     stats["totals"]["hits_attack"] += 1
                     # Aggrega per server_name (= il server block nginx che ha
                     # gestito la richiesta, sempre affidabile). Fallback a host
-                    # per log nel formato intermedio del mattino.
-                    bucket = ev.get("server_name") or ev.get("host")
+                    # solo se host è un dominio reale; ignora IP raw (che sono
+                    # rumore residuale del formato intermedio del 14/05).
+                    bucket = ev.get("server_name")
+                    if not bucket:
+                        h = ev.get("host")
+                        # Accetta solo se host è un dominio reale (no IP)
+                        if h and not (re.match(r'^\d{1,3}(\.\d{1,3}){3}$', h)
+                                      or ':' in h):
+                            bucket = h
                     if bucket:
                         stats["attacks_by_host"][bucket] += 1
                     continue
