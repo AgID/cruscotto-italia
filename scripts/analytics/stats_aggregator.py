@@ -70,6 +70,7 @@ PATH_ATTACK_PATTERNS = re.compile(
 PATH_INTERNAL = re.compile(
     r"^/(?:"
     r"favicon|robots\.txt|sitemap|"
+    r"stats(?:/|$)|"
     r"css/|js/|vendor/|assets/|fonts/|images/|img/|"
     r"\.ico|\.css|\.js|\.woff|\.woff2|\.ttf|\.eot|\.svg|\.png|\.jpg|\.jpeg|\.gif|\.webp"
     r")",
@@ -455,16 +456,124 @@ def render_mcp_section(mcp_stats_path: Path | None) -> str:
         f'</div>'
     )
 
+    # Heatmap giornaliera per tool (giorno × tool)
+    heatmap_html = _render_heatmap(mcp.get("by_day_tool", []))
+
+    # Errori
+    errors = mcp.get("errors", {})
+    err_total = errors.get("total", 0)
+    if err_total > 0:
+        err_pct = err_total / total * 100 if total else 0
+        errors_html = (
+            f"<h2>Errori tool MCP</h2>\n"
+            f"<p class=\"meta\">{err_total:,} errori su {total:,} chiamate "
+            f"({err_pct:.1f}%) negli ultimi {mcp.get('_days_window', 30)} giorni.</p>\n"
+            + render_table(
+                [(t["tool"], t["errors"]) for t in errors.get("by_tool", [])],
+                ("Tool", "Errori"),
+            )
+        )
+    else:
+        errors_html = (
+            "<h2>Errori tool MCP</h2>\n"
+            f"<p class=\"meta\">Nessun errore registrato negli ultimi "
+            f"{mcp.get('_days_window', 30)} giorni.</p>"
+        )
+
+    # Termini di ricerca (search_comune)
+    terms = mcp.get("search_terms", {})
+    if terms.get("total", 0) > 0:
+        terms_html = (
+            f"<h2>Termini più cercati</h2>\n"
+            f"<p class=\"meta\">{terms['total']:,} ricerche, "
+            f"{terms['distinct_terms']:,} termini distinti.</p>\n"
+            + render_table(
+                [(t["term"], t["calls"]) for t in terms.get("top_terms", [])[:20]],
+                ("Termine", "Ricerche"),
+            )
+        )
+    else:
+        terms_html = ""
+
     return (
         f"<h2>Utilizzo MCP — ultimi {mcp.get('_days_window', 30)} giorni</h2>\n"
         f"<p class=\"meta\">Periodo dati MCP: {days_range}</p>\n"
         f"{cards}\n\n"
         f"<h2>Tool MCP più chiamati</h2>\n"
         f"{table_tools}\n\n"
+        f"{heatmap_html}\n\n"
         f"<h2>Comuni più consultati via MCP</h2>\n"
         f"{table_mcp_comuni}\n\n"
         f"<h2>Client che usano l'MCP</h2>\n"
-        f"{table_clients}"
+        f"{table_clients}\n\n"
+        f"{terms_html}\n\n"
+        f"{errors_html}"
+    )
+
+
+def _render_heatmap(by_day_tool: list[dict]) -> str:
+    """
+    Renderizza heatmap giorno × tool come tabella HTML con celle colorate
+    secondo l'intensità (steps di sfumatura del blu).
+    """
+    if not by_day_tool:
+        return ""
+
+    # Raccolgo giorni e tool unici, ordinati
+    days = sorted({r["day"] for r in by_day_tool})
+    tools = sorted({r["tool"] for r in by_day_tool})
+
+    # Matrice di lookup
+    grid: dict[tuple[str, str], int] = {(r["day"], r["tool"]): r["calls"] for r in by_day_tool}
+
+    # Trovo il max per scalare l'intensità
+    max_val = max((r["calls"] for r in by_day_tool), default=1)
+
+    def cell_color(n: int) -> str:
+        if n == 0:
+            return "background:#F5F6F7"
+        # Intensità: 5 livelli di blu
+        ratio = n / max_val
+        if ratio > 0.8:
+            return "background:#0066CC;color:#fff"
+        if ratio > 0.6:
+            return "background:#3385D6"
+        if ratio > 0.4:
+            return "background:#66A3E0"
+        if ratio > 0.2:
+            return "background:#99C2EB"
+        return "background:#CCE0F5"
+
+    # Header con i tool
+    header = "  <tr><th>Giorno</th>" + "".join(
+        f'<th style="text-align:center">{t}</th>' for t in tools
+    ) + "</tr>"
+
+    # Righe
+    rows = []
+    for day in days:
+        cells = []
+        for tool in tools:
+            n = grid.get((day, tool), 0)
+            style = cell_color(n)
+            cells.append(
+                f'<td style="text-align:center;font-variant-numeric:tabular-nums;{style}">'
+                f'{n if n else "·"}</td>'
+            )
+        rows.append(f"  <tr><td>{day}</td>{''.join(cells)}</tr>")
+
+    table_html = (
+        f"<table style=\"font-size:0.85rem\">\n"
+        f"  <thead>{header}</thead>\n"
+        f"  <tbody>\n{chr(10).join(rows)}\n  </tbody>\n"
+        f"</table>"
+    )
+
+    return (
+        f"<h2>Tool calls per giorno</h2>\n"
+        f"<p class=\"meta\">Heatmap: intensità del colore proporzionale "
+        f"al volume (max {max_val:,} chiamate/giorno/tool).</p>\n"
+        f"{table_html}"
     )
 
 

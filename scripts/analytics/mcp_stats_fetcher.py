@@ -114,10 +114,10 @@ def get_bulk_values(account_id: str, namespace_id: str, token: str,
     return result
 
 
-def aggregate(keys_values: dict[str, str], istat_names: dict[str, str],
-              days_window: int) -> dict:
+def aggregate_main(keys_values: dict[str, str], istat_names: dict[str, str],
+                   days_window: int) -> dict:
     """
-    Aggrega le coppie key→value in statistiche.
+    Aggrega i counter principali (prefix 'analytics:').
     Key format: `analytics:YYYY-MM-DD:<tool>:<istat>:<client>`
     """
     cutoff = (date.today() - timedelta(days=days_window)).isoformat()
@@ -126,14 +126,14 @@ def aggregate(keys_values: dict[str, str], istat_names: dict[str, str],
     by_comune: dict[str, int] = defaultdict(int)
     by_client: dict[str, int] = defaultdict(int)
     by_day: dict[str, int] = defaultdict(int)
-    by_tool_comune: dict[tuple[str, str], int] = defaultdict(int)
+    # Heatmap: matrice giorno × tool
+    by_day_tool: dict[tuple[str, str], int] = defaultdict(int)
     total = 0
 
     skipped_malformed = 0
     skipped_old = 0
 
     for k, v in keys_values.items():
-        # k = "analytics:YYYY-MM-DD:tool:istat:client"
         parts = k.split(":", 4)
         if len(parts) != 5 or parts[0] != "analytics":
             skipped_malformed += 1
@@ -151,16 +151,11 @@ def aggregate(keys_values: dict[str, str], istat_names: dict[str, str],
         by_tool[tool] += n
         by_client[client] += n
         by_day[day] += n
+        by_day_tool[(day, tool)] += n
         if istat != "_":
             by_comune[istat] += n
-            by_tool_comune[(tool, istat)] += n
 
     return {
-        "_generated_at": time.strftime("%Y-%m-%dT%H:%M:%S+00:00", time.gmtime()),
-        "_days_window": days_window,
-        "_period_start": cutoff,
-        "_skipped_malformed": skipped_malformed,
-        "_skipped_old": skipped_old,
         "totals": {
             "calls": total,
             "distinct_tools": len(by_tool),
@@ -187,7 +182,94 @@ def aggregate(keys_values: dict[str, str], istat_names: dict[str, str],
             {"day": d, "calls": n}
             for d, n in sorted(by_day.items())
         ],
+        "by_day_tool": [
+            {"day": d, "tool": t, "calls": n}
+            for (d, t), n in sorted(by_day_tool.items())
+        ],
+        "_skipped_malformed": skipped_malformed,
+        "_skipped_old": skipped_old,
     }
+
+
+def aggregate_errors(keys_values: dict[str, str], days_window: int) -> dict:
+    """
+    Aggrega i counter degli errori (prefix 'analytics-err:').
+    Key format: `analytics-err:YYYY-MM-DD:<tool>:<client>`
+    """
+    cutoff = (date.today() - timedelta(days=days_window)).isoformat()
+    by_tool: dict[str, int] = defaultdict(int)
+    by_client: dict[str, int] = defaultdict(int)
+    total = 0
+
+    for k, v in keys_values.items():
+        parts = k.split(":", 3)
+        if len(parts) != 4 or parts[0] != "analytics-err":
+            continue
+        _, day, tool, client = parts
+        if day < cutoff:
+            continue
+        try:
+            n = int(v)
+        except (ValueError, TypeError):
+            continue
+        total += n
+        by_tool[tool] += n
+        by_client[client] += n
+
+    return {
+        "total": total,
+        "by_tool": [
+            {"tool": t, "errors": n}
+            for t, n in sorted(by_tool.items(), key=lambda x: -x[1])
+        ],
+        "by_client": [
+            {"client": c, "errors": n}
+            for c, n in sorted(by_client.items(), key=lambda x: -x[1])
+        ],
+    }
+
+
+def aggregate_terms(keys_values: dict[str, str], days_window: int,
+                    limit: int = 30) -> dict:
+    """
+    Aggrega i termini di ricerca (prefix 'analytics-term:').
+    Key format: `analytics-term:YYYY-MM-DD:<slug>`
+    """
+    cutoff = (date.today() - timedelta(days=days_window)).isoformat()
+    by_term: dict[str, int] = defaultdict(int)
+    total = 0
+
+    for k, v in keys_values.items():
+        parts = k.split(":", 2)
+        if len(parts) != 3 or parts[0] != "analytics-term":
+            continue
+        _, day, slug = parts
+        if day < cutoff:
+            continue
+        try:
+            n = int(v)
+        except (ValueError, TypeError):
+            continue
+        total += n
+        by_term[slug] += n
+
+    return {
+        "total": total,
+        "distinct_terms": len(by_term),
+        "top_terms": [
+            {"term": t, "calls": n}
+            for t, n in sorted(by_term.items(), key=lambda x: -x[1])[:limit]
+        ],
+    }
+
+
+def fetch_prefix(account_id: str, namespace_id: str, token: str,
+                 prefix: str) -> dict[str, str]:
+    """Lista + bulk get di tutte le chiavi con il prefix dato."""
+    keys = list_keys(account_id, namespace_id, token, prefix)
+    if not keys:
+        return {}
+    return get_bulk_values(account_id, namespace_id, token, keys)
 
 
 def main() -> int:
@@ -198,8 +280,6 @@ def main() -> int:
                     help="JSON mapping {istat: nome} (opzionale)")
     ap.add_argument("--days", type=int, default=30,
                     help="Numero di giorni recenti da aggregare (default: 30)")
-    ap.add_argument("--prefix", default="analytics:",
-                    help="Prefix delle chiavi KV da leggere (default: analytics:)")
     args = ap.parse_args()
 
     account_id = os.environ.get("CF_ACCOUNT_ID")
@@ -225,38 +305,37 @@ def main() -> int:
         if p.exists():
             istat_names = json.loads(p.read_text(encoding="utf-8"))
 
-    print(f"→ Listo keys con prefix '{args.prefix}'...")
     try:
-        keys = list_keys(account_id, namespace_id, token, args.prefix)
-    except (HTTPError, URLError, RuntimeError) as e:
-        print(f"✗ Errore lista keys: {e}", file=sys.stderr)
-        return 1
-    print(f"✓ Keys trovate: {len(keys):,}")
+        print(f"→ Fetch prefix 'analytics:' (counter principali)...")
+        main_kv = fetch_prefix(account_id, namespace_id, token, "analytics:")
+        print(f"  ✓ {len(main_kv):,} keys")
 
-    if not keys:
-        # Scrivi comunque output vuoto per non rompere il consumer
-        empty = {
-            "_generated_at": time.strftime("%Y-%m-%dT%H:%M:%S+00:00", time.gmtime()),
-            "_days_window": args.days,
-            "totals": {"calls": 0, "distinct_tools": 0,
-                       "distinct_comuni": 0, "distinct_clients": 0},
-            "by_tool": [], "by_comune": [], "by_client": [], "by_day": [],
-        }
-        (out_dir / "mcp_stats.json").write_text(
-            json.dumps(empty, indent=2, ensure_ascii=False), encoding="utf-8")
-        print(f"✓ Output vuoto scritto in {out_dir / 'mcp_stats.json'}")
-        return 0
+        print(f"→ Fetch prefix 'analytics-err:' (errori)...")
+        err_kv = fetch_prefix(account_id, namespace_id, token, "analytics-err:")
+        print(f"  ✓ {len(err_kv):,} keys")
 
-    print(f"→ Leggo valori in bulk (batch 100)...")
-    try:
-        values = get_bulk_values(account_id, namespace_id, token, keys)
+        print(f"→ Fetch prefix 'analytics-term:' (termini ricerca)...")
+        term_kv = fetch_prefix(account_id, namespace_id, token, "analytics-term:")
+        print(f"  ✓ {len(term_kv):,} keys")
     except (HTTPError, URLError, RuntimeError) as e:
-        print(f"✗ Errore bulk get: {e}", file=sys.stderr)
+        print(f"✗ Errore fetch: {e}", file=sys.stderr)
         return 1
-    print(f"✓ Valori letti: {len(values):,}")
 
     print(f"→ Aggrego (window {args.days} giorni)...")
-    stats = aggregate(values, istat_names, args.days)
+    main_stats = aggregate_main(main_kv, istat_names, args.days)
+    errors = aggregate_errors(err_kv, args.days)
+    terms = aggregate_terms(term_kv, args.days)
+
+    cutoff = (date.today() - timedelta(days=args.days)).isoformat()
+
+    stats = {
+        "_generated_at": time.strftime("%Y-%m-%dT%H:%M:%S+00:00", time.gmtime()),
+        "_days_window": args.days,
+        "_period_start": cutoff,
+        **main_stats,
+        "errors": errors,
+        "search_terms": terms,
+    }
 
     out_file = out_dir / "mcp_stats.json"
     out_file.write_text(json.dumps(stats, indent=2, ensure_ascii=False),
@@ -266,6 +345,8 @@ def main() -> int:
     print(f"✓ Tool distinti: {stats['totals']['distinct_tools']}")
     print(f"✓ Comuni distinti: {stats['totals']['distinct_comuni']}")
     print(f"✓ Client distinti: {stats['totals']['distinct_clients']}")
+    print(f"✓ Errori totali: {errors['total']:,}")
+    print(f"✓ Termini ricerca distinti: {terms['distinct_terms']:,} ({terms['total']:,} ricerche)")
     print(f"✓ Output: {out_file}")
     return 0
 
