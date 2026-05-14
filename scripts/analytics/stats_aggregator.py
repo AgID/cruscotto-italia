@@ -368,7 +368,7 @@ HTML_TEMPLATE = """<!doctype html>
 <h1>Cruscotto Italia — Statistiche</h1>
 <p class="meta">
   Generato: {generated_at}<br>
-  Periodo: {days_range}{exclude_note}
+  {days_range}{exclude_note}
 </p>
 
 <div class="grid">
@@ -591,7 +591,12 @@ def _render_heatmap(by_day_tool: list[dict]) -> str:
 
 def render_html(stats: dict, mcp_stats_path: Path | None = None) -> str:
     days = list(stats["per_day"].keys())
-    days_range = f"{days[0]} → {days[-1]}" if days else "n/d"
+    if len(days) == 1:
+        days_range = f"Statistiche del giorno {days[0]}"
+    elif len(days) > 1:
+        days_range = f"Statistiche dal {days[0]} al {days[-1]}"
+    else:
+        days_range = "Nessun dato"
     exclude_note = (
         "<br>\n  Sono esclusi i comuni di test Roma (058091), Lecce (075035), "
         "Matera (077014), Morterone (097055)."
