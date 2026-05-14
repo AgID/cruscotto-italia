@@ -243,6 +243,7 @@ def aggregate(log_paths: list[Path], exclude_test: bool = False,
         "top_comuni": Counter(),       # istat → conteggio
         "top_referer_domains": Counter(),
         "top_pages": Counter(),        # path senza querystring
+        "attacks_by_host": Counter(),  # host → conteggio attacchi (dal log con $host)
         "status_distribution": Counter(),
         "method_distribution": Counter(),
     }
@@ -270,6 +271,9 @@ def aggregate(log_paths: list[Path], exclude_test: bool = False,
                 # sul sito, quindi sono sempre 4xx).
                 if is_attack(ev["uri"]):
                     stats["totals"]["hits_attack"] += 1
+                    # Aggrega per host (solo se log ha $host, post-modifica)
+                    if ev.get("host"):
+                        stats["attacks_by_host"][ev["host"]] += 1
                     continue
                 if ev["status"] >= 400:
                     stats["totals"]["hits_error"] += 1
@@ -333,6 +337,10 @@ def aggregate(log_paths: list[Path], exclude_test: bool = False,
         "top_pages": [
             {"page": p, "hits": n}
             for p, n in stats["top_pages"].most_common(20)
+        ],
+        "attacks_by_host": [
+            {"host": h, "hits": n}
+            for h, n in stats["attacks_by_host"].most_common()
         ],
         "status_distribution": dict(stats["status_distribution"]),
         "method_distribution": dict(stats["method_distribution"]),
@@ -400,6 +408,8 @@ HTML_TEMPLATE = """<!doctype html>
   <div class="card"><div class="card-val">{hits_error}</div><div class="card-lbl">Errori 4xx/5xx</div></div>
   <div class="card"><div class="card-val">{unique_comuni}</div><div class="card-lbl">Comuni distinti visti</div></div>
 </div>
+
+{section_attacks_by_host}
 
 <h2>Comuni più consultati</h2>
 {table_comuni}
@@ -642,6 +652,19 @@ def render_html(stats: dict, mcp_stats_path: Path | None = None) -> str:
         ("Dominio referer", "Visite"),
     ) if stats["top_referer_domains"] else "<p class=\"meta\">Nessun referer esterno.</p>"
 
+    # Sezione "Attacchi per sito": mostrata solo se ci sono attacchi
+    # tracciati con $host (post-modifica log_format) E almeno 2 host distinti.
+    # Per host singolo è ridondante con il counter principale.
+    by_host = stats.get("attacks_by_host", [])
+    if len(by_host) >= 2:
+        rows_host = [(item["host"], item["hits"]) for item in by_host]
+        section_attacks_by_host = (
+            "<h2>Tentativi attacco per sito</h2>\n"
+            + render_table(rows_host, ("Sito", "Tentativi"))
+        )
+    else:
+        section_attacks_by_host = ""
+
     return HTML_TEMPLATE.format(
         generated_at=stats["_generated_at"],
         days_range=days_range,
@@ -651,6 +674,7 @@ def render_html(stats: dict, mcp_stats_path: Path | None = None) -> str:
         hits_attack=f"{stats['totals']['hits_attack']:,}",
         hits_error=f"{stats['totals']['hits_error']:,}",
         unique_comuni=len(stats["top_comuni"]),
+        section_attacks_by_host=section_attacks_by_host,
         table_comuni=table_comuni,
         table_days=table_days,
         table_pages=table_pages,
