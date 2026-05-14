@@ -4432,7 +4432,9 @@ function initImmobiliPa(d) {
 // ===========================================================================
 // Tab Punti di ricarica (PUN) - GSE/MASE Piattaforma Unica Nazionale
 // Single source: dashboard/<istat>.json sezione "pun" (rebuild quotidiano).
-// Marker scheme: bordo continuo=Attivo, tratteggiato=Non Attivo;
+// Marker scheme: cerchio=Attivo, quadrato=Non Attivo (shape diverso per
+// leggibilita' immediata, vs precedente bordo continuo/tratteggiato che
+// risultava visivamente indistinguibile a circleMarker di raggio 6px);
 //                fill per categoria potenza (Slow/Quick/Fast/HPC/Ultra fast).
 // ===========================================================================
 
@@ -4521,7 +4523,7 @@ function renderPunTab(d) {
             ${renderPunFilters(k.mix_potenza || {})}
           </div>
           <div class="veicoli-euro-note">
-            Bordo <strong>continuo</strong> = Attivo, bordo <strong>tratteggiato</strong> = Non attivo.
+            <strong>● Cerchio</strong> = Attivo · <strong>■ Quadrato</strong> = Non attivo.
             Cluster auto-aggregati a basso zoom.
           </div>
         </div>
@@ -4978,7 +4980,7 @@ function renderCarburantiTab(d) {
             ${renderCarburantiFiltersFuel(d.punti)}
           </div>
           <div class="veicoli-euro-note">
-            Bordo <strong>continuo</strong> = Stradale, bordo <strong>tratteggiato</strong> = Autostradale.
+            <strong>● Cerchio</strong> = impianto Stradale · <strong>■ Quadrato</strong> = impianto Autostradale.
             Marker con <strong>anello dorato e stella ★</strong> = impianto con il prezzo più basso del comune
             (★ = un carburante, ★★ = sia benzina che gasolio).
             Cluster auto-aggregati a basso zoom. Filtri in AND: bandiera selezionata <em>e</em> impianto che eroga il carburante selezionato.
@@ -5082,57 +5084,58 @@ async function initCarburanti(d, regione) {
   const cheapestGasId = carbCheapest(punti, 'gasolio_self')?.id ?? null;
 
   // 4) Marker + cluster
+  // Schema visivo:
+  //   - Stradale  → cerchio (default)
+  //   - Autostradale → quadrato (forma diversa = leggibilita' immediata a vista)
+  //   - Cheapest → variante con anello dorato + stella "★"
+  // Fill = colore bandiera (palette riconoscibile).
   const markersLayer = L.layerGroup().addTo(map);
+
+  // Costruisce l'SVG del marker. shape='circle'|'rect', size=lato/diametro,
+  // color=fill, isCheapest=ring dorato + stella sopra.
+  function buildCarbMarkerSvg(shape, color, isCheapest, crown) {
+    const ring = isCheapest
+      ? '<circle cx="14" cy="14" r="13" fill="#E8A317" opacity="0.30"/>'
+      : '';
+    const ringStroke = isCheapest ? '#E8A317' : '#1a1a1a';
+    const stroke = isCheapest ? 2.5 : 1.8;
+    let shapeSvg = '';
+    if (shape === 'rect') {
+      // quadrato 16x16 centrato a 14,14 -> x=6,y=6
+      shapeSvg = `<rect x="6" y="6" width="16" height="16" rx="2" fill="${color}" stroke="${ringStroke}" stroke-width="${stroke}"/>`;
+    } else {
+      shapeSvg = `<circle cx="14" cy="14" r="8" fill="${color}" stroke="${ringStroke}" stroke-width="${stroke}"/>`;
+    }
+    const text = (isCheapest && crown)
+      ? `<text x="14" y="18" text-anchor="middle" font-family="var(--ui)" font-size="10" font-weight="700" fill="#1a1a1a">${crown}</text>`
+      : '';
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 28 28" aria-hidden="true">${ring}${shapeSvg}${text}</svg>`;
+  }
 
   function makeDot(p) {
     const brand = p.brand || 'Pompe Bianche';
     const color = carbBrandColor(brand);
     const stradale = (p.tipo === 'Stradale' || !p.tipo);
+    const shape = stradale ? 'circle' : 'rect';
+
     // Highlight per gli impianti con prezzo piu' basso del comune
     const isCheapestBenz = p.id != null && p.id === cheapestBenzId;
     const isCheapestGas  = p.id != null && p.id === cheapestGasId;
     const isCheapest = isCheapestBenz || isCheapestGas;
+    const crown = isCheapest ? ((isCheapestBenz && isCheapestGas) ? '★★' : '★') : '';
 
-    if (isCheapest) {
-      // Marker speciale: divIcon SVG con anello dorato + colore brand + corona "★"
-      // (per distinguerli dai semplici circleMarker degli altri impianti)
-      const ringColor = '#E8A317';            // oro
-      const ringStroke = stradale ? '#1a1a1a' : ringColor;
-      const dash = stradale ? '' : 'stroke-dasharray="3,3"';
-      const crown = (isCheapestBenz && isCheapestGas) ? '★★' : '★';
-      const html = `
-        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 28 28" aria-hidden="true">
-          <circle cx="14" cy="14" r="12" fill="${ringColor}" opacity="0.25"/>
-          <circle cx="14" cy="14" r="9" fill="${color}" stroke="${ringStroke}" stroke-width="2" ${dash} opacity="${stradale ? 0.95 : 0.7}"/>
-          <text x="14" y="18" text-anchor="middle" font-family="var(--ui)" font-size="10" font-weight="700" fill="#1a1a1a">${crown}</text>
-        </svg>`;
-      const m = L.marker([p.lat, p.lon], {
-        icon: L.divIcon({
-          html,
-          className: 'carburanti-cheapest',
-          iconSize: [28, 28],
-          iconAnchor: [14, 14]
-        }),
-        keyboard: false,
-        // Z-index sopra agli altri marker
-        zIndexOffset: 1000
-      });
-      m.bindPopup(buildCarbPopup(p, color, stradale, brand, isCheapestBenz, isCheapestGas));
-      return m;
-    }
-
-    // Marker normale: circleMarker con fill brand
-    const options = {
-      radius: 6,
-      fillColor: color,
-      color: stradale ? '#1a1a1a' : color,
-      weight: stradale ? 1.8 : 1.5,
-      opacity: 1,
-      fillOpacity: stradale ? 0.9 : 0.55
-    };
-    if (!stradale) options.dashArray = '3,3';
-    const m = L.circleMarker([p.lat, p.lon], options);
-    m.bindPopup(buildCarbPopup(p, color, stradale, brand, false, false));
+    const html = buildCarbMarkerSvg(shape, color, isCheapest, crown);
+    const m = L.marker([p.lat, p.lon], {
+      icon: L.divIcon({
+        html,
+        className: 'carburanti-marker' + (isCheapest ? ' carburanti-cheapest' : '') + (stradale ? '' : ' carburanti-autostradale'),
+        iconSize: [28, 28],
+        iconAnchor: [14, 14]
+      }),
+      keyboard: false,
+      zIndexOffset: isCheapest ? 1000 : 0
+    });
+    m.bindPopup(buildCarbPopup(p, color, stradale, brand, isCheapestBenz, isCheapestGas));
     return m;
   }
 
@@ -5403,17 +5406,30 @@ function initPun(d) {
     const cat = p.potenza_categoria || 'Slow';
     const color = PUN_CAT_COLORS[cat] || '#9CA3AF';
     const attivo = (p.stato === 'Attivo');
-    // Opzione C: bordo continuo=Attivo, tratteggiato=Non Attivo. Stesso fill per categoria.
-    const options = {
-      radius: 6,
-      fillColor: color,
-      color: attivo ? '#1a1a1a' : color,
-      weight: attivo ? 1.8 : 1.5,
-      opacity: 1,
-      fillOpacity: attivo ? 0.9 : 0.55
-    };
-    if (!attivo) options.dashArray = '3,3';
-    const m = L.circleMarker([p.lat, p.lon], options);
+    // Schema visivo:
+    //   - Attivo    → cerchio (default, piu' frequente)
+    //   - Non attivo → quadrato (forma diversa = leggibilita' immediata)
+    // Fill = colore categoria potenza (palette PUN_CAT_COLORS).
+    const shape = attivo ? 'circle' : 'rect';
+    const stroke = attivo ? '#1a1a1a' : '#666';
+    const strokeW = attivo ? 1.8 : 1.5;
+    const fillOp = attivo ? 0.9 : 0.55;
+    let shapeSvg = '';
+    if (shape === 'rect') {
+      shapeSvg = `<rect x="6" y="6" width="16" height="16" rx="2" fill="${color}" fill-opacity="${fillOp}" stroke="${stroke}" stroke-width="${strokeW}"/>`;
+    } else {
+      shapeSvg = `<circle cx="14" cy="14" r="8" fill="${color}" fill-opacity="${fillOp}" stroke="${stroke}" stroke-width="${strokeW}"/>`;
+    }
+    const html = `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 28 28" aria-hidden="true">${shapeSvg}</svg>`;
+    const m = L.marker([p.lat, p.lon], {
+      icon: L.divIcon({
+        html,
+        className: 'pun-marker' + (attivo ? '' : ' pun-marker-inactive'),
+        iconSize: [28, 28],
+        iconAnchor: [14, 14]
+      }),
+      keyboard: false
+    });
     const popupHtml = `
       <div style="font-family:var(--ui);font-size:12px;min-width:200px">
         <div style="font-weight:600;color:${color};margin-bottom:4px">
