@@ -1,5 +1,19 @@
 name: Deploy · Worker
 
+# Workflow disabilitato per default: il deploy live del Worker MCP
+# (cruscotto-italia-mcp.piersoftckan.biz) avviene da Aruba self-hosted
+# con `cd worker && npm run typecheck && npm run deploy` — NON via
+# GitHub Actions.
+#
+# Nota tecnica: questo workflow usa `deploy --env production`, ma per
+# il deploy attuale di Cruscotto Italia il comando corretto e' `npm run
+# deploy` top-level (env DATA R2 + CACHE KV + ratelimit bindings).
+# `--env production` creerebbe un Worker secondario senza i binding R2.
+#
+# Resta nel repo come scaffolding per la migrazione AgID di giugno 2026.
+# Il job e' gated dal check 'has_secrets' che salta silenziosamente
+# quando i secrets non sono presenti.
+
 on:
   push:
     branches: [main]
@@ -9,8 +23,29 @@ on:
   workflow_dispatch:
 
 jobs:
+  preflight:
+    name: Check Cloudflare secrets
+    runs-on: ubuntu-latest
+    outputs:
+      has_secrets: ${{ steps.check.outputs.has_secrets }}
+    steps:
+      - id: check
+        env:
+          CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          if [ -n "$CF_TOKEN" ] && [ -n "$CF_ACCOUNT" ]; then
+            echo "has_secrets=true" >> $GITHUB_OUTPUT
+            echo "Secrets Cloudflare presenti: procedo con il deploy."
+          else
+            echo "has_secrets=false" >> $GITHUB_OUTPUT
+            echo "Secrets Cloudflare non configurati: deploy disabilitato (vedi commento header)."
+          fi
+
   deploy:
     name: Deploy MCP Worker to Cloudflare
+    needs: [preflight]
+    if: needs.preflight.outputs.has_secrets == 'true'
     runs-on: ubuntu-latest
     environment: production
     defaults:

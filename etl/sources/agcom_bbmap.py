@@ -82,7 +82,6 @@ import csv
 import hashlib
 import io
 import json
-import re
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed

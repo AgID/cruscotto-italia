@@ -524,7 +524,7 @@ def build_shards(anag_rows: list[dict],
 
     # KPI per shard
     today_dt = datetime.now(timezone.utc).date()
-    for istat, sh in shards.items():
+    for _istat, sh in shards.items():
         punti = sh["punti"]
         n_tot = len(punti)
         n_stradali = sum(1 for p in punti if p["tipo"] == "Stradale")

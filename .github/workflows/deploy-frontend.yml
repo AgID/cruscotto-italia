@@ -1,5 +1,17 @@
 name: Deploy · Frontend
 
+# Workflow disabilitato per default: il deploy live di Cruscotto Italia
+# avviene su server Aruba self-hosted (cruscotto-italia.piersoftckan.biz)
+# via git pull manuale, NON via Cloudflare Pages. Il workflow resta nel
+# repo come scaffolding pronto per quando AgID attivera' l'hosting
+# istituzionale a giugno 2026 su cruscotto-italia.dati.gov.it: in quel
+# momento bastera' aggiungere i secrets CLOUDFLARE_API_TOKEN e
+# CLOUDFLARE_ACCOUNT_ID per riattivarlo.
+#
+# Il job e' gated dal check 'has_secrets' che termina con success
+# (non failure) quando i secrets non sono presenti: cosi' i 100+ fail
+# storici si fermano e la run rimane verde.
+
 on:
   push:
     branches: [main]
@@ -9,8 +21,29 @@ on:
   workflow_dispatch:
 
 jobs:
+  preflight:
+    name: Check Cloudflare secrets
+    runs-on: ubuntu-latest
+    outputs:
+      has_secrets: ${{ steps.check.outputs.has_secrets }}
+    steps:
+      - id: check
+        env:
+          CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          if [ -n "$CF_TOKEN" ] && [ -n "$CF_ACCOUNT" ]; then
+            echo "has_secrets=true" >> $GITHUB_OUTPUT
+            echo "Secrets Cloudflare presenti: procedo con il deploy."
+          else
+            echo "has_secrets=false" >> $GITHUB_OUTPUT
+            echo "Secrets Cloudflare non configurati: deploy disabilitato (vedi commento header)."
+          fi
+
   deploy:
     name: Deploy frontend to Cloudflare Pages
+    needs: [preflight]
+    if: needs.preflight.outputs.has_secrets == 'true'
     runs-on: ubuntu-latest
     environment: production
     steps:
