@@ -4883,15 +4883,15 @@ const CARB_FUEL_LABELS = {
 const CARB_FUEL_ORDER = ["benzina_self", "benzina_serv", "gasolio_self",
                           "gasolio_serv", "gpl", "metano", "hvo"];
 
-// Cerca nei punti il piu' economico per un carburante. Restituisce brand e indirizzo
-// per arricchire la KPI card "prezzo minimo".
+// Cerca nei punti il piu' economico per un carburante. Restituisce id+brand+indirizzo
+// per arricchire la KPI card "prezzo minimo" E per evidenziare il marker in mappa.
 function carbCheapest(punti, fuel) {
   let best = null;
   for (const p of (punti || [])) {
     const pr = p.prezzi && p.prezzi[fuel];
     if (pr == null) continue;
     if (!best || pr < best.prezzo) {
-      best = { prezzo: pr, brand: p.brand || 'Pompe Bianche', name: p.name, indirizzo: p.indirizzo };
+      best = { id: p.id, prezzo: pr, brand: p.brand || 'Pompe Bianche', name: p.name, indirizzo: p.indirizzo };
     }
   }
   return best;
@@ -4979,6 +4979,8 @@ function renderCarburantiTab(d) {
           </div>
           <div class="veicoli-euro-note">
             Bordo <strong>continuo</strong> = Stradale, bordo <strong>tratteggiato</strong> = Autostradale.
+            Marker con <strong>anello dorato e stella ★</strong> = impianto con il prezzo più basso del comune
+            (★ = un carburante, ★★ = sia benzina che gasolio).
             Cluster auto-aggregati a basso zoom. Filtri in AND: bandiera selezionata <em>e</em> impianto che eroga il carburante selezionato.
           </div>
         </div>
@@ -5074,6 +5076,11 @@ async function initCarburanti(d, regione) {
   let activeFuel = fuelsAvailable.has('benzina_self') ? 'benzina_self'
                  : (fuelsAvailable.size ? Array.from(fuelsAvailable)[0] : null);
 
+  // ID degli impianti piu' economici (uno per benzina_self, uno per gasolio_self):
+  // questi marker vengono evidenziati graficamente in mappa con anello dorato.
+  const cheapestBenzId = carbCheapest(punti, 'benzina_self')?.id ?? null;
+  const cheapestGasId = carbCheapest(punti, 'gasolio_self')?.id ?? null;
+
   // 4) Marker + cluster
   const markersLayer = L.layerGroup().addTo(map);
 
@@ -5081,6 +5088,40 @@ async function initCarburanti(d, regione) {
     const brand = p.brand || 'Pompe Bianche';
     const color = carbBrandColor(brand);
     const stradale = (p.tipo === 'Stradale' || !p.tipo);
+    // Highlight per gli impianti con prezzo piu' basso del comune
+    const isCheapestBenz = p.id != null && p.id === cheapestBenzId;
+    const isCheapestGas  = p.id != null && p.id === cheapestGasId;
+    const isCheapest = isCheapestBenz || isCheapestGas;
+
+    if (isCheapest) {
+      // Marker speciale: divIcon SVG con anello dorato + colore brand + corona "★"
+      // (per distinguerli dai semplici circleMarker degli altri impianti)
+      const ringColor = '#E8A317';            // oro
+      const ringStroke = stradale ? '#1a1a1a' : ringColor;
+      const dash = stradale ? '' : 'stroke-dasharray="3,3"';
+      const crown = (isCheapestBenz && isCheapestGas) ? '★★' : '★';
+      const html = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 28 28" aria-hidden="true">
+          <circle cx="14" cy="14" r="12" fill="${ringColor}" opacity="0.25"/>
+          <circle cx="14" cy="14" r="9" fill="${color}" stroke="${ringStroke}" stroke-width="2" ${dash} opacity="${stradale ? 0.95 : 0.7}"/>
+          <text x="14" y="18" text-anchor="middle" font-family="var(--ui)" font-size="10" font-weight="700" fill="#1a1a1a">${crown}</text>
+        </svg>`;
+      const m = L.marker([p.lat, p.lon], {
+        icon: L.divIcon({
+          html,
+          className: 'carburanti-cheapest',
+          iconSize: [28, 28],
+          iconAnchor: [14, 14]
+        }),
+        keyboard: false,
+        // Z-index sopra agli altri marker
+        zIndexOffset: 1000
+      });
+      m.bindPopup(buildCarbPopup(p, color, stradale, brand, isCheapestBenz, isCheapestGas));
+      return m;
+    }
+
+    // Marker normale: circleMarker con fill brand
     const options = {
       radius: 6,
       fillColor: color,
@@ -5091,17 +5132,33 @@ async function initCarburanti(d, regione) {
     };
     if (!stradale) options.dashArray = '3,3';
     const m = L.circleMarker([p.lat, p.lon], options);
-    // Popup con prezzi correnti (solo non null)
+    m.bindPopup(buildCarbPopup(p, color, stradale, brand, false, false));
+    return m;
+  }
+
+  // Costruisce HTML popup riusabile da marker normali + cheapest.
+  // Se isCheapestBenz/Gas, aggiunge un badge "prezzo piu' basso del comune".
+  function buildCarbPopup(p, color, stradale, brand, isCheapestBenz, isCheapestGas) {
     let prezziHtml = '';
     if (p.prezzi) {
       const rows = CARB_FUEL_ORDER
         .filter(f => p.prezzi[f] != null)
-        .map(f => `<div><b>${CARB_FUEL_LABELS[f]}:</b> € ${p.prezzi[f].toFixed(3)}</div>`)
+        .map(f => {
+          const highlight = (f === 'benzina_self' && isCheapestBenz) || (f === 'gasolio_self' && isCheapestGas);
+          return `<div${highlight ? ' style="background:#FFF7E0;padding:2px 4px;border-left:3px solid #E8A317;margin:2px 0"' : ''}><b>${CARB_FUEL_LABELS[f]}:</b> € ${p.prezzi[f].toFixed(3)}${highlight ? ' <span style="color:#E8A317;font-weight:700">★ MIN</span>' : ''}</div>`;
+        })
         .join('');
       prezziHtml = rows;
     }
-    const popupHtml = `
+    const cheapestBadges = [];
+    if (isCheapestBenz) cheapestBadges.push('Benzina più economica del comune');
+    if (isCheapestGas) cheapestBadges.push('Gasolio più economico del comune');
+    const badgeHtml = cheapestBadges.length
+      ? `<div style="background:#E8A317;color:#fff;font-weight:600;font-size:11px;padding:3px 6px;border-radius:3px;margin-bottom:6px">★ ${cheapestBadges.join(' · ')}</div>`
+      : '';
+    return `
       <div style="font-family:var(--ui);font-size:12px;min-width:220px">
+        ${badgeHtml}
         <div style="font-weight:600;color:${color};margin-bottom:4px">
           ${brand} &middot; ${stradale ? 'Stradale' : 'Autostradale'}
         </div>
@@ -5112,8 +5169,6 @@ async function initCarburanti(d, regione) {
         ${p.id ? `<div style="font-family:var(--mono);font-size:10px;color:var(--mute)">ID impianto: ${p.id}</div>` : ''}
       </div>
     `;
-    m.bindPopup(popupHtml);
-    return m;
   }
 
   function makeCluster(lat, lon, count) {
@@ -5252,6 +5307,8 @@ async function initCarburantiChart(d, regione) {
       indexAxis: 'y',
       responsive: true,
       maintainAspectRatio: false,
+      // Padding sx per evitare che label asse Y (Benzina/Gasolio) vengano tagliate
+      layout: { padding: { left: 12, right: 12, top: 4, bottom: 4 } },
       plugins: {
         legend: { position: 'bottom', labels: { font: { family: 'var(--ui)', size: 11 }, padding: 8, boxWidth: 12 } },
         tooltip: {
@@ -5268,7 +5325,18 @@ async function initCarburantiChart(d, regione) {
           title: { display: true, text: '€/litro', font: { family: 'var(--ui)', size: 11 } },
           ticks: { callback: v => '€ ' + v.toFixed(2) }
         },
-        y: { ticks: { font: { family: 'var(--ui)', size: 11 } } }
+        y: {
+          ticks: {
+            font: { family: 'var(--ui)', size: 11 },
+            // autoSkip:false impedisce a Chart.js di omettere label per "fare spazio".
+            // padding aumenta lo spazio tra il testo e l'asse.
+            autoSkip: false,
+            padding: 6
+          },
+          // afterFit alloca esplicitamente piu' larghezza all'asse Y per le label lunghe
+          // (Chart.js calcola in automatico ma con label corte tipo "Benzina (self)" sotto-stima).
+          afterFit: (scale) => { scale.width = Math.max(scale.width, 110); }
+        }
       }
     }
   });
