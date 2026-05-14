@@ -25,7 +25,15 @@ interface JsonRpcResponse {
   error?: { code: number; message: string; data?: unknown };
 }
 
-const PROTOCOL_VERSION = "2024-11-05";
+const SUPPORTED_PROTOCOL_VERSIONS = ["2025-06-18", "2025-03-26", "2024-11-05"];
+const DEFAULT_PROTOCOL_VERSION = "2025-06-18";
+
+function negotiateProtocolVersion(requested: unknown): string {
+  if (typeof requested === "string" && SUPPORTED_PROTOCOL_VERSIONS.includes(requested)) {
+    return requested;
+  }
+  return DEFAULT_PROTOCOL_VERSION;
+}
 
 export async function handleMcp(
   req: Request,
@@ -48,20 +56,29 @@ export async function handleMcp(
   }
 
   switch (body.method) {
-    case "initialize":
+    case "initialize": {
+      const requestedVersion = (body.params as { protocolVersion?: unknown } | undefined)?.protocolVersion;
+      const negotiatedVersion = negotiateProtocolVersion(requestedVersion);
       return rpcOk(body.id, {
-        protocolVersion: PROTOCOL_VERSION,
+        protocolVersion: negotiatedVersion,
         capabilities: { tools: {} },
         serverInfo: { name: "cruscotto-italia-mcp", version: "0.1.0" },
       });
+    }
 
     case "tools/list":
       return rpcOk(body.id, {
-        tools: Object.entries(tools).map(([name, def]) => ({
-          name,
-          description: def.description,
-          inputSchema: def.inputSchema,
-        })),
+        tools: Object.entries(tools).map(([name, def]) => {
+          const t: Record<string, unknown> = {
+            name,
+            description: def.description,
+            inputSchema: def.inputSchema,
+          };
+          if (def.outputSchema) {
+            t.outputSchema = def.outputSchema;
+          }
+          return t;
+        }),
       });
 
     case "tools/call": {
@@ -74,9 +91,18 @@ export async function handleMcp(
       try {
         const result = await tool.handler(args, env);
         _ctx.waitUntil(trackToolCall(req, env, params.name, args, "ok"));
-        return rpcOk(body.id, {
+        // ChatGPT (OpenAI MCP custom connector) richiede structuredContent
+        // al top-level del tool result per i tool `search` e `fetch`.
+        // Per gli altri tool restiamo backward-compatible col formato MCP base.
+        // Ref: https://developers.openai.com/api/docs/mcp
+        const isOpenAICompat = params.name === "search" || params.name === "fetch";
+        const responsePayload: Record<string, unknown> = {
           content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
-        });
+        };
+        if (isOpenAICompat) {
+          responsePayload.structuredContent = result;
+        }
+        return rpcOk(body.id, responsePayload);
       } catch (err) {
         _ctx.waitUntil(trackToolCall(req, env, params.name, args, "error"));
         return rpcError(body.id ?? null, -32000, `Tool error: ${String(err)}`);

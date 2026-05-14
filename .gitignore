@@ -58,3 +58,6 @@ coverage/
 htmlcov/
 *.bak*
 output/
+
+# ETL scratch locale (non versionato; i dati live sono su R2)
+data/

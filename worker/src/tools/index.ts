@@ -34,6 +34,7 @@ import { comuneDashboard } from "./comune_dashboard.js";
 import { searchComune } from "./search_comune.js";
 import { mcpInfo } from "./mcp_info.js";
 import { anncsuCivicoSearch } from "./anncsu_civico_search.js";
+import { openaiSearch, openaiFetch } from "./openai_compat.js";
 
 export type ToolHandler = (
   args: Record<string, unknown>,
@@ -43,6 +44,7 @@ export type ToolHandler = (
 export interface ToolDefinition {
   description: string;
   inputSchema: Record<string, unknown>;
+  outputSchema?: Record<string, unknown>;
   handler: ToolHandler;
 }
 
@@ -57,6 +59,9 @@ export const tools = {
   // Specializzati: forniscono dati NON ridondanti rispetto a comune_dashboard
   comune_opere_dettaglio: comuneOpereDettaglio,  // BDAP dettaglio filtrato 2025
   anncsu_civico_search: anncsuCivicoSearch,      // query puntuali civici ANNCSU
+  // OpenAI ChatGPT MCP custom connector compatibility (obbligatori, schema fisso)
+  search: openaiSearch,
+  fetch: openaiFetch,
 } satisfies Record<string, ToolDefinition>;
 
 export type ToolName = keyof typeof tools;
