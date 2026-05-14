@@ -5022,11 +5022,17 @@ function renderCarburantiTab(d) {
           <div class="impa-filters" id="carburanti-filters-fuel" role="group" aria-label="Filtri per carburante">
             ${renderCarburantiFiltersFuel(d.punti)}
           </div>
+          <div class="impa-filters" id="carburanti-filters-cheapest" role="group" aria-label="Mostra solo gli impianti piu' economici">
+            <button type="button" class="impa-chip" data-carb-cheapest="on" aria-pressed="false">
+              <span class="impa-chip-dot" style="background:#8C5E00"></span>
+              <span class="impa-chip-label">★ Solo i più economici del comune</span>
+            </button>
+          </div>
           <div class="veicoli-euro-note">
             <strong>● Cerchio</strong> = impianto Stradale · <strong>■ Quadrato</strong> = impianto Autostradale.
             Marker con <strong>anello dorato e stella ★</strong> = impianto con il prezzo più basso del comune
             (★ = un carburante, ★★ = sia benzina che gasolio).
-            Cluster auto-aggregati a basso zoom. Filtri in AND: bandiera selezionata <em>e</em> impianto che eroga il carburante selezionato.
+            Cluster auto-aggregati a basso zoom; con il filtro <em>★ Solo i più economici</em> attivo i cluster vengono sciolti per rendere visibili i marker premiati anche su mappe dense (Roma, Napoli, Milano).
           </div>
         </div>
         <div>
@@ -5125,6 +5131,12 @@ async function initCarburanti(d, regione) {
   // questi marker vengono evidenziati graficamente in mappa con anello dorato.
   const cheapestBenzId = carbCheapest(punti, 'benzina_self')?.id ?? null;
   const cheapestGasId = carbCheapest(punti, 'gasolio_self')?.id ?? null;
+
+  // Filtro "Solo i piu' economici": quando true, mostra SOLTANTO i 2 marker
+  // cheapest (benz + gasolio) ignorando bandiera e carburante selezionato.
+  // Utile su mappe dense (Napoli, Roma, Milano) dove i cheapest finiscono
+  // dentro a cluster e diventano invisibili.
+  let cheapestOnly = false;
 
   // 4) Marker + cluster
   // Schema visivo:
@@ -5237,6 +5249,12 @@ async function initCarburanti(d, regione) {
   }
 
   function filterPunti() {
+    // Quando il filtro "Solo i piu' economici" e' attivo, ignora gli altri
+    // filtri e mostra solo i 2 cheapest del comune (puo' essere 1 solo se
+    // benz e gasolio sono dello stesso impianto = ★★).
+    if (cheapestOnly) {
+      return punti.filter(p => p.id === cheapestBenzId || p.id === cheapestGasId);
+    }
     return punti.filter(p => {
       const brand = p.brand || 'Pompe Bianche';
       if (!activeBrands.has(brand)) return false;
@@ -5249,7 +5267,9 @@ async function initCarburanti(d, regione) {
     markersLayer.clearLayers();
     const z = map.getZoom();
     const visible = filterPunti();
-    if (z >= 14 || visible.length <= 50) {
+    // Con cheapestOnly attivo bypass cluster: i marker premiati restano
+    // sempre visibili, anche se sovrapposti. Sono al massimo 2.
+    if (cheapestOnly || z >= 14 || visible.length <= 50) {
       visible.forEach(p => markersLayer.addLayer(makeDot(p)));
       return;
     }
@@ -5310,6 +5330,34 @@ async function initCarburanti(d, regione) {
       btn.setAttribute('aria-pressed', 'true');
       activeFuel = (fuel === '__any__') ? null : fuel;
       redrawClusters();
+    });
+  }
+
+  // 6b) Listener chip "Solo i piu' economici" (toggle on/off).
+  // Quando attivato: zoom su un bbox che contiene entrambi i marker cheapest
+  // (utile su comuni grandi tipo Roma/Napoli dove possono essere lontani).
+  const cheapestFilter = document.getElementById('carburanti-filters-cheapest');
+  if (cheapestFilter) {
+    cheapestFilter.addEventListener('click', (ev) => {
+      const btn = ev.target.closest('.impa-chip');
+      if (!btn) return;
+      cheapestOnly = !cheapestOnly;
+      btn.setAttribute('aria-pressed', cheapestOnly ? 'true' : 'false');
+      redrawClusters();
+      if (cheapestOnly) {
+        const cheapestPunti = punti.filter(p => p.id === cheapestBenzId || p.id === cheapestGasId);
+        if (cheapestPunti.length === 1) {
+          // Singolo marker (caso ★★): zoom alto centrato sopra
+          map.setView([cheapestPunti[0].lat, cheapestPunti[0].lon], 15);
+        } else if (cheapestPunti.length === 2) {
+          // Due marker: fit bounds con padding
+          const b = L.latLngBounds(cheapestPunti.map(p => [p.lat, p.lon]));
+          map.fitBounds(b, { padding: [60, 60], maxZoom: 15 });
+        }
+      } else {
+        // Disattivazione: torna al bounding box di tutti i punti
+        map.fitBounds(bounds, { padding: [20, 20] });
+      }
     });
   }
 
