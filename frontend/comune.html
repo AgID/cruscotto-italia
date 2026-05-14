@@ -1398,6 +1398,10 @@ function renderComune(data) {
   window.__punInited = false;
   window.__bandaLargaData = k.agcom_bbmap || null;
   window.__bandaLargaInited = false;
+  window.__carburantiData = k.carburanti || null;
+  window.__carburantiInited = false;
+  window.__carburantiNazionale = null;        // fetch lazy alla prima apertura tab
+  window.__carburantiRegione = a.regione || null;
   const tabs = [
     { id: 'panoramica', label: 'Panoramica', kpi: '' },
     { id: 'anncsu', label: 'ANNCSU', kpi: k.anncsu?.kpi?.n_strade != null ? fmtNum(k.anncsu.kpi.n_strade) : '—' },
@@ -1405,6 +1409,7 @@ function renderComune(data) {
     { id: 'banda-larga', label: 'Banda larga', kpi: k.agcom_bbmap?.kpi?.copertura_ftth_desi_pct != null ? Math.round(k.agcom_bbmap.kpi.copertura_ftth_desi_pct) + '%' : '—' },
     { id: 'contratti', label: 'Contratti', kpi: fmtNum(k.contratti?.count || 0) },
     { id: 'demografia', label: 'Demografia', kpi: k.popolazione != null ? fmtNum(k.popolazione) : '—' },
+    { id: 'carburanti', label: 'Distributori e prezzi', kpi: k.carburanti?.kpi?.n_impianti != null ? fmtNum(k.carburanti.kpi.n_impianti) : '—' },
     { id: 'opere', label: 'Opere', kpi: k.opere?.count != null ? fmtNum(k.opere.count) : '—' },
     { id: 'patrimonio-pa', label: 'Patrimonio PA', kpi: k.immobili_pa?.kpi?.n_totale != null ? fmtNum(k.immobili_pa.kpi.n_totale) : '—' },
     { id: 'pnrr', label: 'PNRR', kpi: '<span data-tab-pnrr-count><span class="tab-spinner"></span></span>' },
@@ -1584,6 +1589,7 @@ function renderComune(data) {
       ${renderAnncsuTab(k.anncsu)}
       ${renderPunTab(k.pun)}
       ${renderBandaLargaTab(k.agcom_bbmap, a, k.territorio)}
+      ${renderCarburantiTab(k.carburanti)}
     </div>
   `;
 }
@@ -4825,6 +4831,461 @@ function initBandaLarga(d) {
   }
 }
 
+// ----------------------------------------------------------------------------
+// Tab Distributori e prezzi - MIMIT Osservatorio Prezzi Carburanti, 18a fonte
+// ----------------------------------------------------------------------------
+// Single source: dashboard/<istat>.json sezione "carburanti" (rebuild giornaliero).
+// Schema: kpi { n_impianti, n_stradali, n_autostradali, n_pompe_bianche,
+//   pct_pompe_bianche, n_bandiere_distinte, mix_bandiere {top5+Altre},
+//   prezzo_medio {benzina_self,benzina_serv,gasolio_self,gasolio_serv,gpl,
+//   metano,hvo}, prezzo_min {benzina_self,gasolio_self}, freshness_pct }
+// punti[] { id, name, brand, tipo (Stradale|Autostradale), lat, lon,
+//   indirizzo, prezzi {benzina_self,benzina_serv,gasolio_self,gasolio_serv,
+//   gpl,metano,hvo}, prezzi_extra{<premium>}?, ultimo_aggiornamento }
+//
+// Marker scheme: fill per bandiera (palette top brand + Pompe Bianche + Altre),
+// bordo continuo=Stradale, bordo dashed=Autostradale.
+// Filtri: chip per bandiera + chip per carburante (mappa filtra in AND).
+// Chart: bar orizzontale prezzo comune vs media regionale vs media nazionale,
+// fetch lazy carburanti/_nazionale.json alla prima apertura tab.
+
+// Palette colori per bandiera. Top 5 nazionali + Pompe Bianche + Altre.
+// (Allineata visualmente alle bandiere conosciute, NON neutrale: vuole essere
+// riconoscibile per chi guida.)
+const CARB_BRAND_COLORS = {
+  "Agip Eni":       "#FFD400",   // giallo Eni
+  "Api-Ip":         "#003C71",   // blu Api/IP
+  "Q8":             "#E30613",   // rosso Q8
+  "Esso":           "#005EB8",   // blu Esso
+  "Tamoil":         "#D7232A",   // rosso Tamoil
+  "Shell":          "#FFCC00",   // giallo Shell
+  "Pompe Bianche":  "#7A7A7A",   // grigio
+  "Altre":          "#B0B0B0",   // grigio chiaro fallback
+};
+const CARB_BRAND_FALLBACK = "#B0B0B0";
+
+function carbBrandColor(brand) {
+  if (!brand) return CARB_BRAND_FALLBACK;
+  if (CARB_BRAND_COLORS[brand]) return CARB_BRAND_COLORS[brand];
+  return CARB_BRAND_FALLBACK;
+}
+
+// Etichette carburanti per chip + popup. Slug interno -> label umana.
+const CARB_FUEL_LABELS = {
+  "benzina_self": "Benzina (self)",
+  "benzina_serv": "Benzina (serv.)",
+  "gasolio_self": "Gasolio (self)",
+  "gasolio_serv": "Gasolio (serv.)",
+  "gpl":          "GPL",
+  "metano":       "Metano",
+  "hvo":          "HVO",
+};
+const CARB_FUEL_ORDER = ["benzina_self", "benzina_serv", "gasolio_self",
+                          "gasolio_serv", "gpl", "metano", "hvo"];
+
+// Cerca nei punti il piu' economico per un carburante. Restituisce brand e indirizzo
+// per arricchire la KPI card "prezzo minimo".
+function carbCheapest(punti, fuel) {
+  let best = null;
+  for (const p of (punti || [])) {
+    const pr = p.prezzi && p.prezzi[fuel];
+    if (pr == null) continue;
+    if (!best || pr < best.prezzo) {
+      best = { prezzo: pr, brand: p.brand || 'Pompe Bianche', name: p.name, indirizzo: p.indirizzo };
+    }
+  }
+  return best;
+}
+
+function renderCarburantiTab(d) {
+  if (!d || !d.kpi || d.kpi.n_impianti == null || d.kpi.n_impianti === 0) {
+    return `
+      <div class="tab-pane" id="pane-carburanti">
+        <div class="section-title">§ Distributori e prezzi</div>
+        <h2 class="section-h">Nessun distributore di carburante <em>registrato</em>.</h2>
+        <p class="muted">L'Osservatorio Prezzi Carburanti del MIMIT non riporta impianti
+        attivi per questo comune. Sono coperti <strong>~5.450 comuni su 7.896 (69%)</strong>:
+        i comuni senza distributore sono per la quasi totalità micro-comuni di montagna
+        o piccoli paesi rurali. L'aggiornamento è quotidiano, snapshot
+        "Prezzo alle 8 di mattina".</p>
+      </div>`;
+  }
+  const k = d.kpi;
+  const pm = k.prezzo_medio || {};
+  const pmin = k.prezzo_min || {};
+  const cheapestBenz = carbCheapest(d.punti, 'benzina_self');
+  const cheapestGas = carbCheapest(d.punti, 'gasolio_self');
+  const dataLastMod = d._data_last_modified || '—';
+  const pctAuto = (k.n_impianti > 0 && k.n_autostradali != null)
+    ? (k.n_autostradali / k.n_impianti * 100) : null;
+  const fmtPrezzo = (v) => (v != null && !isNaN(v)) ? '€ ' + v.toFixed(3) : '—';
+
+  return `
+    <div class="tab-pane" id="pane-carburanti">
+      <div class="section-title">§ Distributori e prezzi</div>
+      <h2 class="section-h">${fmtNum(k.n_impianti)} ${k.n_impianti === 1 ? 'distributore' : 'distributori'} attivi, prezzi al <em>${dataLastMod}</em>.</h2>
+      <p class="section-sub">
+        Anagrafica e prezzi praticati comunicati quotidianamente dai gestori al
+        <a href="https://carburanti.mise.gov.it/" target="_blank" rel="noopener">MIMIT — Osservatorio Prezzi Carburanti</a>
+        (ai sensi dell'art.&nbsp;51 della Legge&nbsp;99/2009). Dato aggiornato giornalmente, snapshot "Prezzo alle 8 di mattina".
+      </p>
+      <div class="kpi-cards">
+        <div class="kpi-card">
+          <div class="kpi-card-lab">Totale impianti</div>
+          <div class="kpi-card-val">${fmtNum(k.n_impianti)}</div>
+          <div class="kpi-card-sub">${fmtNum(k.n_stradali || 0)} stradali · ${fmtNum(k.n_autostradali || 0)} autostradali</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-card-lab">Benzina (self)</div>
+          <div class="kpi-card-val">${fmtPrezzo(pm.benzina_self)}</div>
+          <div class="kpi-card-sub">prezzo medio nel comune · €/litro</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-card-lab">Gasolio (self)</div>
+          <div class="kpi-card-val">${fmtPrezzo(pm.gasolio_self)}</div>
+          <div class="kpi-card-sub">prezzo medio nel comune · €/litro</div>
+        </div>
+        <div class="kpi-card ${cheapestBenz ? '' : 'tbd'}">
+          <div class="kpi-card-lab">Benzina più economica</div>
+          <div class="kpi-card-val">${cheapestBenz ? fmtPrezzo(cheapestBenz.prezzo) : '—'}</div>
+          <div class="kpi-card-sub">${cheapestBenz ? `${cheapestBenz.brand}` : 'nessun dato'}</div>
+        </div>
+        <div class="kpi-card ${cheapestGas ? '' : 'tbd'}">
+          <div class="kpi-card-lab">Gasolio più economico</div>
+          <div class="kpi-card-val">${cheapestGas ? fmtPrezzo(cheapestGas.prezzo) : '—'}</div>
+          <div class="kpi-card-sub">${cheapestGas ? `${cheapestGas.brand}` : 'nessun dato'}</div>
+        </div>
+        <div class="kpi-card ${(k.n_pompe_bianche || 0) > 0 ? '' : 'tbd'}">
+          <div class="kpi-card-lab">Pompe bianche</div>
+          <div class="kpi-card-val">${fmtNum(k.n_pompe_bianche || 0)}</div>
+          <div class="kpi-card-sub">${k.pct_pompe_bianche != null ? k.pct_pompe_bianche.toFixed(1) + '% del totale' : 'non affiliate a bandiera'}</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-card-lab">Prezzi aggiornati</div>
+          <div class="kpi-card-val">${k.freshness_pct != null ? k.freshness_pct.toFixed(0) + '%' : '—'}</div>
+          <div class="kpi-card-sub">aggiornati negli ultimi 7 giorni</div>
+        </div>
+      </div>
+
+      <div class="veicoli-grid">
+        <div>
+          <h3 class="veicoli-col-h">Mappa (${fmtNum((d.punti || []).length)} impianti)</h3>
+          <div id="carburanti-map-main" class="impa-map" role="region" aria-label="Mappa distributori di carburante"></div>
+          <div class="impa-filters" id="carburanti-filters-brand" role="group" aria-label="Filtri per bandiera">
+            ${renderCarburantiFiltersBrand(k.mix_bandiere || {})}
+          </div>
+          <div class="impa-filters" id="carburanti-filters-fuel" role="group" aria-label="Filtri per carburante">
+            ${renderCarburantiFiltersFuel(d.punti)}
+          </div>
+          <div class="veicoli-euro-note">
+            Bordo <strong>continuo</strong> = Stradale, bordo <strong>tratteggiato</strong> = Autostradale.
+            Cluster auto-aggregati a basso zoom. Filtri in AND: bandiera selezionata <em>e</em> impianto che eroga il carburante selezionato.
+          </div>
+        </div>
+        <div>
+          <h3 class="veicoli-col-h">Confronto prezzo medio</h3>
+          <div class="pun-chart-wrap">
+            <canvas id="carburanti-prezzi-chart" aria-label="Confronto prezzo medio comune vs regione vs Italia" role="img"></canvas>
+          </div>
+          <div class="veicoli-euro-note" id="carburanti-prezzi-note">
+            Caricamento medie nazionali e regionali in corso…
+          </div>
+        </div>
+      </div>
+
+      <p class="muted" style="font-family:var(--mono);font-size:11px;margin-top:18px;">
+        Fonte: <a href="https://www.mimit.gov.it/it/open-data/elenco-dataset/carburanti-prezzi-praticati-e-anagrafica-degli-impianti" target="_blank" rel="noopener">MIMIT — Osservatorio Prezzi Carburanti</a>.
+        Licenza IODL 2.0 (attribution-only, compatibile con CC BY).
+        Snapshot: ${dataLastMod}.
+      </p>
+    </div>`;
+}
+
+// Chip filtri bandiera. Solo i brand effettivamente presenti nel comune.
+function renderCarburantiFiltersBrand(mixBandiere) {
+  const entries = Object.entries(mixBandiere || {}).filter(([k, v]) => v > 0);
+  if (!entries.length) return '';
+  const chips = entries.map(([brand, count]) => {
+    const color = carbBrandColor(brand);
+    return `
+      <button type="button" class="impa-chip" data-carb-brand="${brand}" aria-pressed="true" style="--chip-color:${color}">
+        <span class="impa-chip-dot" style="background:${color}"></span>
+        <span class="impa-chip-label">${brand}</span>
+        <span class="impa-chip-count">${fmtNum(count)}</span>
+      </button>`;
+  }).join('');
+  return `
+    <button type="button" class="impa-chip impa-chip-all" data-carb-brand="__all__" aria-pressed="true">
+      <span class="impa-chip-label">Tutte le bandiere</span>
+    </button>
+    ${chips}`;
+}
+
+// Chip filtri carburante. Solo i carburanti effettivamente erogati nel comune.
+function renderCarburantiFiltersFuel(punti) {
+  const available = new Set();
+  (punti || []).forEach(p => {
+    if (!p.prezzi) return;
+    CARB_FUEL_ORDER.forEach(f => { if (p.prezzi[f] != null) available.add(f); });
+  });
+  if (!available.size) return '';
+  const chips = CARB_FUEL_ORDER.filter(f => available.has(f)).map(f => `
+      <button type="button" class="impa-chip" data-carb-fuel="${f}" aria-pressed="${f === 'benzina_self' ? 'true' : 'false'}">
+        <span class="impa-chip-label">${CARB_FUEL_LABELS[f]}</span>
+      </button>`).join('');
+  return `
+    <button type="button" class="impa-chip impa-chip-all" data-carb-fuel="__any__" aria-pressed="false">
+      <span class="impa-chip-label">Tutti i carburanti</span>
+    </button>
+    ${chips}`;
+}
+
+// initCarburanti: mappa Leaflet + cluster grid + filtri brand+fuel + chart confronto
+async function initCarburanti(d, regione) {
+  if (!d || !d.punti) return;
+  const punti = d.punti || [];
+  const mapEl = document.getElementById('carburanti-map-main');
+  if (!mapEl || typeof L === 'undefined') return;
+
+  if (!punti.length) {
+    mapEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted);font-family:var(--mono);font-size:12px;">Nessun impianto geo-referenziato.</div>';
+    return;
+  }
+
+  // 1) Bounding box impianti
+  const lats = punti.map(p => p.lat);
+  const lons = punti.map(p => p.lon);
+  const bounds = L.latLngBounds([[Math.min(...lats), Math.min(...lons)], [Math.max(...lats), Math.max(...lons)]]);
+
+  // 2) Mappa Leaflet + tile OSM
+  const map = L.map('carburanti-map-main', { scrollWheelZoom: false, zoomControl: true }).fitBounds(bounds, { padding: [20, 20] });
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+  }).addTo(map);
+
+  // 3) Stato filtri: brand attivi (default tutti) + carburante selezionato (default benzina_self se presente, altrimenti il primo disponibile)
+  const allBrands = new Set();
+  (punti || []).forEach(p => { if (p.brand) allBrands.add(p.brand); });
+  const activeBrands = new Set(allBrands);
+  // Insieme dei carburanti effettivamente disponibili nel comune
+  const fuelsAvailable = new Set();
+  punti.forEach(p => { if (p.prezzi) CARB_FUEL_ORDER.forEach(f => { if (p.prezzi[f] != null) fuelsAvailable.add(f); }); });
+  let activeFuel = fuelsAvailable.has('benzina_self') ? 'benzina_self'
+                 : (fuelsAvailable.size ? Array.from(fuelsAvailable)[0] : null);
+
+  // 4) Marker + cluster
+  const markersLayer = L.layerGroup().addTo(map);
+
+  function makeDot(p) {
+    const brand = p.brand || 'Pompe Bianche';
+    const color = carbBrandColor(brand);
+    const stradale = (p.tipo === 'Stradale' || !p.tipo);
+    const options = {
+      radius: 6,
+      fillColor: color,
+      color: stradale ? '#1a1a1a' : color,
+      weight: stradale ? 1.8 : 1.5,
+      opacity: 1,
+      fillOpacity: stradale ? 0.9 : 0.55
+    };
+    if (!stradale) options.dashArray = '3,3';
+    const m = L.circleMarker([p.lat, p.lon], options);
+    // Popup con prezzi correnti (solo non null)
+    let prezziHtml = '';
+    if (p.prezzi) {
+      const rows = CARB_FUEL_ORDER
+        .filter(f => p.prezzi[f] != null)
+        .map(f => `<div><b>${CARB_FUEL_LABELS[f]}:</b> € ${p.prezzi[f].toFixed(3)}</div>`)
+        .join('');
+      prezziHtml = rows;
+    }
+    const popupHtml = `
+      <div style="font-family:var(--ui);font-size:12px;min-width:220px">
+        <div style="font-weight:600;color:${color};margin-bottom:4px">
+          ${brand} &middot; ${stradale ? 'Stradale' : 'Autostradale'}
+        </div>
+        ${p.name ? `<div style="font-weight:500;margin-bottom:4px">${p.name}</div>` : ''}
+        ${p.indirizzo ? `<div style="color:var(--mute);font-size:11px;margin-bottom:6px">${p.indirizzo}</div>` : ''}
+        ${prezziHtml || '<div style="color:var(--mute);font-size:11px">Nessun prezzo comunicato</div>'}
+        ${p.ultimo_aggiornamento ? `<div style="font-family:var(--mono);font-size:10px;color:var(--mute);margin-top:6px">Ultimo aggiornamento: ${p.ultimo_aggiornamento}</div>` : ''}
+        ${p.id ? `<div style="font-family:var(--mono);font-size:10px;color:var(--mute)">ID impianto: ${p.id}</div>` : ''}
+      </div>
+    `;
+    m.bindPopup(popupHtml);
+    return m;
+  }
+
+  function makeCluster(lat, lon, count) {
+    const html = `<div style="background:#003C71;color:#fff;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-family:var(--ui);font-weight:700;font-size:13px;box-shadow:0 2px 4px rgba(0,0,0,0.3);border:2px solid #fff">${count}</div>`;
+    return L.marker([lat, lon], {
+      icon: L.divIcon({ html, className: 'carburanti-cluster', iconSize: [32, 32], iconAnchor: [16, 16] })
+    });
+  }
+
+  function filterPunti() {
+    return punti.filter(p => {
+      const brand = p.brand || 'Pompe Bianche';
+      if (!activeBrands.has(brand)) return false;
+      if (activeFuel && (!p.prezzi || p.prezzi[activeFuel] == null)) return false;
+      return true;
+    });
+  }
+
+  function redrawClusters() {
+    markersLayer.clearLayers();
+    const z = map.getZoom();
+    const visible = filterPunti();
+    if (z >= 14 || visible.length <= 50) {
+      visible.forEach(p => markersLayer.addLayer(makeDot(p)));
+      return;
+    }
+    const cellSize = z < 10 ? 0.05 : z < 12 ? 0.015 : 0.005;
+    const grid = new Map();
+    visible.forEach(p => {
+      const key = `${Math.floor(p.lat / cellSize)}_${Math.floor(p.lon / cellSize)}`;
+      if (!grid.has(key)) grid.set(key, []);
+      grid.get(key).push(p);
+    });
+    grid.forEach(cellPunti => {
+      if (cellPunti.length === 1) {
+        markersLayer.addLayer(makeDot(cellPunti[0]));
+      } else {
+        const avgLat = cellPunti.reduce((s, p) => s + p.lat, 0) / cellPunti.length;
+        const avgLon = cellPunti.reduce((s, p) => s + p.lon, 0) / cellPunti.length;
+        markersLayer.addLayer(makeCluster(avgLat, avgLon, cellPunti.length));
+      }
+    });
+  }
+  redrawClusters();
+  map.on('zoomend moveend', redrawClusters);
+
+  // 5) Listener chip filtri bandiera
+  const brandFilters = document.getElementById('carburanti-filters-brand');
+  if (brandFilters) {
+    brandFilters.addEventListener('click', (ev) => {
+      const btn = ev.target.closest('.impa-chip');
+      if (!btn) return;
+      const brand = btn.dataset.carbBrand;
+      if (brand === '__all__') {
+        activeBrands.clear();
+        allBrands.forEach(b => activeBrands.add(b));
+        brandFilters.querySelectorAll('.impa-chip').forEach(b => b.setAttribute('aria-pressed', 'true'));
+      } else {
+        if (activeBrands.has(brand)) {
+          activeBrands.delete(brand);
+          btn.setAttribute('aria-pressed', 'false');
+        } else {
+          activeBrands.add(brand);
+          btn.setAttribute('aria-pressed', 'true');
+        }
+        const allBtn = brandFilters.querySelector('.impa-chip-all');
+        if (allBtn) allBtn.setAttribute('aria-pressed', activeBrands.size === allBrands.size ? 'true' : 'false');
+      }
+      redrawClusters();
+    });
+  }
+
+  // 6) Listener chip filtri carburante (radio: solo uno alla volta, oppure "tutti")
+  const fuelFilters = document.getElementById('carburanti-filters-fuel');
+  if (fuelFilters) {
+    fuelFilters.addEventListener('click', (ev) => {
+      const btn = ev.target.closest('.impa-chip');
+      if (!btn) return;
+      const fuel = btn.dataset.carbFuel;
+      fuelFilters.querySelectorAll('.impa-chip').forEach(b => b.setAttribute('aria-pressed', 'false'));
+      btn.setAttribute('aria-pressed', 'true');
+      activeFuel = (fuel === '__any__') ? null : fuel;
+      redrawClusters();
+    });
+  }
+
+  // 7) Chart confronto prezzi comune vs regione vs Italia
+  //    Fetch lazy /carburanti/_nazionale.json (~4.5 KB)
+  await initCarburantiChart(d, regione);
+}
+
+async function initCarburantiChart(d, regione) {
+  const canvas = document.getElementById('carburanti-prezzi-chart');
+  const note = document.getElementById('carburanti-prezzi-note');
+  if (!canvas || !window.Chart) return;
+
+  let nazData = window.__carburantiNazionale;
+  if (!nazData) {
+    try {
+      const r = await fetch('https://cruscotto-italia-data.r2.dev/carburanti/_nazionale.json',
+        { method: 'GET' });
+      if (r.ok) {
+        nazData = await r.json();
+        window.__carburantiNazionale = nazData;
+      }
+    } catch (e) {
+      // Network o CORS error: rendiamo solo il prezzo comune
+    }
+  }
+
+  const pm = d.kpi?.prezzo_medio || {};
+  const naz = nazData?.nazionale || {};
+  const reg = (regione && nazData?.regionale?.[regione]) || {};
+  // Mostro solo i 4 carburanti core piu' rilevanti (la versione "self")
+  const fuels = ["benzina_self", "gasolio_self", "gpl", "metano"];
+  const labels = fuels.map(f => CARB_FUEL_LABELS[f]);
+
+  const dsComune = fuels.map(f => pm[f] != null ? pm[f] : null);
+  const dsRegione = fuels.map(f => reg[f] != null ? reg[f] : null);
+  const dsItalia = fuels.map(f => naz[f] != null ? naz[f] : null);
+
+  const datasets = [
+    { label: 'Comune', data: dsComune, backgroundColor: '#0066CC' },
+  ];
+  if (regione && dsRegione.some(v => v != null)) {
+    datasets.push({ label: regione, data: dsRegione, backgroundColor: '#7CB342' });
+  }
+  if (dsItalia.some(v => v != null)) {
+    datasets.push({ label: 'Italia', data: dsItalia, backgroundColor: '#9E9E9E' });
+  }
+
+  new Chart(canvas.getContext('2d'), {
+    type: 'bar',
+    data: { labels, datasets },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom', labels: { font: { family: 'var(--ui)', size: 11 }, padding: 8, boxWidth: 12 } },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => {
+              const v = ctx.parsed.x;
+              return `${ctx.dataset.label}: € ${v != null ? v.toFixed(3) : '—'}/litro`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          title: { display: true, text: '€/litro', font: { family: 'var(--ui)', size: 11 } },
+          ticks: { callback: v => '€ ' + v.toFixed(2) }
+        },
+        y: { ticks: { font: { family: 'var(--ui)', size: 11 } } }
+      }
+    }
+  });
+
+  if (note) {
+    if (nazData) {
+      const snapDate = nazData._snapshot_date || '—';
+      note.textContent = `Comune vs ${regione ? regione + ' vs ' : ''}media nazionale · snapshot ${snapDate}. ` +
+        `Le medie nazionali e regionali sono pre-calcolate ogni mattina dall'ETL su tutti gli ~23.700 impianti.`;
+    } else {
+      note.textContent = 'Confronto vs Italia/regione non disponibile (caricamento medie nazionali fallito). ' +
+        'I prezzi medi del comune restano visibili nelle card sopra.';
+    }
+  }
+}
+
+
 // Chip filtri: 5 categorie potenza + "Tutti"; toggle stato secondario.
 function renderPunFilters(mixPotenza) {
   const entries = PUN_CAT_ORDER
@@ -6929,6 +7390,15 @@ function bindTabSwitching() {
         }
       }
 
+      // Lazy-init mappa Leaflet + chart prezzi Carburanti al primo click
+      // Fetch async di carburanti/_nazionale.json per il confronto vs media nazionale/regionale
+      if (tab.dataset.tab === 'carburanti') {
+        if (window.__carburantiData && !window.__carburantiInited) {
+          setTimeout(() => initCarburanti(window.__carburantiData, window.__carburantiRegione), 0);
+          window.__carburantiInited = true;
+        }
+      }
+
       // Lazy-load tab Spese: chiamata al primo click
       if (tab.dataset.tab === 'spese') {
         const params = new URLSearchParams(window.location.search);
@@ -7653,6 +8123,7 @@ function adaptDashboardToOverview(d) {
       anncsu: d.anncsu,  // pass-through completo per renderAnncsuTab
       pun: d.pun,  // pass-through completo per renderPunTab
       agcom_bbmap: d.agcom_bbmap,  // pass-through completo per renderBandaLargaTab
+      carburanti: d.carburanti,    // pass-through completo per renderCarburantiTab
       // Pass-through aggiuntivi (servono alla Panoramica home per i KPI di sintesi):
       profilo: d.profilo,
       turismo: d.turismo,
@@ -7843,7 +8314,7 @@ CONTENUTO DELLO ZIP
 - METADATI.csv         Legenda campi, fonti, periodi di riferimento
 - LICENSE.txt          Licenza d'uso e attribuzioni
 
-FONTI INTEGRATE (17 dataset, 13 istituzioni)
+FONTI INTEGRATE (18 dataset, 14 istituzioni)
 --------------------------------------------
 - ANAC                              Contratti pubblici (OCDS)
 - BDAP-MOP                          Opere pubbliche dei comuni
@@ -7859,6 +8330,7 @@ FONTI INTEGRATE (17 dataset, 13 istituzioni)
 - Ministero della Salute            Farmacie, parafarmacie, posti letto ospedalieri
 - GSE / MASE                        Piattaforma Unica Nazionale (PUN) — punti di ricarica EV
 - AGCOM                             Broadband Map (BBmap) — copertura banda larga FTTH/FTTC
+- MIMIT                             Osservatorio Prezzi Carburanti — distributori e prezzi praticati
 
 I dati di origine sono pubblicati dalle istituzioni elencate in
 LICENSE.txt e sono disponibili sui rispettivi portali open data.
@@ -7928,6 +8400,24 @@ incluse nel JSON: la mappa di dettaglio è disponibile sul portale
 ufficiale AGCOM (https://geo.agcom.it/agcomapps/BB4/BB4_BBwired_na_app16_4/),
 linkata da Cruscotto Italia via deep-link con centro e zoom calcolati
 in base alla taglia del comune.
+
+NOTA SUI DISTRIBUTORI DI CARBURANTE (MIMIT)
+-------------------------------------------
+La sezione "carburanti" contiene l'anagrafica completa dei distributori
+di carburante attivi nel comune e i prezzi correnti comunicati dai
+gestori al MIMIT, pubblicati ai sensi dell'art. 51 della Legge 99/2009.
+Il campo "kpi" aggrega: numero totale impianti, split Stradali vs
+Autostradali, numero pompe bianche, mix bandiere (top 5 + Altre),
+prezzo medio per i 7 carburanti core (Benzina e Gasolio in versione
+self e servito, GPL, Metano, HVO), prezzo minimo nel comune per Benzina
+e Gasolio self, freshness (% di impianti con prezzo aggiornato negli
+ultimi 7 giorni). Il campo "punti" contiene TUTTI gli impianti del
+comune (senza cap) con lat, lon, indirizzo, bandiera, tipo, prezzi
+correnti per i carburanti core e premium proprietari (Shell V-Power,
+Hi-Q Diesel, Supreme Diesel, Blue Diesel) in "prezzi_extra".
+Aggiornamento quotidiano (snapshot "Prezzo alle 8 di mattina"); per
+i comuni piccoli senza distributori la sezione è omessa.
+Licenza IODL 2.0 (attribution-only, compatibile CC BY).
 
 `;
       zip.file('README.txt', readme);
