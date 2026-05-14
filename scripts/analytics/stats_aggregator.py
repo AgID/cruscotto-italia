@@ -79,6 +79,8 @@ PATH_ATTACK_PATTERNS = re.compile(
 PATH_INTERNAL = re.compile(
     r"(?:"
     r"^/favicon|^/robots\.txt|^/sitemap|^/stats(?:/|$)|"
+    r"^/analytics-api/|"  # chiamate AJAX SIMBA dashboard (polling realtime)
+    r"^/api/health(?:/|$)|"  # health check, non navigazione
     r"/assets/|/css/|/js/|/vendor/|/fonts/|/images/|/img/|/static/|"
     r"\.(?:ico|css|js|mjs|woff|woff2|ttf|eot|svg|png|jpg|jpeg|gif|webp|map)(?:\?|$)"
     r")",
