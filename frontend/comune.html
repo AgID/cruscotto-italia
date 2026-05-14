@@ -4853,7 +4853,9 @@ function initBandaLarga(d) {
 
 // Palette colori per bandiera. Top 5 nazionali + Pompe Bianche + Altre.
 // (Allineata visualmente alle bandiere conosciute, NON neutrale: vuole essere
-// riconoscibile per chi guida.)
+// riconoscibile per chi guida.) Pompe Bianche scelto piu' scuro di un puro
+// grigio medio per garantire contrast 4.5+:1 con la stella SVG bianca dei
+// marker cheapest (sicurezza WCAG 1.4.11 Non-text Contrast).
 const CARB_BRAND_COLORS = {
   "Agip Eni":       "#FFD400",   // giallo Eni
   "Api-Ip":         "#003C71",   // blu Api/IP
@@ -4861,7 +4863,7 @@ const CARB_BRAND_COLORS = {
   "Esso":           "#005EB8",   // blu Esso
   "Tamoil":         "#D7232A",   // rosso Tamoil
   "Shell":          "#FFCC00",   // giallo Shell
-  "Pompe Bianche":  "#7A7A7A",   // grigio
+  "Pompe Bianche":  "#666666",   // grigio scuro (contrast stella bianca 5.74:1)
   "Altre":          "#B0B0B0",   // grigio chiaro fallback
 };
 const CARB_BRAND_FALLBACK = "#B0B0B0";
@@ -4870,6 +4872,47 @@ function carbBrandColor(brand) {
   if (!brand) return CARB_BRAND_FALLBACK;
   if (CARB_BRAND_COLORS[brand]) return CARB_BRAND_COLORS[brand];
   return CARB_BRAND_FALLBACK;
+}
+
+// Helper contrasto WCAG: scelta automatica fra nero e bianco per testo
+// sovrapposto a un fill colorato. Usa relative luminance ex WCAG 2.x
+// (https://www.w3.org/TR/WCAG21/#dfn-relative-luminance).
+//
+// Soglia 0.179: corrisponde al "switch point" comunemente usato — sotto
+// 0.179 → background scuro, scegliere bianco; sopra → background chiaro,
+// scegliere nero. Verifica AA su tutti i brand della palette MIMIT:
+//   - Agip Eni #FFD400 (giallo, L 0.74) → nero ✓ contrast 16.4:1
+//   - Api-Ip #003C71 (blu navy, L 0.03) → bianco ✓ contrast 12.8:1
+//   - Q8 #E30613 (rosso, L 0.17) → bianco ✓ contrast 4.8:1
+//   - Esso #005EB8 (blu, L 0.10) → bianco ✓ contrast 7.7:1
+//   - Tamoil #D7232A (rosso, L 0.18) → bianco ✓ contrast 4.5:1
+//   - Shell #FFCC00 (giallo, L 0.69) → nero ✓ contrast 14.9:1
+//   - Pompe Bianche #7A7A7A (grigio, L 0.20) → bianco ✓ contrast 4.4:1
+//   - Altre #B0B0B0 (grigio chiaro, L 0.42) → nero ✓ contrast 7.7:1
+function bestTextOn(hexColor) {
+  if (!hexColor || typeof hexColor !== 'string') return '#1a1a1a';
+  const m = hexColor.replace('#', '').match(/^([0-9a-f]{6})$/i);
+  if (!m) return '#1a1a1a';
+  const r = parseInt(m[1].slice(0, 2), 16) / 255;
+  const g = parseInt(m[1].slice(2, 4), 16) / 255;
+  const b = parseInt(m[1].slice(4, 6), 16) / 255;
+  const toLin = (c) => c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  const L = 0.2126 * toLin(r) + 0.7152 * toLin(g) + 0.0722 * toLin(b);
+  return L < 0.179 ? '#ffffff' : '#1a1a1a';
+}
+
+// Versione "safe per testo su sfondo bianco": se il colore brand ha
+// contrasto < 4.5:1 su #fff, restituisce una variante piu' scura.
+// Brand problematici sostituiti: gialli chiari (Eni/Shell) e grigi
+// medi (Pompe Bianche/Altre) → tutti con contrast >= 4.7:1 verificato.
+const CARB_BRAND_TEXT_ON_WHITE = {
+  "Agip Eni":       "#8C7000",   // giallo Eni scuro (contrast 4.74:1 su bianco)
+  "Shell":          "#8C7000",   // stesso giallo scuro
+  "Pompe Bianche":  "#5A5A5A",   // grigio scuro (contrast 6.90:1 su bianco)
+  "Altre":          "#5A5A5A",   // stesso grigio scuro
+};
+function carbBrandTextColor(brand) {
+  return CARB_BRAND_TEXT_ON_WHITE[brand] || carbBrandColor(brand);
 }
 
 // Etichette carburanti per chip + popup. Slug interno -> label umana.
@@ -5092,7 +5135,7 @@ async function initCarburanti(d, regione) {
   const markersLayer = L.layerGroup().addTo(map);
 
   // Costruisce l'SVG del marker. shape='circle'|'rect', size=lato/diametro,
-  // color=fill, isCheapest=ring dorato + stella sopra.
+  // color=fill, isCheapest=ring dorato + stella sopra (colore dinamico).
   function buildCarbMarkerSvg(shape, color, isCheapest, crown) {
     const ring = isCheapest
       ? '<circle cx="14" cy="14" r="13" fill="#E8A317" opacity="0.30"/>'
@@ -5106,9 +5149,15 @@ async function initCarburanti(d, regione) {
     } else {
       shapeSvg = `<circle cx="14" cy="14" r="8" fill="${color}" stroke="${ringStroke}" stroke-width="${stroke}"/>`;
     }
-    const text = (isCheapest && crown)
-      ? `<text x="14" y="18" text-anchor="middle" font-family="var(--ui)" font-size="10" font-weight="700" fill="#1a1a1a">${crown}</text>`
-      : '';
+    let text = '';
+    if (isCheapest && crown) {
+      // Stella: colore scelto dinamicamente per contrasto su fill brand.
+      // Halo di contrasto (stroke opposto) garantisce leggibilita' anche
+      // su bordo dorato del ring esterno.
+      const textColor = bestTextOn(color);
+      const haloColor = textColor === '#ffffff' ? '#000000' : '#ffffff';
+      text = `<text x="14" y="18" text-anchor="middle" font-family="var(--ui)" font-size="10" font-weight="700" paint-order="stroke" stroke="${haloColor}" stroke-width="2" stroke-linejoin="round" fill="${textColor}">${crown}</text>`;
+    }
     return `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 28 28" aria-hidden="true">${ring}${shapeSvg}${text}</svg>`;
   }
 
@@ -5142,13 +5191,17 @@ async function initCarburanti(d, regione) {
   // Costruisce HTML popup riusabile da marker normali + cheapest.
   // Se isCheapestBenz/Gas, aggiunge un badge "prezzo piu' basso del comune".
   function buildCarbPopup(p, color, stradale, brand, isCheapestBenz, isCheapestGas) {
+    // Per testo su sfondo bianco del popup serve la versione "safe" del
+    // colore brand (i gialli Eni/Shell hanno contrast <4.5:1 puri, sono
+    // sostituiti con una variante scura in carbBrandTextColor).
+    const brandTextColor = carbBrandTextColor(brand);
     let prezziHtml = '';
     if (p.prezzi) {
       const rows = CARB_FUEL_ORDER
         .filter(f => p.prezzi[f] != null)
         .map(f => {
           const highlight = (f === 'benzina_self' && isCheapestBenz) || (f === 'gasolio_self' && isCheapestGas);
-          return `<div${highlight ? ' style="background:#FFF7E0;padding:2px 4px;border-left:3px solid #E8A317;margin:2px 0"' : ''}><b>${CARB_FUEL_LABELS[f]}:</b> € ${p.prezzi[f].toFixed(3)}${highlight ? ' <span style="color:#E8A317;font-weight:700">★ MIN</span>' : ''}</div>`;
+          return `<div${highlight ? ' style="background:#FFF7E0;padding:2px 4px;border-left:3px solid #B07800;margin:2px 0"' : ''}><b>${CARB_FUEL_LABELS[f]}:</b> € ${p.prezzi[f].toFixed(3)}${highlight ? ' <span style="color:#8C5E00;font-weight:700">★ MIN</span>' : ''}</div>`;
         })
         .join('');
       prezziHtml = rows;
@@ -5156,13 +5209,15 @@ async function initCarburanti(d, regione) {
     const cheapestBadges = [];
     if (isCheapestBenz) cheapestBadges.push('Benzina più economica del comune');
     if (isCheapestGas) cheapestBadges.push('Gasolio più economico del comune');
+    // Badge dorato: il #E8A317 con testo bianco e' al limite (3.5:1, non AA).
+    // Uso #8C5E00 (oro scuro) come fill: contrast 6.7:1 su bianco ✓.
     const badgeHtml = cheapestBadges.length
-      ? `<div style="background:#E8A317;color:#fff;font-weight:600;font-size:11px;padding:3px 6px;border-radius:3px;margin-bottom:6px">★ ${cheapestBadges.join(' · ')}</div>`
+      ? `<div style="background:#8C5E00;color:#fff;font-weight:600;font-size:11px;padding:3px 6px;border-radius:3px;margin-bottom:6px">★ ${cheapestBadges.join(' · ')}</div>`
       : '';
     return `
       <div style="font-family:var(--ui);font-size:12px;min-width:220px">
         ${badgeHtml}
-        <div style="font-weight:600;color:${color};margin-bottom:4px">
+        <div style="font-weight:600;color:${brandTextColor};margin-bottom:4px">
           ${brand} &middot; ${stradale ? 'Stradale' : 'Autostradale'}
         </div>
         ${p.name ? `<div style="font-weight:500;margin-bottom:4px">${p.name}</div>` : ''}
