@@ -652,26 +652,61 @@ def render_html(stats: dict, mcp_stats_path: Path | None = None) -> str:
         ("Dominio referer", "Visite"),
     ) if stats["top_referer_domains"] else "<p class=\"meta\">Nessun referer esterno.</p>"
 
-    # Sezione "Attacchi per sito": mostrata solo se ci sono attacchi
-    # tracciati con $host (post-modifica log_format) E almeno 2 host distinti.
-    # Per host singolo è ridondante con il counter principale.
+    # Sezione "Attacchi per sito": sempre visibile.
+    # Se 2+ host distinti → tabella comparativa.
+    # Se 0-1 host (caso comune: scanner colpiscono per IP server) → messaggio
+    # didattico che spiega la situazione.
     by_host = stats.get("attacks_by_host", [])
+
+    def humanize_host(h: str) -> str:
+        """Riconosce IPv4 raw (4 ottetti) o IPv6 (contiene ':') e aggiunge label."""
+        if re.match(r'^\d{1,3}(\.\d{1,3}){3}$', h) or ':' in h:
+            return f"{h} <span class=\"meta\">(scanner per IP)</span>"
+        return h
+
     if len(by_host) >= 2:
-        # Mappa IP raw (es. '31.14.139.9' = IP del server) a label leggibile.
-        # Gli scanner che colpiscono per IP usano l'IP server come Host header;
-        # un dominio reale invece arriva sempre come stringa tipo "foo.example".
-        def humanize_host(h: str) -> str:
-            # Riconosce IPv4 raw (4 ottetti) o IPv6 con ":"
-            if re.match(r'^\d{1,3}(\.\d{1,3}){3}$', h) or ':' in h:
-                return f"{h} <span class=\"meta\">(scanner per IP)</span>"
-            return h
         rows_host = [(humanize_host(item["host"]), item["hits"]) for item in by_host]
         section_attacks_by_host = (
             "<h2>Tentativi attacco per sito</h2>\n"
             + render_table(rows_host, ("Sito / origine", "Tentativi"))
         )
+    elif len(by_host) == 1:
+        # 1 solo host = quasi sempre l'IP server (scanner ciechi)
+        only_host = by_host[0]
+        is_ip = bool(re.match(r'^\d{1,3}(\.\d{1,3}){3}$', only_host["host"])) \
+                or ':' in only_host["host"]
+        if is_ip:
+            section_attacks_by_host = (
+                "<h2>Tentativi attacco per sito</h2>\n"
+                "<p class=\"meta\">Tutti i tentativi rilevati provengono da scanner "
+                "che colpiscono direttamente l'IP del server senza specificare un "
+                "dominio. È il pattern tipico delle botnet di scanning di massa: "
+                "trovano IP pubblici e provano exploit indiscriminatamente. "
+                "Non sono attacchi mirati a Cruscotto Italia o ad altri domini "
+                "ospitati sullo stesso server.</p>\n"
+                + render_table(
+                    [(humanize_host(only_host["host"]), only_host["hits"])],
+                    ("Sito / origine", "Tentativi"),
+                )
+            )
+        else:
+            # Caso raro: 1 solo host ed è un dominio reale
+            section_attacks_by_host = (
+                "<h2>Tentativi attacco per sito</h2>\n"
+                + render_table(
+                    [(humanize_host(only_host["host"]), only_host["hits"])],
+                    ("Sito / origine", "Tentativi"),
+                )
+            )
     else:
-        section_attacks_by_host = ""
+        # Nessun attacco con $host (es. log vecchio formato o nessun attack oggi)
+        section_attacks_by_host = (
+            "<h2>Tentativi attacco per sito</h2>\n"
+            "<p class=\"meta\">Nessun tentativo di attacco rilevato con dominio "
+            "tracciato. Possibili cause: nessun attacco oggi, oppure il log "
+            "nginx è in vecchio formato senza il campo "
+            "<code>$host</code>.</p>"
+        )
 
     return HTML_TEMPLATE.format(
         generated_at=stats["_generated_at"],
