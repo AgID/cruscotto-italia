@@ -52,16 +52,23 @@ UA_BOT_PATTERNS = re.compile(
 )
 
 # Path che sono evidentemente probe/attacchi (router exploit, CMS scan, etc.)
+# Path che indicano tentativi di attacco / scanning automatici.
+# Pattern intenzionalmente NON ancorato a inizio URI ('^/') perché
+# molti scanner tentano path annidati come '/zend/.env', '/var/www/.env',
+# '/wp/wp-admin/'. Matcha quindi ovunque nell'URI ('/.env' o 'wp-admin').
 PATH_ATTACK_PATTERNS = re.compile(
-    r"^/(?:"
-    r"boaform|admin|wp-admin|wp-login|wp-content|wp-includes|"
-    r"phpmyadmin|pma|mysql|adminer|"
-    r"\.env|\.git|\.aws|\.ssh|\.well-known/security|"
-    r"cgi-bin|fckeditor|tinymce|"
-    r"vendor/phpunit|api/v1/user|HNAP1|"
-    r"console|jenkins|gitlab|"
-    r"actuator|metrics|jolokia|"
-    r"webdav|backup|sql|dump"
+    r"(?:"
+    r"/\.env(?:\.|/|$)|"           # .env, .env.old, .env.backup, .env/...
+    r"/\.git(?:/|$)|"              # .git/config, .git/HEAD
+    r"/\.aws(?:/|$)|/\.ssh(?:/|$)|"
+    r"/boaform|/HNAP1|"            # router IoT exploit
+    r"/wp-admin|/wp-login|/wp-content|/wp-includes|/wordpress/|/wp/|"
+    r"/phpmyadmin|/pma/|/mysql/|/adminer|"
+    r"/cgi-bin|/fckeditor|/tinymce|"
+    r"/vendor/phpunit|/phpunit/|"
+    r"/HNAP1|/console/|/jenkins/|/gitlab/|"
+    r"/actuator/|/jolokia/|"
+    r"/webdav/|/\.well-known/security"
     r")",
     re.IGNORECASE,
 )
@@ -136,7 +143,8 @@ def is_bot(ua: str) -> bool:
 
 
 def is_attack(uri: str) -> bool:
-    return bool(PATH_ATTACK_PATTERNS.match(uri))
+    # search() per matchare anche path annidati tipo '/zend/.env', '/var/www/.env'
+    return bool(PATH_ATTACK_PATTERNS.search(uri))
 
 
 def is_internal_asset(uri: str) -> bool:
