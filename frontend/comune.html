@@ -1404,7 +1404,7 @@ function renderComune(data) {
   window.__carburantiRegione = a.regione || null;
   const tabs = [
     { id: 'panoramica', label: 'Panoramica', kpi: '' },
-    { id: 'anncsu', label: 'ANNCSU', kpi: k.anncsu?.kpi?.n_strade != null ? fmtNum(k.anncsu.kpi.n_strade) : '—' },
+    { id: 'anncsu', label: 'ANNCSU', kpi: k.anncsu?.kpi?.n_strade != null ? fmtNum(k.anncsu.kpi.n_strade) + (k.anncsu.kpi.n_civici != null ? ' / ' + fmtNum(k.anncsu.kpi.n_civici) : '') : '—' },
     { id: 'aria', label: 'Aria', kpi: '<span data-tab-aria-n><span class="tab-spinner"></span></span>' },
     { id: 'banda-larga', label: 'Banda larga', kpi: k.agcom_bbmap?.kpi?.copertura_ftth_desi_pct != null ? Math.round(k.agcom_bbmap.kpi.copertura_ftth_desi_pct) + '%' : '—' },
     { id: 'contratti', label: 'Contratti', kpi: fmtNum(k.contratti?.count || 0) },
@@ -1462,7 +1462,7 @@ function renderComune(data) {
           <div class="kpi-card ${k.anncsu?.kpi?.n_strade != null ? '' : 'tbd'}" data-go-tab="anncsu" tabindex="0" role="button" aria-label="Vai alla tab ANNCSU">
             <div class="kpi-card-lab">ANNCSU</div>
             <div class="kpi-card-val">${k.anncsu?.kpi?.n_strade != null ? fmtNum(k.anncsu.kpi.n_strade) : '—'}</div>
-            <div class="kpi-card-sub">strade certificate</div>
+            <div class="kpi-card-sub">${k.anncsu?.kpi?.n_civici != null ? 'strade · ' + fmtNum(k.anncsu.kpi.n_civici) + ' civici' : 'strade certificate'}</div>
           </div>
 
           <div class="kpi-card ${k.aria?.ultimo_anno?.no2?.media != null ? '' : 'tbd'}" data-go-tab="aria" tabindex="0" role="button" aria-label="Vai alla tab Aria">
