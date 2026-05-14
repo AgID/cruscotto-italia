@@ -94,11 +94,11 @@ def collect_attack_details(log_path: Path, max_hours: int = 1,
     try:
         with open(log_path, "rb") as f:
             # Tail veloce: ultimi ~5 MB del log
-            try:
+            size = os.fstat(f.fileno()).st_size
+            if size > 5 * 1024 * 1024:
                 f.seek(-5 * 1024 * 1024, 2)
                 f.readline()  # skip partial line
-            except OSError:
-                f.seek(0)
+            # else: leggo dall'inizio (log piccolo, tipicamente post-logrotate)
             for raw in f:
                 try:
                     line = raw.decode("utf-8", errors="ignore")
@@ -234,9 +234,11 @@ def main() -> int:
         return 0
 
     # Sopra soglia + cooldown OK: raccolgo dettagli e invio
-    print(f"→ Estraggo dettagli dal log {args.log}...")
-    details = collect_attack_details(args.log, max_hours=1)
-    msg = format_alert(delta, args.threshold, current, details, hours=1)
+    # Finestra dettagli: 6h (più larga della delta-soglia oraria, così
+    # cattura comunque IP/path anche se gli attacchi sono spalmati).
+    print(f"→ Estraggo dettagli dal log {args.log} (ultime 6h)...")
+    details = collect_attack_details(args.log, max_hours=6)
+    msg = format_alert(delta, args.threshold, current, details, hours=6)
 
     print("\n" + msg + "\n")
 
