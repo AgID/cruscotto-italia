@@ -242,11 +242,15 @@ def aggregate(log_paths: list[Path], exclude_test: bool = False,
                 stats["method_distribution"][ev["method"]] += 1
 
                 # Filtri di esclusione
-                if ev["status"] >= 400:
-                    stats["totals"]["hits_error"] += 1
-                    continue
+                # IMPORTANTE: attack check PRIMA di status>=400, altrimenti
+                # tutti gli scanner che generano 404/444 finiscono in hits_error
+                # invece di hits_attack (i pattern attack tipicamente NON esistono
+                # sul sito, quindi sono sempre 4xx).
                 if is_attack(ev["uri"]):
                     stats["totals"]["hits_attack"] += 1
+                    continue
+                if ev["status"] >= 400:
+                    stats["totals"]["hits_error"] += 1
                     continue
                 if is_bot(ev["ua"]):
                     stats["totals"]["hits_bot"] += 1
