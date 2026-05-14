@@ -81,14 +81,16 @@ def collect_attack_details(log_path: Path, max_hours: int = 1,
     Scorre il log nginx delle ultime max_hours ore e raccoglie:
     - Top IP attaccanti
     - Top path attaccati
+    - Top host attaccati (se presente nel log_format)
     - Conteggio totale attacchi nel window
     """
     if not log_path.exists():
-        return {"top_ips": [], "top_paths": [], "total": 0}
+        return {"top_ips": [], "top_paths": [], "top_hosts": [], "total": 0}
 
     cutoff_ts = time.time() - (max_hours * 3600)
     by_ip: Counter = Counter()
     by_path: Counter = Counter()
+    by_host: Counter = Counter()
     total = 0
 
     try:
@@ -122,13 +124,17 @@ def collect_attack_details(log_path: Path, max_hours: int = 1,
                 total += 1
                 by_ip[ev["ip"]] += 1
                 by_path[ev["uri"]] += 1
+                # host può essere None (log legacy pre-modifica)
+                if ev.get("host"):
+                    by_host[ev["host"]] += 1
     except OSError:
-        return {"top_ips": [], "top_paths": [], "total": 0}
+        return {"top_ips": [], "top_paths": [], "top_hosts": [], "total": 0}
 
     return {
         "total": total,
         "top_ips": [(ip, n) for ip, n in by_ip.most_common(top_n)],
         "top_paths": [(p, n) for p, n in by_path.most_common(top_n)],
+        "top_hosts": [(h, n) for h, n in by_host.most_common(top_n)],
     }
 
 
@@ -142,6 +148,13 @@ def format_alert(delta: int, threshold: int, current: int,
         f"Totale oggi: {current}",
         f"",
     ]
+    # Top host: mostrato solo se almeno 2 host distinti (altrimenti
+    # è ovvio e ridondante)
+    if len(details.get("top_hosts", [])) >= 2:
+        lines.append(f"<b>Top sito attaccato (ultime {hours}h):</b>")
+        for host, n in details["top_hosts"]:
+            lines.append(f"  • <code>{host}</code> — {n} hit")
+        lines.append("")
     if details["top_ips"]:
         lines.append(f"<b>Top IP attaccanti (ultime {hours}h):</b>")
         for ip, n in details["top_ips"]:

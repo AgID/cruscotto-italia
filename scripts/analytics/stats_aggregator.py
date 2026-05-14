@@ -98,6 +98,21 @@ TEST_COMUNI = {
 # Formato 'main' (default Ubuntu): combined + $http_x_forwarded_for
 # ---------------------------------------------------------------------------
 
+# Formato attuale (con $host come primo campo, dal 2026-05-14):
+#   chatbot.piersoftckan.biz 1.2.3.4 - - [time] "GET /path HTTP/1.1" 200 1234 "ref" "ua"
+LOG_LINE_WITH_HOST = re.compile(
+    r'^(?P<host>\S+)\s+'
+    r'(?P<ip>\S+)\s+'
+    r'\S+\s+\S+\s+'                                    # remote_user, time_user
+    r'\[(?P<time>[^\]]+)\]\s+'
+    r'"(?P<request>[^"]*)"\s+'
+    r'(?P<status>\d{3})\s+'
+    r'(?P<size>\d+|-)\s+'
+    r'"(?P<referer>[^"]*)"\s+'
+    r'"(?P<ua>[^"]*)"'
+)
+
+# Formato legacy (senza $host) — per leggere log ruotati pre-modifica
 LOG_LINE = re.compile(
     r'^(?P<ip>\S+)\s+'
     r'\S+\s+\S+\s+'                                    # remote_user, time_user
@@ -120,13 +135,20 @@ def open_log(path: Path):
 
 
 def parse_line(line: str) -> dict | None:
-    m = LOG_LINE.match(line)
-    if not m:
-        return None
+    # Prima provo il nuovo formato con $host, poi fallback al legacy
+    m = LOG_LINE_WITH_HOST.match(line)
+    host = None
+    if m:
+        host = m["host"]
+    else:
+        m = LOG_LINE.match(line)
+        if not m:
+            return None
     req = REQUEST.match(m["request"])
     if not req:
         return None
     return {
+        "host": host,  # None per log legacy senza $host
         "ip": m["ip"],
         "time": m["time"],
         "method": req["method"],
