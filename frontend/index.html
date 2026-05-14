@@ -1100,6 +1100,10 @@ document.addEventListener('click', (e) => {
     box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.15);
     font-family: var(--font-sans, 'Titillium Web'), sans-serif;
   }
+  /* L'attributo hidden deve vincere display:flex (specificità) */
+  .privacy-banner[hidden] {
+    display: none !important;
+  }
   .privacy-banner-text {
     flex: 1;
     min-width: 280px;
