@@ -355,8 +355,7 @@ HTML_TEMPLATE = """<!doctype html>
 <h1>Cruscotto Italia — Statistiche</h1>
 <p class="meta">
   Generato: {generated_at}<br>
-  Periodo: {days_range}<br>
-  {exclude_note}
+  Periodo: {days_range}{exclude_note}
 </p>
 
 <div class="grid">
@@ -405,10 +404,10 @@ def render_html(stats: dict) -> str:
     days = list(stats["per_day"].keys())
     days_range = f"{days[0]} → {days[-1]}" if days else "n/d"
     exclude_note = (
-        "Sono esclusi i comuni di test Roma (058091), Lecce (075035), "
+        "<br>\n  Sono esclusi i comuni di test Roma (058091), Lecce (075035), "
         "Matera (077014), Morterone (097055)."
         if stats["_exclude_test_comuni"]
-        else "Tutti i comuni inclusi (anche i 4 usati come test interni)."
+        else ""
     )
     table_comuni = render_table(
         [(f"{c['nome']} ({c['istat']})", c["hits"]) for c in stats["top_comuni"]],
