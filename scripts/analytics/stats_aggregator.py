@@ -73,16 +73,63 @@ PATH_ATTACK_PATTERNS = re.compile(
     re.IGNORECASE,
 )
 
-# Path interni che non rappresentano "navigazione utente"
+# Path interni / asset tecnici che non sono "pagine viste" dall'utente.
+# Pattern non ancorato all'inizio: cattura anche path annidati come
+# /chatbot/assets/index-XXX.js o /api/static/foo.css
 PATH_INTERNAL = re.compile(
-    r"^/(?:"
-    r"favicon|robots\.txt|sitemap|"
-    r"stats(?:/|$)|"
-    r"css/|js/|vendor/|assets/|fonts/|images/|img/|"
-    r"\.ico|\.css|\.js|\.woff|\.woff2|\.ttf|\.eot|\.svg|\.png|\.jpg|\.jpeg|\.gif|\.webp"
+    r"(?:"
+    r"^/favicon|^/robots\.txt|^/sitemap|^/stats(?:/|$)|"
+    r"/assets/|/css/|/js/|/vendor/|/fonts/|/images/|/img/|/static/|"
+    r"\.(?:ico|css|js|mjs|woff|woff2|ttf|eot|svg|png|jpg|jpeg|gif|webp|map)(?:\?|$)"
     r")",
     re.IGNORECASE,
 )
+
+
+def is_internal_asset(uri: str) -> bool:
+    # search() per matchare path annidati come /chatbot/assets/foo.js
+    return bool(PATH_INTERNAL.search(uri))
+
+
+# Mappatura path → label leggibile per la sezione "Pagine più viste".
+# Ordine importante: pattern più specifici prima.
+PAGE_LABELS = [
+    # SIMBA
+    (re.compile(r"^/analytics-api/stats/overview"),    "SIMBA: API dashboard — overview"),
+    (re.compile(r"^/analytics-api/stats/search"),      "SIMBA: API dashboard — search"),
+    (re.compile(r"^/analytics-api/stats/validate"),    "SIMBA: API dashboard — validate"),
+    (re.compile(r"^/analytics-api/stats/ttl"),         "SIMBA: API dashboard — ttl"),
+    (re.compile(r"^/analytics-api/stats/errors"),      "SIMBA: API dashboard — errors"),
+    (re.compile(r"^/analytics-api/stats/performance"), "SIMBA: API dashboard — performance"),
+    (re.compile(r"^/analytics-api/"),                  "SIMBA: API analytics (altro)"),
+    (re.compile(r"^/chatbot/analytics"),               "SIMBA: Dashboard analytics (UI)"),
+    (re.compile(r"^/chatbot/admin"),                   "SIMBA: Admin"),
+    (re.compile(r"^/chatbot(/|$)"),                    "SIMBA: Chatbot UI"),
+    (re.compile(r"^/api/admin/"),                      "SIMBA: API admin"),
+    (re.compile(r"^/api/blocklist"),                   "SIMBA: API blocklist"),
+    (re.compile(r"^/api/health"),                      "SIMBA: API health"),
+    (re.compile(r"^/api/"),                            "SIMBA: API backend"),
+    (re.compile(r"^/admin(/|$)"),                      "SIMBA: Admin"),
+    (re.compile(r"^/analytics(/|$)"),                  "SIMBA: Analytics UI"),
+    # Cruscotto Italia
+    (re.compile(r"^/comune\.html"),                    "Cruscotto: Dashboard comune"),
+    (re.compile(r"^/about\.html"),                     "Cruscotto: About"),
+    (re.compile(r"^/accessibilita\.html"),             "Cruscotto: Accessibilità"),
+    (re.compile(r"^/privacy\.html"),                   "Cruscotto: Privacy"),
+    (re.compile(r"^/stats(/|$)"),                      "Cruscotto: Statistiche (questa pagina)"),
+    (re.compile(r"^/$"),                               "Cruscotto: Home"),
+    (re.compile(r"^/index\.html"),                     "Cruscotto: Home"),
+]
+
+
+def humanize_page(uri: str) -> str:
+    """Trasforma path tecnico in label leggibile, lasciando invariato se non mappato."""
+    # Strip query string per il match (es. /comune.html?istat=075035 → /comune.html)
+    path = uri.split("?", 1)[0]
+    for pattern, label in PAGE_LABELS:
+        if pattern.search(path):
+            return label
+    return uri
 
 # I 4 comuni di test usati durante lo sviluppo (Roma + 3 di Piersoft).
 # Possono essere esclusi via --exclude-test-comuni per non gonfiare le statistiche.
@@ -192,10 +239,6 @@ def is_bot(ua: str) -> bool:
 def is_attack(uri: str) -> bool:
     # search() per matchare anche path annidati tipo '/zend/.env', '/var/www/.env'
     return bool(PATH_ATTACK_PATTERNS.search(uri))
-
-
-def is_internal_asset(uri: str) -> bool:
-    return bool(PATH_INTERNAL.match(uri))
 
 
 def extract_istat(uri: str) -> str | None:
@@ -342,8 +385,9 @@ def aggregate(log_paths: list[Path], exclude_test: bool = False,
                     else:
                         stats["top_comuni"][istat] += 1
 
-                # Top pages (senza querystring)
-                page = ev["uri"].split("?")[0]
+                # Top pages (humanized: asset esclusi a monte da is_internal_asset
+                # qui sopra, e i path tecnici mappati a label leggibili)
+                page = humanize_page(ev["uri"])
                 stats["top_pages"][page] += 1
 
                 # Top referer
