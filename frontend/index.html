@@ -1079,5 +1079,81 @@ document.addEventListener('click', (e) => {
 });
 </script>
 
+<!-- ── Banner privacy GDPR ────────────────────────────────────────────── -->
+<style>
+  .privacy-banner {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 9999;
+    background: var(--ink, #17324d);
+    color: #ffffff;
+    padding: 14px 20px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: var(--fs-sm, 0.875rem);
+    line-height: 1.5;
+    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.15);
+    font-family: var(--font-sans, 'Titillium Web'), sans-serif;
+  }
+  .privacy-banner-text {
+    flex: 1;
+    min-width: 280px;
+  }
+  .privacy-banner a {
+    color: #8FCCFF;
+    text-decoration: underline;
+  }
+  .privacy-banner a:hover,
+  .privacy-banner a:focus {
+    color: #ffffff;
+  }
+  .privacy-banner-btn {
+    background: var(--blu-italia, #0066CC);
+    color: #ffffff;
+    border: none;
+    border-radius: 4px;
+    padding: 8px 18px;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: var(--fs-sm, 0.875rem);
+    font-family: inherit;
+    min-height: 36px;
+  }
+  .privacy-banner-btn:hover,
+  .privacy-banner-btn:focus {
+    background: var(--blu-italia-dark, #004C99);
+    outline: 2px solid #ffffff;
+    outline-offset: 2px;
+  }
+</style>
+<div class="privacy-banner" id="privacy-banner" role="region" aria-label="Informativa privacy" hidden>
+  <div class="privacy-banner-text">
+    Questo servizio non utilizza cookie di profilazione né strumenti di tracciamento.
+    I log standard del server (indirizzo IP, pagina visitata) sono conservati per amministrazione
+    e statistica aggregata. Le chiamate tramite MCP server sono registrate in forma anonima.
+    Maggiori informazioni: <a href="https://www.dati.gov.it/policy" target="_blank" rel="noopener noreferrer">Informativa privacy AgID</a>.
+  </div>
+  <button class="privacy-banner-btn" id="privacy-ok-btn" type="button">Ho capito ✕</button>
+</div>
+<script>
+(function() {
+  try {
+    if (localStorage.getItem('privacy_ok') === '1') return;
+  } catch (e) { /* localStorage può fallire in private mode */ }
+  var banner = document.getElementById('privacy-banner');
+  if (!banner) return;
+  banner.hidden = false;
+  document.getElementById('privacy-ok-btn').addEventListener('click', function() {
+    try { localStorage.setItem('privacy_ok', '1'); } catch (e) {}
+    banner.hidden = true;
+  });
+})();
+</script>
+
 </body>
 </html>
