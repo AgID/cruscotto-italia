@@ -30,7 +30,7 @@ export const searchComune: ToolDefinition = {
   inputSchema: {
     type: "object",
     properties: {
-      query: { type: "string", minLength: 2, description: "Testo da cercare (es. 'Lec', 'milano')" },
+      query: { type: "string", minLength: 3, description: "Testo da cercare (minimo 3 caratteri, es. 'lec', 'milano')" },
       limit: { type: "integer", minimum: 1, maximum: 50, default: 10 },
     },
     required: ["query"],
@@ -40,8 +40,8 @@ export const searchComune: ToolDefinition = {
     const q = String(args.query ?? "").toLowerCase().trim();
     const limit = Math.min(50, Math.max(1, Number(args.limit ?? 10)));
 
-    if (q.length < 2) {
-      return { count: 0, results: [], warning: "query too short (min 2 chars)" };
+    if (q.length < 3) {
+      return { count: 0, results: [], warning: "query too short (min 3 chars)" };
     }
 
     // Load the comuni index from R2 (cached in KV)
