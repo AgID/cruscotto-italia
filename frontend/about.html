@@ -436,6 +436,27 @@ footer a:hover { color: #fff !important; }
           </td>
           <td class="freq">trimestrale</td>
         </tr>
+        <tr data-fonte-row="MIMIT">
+          <td>MIMIT</td>
+          <td>
+            <strong>Osservatorio Prezzi Carburanti — distributori e prezzi praticati</strong>
+            Anagrafica completa degli impianti di distribuzione carburanti
+            attivi in Italia (~23.700 distributori) e prezzi praticati
+            comunicati quotidianamente dai gestori, pubblicati dal Ministero
+            delle Imprese e del Made in Italy ai sensi dell'art.&nbsp;51 della
+            Legge&nbsp;99/2009. Il dataset comprende bandiera, gestore,
+            tipo (Stradale/Autostradale), indirizzo georeferenziato, e prezzi
+            correnti per i 7 carburanti core (Benzina, Gasolio, GPL, Metano,
+            HVO — self-service e servito) oltre ai premium proprietari
+            (Shell V-Power, Hi-Q Diesel, Supreme Diesel, Blue Diesel).
+            Copertura: <strong>~5.450 comuni su 7.896 (69%)</strong>; i
+            ~2.450 comuni senza distributore sono per la quasi totalità
+            micro-comuni di montagna. Aggiornamento <strong>quotidiano</strong>
+            (snapshot "Prezzo alle 8 di mattina"). Licenza IODL&nbsp;2.0
+            (attribution-only, compatibile con CC&nbsp;BY).
+          </td>
+          <td class="freq">giornaliera</td>
+        </tr>
       </tbody>
     </table>
 
@@ -484,7 +505,7 @@ footer a:hover { color: #fff !important; }
         <h3>1. Estrazione</h3>
         <p>
           Script Python (uno per fonte) scaricano i dataset originali dai
-          portali ufficiali delle 13 istituzioni integrate: ISTAT (POSAS,
+          portali ufficiali delle 14 istituzioni integrate: ISTAT (POSAS,
           censimento, turismo, incidenti) in SDMX-ML via API REST,
           ANAC i contratti come JSON-LD su dati.anticorruzione.it,
           BDAP-MOP le opere via API a paginazione,
@@ -499,7 +520,10 @@ footer a:hover { color: #fff !important; }
           il GSE per conto del MASE la Piattaforma Unica Nazionale dei punti
           di ricarica elettrica via CSV nazionale firmato S3 (Cognito guest),
           AGCOM la Broadband Map sulla copertura della rete cablata
-          ex art.&nbsp;22 CCE via CSV nazionale ArcGIS aggiornato trimestralmente.
+          ex art.&nbsp;22 CCE via CSV nazionale ArcGIS aggiornato trimestralmente,
+          il MIMIT l'Osservatorio Prezzi Carburanti via CSV bulk quotidiano
+          ("Prezzo alle 8 di mattina") con anagrafica impianti e prezzi praticati
+          ex art.&nbsp;51 L.&nbsp;99/2009.
         </p>
         <p>
           Gli script gestiscono le idiosincrasie di ciascun dataset:
