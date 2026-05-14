@@ -657,10 +657,18 @@ def render_html(stats: dict, mcp_stats_path: Path | None = None) -> str:
     # Per host singolo è ridondante con il counter principale.
     by_host = stats.get("attacks_by_host", [])
     if len(by_host) >= 2:
-        rows_host = [(item["host"], item["hits"]) for item in by_host]
+        # Mappa IP raw (es. '31.14.139.9' = IP del server) a label leggibile.
+        # Gli scanner che colpiscono per IP usano l'IP server come Host header;
+        # un dominio reale invece arriva sempre come stringa tipo "foo.example".
+        def humanize_host(h: str) -> str:
+            # Riconosce IPv4 raw (4 ottetti) o IPv6 con ":"
+            if re.match(r'^\d{1,3}(\.\d{1,3}){3}$', h) or ':' in h:
+                return f"{h} <span class=\"meta\">(scanner per IP)</span>"
+            return h
+        rows_host = [(humanize_host(item["host"]), item["hits"]) for item in by_host]
         section_attacks_by_host = (
             "<h2>Tentativi attacco per sito</h2>\n"
-            + render_table(rows_host, ("Sito", "Tentativi"))
+            + render_table(rows_host, ("Sito / origine", "Tentativi"))
         )
     else:
         section_attacks_by_host = ""
