@@ -5016,17 +5016,15 @@ function renderCarburantiTab(d) {
         <div>
           <h3 class="veicoli-col-h">Mappa (${fmtNum((d.punti || []).length)} impianti)</h3>
           <div id="carburanti-map-main" class="impa-map" role="region" aria-label="Mappa distributori di carburante"></div>
-          <div class="impa-filters" id="carburanti-filters-brand" role="group" aria-label="Filtri per bandiera">
+          <div class="impa-filters" id="carburanti-filters-brand" role="group" aria-label="Filtri per bandiera e impianti piu' economici">
             ${renderCarburantiFiltersBrand(k.mix_bandiere || {})}
-          </div>
-          <div class="impa-filters" id="carburanti-filters-fuel" role="group" aria-label="Filtri per carburante">
-            ${renderCarburantiFiltersFuel(d.punti)}
-          </div>
-          <div class="impa-filters" id="carburanti-filters-cheapest" role="group" aria-label="Mostra solo gli impianti piu' economici">
             <button type="button" class="impa-chip" data-carb-cheapest="on" aria-pressed="false">
               <span class="impa-chip-dot" style="background:#8C5E00"></span>
               <span class="impa-chip-label">★ Solo i più economici del comune</span>
             </button>
+          </div>
+          <div class="impa-filters" id="carburanti-filters-fuel" role="group" aria-label="Filtri per carburante">
+            ${renderCarburantiFiltersFuel(d.punti)}
           </div>
           <div class="veicoli-euro-note">
             <strong>● Cerchio</strong> = impianto Stradale · <strong>■ Quadrato</strong> = impianto Autostradale.
@@ -5299,11 +5297,15 @@ async function initCarburanti(d, regione) {
     brandFilters.addEventListener('click', (ev) => {
       const btn = ev.target.closest('.impa-chip');
       if (!btn) return;
+      // La chip "Solo i piu' economici" vive nella stessa riga ma e' gestita
+      // da un listener separato (vedi sotto). Salta qui.
+      if (btn.dataset.carbCheapest) return;
       const brand = btn.dataset.carbBrand;
       if (brand === '__all__') {
         activeBrands.clear();
         allBrands.forEach(b => activeBrands.add(b));
-        brandFilters.querySelectorAll('.impa-chip').forEach(b => b.setAttribute('aria-pressed', 'true'));
+        // Setto aria-pressed=true solo sulle chip bandiera, non sulla cheapest
+        brandFilters.querySelectorAll('.impa-chip[data-carb-brand]').forEach(b => b.setAttribute('aria-pressed', 'true'));
       } else {
         if (activeBrands.has(brand)) {
           activeBrands.delete(brand);
@@ -5334,15 +5336,14 @@ async function initCarburanti(d, regione) {
   }
 
   // 6b) Listener chip "Solo i piu' economici" (toggle on/off).
+  // La chip vive dentro la riga delle bandiere, intercettata via data attribute.
   // Quando attivato: zoom su un bbox che contiene entrambi i marker cheapest
   // (utile su comuni grandi tipo Roma/Napoli dove possono essere lontani).
-  const cheapestFilter = document.getElementById('carburanti-filters-cheapest');
-  if (cheapestFilter) {
-    cheapestFilter.addEventListener('click', (ev) => {
-      const btn = ev.target.closest('.impa-chip');
-      if (!btn) return;
+  const cheapestChip = document.querySelector('[data-carb-cheapest]');
+  if (cheapestChip) {
+    cheapestChip.addEventListener('click', () => {
       cheapestOnly = !cheapestOnly;
-      btn.setAttribute('aria-pressed', cheapestOnly ? 'true' : 'false');
+      cheapestChip.setAttribute('aria-pressed', cheapestOnly ? 'true' : 'false');
       redrawClusters();
       if (cheapestOnly) {
         const cheapestPunti = punti.filter(p => p.id === cheapestBenzId || p.id === cheapestGasId);
