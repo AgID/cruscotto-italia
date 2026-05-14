@@ -98,8 +98,26 @@ TEST_COMUNI = {
 # Formato 'main' (default Ubuntu): combined + $http_x_forwarded_for
 # ---------------------------------------------------------------------------
 
-# Formato attuale (con $host come primo campo, dal 2026-05-14):
-#   chatbot.piersoftckan.biz 1.2.3.4 - - [time] "GET /path HTTP/1.1" 200 1234 "ref" "ua"
+# Formato attuale (con $host $server_name come primi due campi, dal 2026-05-14
+# pomeriggio):
+#   chatbot.piersoftckan.biz chatbot.piersoftckan.biz 1.2.3.4 - - [time] "..." 200 ...
+# Nota: per ora $service NON è nel log_format globale (sarebbe condiviso tra
+# tutti i siti); è invece esposto come header X-Service o accessibile via
+# log custom. Mantengo il parser pronto al campo se aggiunto.
+LOG_LINE_WITH_SERVER = re.compile(
+    r'^(?P<host>\S+)\s+'
+    r'(?P<server_name>\S+)\s+'
+    r'(?P<ip>\S+)\s+'
+    r'\S+\s+\S+\s+'                                    # remote_user, time_user
+    r'\[(?P<time>[^\]]+)\]\s+'
+    r'"(?P<request>[^"]*)"\s+'
+    r'(?P<status>\d{3})\s+'
+    r'(?P<size>\d+|-)\s+'
+    r'"(?P<referer>[^"]*)"\s+'
+    r'"(?P<ua>[^"]*)"'
+)
+
+# Formato intermedio (solo $host, senza $server_name): pre commit 1e71f7d
 LOG_LINE_WITH_HOST = re.compile(
     r'^(?P<host>\S+)\s+'
     r'(?P<ip>\S+)\s+'
@@ -135,20 +153,27 @@ def open_log(path: Path):
 
 
 def parse_line(line: str) -> dict | None:
-    # Prima provo il nuovo formato con $host, poi fallback al legacy
-    m = LOG_LINE_WITH_HOST.match(line)
+    # Provo i formati dal più nuovo al più vecchio
+    server_name = None
     host = None
+    m = LOG_LINE_WITH_SERVER.match(line)
     if m:
         host = m["host"]
+        server_name = m["server_name"]
     else:
-        m = LOG_LINE.match(line)
-        if not m:
-            return None
+        m = LOG_LINE_WITH_HOST.match(line)
+        if m:
+            host = m["host"]
+        else:
+            m = LOG_LINE.match(line)
+            if not m:
+                return None
     req = REQUEST.match(m["request"])
     if not req:
         return None
     return {
-        "host": host,  # None per log legacy senza $host
+        "host": host,                # None per log legacy senza $host
+        "server_name": server_name,  # None per log senza $server_name
         "ip": m["ip"],
         "time": m["time"],
         "method": req["method"],
