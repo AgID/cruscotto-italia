@@ -378,6 +378,8 @@ HTML_TEMPLATE = """<!doctype html>
 <h2>Referer esterni</h2>
 {table_referers}
 
+{mcp_section}
+
 <div class="footer">
   Conformità privacy: aggregati anonimi senza IP né user agent grezzi.
   Log raw nginx ruotati a 7 giorni come da policy
@@ -400,7 +402,73 @@ def render_table(rows: list[tuple[str, int]], headers: tuple[str, str]) -> str:
             f"  <tbody>\n{body}\n  </tbody>\n</table>")
 
 
-def render_html(stats: dict) -> str:
+def render_mcp_section(mcp_stats_path: Path | None) -> str:
+    """
+    Costruisce la sezione HTML per le statistiche MCP, leggendo mcp_stats.json
+    se esiste. Ritorna stringa vuota se il file non esiste o è vuoto.
+    """
+    if not mcp_stats_path or not mcp_stats_path.exists():
+        return ""
+    try:
+        mcp = json.loads(mcp_stats_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return ""
+
+    total = mcp.get("totals", {}).get("calls", 0)
+    if total == 0:
+        return (
+            "<h2>Utilizzo MCP</h2>\n"
+            "<p class=\"meta\">Nessuna tool call registrata negli ultimi "
+            f"{mcp.get('_days_window', 30)} giorni.</p>"
+        )
+
+    table_tools = render_table(
+        [(t["tool"], t["calls"]) for t in mcp.get("by_tool", [])],
+        ("Tool MCP", "Chiamate"),
+    )
+    table_mcp_comuni = render_table(
+        [(f"{c['nome']} ({c['istat']})", c["calls"])
+         for c in mcp.get("by_comune", [])],
+        ("Comune", "Chiamate"),
+    ) if mcp.get("by_comune") else "<p class=\"meta\">Nessun comune referenziato (tool senza ISTAT).</p>"
+    table_clients = render_table(
+        [(c["client"], c["calls"]) for c in mcp.get("by_client", [])],
+        ("Client", "Chiamate"),
+    )
+
+    days = mcp.get("by_day", [])
+    days_range = f"{days[0]['day']} → {days[-1]['day']}" if days else "n/d"
+
+    cards = (
+        f'<div class="grid">\n'
+        f'  <div class="card"><div class="card-val">{total:,}</div>'
+        f'<div class="card-lbl">Tool call MCP totali</div></div>\n'
+        f'  <div class="card"><div class="card-val">'
+        f'{mcp["totals"]["distinct_tools"]}</div>'
+        f'<div class="card-lbl">Tool distinti</div></div>\n'
+        f'  <div class="card"><div class="card-val">'
+        f'{mcp["totals"]["distinct_comuni"]}</div>'
+        f'<div class="card-lbl">Comuni interrogati</div></div>\n'
+        f'  <div class="card"><div class="card-val">'
+        f'{mcp["totals"]["distinct_clients"]}</div>'
+        f'<div class="card-lbl">Tipi di client</div></div>\n'
+        f'</div>'
+    )
+
+    return (
+        f"<h2>Utilizzo MCP — ultimi {mcp.get('_days_window', 30)} giorni</h2>\n"
+        f"<p class=\"meta\">Periodo dati MCP: {days_range}</p>\n"
+        f"{cards}\n\n"
+        f"<h2>Tool MCP più chiamati</h2>\n"
+        f"{table_tools}\n\n"
+        f"<h2>Comuni più consultati via MCP</h2>\n"
+        f"{table_mcp_comuni}\n\n"
+        f"<h2>Client che usano l'MCP</h2>\n"
+        f"{table_clients}"
+    )
+
+
+def render_html(stats: dict, mcp_stats_path: Path | None = None) -> str:
     days = list(stats["per_day"].keys())
     days_range = f"{days[0]} → {days[-1]}" if days else "n/d"
     exclude_note = (
@@ -439,6 +507,7 @@ def render_html(stats: dict) -> str:
         table_days=table_days,
         table_pages=table_pages,
         table_referers=table_referers,
+        mcp_section=render_mcp_section(mcp_stats_path),
     )
 
 
@@ -456,6 +525,8 @@ def main() -> int:
                     help="Escludi Roma/Lecce/Matera/Morterone dalle stats")
     ap.add_argument("--istat-names",
                     help="JSON mapping {istat: nome} per labelare i comuni (opzionale)")
+    ap.add_argument("--mcp-stats",
+                    help="JSON di analytics MCP (output di mcp_stats_fetcher.py)")
     args = ap.parse_args()
 
     log_paths = [Path(p) for p in args.logs]
@@ -472,7 +543,8 @@ def main() -> int:
     html_out = out_dir / "index.html"
 
     json_out.write_text(json.dumps(stats, indent=2, ensure_ascii=False), encoding="utf-8")
-    html_out.write_text(render_html(stats), encoding="utf-8")
+    mcp_stats_path = Path(args.mcp_stats) if args.mcp_stats else None
+    html_out.write_text(render_html(stats, mcp_stats_path), encoding="utf-8")
 
     print(f"✓ Linee processate: {stats['totals']['lines_parsed']:,} / {stats['totals']['lines_total']:,}")
     print(f"✓ Visite umane: {stats['totals']['hits_human']:,}")

@@ -123,3 +123,57 @@ In `/var/www/cruscotto-stats/`:
 
 - `index.html` — pagina di riepilogo con KPI cards + tabelle (visibile via browser)
 - `stats.json` — stessi dati in formato JSON (per consumo programmatico)
+- `mcp_stats.json` — analytics tool calls MCP (solo se è girato anche `mcp_stats_fetcher.py`)
+
+## Analytics MCP (Worker Cloudflare)
+
+Il Worker MCP scrive in KV `CACHE` un contatore per ogni tool call, chiave:
+
+```
+analytics:YYYY-MM-DD:<tool>:<istat>:<client>
+```
+
+Dove `istat` è il codice comune (6-digit) se presente negli args del tool, `_` altrimenti;
+`client` è una categoria estratta dallo User-Agent (claude/chatgpt/cursor/python/node/curl/browser/other).
+
+TTL automatico 35 giorni. Nessun IP, nessun UA grezzo: privacy AgID compliant.
+
+### Setup fetcher (una volta sola)
+
+1. **Crea un token Cloudflare API** su https://dash.cloudflare.com/profile/api-tokens
+   con permessi:
+   - `Account` → `Workers KV Storage:Read`
+   - Scope: il tuo account
+
+2. **Salva le credenziali fuori dal repo**, ad esempio in `/etc/cruscotto-analytics.env`:
+
+   ```bash
+   sudo tee /etc/cruscotto-analytics.env >/dev/null <<EOF
+   CF_ACCOUNT_ID=f6973be57e2f5b597beeffdce3f218d1
+   CF_KV_NAMESPACE=9251e463afc3406b83f81e555a6e12b7
+   CF_API_TOKEN=<token-letto-solo-permesso-KV>
+   EOF
+   sudo chmod 600 /etc/cruscotto-analytics.env
+   ```
+
+3. **Aggiorna il cron** per chiamare prima il fetcher e poi l'aggregator:
+
+   ```
+   0 4 * * * set -a && . /etc/cruscotto-analytics.env && set +a && /usr/bin/python3 /home/ubuntu/cruscotto-italia/scripts/analytics/mcp_stats_fetcher.py --out /var/www/cruscotto-stats --istat-names /var/www/cruscotto-stats/istat-names.json --days 30 >> /var/log/cruscotto-stats/cron.log 2>&1 ; /usr/bin/python3 /home/ubuntu/cruscotto-italia/scripts/analytics/stats_aggregator.py --logs /var/log/nginx/access.log.1 --out /var/www/cruscotto-stats --istat-names /var/www/cruscotto-stats/istat-names.json --mcp-stats /var/www/cruscotto-stats/mcp_stats.json >> /var/log/cruscotto-stats/cron.log 2>&1 && /bin/chown -R www-data:www-data /var/www/cruscotto-stats
+   ```
+
+### Esecuzione manuale del fetcher
+
+```bash
+set -a && . /etc/cruscotto-analytics.env && set +a
+python3 scripts/analytics/mcp_stats_fetcher.py \
+  --out /var/www/cruscotto-stats \
+  --istat-names /var/www/cruscotto-stats/istat-names.json \
+  --days 30
+```
+
+### Costi
+
+- Worker piano Free: ammessi 100k requests/giorno, 1k KV writes/giorno, 100k KV reads/giorno.
+- Il fetcher fa ~10-50 KV reads via API REST (un bulk batch ogni 100 chiavi).
+- Limite operativo prevedibile: ~1000 tool calls/giorno prima di toccare il limite KV writes.
