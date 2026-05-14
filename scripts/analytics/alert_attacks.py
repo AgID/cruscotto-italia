@@ -138,7 +138,7 @@ def format_alert(delta: int, threshold: int, current: int,
     lines = [
         f"🚨 <b>Cruscotto Italia — Picco attacchi</b>",
         f"",
-        f"Delta {hours}h: <b>+{delta}</b> attacchi (soglia: {threshold})",
+        f"Nuovi attacchi rispetto all'ultima verifica: <b>+{delta}</b> (soglia: {threshold})",
         f"Totale oggi: {current}",
         f"",
     ]
@@ -148,7 +148,7 @@ def format_alert(delta: int, threshold: int, current: int,
             lines.append(f"  • <code>{ip}</code> — {n} hit")
         lines.append("")
     if details["top_paths"]:
-        lines.append(f"<b>Top path tentati:</b>")
+        lines.append(f"<b>Top path tentati (ultime {hours}h):</b>")
         for p, n in details["top_paths"]:
             # Telegram HTML: scape minimo
             safe_p = p.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
