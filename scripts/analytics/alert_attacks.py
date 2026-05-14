@@ -111,8 +111,10 @@ def collect_attack_details(log_path: Path, max_hours: int = 1,
                     continue
                 # parse timestamp (formato nginx: 14/May/2026:11:57:12 +0000)
                 try:
-                    t = time.strptime(ev["ts"][:20], "%d/%b/%Y:%H:%M:%S")
-                    ts = time.mktime(t)  # treat as UTC approx
+                    # ev["time"] è già senza quadre, es: "14/May/2026:11:57:12 +0000"
+                    # struct_time non gestisce timezone, prendo solo i primi 20 char
+                    t = time.strptime(ev["time"][:20], "%d/%b/%Y:%H:%M:%S")
+                    ts = time.mktime(t)  # locale; approssimazione accettabile per cutoff 1h
                 except Exception:
                     continue
                 if ts < cutoff_ts:
