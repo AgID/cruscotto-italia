@@ -61,9 +61,9 @@ Cruscotto Italia espone un server [Model Context Protocol](https://modelcontextp
 
 **Endpoint pubblico**: `https://cruscotto-italia-mcp.piersoftckan.biz/mcp`
 
-**Tool esposti** (10): `mcp_info`, `search_comune`, `comune_dashboard`, `comune_demografia`, `comune_profilo`, `comune_turismo`, `comune_pnrr`, `comune_territorio`, `comune_opere_dettaglio`, `comune_contratti`.
+**Tool esposti** (5): `mcp_info`, `search_comune`, `comune_dashboard`, `comune_opere_dettaglio`, `anncsu_civico_search`.
 
-Le fonti integrate dopo la v0.4 (qualità aria, scuole, veicoli, redditi, patrimonio PA, ANNCSU, sanità MdS, punti di ricarica PUN, banda larga AGCOM, distributori MIMIT) sono esposte come **sezioni** dentro `comune_dashboard` invece che come tool dedicati: una singola chiamata restituisce l'aggregato completo del comune.
+Tutte le fonti integrate sono esposte come **sezioni** dentro `comune_dashboard` (single-fetch, 21 sezioni in una chiamata). I tool ridondanti `comune_demografia`, `comune_profilo`, `comune_turismo`, `comune_pnrr`, `comune_territorio`, `comune_contratti` sono stati rimossi nella v0.10.0 perché duplicavano sezioni di `comune_dashboard` e confondevano la scelta dell'LLM (a volte sceglieva il tool dedicato facendo 2-3 round-trip invece di 1 chiamata `comune_dashboard`). `comune_opere_dettaglio` resta perché fornisce il dettaglio per-progetto filtrato al 2025, non disponibile come dato aggregato in `dashboard.bdap_kpi`. `anncsu_civico_search` permette query puntuali su civici (filtri odonimo/civico server-side) evitando di buttare 500k civici di Roma nel context LLM.
 
 **Rate limit**: 60 richieste/minuto per IP.
 
@@ -75,7 +75,7 @@ Le fonti integrate dopo la v0.4 (qualità aria, scuole, veicoli, redditi, patrim
 
 ### Skill Claude opzionale
 
-Per ottenere risposte più mirate è disponibile una skill Claude che documenta l'uso del connettore (inventario dei tool, schema di `comune_dashboard` con tutte le sezioni, endpoint REST `/data/anncsu_full/<istat>.json`, pattern operativi e caveat per sezione). Scaricabile da [`/skills/cruscotto-italia-workflow-v1.4.zip`](https://cruscotto-italia-mcp.piersoftckan.biz/skills/cruscotto-italia-workflow-v1.4.zip) (allineata a MCP v0.9.0: 18 dataset, 14 istituzioni, 21 sezioni dashboard incluse banda larga AGCOM e distributori carburanti MIMIT).
+Per ottenere risposte più mirate è disponibile una skill Claude che documenta l'uso del connettore (inventario dei 5 tool, schema di `comune_dashboard` con tutte le sezioni, endpoint REST `/data/anncsu_full/<istat>.json`, pattern operativi e caveat per sezione). Scaricabile da [`/skills/cruscotto-italia-workflow-v1.5.zip`](https://cruscotto-italia-mcp.piersoftckan.biz/skills/cruscotto-italia-workflow-v1.5.zip) (allineata a MCP v0.10.0: 18 dataset, 14 istituzioni, 21 sezioni dashboard, 5 tool dopo il cleanup dei tool ridondanti).
 
 ### System prompt suggerito
 
@@ -86,8 +86,8 @@ Hai accesso al connector "Cruscotto Italia" che fornisce dati civici sui ~7.900 
 
 Linee guida:
 - Quando l'utente menziona un comune per nome, chiama PRIMA search_comune per ottenere il codice ISTAT esatto, poi usa quel codice negli altri tool.
-- Per domande generali su un comune ("dimmi di Bergamo", "dati di Milano") usa comune_dashboard: contiene tutto in una chiamata (17 sezioni: anagrafica, demografia, profilo, turismo, PNRR, territorio, aria, opere, contratti, spese, scuole, veicoli, redditi, immobili PA, ANNCSU, sanità, punti di ricarica EV, banda larga FTTH/FTTC).
-- Usa i tool specifici (comune_pnrr, comune_demografia, ecc.) solo se l'utente vuole dettagli mirati su un singolo aspetto.
+- Per domande generali su un comune ("dimmi di Bergamo", "dati di Milano") usa comune_dashboard: contiene tutto in una chiamata (21 sezioni: anagrafica, demografia, profilo, turismo, PNRR, territorio, aria, opere, contratti ANAC, spese SIOPE, scuole, veicoli, redditi, immobili PA, ANNCSU, sanità, punti di ricarica EV, banda larga FTTH/FTTC, distributori carburanti).
+- Per il dettaglio dei progetti BDAP (lista CUP filtrabile al 2025) usa comune_opere_dettaglio; per query puntuali su civici (es. "quote di Via X", "esiste il civico Y in Z") usa anncsu_civico_search.
 - In caso di omonimi (es. "San Teodoro" esiste in Sardegna e Sicilia) mostra all'utente i match e chiedi quale.
 - Se l'utente non specifica il comune, chiedi chiarimento prima di chiamare i tool.
 - Cita sempre la fonte dati primaria nei tuoi output (ANAC, ISTAT, BDAP-MOP, ISPRA, MEF, MIUR, ACI, Agenzia Entrate, Ministero Salute, GSE/MASE, AGCOM, MIMIT).
