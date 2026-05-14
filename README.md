@@ -63,7 +63,7 @@ Cruscotto Italia espone un server [Model Context Protocol](https://modelcontextp
 
 **Tool esposti** (5): `mcp_info`, `search_comune`, `comune_dashboard`, `comune_opere_dettaglio`, `anncsu_civico_search`.
 
-Tutte le fonti integrate sono esposte come **sezioni** dentro `comune_dashboard` (single-fetch, 21 sezioni in una chiamata). I tool ridondanti `comune_demografia`, `comune_profilo`, `comune_turismo`, `comune_pnrr`, `comune_territorio`, `comune_contratti` sono stati rimossi nella v0.10.0 perché duplicavano sezioni di `comune_dashboard` e confondevano la scelta dell'LLM (a volte sceglieva il tool dedicato facendo 2-3 round-trip invece di 1 chiamata `comune_dashboard`). `comune_opere_dettaglio` resta perché fornisce il dettaglio per-progetto filtrato al 2025, non disponibile come dato aggregato in `dashboard.bdap_kpi`. `anncsu_civico_search` permette query puntuali su civici (filtri odonimo/civico server-side) evitando di buttare 500k civici di Roma nel context LLM.
+`comune_dashboard` è il tool principale: una sola chiamata restituisce 21 sezioni con tutti i dati del comune. `comune_opere_dettaglio` fornisce la lista dei singoli progetti BDAP filtrati al 2025. `anncsu_civico_search` consente query puntuali sui numeri civici ANNCSU con filtri server-side (odonimo, civico).
 
 **Rate limit**: 60 richieste/minuto per IP.
 
@@ -75,7 +75,7 @@ Tutte le fonti integrate sono esposte come **sezioni** dentro `comune_dashboard`
 
 ### Skill Claude opzionale
 
-Per ottenere risposte più mirate è disponibile una skill Claude che documenta l'uso del connettore (inventario dei 5 tool, schema di `comune_dashboard` con tutte le sezioni, endpoint REST `/data/anncsu_full/<istat>.json`, pattern operativi e caveat per sezione). Scaricabile da [`/skills/cruscotto-italia-workflow-v1.5.zip`](https://cruscotto-italia-mcp.piersoftckan.biz/skills/cruscotto-italia-workflow-v1.5.zip) (allineata a MCP v0.10.0: 18 dataset, 14 istituzioni, 21 sezioni dashboard, 5 tool dopo il cleanup dei tool ridondanti).
+Per ottenere risposte più mirate è disponibile una skill Claude che documenta l'uso del connettore (inventario dei 5 tool, schema di `comune_dashboard` con tutte le sezioni, endpoint REST `/data/anncsu_full/<istat>.json`, pattern operativi e caveat per sezione). Scaricabile da [`/skills/cruscotto-italia-workflow-v1.5.zip`](https://cruscotto-italia-mcp.piersoftckan.biz/skills/cruscotto-italia-workflow-v1.5.zip).
 
 ### System prompt suggerito
 

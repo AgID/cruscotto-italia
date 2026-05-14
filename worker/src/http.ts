@@ -229,9 +229,9 @@ pre code {
 
 <main class="mcp-page">
 
-  <div class="eyebrow">§ MCP Server · v0.7</div>
+  <div class="eyebrow">§ MCP Server</div>
   <h1>Cruscotto Italia <em>MCP</em>.</h1>
-  <p class="lead">Server <a href="https://modelcontextprotocol.io" target="_blank" rel="noopener">Model Context Protocol</a> che federa diciassette dataset pubblici sui comuni italiani (ANAC, BDAP-MOP, SIOPE, PNRR, ISPRA Suolo/IdroGEO/Rifiuti, ISPRA SNPA qualità aria, ISTAT POSAS/Censimento/Veicoli/Incidenti, MIUR scuole, ACI nuove iscrizioni, MEF Federalismo Fiscale, MEF Patrimonio Immobiliare, Agenzia delle Entrate ANNCSU civici e strade, Ministero della Salute farmacie/parafarmacie/posti letto ospedalieri, GSE/MASE Piattaforma Unica Nazionale punti di ricarica veicoli elettrici, AGCOM Broadband Map copertura banda larga). Connettilo al tuo client LLM per interrogare i dati ufficiali con linguaggio naturale.</p>
+  <p class="lead">Server <a href="https://modelcontextprotocol.io" target="_blank" rel="noopener">Model Context Protocol</a> che federa diciotto dataset pubblici sui comuni italiani (ANAC, BDAP-MOP, SIOPE, PNRR, ISPRA Suolo/IdroGEO/Rifiuti, ISPRA SNPA qualit&agrave; aria, ISTAT POSAS/Censimento/Veicoli/Incidenti, MIUR scuole, ACI nuove iscrizioni, MEF Federalismo Fiscale, MEF Patrimonio Immobiliare, Agenzia delle Entrate ANNCSU civici e strade, Ministero della Salute farmacie/parafarmacie/posti letto ospedalieri, GSE/MASE Piattaforma Unica Nazionale punti di ricarica veicoli elettrici, AGCOM Broadband Map copertura banda larga, MIMIT Osservatorio Prezzi Carburanti). Connettilo al tuo client LLM per interrogare i dati ufficiali con linguaggio naturale.</p>
 
   <h2>Come <em>connetterlo</em></h2>
 
@@ -270,7 +270,7 @@ pre code {
   <h3>Skill <em>opzionale</em> per Claude</h3>
   <p>Per ottenere risposte pi&ugrave; mirate quando l'utente chiede dati su uno o pi&ugrave; comuni italiani, &egrave; disponibile una <em>skill</em> Claude che documenta l'uso del connettore: inventario dei 5 tool, schema completo di <code>comune_dashboard</code> (incluse sezioni <code>immobili_pa</code>, <code>anncsu</code>, <code>sanita_mds</code> per farmacie, parafarmacie e posti letto ospedalieri, <code>pun</code> per i punti di ricarica veicoli elettrici, <code>agcom_bbmap</code> per la copertura banda larga FTTH/FTTC, e <code>carburanti</code> per i distributori e prezzi MIMIT), endpoint REST <code>/data/anncsu_full/&lt;istat&gt;.json</code>, pattern operativi e <em>caveat</em> per sezione.</p>
   <p>Scarica il pacchetto e caricalo nelle <em>Skills</em> di Claude (UI o API):</p>
-  <p><a href="/skills/cruscotto-italia-workflow-v1.5.zip" download><strong>cruscotto-italia-workflow-v1.5.zip</strong></a> &mdash; allineata a MCP v0.10.0 (18 dataset, 14 istituzioni, 5 tool)</p>
+  <p><a href="/skills/cruscotto-italia-workflow-v1.5.zip" download><strong>cruscotto-italia-workflow-v1.5.zip</strong></a></p>
 
   <h3>ChatGPT (Custom GPT)</h3>
   <p>Nei custom GPT con supporto MCP, aggiungi un nuovo server con URL <code>https://cruscotto-italia-mcp.piersoftckan.biz/mcp</code> e tipo JSON-RPC 2.0. Nessuna autenticazione richiesta.</p>
@@ -282,8 +282,7 @@ pre code {
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'</code></pre>
 
   <h2>Tool <em>disponibili</em></h2>
-  <p>5 strumenti MCP. <code>search_comune</code> va sempre chiamato per primo quando l'utente fornisce un nome di comune, per ottenere il codice ISTAT.</p>
-  <p>Storia: la prima generazione di tool era a granularita' per fonte (uno per dataset). Per ridurre la latenza (6+ chiamate per una panoramica) e' stato introdotto <code>comune_dashboard</code>: single-fetch che restituisce tutte le 18 fonti aggregate in 21 sezioni. Nella v0.10.0 (maggio 2026) sono stati rimossi i 6 tool ridondanti (<code>comune_demografia</code>, <code>comune_profilo</code>, <code>comune_turismo</code>, <code>comune_pnrr</code>, <code>comune_territorio</code>, <code>comune_contratti</code>) che duplicavano sezioni gia' presenti in <code>comune_dashboard</code>: il choice del modello LLM diventa cosi' ovvio (1 chiamata invece di 2-3 round-trip).</p>
+  <p>5 strumenti MCP. <code>search_comune</code> va sempre chiamato per primo quando l'utente fornisce un nome di comune, per ottenere il codice ISTAT. Per qualunque vista comunale poi, <code>comune_dashboard</code> restituisce in una sola chiamata tutte le 21 sezioni di dati aggregati.</p>
 
   <div class="tools">
     <div class="tool-row"><div class="tool-name">mcp_info</div><div class="tool-desc">Metadata del server: versione, sorgenti integrate (18), freshness di ogni dataset.</div></div>

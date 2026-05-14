@@ -9,39 +9,24 @@ frontmatter `name`/`description`/`version`) e opzionali file di
 riferimento. Claude carica la skill quando il `description` matcha
 l'intent dell'utente.
 
-## Pacchetti disponibili
+## Pacchetto corrente
 
-- **`cruscotto-italia-workflow-v1.5.zip`** *(corrente)* — workflow del connettore MCP:
-  inventory dei **5 tool** (allineato al cleanup v0.10.0: `mcp_info`, `search_comune`,
-  `comune_dashboard`, `comune_opere_dettaglio`, **`anncsu_civico_search`** nuovo),
-  schema completo di `comune_dashboard` (21 sezioni fra cui `immobili_pa`, `anncsu`,
-  `sanita_mds`, `pun`, `agcom_bbmap`, `carburanti`), endpoint REST non-MCP
-  `/data/anncsu_full/<istat>.json`, pattern operativi multi-comune, lookup civici
-  via tool dedicato (3 livelli: dashboard sample, `anncsu_civico_search` puntuale,
-  endpoint full), lookup sanità territoriale, lookup mobilità elettrica, lookup
-  banda larga e lookup carburanti (KPI prezzo medio/min, mix bandiere, freshness,
-  pattern di confronto con `_nazionale.json` e pattern API zonale 5km lato client),
-  caveat per sezione.
+- **`cruscotto-italia-workflow-v1.5.zip`** — workflow del connettore MCP:
+  inventario dei 5 tool, schema completo di `comune_dashboard` (21 sezioni
+  fra cui `immobili_pa`, `anncsu`, `sanita_mds`, `pun`, `agcom_bbmap`,
+  `carburanti`), tool `anncsu_civico_search` per query puntuali sui civici,
+  endpoint REST non-MCP `/data/anncsu_full/<istat>.json`, pattern operativi
+  multi-comune e caveat per sezione.
 
-  Allineata a MCP v0.10.0 (18 dataset, 14 istituzioni, 5 tool, ~7.918 comuni).
+## Pacchetti storici
 
-- **`cruscotto-italia-workflow-v1.4.zip`** *(storica)* — Allineata a MCP v0.9.0
-  (18 dataset, 14 istituzioni, 10 tool). Aggiungeva la sezione `carburanti` (MIMIT
-  Osservatorio Prezzi). Sostituita da v1.5 dopo il cleanup dei tool ridondanti.
+Le versioni precedenti restano disponibili per audit:
 
-- **`cruscotto-italia-workflow-v1.3.zip`** *(storica)* — Allineata a MCP v0.8.0
-  (17 dataset, 13 istituzioni). 20 sezioni dashboard, con `agcom_bbmap`
-  ma senza `carburanti`.
-
-- **`cruscotto-italia-workflow-v1.2.zip`** *(storica)* — Allineata a MCP v0.7.0
-  (16 dataset, 12 istituzioni). 19 sezioni dashboard, con `pun` ma senza `agcom_bbmap`.
-
-- **`cruscotto-italia-workflow-v1.1.zip`** *(storica)* — Allineata a MCP v0.6.0
-  (15 dataset, 11 istituzioni). 18 sezioni dashboard, senza `pun`.
-
-- **`cruscotto-italia-workflow-v1.0.zip`** *(storica)* — versione iniziale.
-  Allineata a MCP v0.5.0 (14 dataset, 10 istituzioni). Manteneva 17 sezioni
-  dashboard (senza `sanita_mds`).
+- `cruscotto-italia-workflow-v1.4.zip`
+- `cruscotto-italia-workflow-v1.3.zip`
+- `cruscotto-italia-workflow-v1.2.zip`
+- `cruscotto-italia-workflow-v1.1.zip`
+- `cruscotto-italia-workflow-v1.0.zip`
 
 ## Installazione lato Claude
 
