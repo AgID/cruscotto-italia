@@ -315,36 +315,18 @@ def download_chunk(istat_codes: list[str],
 
 
 def get_all_istat_codes() -> list[str]:
-    """Ritorna lista ufficiale comuni ISTAT da manifest demografia (gia' su R2).
+    """Ritorna lista ufficiale dei ~7896 ISTAT comuni dal bundle R2.
 
-    Se non disponibile, fallback a probe SDMX (lento).
+    Stesso pattern di anncsu.py / load_canonical_istat():
+    legge lookup/comuni-bundle.json dal bucket R2 cruscotto-italia-data.
     """
-    # Tentativo 1: manifest demografia se accessibile
-    try:
-        m = manifest.load()
-        files = m.get("sources", {}).get("demografia", {}).get("files", [])
-        codes = []
-        for f in files:
-            name = f.get("name", "")
-            if name.endswith(".json"):
-                codes.append(name[:-5])  # strip .json
-        codes = sorted(set(c for c in codes if c.isdigit() and len(c) == 6))
-        if len(codes) > 7000:
-            log.info("asia_istat_codes_from_manifest", n=len(codes))
-            return codes
-    except Exception as e:
-        log.warning("asia_manifest_unavailable", err=str(e))
-
-    # Tentativo 2: codelist CL_ITTER107 da SDMX (lento, ~50 MB)
-    log.info("asia_fetching_codelist_itter107")
-    cl_url = (f"{SDMX_BASE}/codelist/{SDMX_AGENCY}/CL_ITTER107/1.0"
-              "?detail=allstubs")
-    req = urllib.request.Request(cl_url, headers={"User-Agent": UA})
-    with urllib.request.urlopen(req, timeout=300) as resp:
-        xml = resp.read().decode("utf-8")
-    import re
-    codes = sorted(set(re.findall(r'<structure:Code id="(\d{6})"', xml)))
-    log.info("asia_istat_codes_from_codelist", n=len(codes))
+    log.info("asia_loading_canonical_istat")
+    client = r2.get_r2_client()
+    obj = client.get_object(Bucket=r2.get_bucket(),
+                            Key="lookup/comuni-bundle.json")
+    bundle = json.loads(obj["Body"].read())["comuni"]
+    codes = sorted(bundle.keys())
+    log.info("asia_canonical_loaded", n_comuni=len(codes))
     return codes
 
 
@@ -783,6 +765,10 @@ def main() -> int:
             limit_istat=limit,
             force=args.force_download,
         )
+
+    if not csv_paths:
+        log.error("asia_no_csv_to_load", hint="Nothing to do — check download phase")
+        return 1
     con = load_csvs_to_duckdb(csv_paths, limit_istat=limit)
 
     # FASE 3: shard build
