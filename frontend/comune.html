@@ -1299,6 +1299,13 @@ footer a:hover { color: #fff !important; }
   padding:12px 16px;border-radius:0 8px 8px 0;margin:14px 0;font-size:14px;
 }
 
+.runts-privacy-note{
+  background:#f4f7fb;border-left:4px solid #5C6F82;
+  padding:11px 16px;border-radius:0 8px 8px 0;margin:14px 0;
+  font-size:13px;line-height:1.55;
+}
+.runts-privacy-note a{color:var(--accent);}
+
 .runts-table-controls{
   display:flex;gap:14px;align-items:center;flex-wrap:wrap;
   margin:18px 0 14px 0;
@@ -9028,6 +9035,16 @@ function renderRuntsTab(d) {
 
       <h3 class="section-h-small">Elenco enti</h3>
       ${truncNote}
+      <p class="muted runts-privacy-note">
+        <strong>Pubblicità legale.</strong> Il nominativo del legale rappresentante è
+        un dato di <strong>pubblicità legale obbligatoria</strong> ai sensi degli
+        artt. 45, 48 e 52 del <a href="https://www.normattiva.it/uri-res/N2Ls?urn:nir:stato:decreto.legislativo:2017-07-03;117" target="_blank" rel="noopener">D.Lgs&nbsp;117/2017</a>
+        (Codice del Terzo Settore): il RUNTS è per legge pubblico, telematico
+        e accessibile a chiunque, e la conoscibilità del rappresentante rende
+        gli atti dell'ente opponibili ai terzi. Stessa logica della visura
+        camerale del Registro Imprese. Base giuridica GDPR: art.&nbsp;6.1.c
+        (obbligo di legge) e art.&nbsp;6.1.e (compito di interesse pubblico).
+      </p>
       <div class="runts-table-controls">
         <label for="runts-search" class="visually-hidden">Cerca ente per denominazione o codice fiscale</label>
         <input type="search" id="runts-search" class="runts-search-input"
