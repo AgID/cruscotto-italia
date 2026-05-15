@@ -527,7 +527,7 @@ def build_shard_for_istat(con: duckdb.DuckDBPyConnection, istat: str,
 
     # ── Top settori per UL (esclusi codici aggregati '0010' e altre) ─
     top_ul_rows = con.execute("""
-        SELECT ateco, value AS ul, COALESCE(add_val.value, 0) AS addetti
+        SELECT ul_t.ateco, ul_t.value AS ul, COALESCE(add_val.value, 0) AS addetti
         FROM asia_raw AS ul_t
         LEFT JOIN asia_raw AS add_val
           ON ul_t.istat = add_val.istat AND ul_t.ateco = add_val.ateco
