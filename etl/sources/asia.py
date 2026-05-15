@@ -230,116 +230,199 @@ ATECO_LABELS = {
 
 
 # ═════════════════════════════════════════════════════════════════════════
-# FASE 1 — Download CSV bulk per anno
+# FASE 1 — Download CSV in chunk di N comuni × tutti gli anni in 1 chiamata
 # ═════════════════════════════════════════════════════════════════════════
+#
+# Strategia validata 2026-05-15:
+# - ISTAT esploradati.istat.it ha limite MAX 35 codici REF_AREA per chiamata
+#   (40 → HTTP 400 "Bad Request - Invalid URL").
+# - Il bulk full su 1 anno (~150 MB) e' instabile: in ~50% dei casi viene
+#   troncato a 70-80 MB senza errore (server-side ConnectionReset).
+# - Il bulk full 6 anni (~900 MB) e' totalmente non praticabile.
+# - Parallelismo > 2 connessioni → HTTP 503 da rate-limit.
+#
+# Soluzione: 226 chiamate da 35 comuni × 6 anni = ~25 s/chiamata.
+# Con parallelismo=2 + retry su 503: ~60 min/full pull annuale (CI).
+# Per smoke test --limit (5 comuni): 1 sola chiamata, ~30 s.
+#
+# Cache: 1 file CSV per chunk (asia_chunk_<idx>.csv) in CACHE_DIR.
 
-def sdmx_data_url(year: int) -> str:
-    """URL SDMX bulk CSV per un singolo anno (5 dimensioni wildcard)."""
+CHUNK_SIZE = 35  # max codici REF_AREA per chiamata SDMX ISTAT
+PARALLEL_DOWNLOADS = 2  # ISTAT rate-limit a 503 oltre 2 connessioni concorrenti
+
+
+def sdmx_data_url_chunk(istat_codes: list[str],
+                        year_start: int, year_end: int) -> str:
+    """URL SDMX per N comuni × range anni in 1 chiamata."""
+    key_area = "+".join(istat_codes)
     return (f"{SDMX_BASE}/data/{SDMX_AGENCY},{DATAFLOW_ID},{SDMX_VERSION}/"
-            f"A.....?startPeriod={year}&endPeriod={year}")
+            f"A.{key_area}.....?startPeriod={year_start}&endPeriod={year_end}")
 
 
-def download_csv_year(year: int, cache_dir: Path,
-                      force: bool = False,
-                      max_retry: int = 4) -> Path:
-    """Scarica CSV bulk per 1 anno con retry su 503 e streaming chunked.
+def download_chunk(istat_codes: list[str],
+                   year_start: int, year_end: int,
+                   out_path: Path,
+                   max_retry: int = 4) -> Path:
+    """Scarica 1 chunk (N comuni × range anni) con retry su 503."""
+    url = sdmx_data_url_chunk(istat_codes, year_start, year_end)
+    if len(istat_codes) > CHUNK_SIZE:
+        raise ValueError(f"Chunk size {len(istat_codes)} > limite ISTAT {CHUNK_SIZE}")
 
-    Streaming a 256 KB chunk con scrittura incrementale + log ogni 10 MB
-    per visibilità del progresso (ISTAT serve in chunked-encoding, payload
-    ~150 MB per anno). Su 503 retry con backoff esponenziale.
-    """
-    cache_dir.mkdir(parents=True, exist_ok=True)
-    out = cache_dir / f"asia_{year}.csv"
-    tmp = cache_dir / f"asia_{year}.csv.part"
-    if out.exists() and out.stat().st_size > 10_000_000 and not force:
-        log.info("asia_cache_hit", year=year, path=str(out),
-                 size_mb=round(out.stat().st_size / 1024 / 1024, 1))
-        return out
-
-    url = sdmx_data_url(year)
     headers = {
         "Accept": "application/vnd.sdmx.data+csv;version=1.0.0",
         "User-Agent": UA,
-        "Accept-Encoding": "identity",  # disabilita gzip per progress reale
+        "Accept-Encoding": "identity",
     }
-    CHUNK = 262_144         # 256 KB
-    LOG_EVERY = 10 * 1024 * 1024   # log ogni 10 MB scaricati
 
     for attempt in range(1, max_retry + 1):
         try:
-            log.info("asia_downloading", year=year, attempt=attempt, url=url)
             t0 = time.time()
             req = urllib.request.Request(url, headers=headers)
-            with urllib.request.urlopen(req, timeout=900) as resp:
-                status = resp.status
-                total_hdr = resp.headers.get("Content-Length")
-                log.info("asia_download_start",
-                         year=year, http=status,
-                         content_length=total_hdr,
-                         content_type=resp.headers.get("Content-Type"))
-                bytes_written = 0
-                next_log_at = LOG_EVERY
-                with open(tmp, "wb") as fh:
-                    while True:
-                        buf = resp.read(CHUNK)
-                        if not buf:
-                            break
-                        fh.write(buf)
-                        bytes_written += len(buf)
-                        if bytes_written >= next_log_at:
-                            elapsed = time.time() - t0
-                            rate = bytes_written / elapsed / 1024 / 1024
-                            log.info("asia_download_progress",
-                                     year=year,
-                                     mb=round(bytes_written / 1024 / 1024, 1),
-                                     elapsed_s=round(elapsed, 1),
-                                     mbps=round(rate, 2))
-                            next_log_at += LOG_EVERY
+            with urllib.request.urlopen(req, timeout=180) as resp:
+                data = resp.read()
             elapsed = time.time() - t0
-            size_mb = bytes_written / 1024 / 1024
-            if bytes_written < 1_000_000:
-                snippet = tmp.read_bytes()[:200].decode("utf-8", errors="ignore")
-                log.warning("asia_response_too_small",
-                            year=year, bytes=bytes_written, snippet=snippet)
-                tmp.unlink(missing_ok=True)
-                raise RuntimeError(f"Response too small: {bytes_written} bytes")
-            tmp.rename(out)
-            log.info("asia_downloaded", year=year,
-                     size_mb=round(size_mb, 1), seconds=round(elapsed, 1),
-                     mbps=round(size_mb / elapsed, 2))
-            return out
+            if len(data) < 1000:
+                snippet = data[:200].decode("utf-8", errors="ignore")
+                raise RuntimeError(f"Response too small: {len(data)} bytes | {snippet}")
+            out_path.write_bytes(data)
+            return out_path
         except urllib.error.HTTPError as e:
-            log.warning("asia_http_error", year=year,
-                        status=e.code, attempt=attempt, max_retry=max_retry)
-            tmp.unlink(missing_ok=True)
-            if e.code == 503 and attempt < max_retry:
-                backoff = 30 * attempt
-                log.info("asia_backoff_sleep", year=year, seconds=backoff)
+            if e.code in (503, 429) and attempt < max_retry:
+                backoff = 15 * attempt
+                log.warning("asia_chunk_503_backoff",
+                            chunk_file=out_path.name,
+                            attempt=attempt, backoff=backoff,
+                            n_codes=len(istat_codes))
                 time.sleep(backoff)
                 continue
+            log.error("asia_chunk_http_error",
+                      chunk_file=out_path.name,
+                      code=e.code, attempt=attempt,
+                      first_codes=istat_codes[:3])
             raise
         except (urllib.error.URLError, RuntimeError, TimeoutError, OSError) as e:
-            log.warning("asia_download_error",
-                        year=year, error=str(e),
-                        attempt=attempt, max_retry=max_retry)
-            tmp.unlink(missing_ok=True)
             if attempt < max_retry:
-                backoff = 30 * attempt
+                backoff = 15 * attempt
+                log.warning("asia_chunk_retry",
+                            chunk_file=out_path.name,
+                            attempt=attempt, error=str(e), backoff=backoff)
                 time.sleep(backoff)
                 continue
+            log.error("asia_chunk_failed", chunk_file=out_path.name,
+                      err=str(e), attempts=attempt)
             raise
-    raise RuntimeError(f"asia download failed after {max_retry} retries (year={year})")
+    raise RuntimeError(f"chunk failed after {max_retry} retries (file={out_path.name})")
 
 
-def download_all_years(cache_dir: Path, force: bool = False) -> list[Path]:
-    """Scarica tutti gli anni con pausa di cortesia tra chiamate."""
-    out = []
-    for i, year in enumerate(YEARS):
-        if i > 0 and not (cache_dir / f"asia_{year}.csv").exists():
-            # Pausa di cortesia (ISTAT 503-prone dopo bulk)
-            time.sleep(15)
-        out.append(download_csv_year(year, cache_dir, force=force))
-    return out
+def get_all_istat_codes() -> list[str]:
+    """Ritorna lista ufficiale comuni ISTAT da manifest demografia (gia' su R2).
+
+    Se non disponibile, fallback a probe SDMX (lento).
+    """
+    # Tentativo 1: manifest demografia se accessibile
+    try:
+        m = manifest.load()
+        files = m.get("sources", {}).get("demografia", {}).get("files", [])
+        codes = []
+        for f in files:
+            name = f.get("name", "")
+            if name.endswith(".json"):
+                codes.append(name[:-5])  # strip .json
+        codes = sorted(set(c for c in codes if c.isdigit() and len(c) == 6))
+        if len(codes) > 7000:
+            log.info("asia_istat_codes_from_manifest", n=len(codes))
+            return codes
+    except Exception as e:
+        log.warning("asia_manifest_unavailable", err=str(e))
+
+    # Tentativo 2: codelist CL_ITTER107 da SDMX (lento, ~50 MB)
+    log.info("asia_fetching_codelist_itter107")
+    cl_url = (f"{SDMX_BASE}/codelist/{SDMX_AGENCY}/CL_ITTER107/1.0"
+              "?detail=allstubs")
+    req = urllib.request.Request(cl_url, headers={"User-Agent": UA})
+    with urllib.request.urlopen(req, timeout=300) as resp:
+        xml = resp.read().decode("utf-8")
+    import re
+    codes = sorted(set(re.findall(r'<structure:Code id="(\d{6})"', xml)))
+    log.info("asia_istat_codes_from_codelist", n=len(codes))
+    return codes
+
+
+def download_all_in_chunks(cache_dir: Path,
+                           year_start: int, year_end: int,
+                           limit_istat: list[str] | None = None,
+                           force: bool = False) -> list[Path]:
+    """Itera chunked download di TUTTI i comuni ISTAT × range anni.
+
+    Se limit_istat passato, scarica solo quelli (smoke test).
+    """
+    cache_dir.mkdir(parents=True, exist_ok=True)
+
+    if limit_istat:
+        all_codes = sorted(set(limit_istat))
+        log.info("asia_download_limit_mode", n_codes=len(all_codes))
+    else:
+        all_codes = get_all_istat_codes()
+        log.info("asia_download_full_mode", n_codes=len(all_codes))
+
+    # Chunk in gruppi di CHUNK_SIZE
+    chunks = [all_codes[i:i + CHUNK_SIZE]
+              for i in range(0, len(all_codes), CHUNK_SIZE)]
+    log.info("asia_download_chunks_planned",
+             n_chunks=len(chunks), chunk_size=CHUNK_SIZE,
+             years=f"{year_start}-{year_end}",
+             parallel=PARALLEL_DOWNLOADS)
+
+    out_paths: list[Path] = []
+    todo: list[tuple[int, list[str], Path]] = []
+    for idx, chunk_codes in enumerate(chunks):
+        out = cache_dir / f"asia_chunk_{idx:04d}.csv"
+        if out.exists() and out.stat().st_size > 1000 and not force:
+            out_paths.append(out)
+            continue
+        todo.append((idx, chunk_codes, out))
+
+    log.info("asia_download_todo", todo=len(todo), cached=len(chunks) - len(todo))
+
+    if not todo:
+        return [cache_dir / f"asia_chunk_{idx:04d}.csv" for idx in range(len(chunks))]
+
+    t0 = time.time()
+    done = 0
+    failed: list[int] = []
+
+    def _worker(idx: int, codes: list[str], out: Path) -> tuple[int, bool]:
+        try:
+            download_chunk(codes, year_start, year_end, out)
+            return idx, True
+        except Exception as e:
+            log.error("asia_chunk_giveup", idx=idx, err=str(e))
+            return idx, False
+
+    with ThreadPoolExecutor(max_workers=PARALLEL_DOWNLOADS) as ex:
+        futs = {ex.submit(_worker, idx, codes, out): idx
+                for idx, codes, out in todo}
+        for fut in as_completed(futs):
+            idx, ok = fut.result()
+            done += 1
+            if not ok:
+                failed.append(idx)
+            if done % 10 == 0 or done == len(todo):
+                elapsed = time.time() - t0
+                eta = elapsed / done * (len(todo) - done) if done > 0 else 0
+                log.info("asia_download_progress",
+                         done=done, todo=len(todo),
+                         failed=len(failed),
+                         elapsed_s=round(elapsed, 1),
+                         eta_s=round(eta, 1))
+
+    if failed:
+        log.error("asia_download_partial_failure",
+                  failed_chunks=failed[:20], n_failed=len(failed))
+        raise RuntimeError(f"{len(failed)} chunks failed (see log)")
+
+    # Ritorna paths in ordine
+    return [cache_dir / f"asia_chunk_{idx:04d}.csv" for idx in range(len(chunks))]
 
 
 # ═════════════════════════════════════════════════════════════════════════
@@ -680,19 +763,26 @@ def main() -> int:
     log.info("asia_etl_start", target=args.target)
     t_start = time.time()
 
-    # FASE 1: download
+    # FASE 1: download chunked
+    limit = [c.strip() for c in args.limit.split(",") if c.strip()] if args.limit else None
+
     if args.skip_download:
         log.info("asia_skip_download")
-        csv_paths = [CACHE_DIR / f"asia_{y}.csv" for y in YEARS]
-        missing = [p for p in csv_paths if not p.exists()]
-        if missing:
-            log.error("asia_cache_missing", missing=[str(p) for p in missing])
+        csv_paths = sorted(CACHE_DIR.glob("asia_chunk_*.csv"))
+        if not csv_paths:
+            log.error("asia_cache_missing",
+                      cache_dir=str(CACHE_DIR),
+                      hint="Run without --skip-download first")
             return 1
+        log.info("asia_cache_files_found", n=len(csv_paths))
     else:
-        csv_paths = download_all_years(CACHE_DIR, force=args.force_download)
-
-    # FASE 2: load + aggregate
-    limit = [c.strip() for c in args.limit.split(",") if c.strip()] if args.limit else None
+        csv_paths = download_all_in_chunks(
+            CACHE_DIR,
+            year_start=min(YEARS),
+            year_end=max(YEARS),
+            limit_istat=limit,
+            force=args.force_download,
+        )
     con = load_csvs_to_duckdb(csv_paths, limit_istat=limit)
 
     # FASE 3: shard build
