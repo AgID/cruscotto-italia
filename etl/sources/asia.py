@@ -242,13 +242,15 @@ def sdmx_data_url(year: int) -> str:
 def download_csv_year(year: int, cache_dir: Path,
                       force: bool = False,
                       max_retry: int = 4) -> Path:
-    """Scarica CSV bulk per 1 anno con retry su 503.
+    """Scarica CSV bulk per 1 anno con retry su 503 e streaming chunked.
 
-    ISTAT serve in modalità streaming, payload ~150 MB per anno.
-    Timeout urllib alto (900s) per copertura.
+    Streaming a 256 KB chunk con scrittura incrementale + log ogni 10 MB
+    per visibilità del progresso (ISTAT serve in chunked-encoding, payload
+    ~150 MB per anno). Su 503 retry con backoff esponenziale.
     """
     cache_dir.mkdir(parents=True, exist_ok=True)
     out = cache_dir / f"asia_{year}.csv"
+    tmp = cache_dir / f"asia_{year}.csv.part"
     if out.exists() and out.stat().st_size > 10_000_000 and not force:
         log.info("asia_cache_hit", year=year, path=str(out),
                  size_mb=round(out.stat().st_size / 1024 / 1024, 1))
@@ -258,7 +260,10 @@ def download_csv_year(year: int, cache_dir: Path,
     headers = {
         "Accept": "application/vnd.sdmx.data+csv;version=1.0.0",
         "User-Agent": UA,
+        "Accept-Encoding": "identity",  # disabilita gzip per progress reale
     }
+    CHUNK = 262_144         # 256 KB
+    LOG_EVERY = 10 * 1024 * 1024   # log ogni 10 MB scaricati
 
     for attempt in range(1, max_retry + 1):
         try:
@@ -266,32 +271,58 @@ def download_csv_year(year: int, cache_dir: Path,
             t0 = time.time()
             req = urllib.request.Request(url, headers=headers)
             with urllib.request.urlopen(req, timeout=900) as resp:
-                data = resp.read()
+                status = resp.status
+                total_hdr = resp.headers.get("Content-Length")
+                log.info("asia_download_start",
+                         year=year, http=status,
+                         content_length=total_hdr,
+                         content_type=resp.headers.get("Content-Type"))
+                bytes_written = 0
+                next_log_at = LOG_EVERY
+                with open(tmp, "wb") as fh:
+                    while True:
+                        buf = resp.read(CHUNK)
+                        if not buf:
+                            break
+                        fh.write(buf)
+                        bytes_written += len(buf)
+                        if bytes_written >= next_log_at:
+                            elapsed = time.time() - t0
+                            rate = bytes_written / elapsed / 1024 / 1024
+                            log.info("asia_download_progress",
+                                     year=year,
+                                     mb=round(bytes_written / 1024 / 1024, 1),
+                                     elapsed_s=round(elapsed, 1),
+                                     mbps=round(rate, 2))
+                            next_log_at += LOG_EVERY
             elapsed = time.time() - t0
-            size_mb = len(data) / 1024 / 1024
-            if len(data) < 1_000_000:
-                # Forse 503 mascherato da successo
-                snippet = data[:200].decode("utf-8", errors="ignore")
+            size_mb = bytes_written / 1024 / 1024
+            if bytes_written < 1_000_000:
+                snippet = tmp.read_bytes()[:200].decode("utf-8", errors="ignore")
                 log.warning("asia_response_too_small",
-                            year=year, bytes=len(data), snippet=snippet)
-                raise RuntimeError(f"Response too small: {len(data)} bytes")
-            out.write_bytes(data)
+                            year=year, bytes=bytes_written, snippet=snippet)
+                tmp.unlink(missing_ok=True)
+                raise RuntimeError(f"Response too small: {bytes_written} bytes")
+            tmp.rename(out)
             log.info("asia_downloaded", year=year,
-                     size_mb=round(size_mb, 1), seconds=round(elapsed, 1))
+                     size_mb=round(size_mb, 1), seconds=round(elapsed, 1),
+                     mbps=round(size_mb / elapsed, 2))
             return out
         except urllib.error.HTTPError as e:
             log.warning("asia_http_error", year=year,
                         status=e.code, attempt=attempt, max_retry=max_retry)
+            tmp.unlink(missing_ok=True)
             if e.code == 503 and attempt < max_retry:
                 backoff = 30 * attempt
                 log.info("asia_backoff_sleep", year=year, seconds=backoff)
                 time.sleep(backoff)
                 continue
             raise
-        except (urllib.error.URLError, RuntimeError, TimeoutError) as e:
+        except (urllib.error.URLError, RuntimeError, TimeoutError, OSError) as e:
             log.warning("asia_download_error",
                         year=year, error=str(e),
                         attempt=attempt, max_retry=max_retry)
+            tmp.unlink(missing_ok=True)
             if attempt < max_retry:
                 backoff = 30 * attempt
                 time.sleep(backoff)
