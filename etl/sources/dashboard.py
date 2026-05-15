@@ -88,6 +88,7 @@ SHARDS = [
     ("agcom_bbmap","agcom_bbmap/{istat}.json"),
     ("carburanti", "carburanti/{istat}.json"),
     ("runts",      "runts/{istat}.json"),
+    ("asia",       "asia/{istat}.json"),
 ]
 
 ETL_VERSION = "0.1.0"
@@ -158,6 +159,7 @@ def compute_kpi_summary(out: dict) -> dict:
     anncsu = out.get("anncsu") or {}
     runts = out.get("runts") or {}
     sanita = out.get("sanita_mds") or {}
+    asia = out.get("asia") or {}
 
     # Popolazione (riferimento per molti pro-capite/per-1000)
     pop = _safe(demo, "popolazione_totale")
@@ -319,6 +321,14 @@ def compute_kpi_summary(out: dict) -> dict:
             "pct_5x1000": _safe(runts, "kpi", "pct_5x1000"),
             "enti_per_1000_ab": _per_1000(_safe(runts, "kpi", "n_totale"), pop),
             "snapshot_date": runts.get("_snapshot_date"),
+        },
+        "imprese_asia": {
+            "anno": asia.get("_latest_year"),
+            "ul_totali": _safe(asia, "kpi", "ul_totali"),
+            "addetti_totali": _safe(asia, "kpi", "addetti_totali"),
+            "addetti_per_ul": _safe(asia, "kpi", "addetti_per_ul"),
+            "ul_yoy_pct": _safe(asia, "kpi", "ul_yoy_pct"),
+            "ul_per_1000_ab": _per_1000(_safe(asia, "kpi", "ul_totali"), pop),
         },
         "sanita_mds": {
             "n_farmacie": n_farmacie,
