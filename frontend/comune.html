@@ -3461,7 +3461,7 @@ function renderContrattiTab(contratti) {
         <h2 class="section-h">Nessun contratto ANAC <em>per il periodo coperto</em>.</h2>
         <div class="placeholder">
           Il comune potrebbe non aver registrato aggiudicazioni nel periodo
-          monitorato (marzo 2026), oppure l'ETL non ha trovato un match
+          monitorato, oppure l'ETL non ha trovato un match
           via codice fiscale stazione appaltante.
         </div>
       </div>
@@ -3477,6 +3477,18 @@ function renderContrattiTab(contratti) {
     const [d] = s.split(' ');
     const [y,m,dd] = d.split('-');
     return `${dd}/${m}/${y}`;
+  };
+
+  // Formato esteso "25 marzo 2026" per frasi descrittive
+  const fmtDateExt = s => {
+    if (!s) return null;
+    const MESI = ['gennaio','febbraio','marzo','aprile','maggio','giugno',
+                  'luglio','agosto','settembre','ottobre','novembre','dicembre'];
+    const [d] = s.split(' ');
+    const [y,m,dd] = d.split('-');
+    const mi = parseInt(m, 10) - 1;
+    if (mi < 0 || mi > 11) return null;
+    return `${parseInt(dd, 10)} ${MESI[mi]} ${y}`;
   };
 
   // Top CPV: lista con barra proporzionale al count
@@ -3505,8 +3517,12 @@ function renderContrattiTab(contratti) {
       <h2 class="section-h">${fmtNum(c.count)} aggiudicazioni <em>per €${fmtNum(Math.round(c.importo_totale || 0))}</em>.</h2>
       <p class="section-sub">
         Contratti pubblici dove il Comune è <em>stazione appaltante</em>, secondo lo standard
-        Open Contracting (OCDS). Il dato è limitato alle aggiudicazioni di <strong>marzo 2026</strong>:
-        per la copertura completa servirà l'aggregazione di altri mesi.
+        Open Contracting (OCDS). ${(() => {
+          const last = fmtDateExt(c.last_award_date);
+          return last
+            ? `L'ultima aggiudicazione registrata è del <strong>${last}</strong>: per il quadro completo servirà l'aggregazione di altri mesi.`
+            : `Per il quadro completo servirà l'aggregazione di altri mesi.`;
+        })()}
       </p>
 
       <div class="kpi-cards">
