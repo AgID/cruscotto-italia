@@ -210,8 +210,7 @@ cruscotto-italia/
 │   ├── sources/              ← un modulo per fonte
 │   │   ├── anagrafica.py       ← spina dorsale ISTAT comuni + IPA
 │   │   ├── anac.py             ← contratti pubblici (OCDS)
-│   │   ├── bdap_mop.py         ← opere pubbliche
-│   │   ├── bdap.py             ← BDAP aggregato (per ANAC lookup)
+│   │   ├── bdap.py             ← BDAP-MOP opere pubbliche (CUP, progetti) + aggregato per ANAC lookup
 │   │   ├── siope.py            ← SIOPE Spese multi-anno (CKAN)
 │   │   ├── pnrr_progetti.py    ← progetti PNRR (Italia Domani/ReGiS)
 │   │   ├── demografia.py       ← popolazione (POSAS)
