@@ -25,7 +25,7 @@ export const mcpInfo: ToolDefinition = {
     }
     return {
       service: "cruscotto-italia-mcp",
-      version: "0.11.0",
+      version: "0.12.0",
       protocol: "MCP 2024-11-05",
       datasets: 19,
       institutions: 15,

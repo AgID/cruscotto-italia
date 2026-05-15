@@ -15,22 +15,28 @@
  *     LLM diventa ovvio: per qualsiasi vista comunale, comune_dashboard.
  *     I tool legacy creavano confusione (Claude/GPT a volte sceglieva
  *     il dedicato facendo 2-3 round-trip invece di 1).
+ *   - v0.11.0 (2026-05-15): introdotto comune_kpi (~620 token) come
+ *     "primo contatto" per agent AI. Risolve l'over-fetching di
+ *     comune_dashboard (~250K token, oltre il limite Claude Connector
+ *     di 25K token per tool response). Pattern d'uso:
+ *       - Query puntuali e confronti N-comuni → comune_kpi (leggero)
+ *       - Vista dettagliata singolo-comune → comune_dashboard (pesante)
+ *       - Dettaglio specifico → comune_opere_dettaglio, anncsu_civico_search
  *
- * Tool attivi (5):
+ * Tool attivi (6):
  *   - mcp_info: metadata server + freshness datasets
- *   - search_comune: nome -> codice ISTAT (preliminare a comune_dashboard)
- *   - comune_dashboard: workhorse, vista completa 21 sezioni
- *   - comune_opere_dettaglio: dettaglio BDAP filtrato al 2025 (non
- *     disponibile come dato aggregato in dashboard.bdap_kpi)
- *   - anncsu_civico_search: query puntuali civici ANNCSU con filtri
- *     odonimo/civico (sostituisce il fetch del full shard per query
- *     mirate, evita di buttare 500k civici di Roma nel context LLM)
+ *   - search_comune: nome -> codice ISTAT (preliminare ai tool comune_*)
+ *   - comune_kpi: KPI sintetici (~620 token, primo tool da chiamare)
+ *   - comune_dashboard: workhorse pesante, vista completa 21 sezioni
+ *   - comune_opere_dettaglio: dettaglio BDAP filtrato al 2025
+ *   - anncsu_civico_search: query puntuali civici ANNCSU
  */
 
 import type { Env } from "../index.js";
 
 import { comuneOpereDettaglio } from "./comune_opere_dettaglio.js";
 import { comuneDashboard } from "./comune_dashboard.js";
+import { comuneKpi } from "./comune_kpi.js";
 import { searchComune } from "./search_comune.js";
 import { mcpInfo } from "./mcp_info.js";
 import { anncsuCivicoSearch } from "./anncsu_civico_search.js";
@@ -53,7 +59,11 @@ export const tools = {
   mcp_info: mcpInfo,
   search_comune: searchComune,
 
-  // Workhorse: single-fetch per vista comunale completa (21 sezioni)
+  // Workhorse leggero: KPI sintetici, primo tool da chiamare per query
+  // puntuali e confronti tra comuni (~620 token, vs 250K di comune_dashboard)
+  comune_kpi: comuneKpi,
+
+  // Workhorse pesante: single-fetch per vista comunale completa (21 sezioni)
   comune_dashboard: comuneDashboard,
 
   // Specializzati: forniscono dati NON ridondanti rispetto a comune_dashboard
