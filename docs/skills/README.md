@@ -11,17 +11,21 @@ l'intent dell'utente.
 
 ## Pacchetto corrente
 
-- **`cruscotto-italia-workflow-v1.5.zip`** — workflow del connettore MCP:
-  inventario dei 5 tool, schema completo di `comune_dashboard` (21 sezioni
-  fra cui `immobili_pa`, `anncsu`, `sanita_mds`, `pun`, `agcom_bbmap`,
-  `carburanti`), tool `anncsu_civico_search` per query puntuali sui civici,
-  endpoint REST non-MCP `/data/anncsu_full/<istat>.json`, pattern operativi
-  multi-comune e caveat per sezione.
+- **`cruscotto-italia-workflow-v1.7.0.zip`** — workflow del connettore MCP:
+  inventario dei **6 tool** (introduce `comune_kpi` per query puntuali e
+  confronti tra comuni: ~620 token, 22 gruppi tematici di KPI sintetici),
+  schema completo di `comune_dashboard` (22 sezioni fra cui `immobili_pa`,
+  `anncsu`, `sanita_mds`, `pun`, `agcom_bbmap`, `carburanti`, `runts`),
+  tool `anncsu_civico_search` per query puntuali sui civici, endpoint REST
+  non-MCP `/data/anncsu_full/<istat>.json`, decision tree tool selection,
+  pattern operativi multi-comune e caveat per sezione.
 
 ## Pacchetti storici
 
 Le versioni precedenti restano disponibili per audit:
 
+- `cruscotto-italia-workflow-v1.6.0.zip`
+- `cruscotto-italia-workflow-v1.5.zip`
 - `cruscotto-italia-workflow-v1.4.zip`
 - `cruscotto-italia-workflow-v1.3.zip`
 - `cruscotto-italia-workflow-v1.2.zip`
