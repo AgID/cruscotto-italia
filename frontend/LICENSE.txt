@@ -23,7 +23,9 @@ FONTI ORIGINARIE E LORO LICENZE
 - SIOPE (dati.gov.it / Banca d'Italia) ............... CC BY 4.0
 - Italia Domani (PNRR — Presidenza del Consiglio) .... CC BY 4.0
 - ISPRA (Suolo, IdroGEO, Catasto Rifiuti, SNPA Aria) . CC BY 4.0
-- ISTAT (POSAS, Censimento, Turismo, Incidenti) ...... CC BY 3.0 IT
+- ISTAT (POSAS, Censimento, Turismo, Incidenti,
+  ASIA UL - Archivio Statistico Imprese Attive
+  Unita' Locali) ..................................... CC BY 3.0 IT
 - MIUR (Anagrafe Scuole) ............................. CC BY 4.0
 - ACI (Parco veicolare — LOD) ........................ CC BY 4.0
 - MEF Dipartimento Finanze (Redditi IRPEF) ........... CC BY 3.0
