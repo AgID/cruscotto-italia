@@ -1537,7 +1537,7 @@ function renderComune(data) {
     { id: 'anncsu', label: 'ANNCSU', kpi: k.anncsu?.kpi?.n_strade != null ? fmtNum(k.anncsu.kpi.n_strade) + (k.anncsu.kpi.n_civici != null ? ' / ' + fmtNum(k.anncsu.kpi.n_civici) : '') : '—' },
     { id: 'aria', label: 'Aria', kpi: '<span data-tab-aria-n><span class="tab-spinner"></span></span>' },
     { id: 'banda-larga', label: 'Banda larga', kpi: k.agcom_bbmap?.kpi?.copertura_ftth_desi_pct != null ? Math.round(k.agcom_bbmap.kpi.copertura_ftth_desi_pct) + '%' : '—' },
-    { id: 'contratti', label: 'Contratti', kpi: fmtNum(k.contratti?.count || 0) },
+    { id: 'contratti', label: 'Contratti ANAC', kpi: fmtNum(k.contratti?.count || 0) },
     { id: 'demografia', label: 'Demografia', kpi: k.popolazione != null ? fmtNum(k.popolazione) : '—' },
     { id: 'carburanti', label: 'Distributori e prezzi', kpi: k.carburanti?.kpi?.n_impianti != null ? fmtNum(k.carburanti.kpi.n_impianti) : '—' },
     { id: 'opere', label: 'Opere', kpi: k.opere?.count != null ? fmtNum(k.opere.count) : '—' },
