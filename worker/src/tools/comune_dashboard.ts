@@ -55,6 +55,15 @@
  *                                   enti per comune, ordinati per data
  *                                   iscrizione DESC.
  *                                   Aggiornamento quotidiano.)
+ *   - asia/<istat>.json            (ISTAT - Archivio Statistico Imprese Attive
+ *                                   Unità Locali (ASIA UL). Licenza CC BY 3.0 IT.
+ *                                   Dataflow SDMX 183_1163_DF_DICA_ASIAULP_TERRIFDATA_7.
+ *                                   Granularità comune × ATECO 2 cifre × classe
+ *                                   addetti × anno. Serie 2018-2023. Misure: LU
+ *                                   (stock unità locali) + LUEMPDAA (addetti
+ *                                   media annua). Classi: W0_9, W10_49, W50_249,
+ *                                   W_GE250. Copertura: 100% dei 7.896 comuni.
+ *                                   Aggiornamento annuale (~Q4 ISTAT).)
  *   - lookup/anac-aggregato.json[<cf>] (contratti)
  *
  * Schema output (passa-attraverso del file R2):
@@ -260,6 +269,42 @@
  *                                       //   con n_totale=0 (piccoli, montani).
  *                                       //   Aggiornamento quotidiano (XLSX bulk
  *                                       //   ASP.NET PostBack servizi.lavoro.gov.it).
+ *     "asia":        { ... }            // ISTAT - Archivio Statistico Imprese Attive
+ *                                       //   Unità Locali (ASIA UL):
+ *                                       //   { _source_url, _license: "CC BY 3.0 IT",
+ *                                       //     _latest_year: int, _years_available: [int...],
+ *                                       //     kpi: { ul_totali,
+ *                                       //            addetti_totali,
+ *                                       //            addetti_per_ul,  // dimensione media UL
+ *                                       //            ul_yoy_pct,       // crescita year-on-year
+ *                                       //            mix_classe_addetti: // % UL per classe
+ *                                       //              {W0_9, W10_49,
+ *                                       //               W50_249, W_GE250}: float,
+ *                                       //            top_settori_ul: [{
+ *                                       //              code, label, ul, addetti
+ *                                       //            }, ...] (top 10 per UL),
+ *                                       //            top_settori_addetti: [{
+ *                                       //              code, label, ul, addetti
+ *                                       //            }, ...] (top 10 per addetti)
+ *                                       //          },
+ *                                       //     serie_storica: { anni: [2018..2023],
+ *                                       //                      ul: [int..],
+ *                                       //                      addetti: [float..] },
+ *                                       //     ateco_dettaglio: {
+ *                                       //        "<latest_year>": {
+ *                                       //          "<ateco2cifre>": {
+ *                                       //            "<class>": { ul, addetti },
+ *                                       //            ...
+ *                                       //          }, ...
+ *                                       //        }
+ *                                       //     }
+ *                                       //   }
+ *                                       //   Caveat: ASIA conta UL non imprese
+ *                                       //   giuridiche - 1 impresa con sedi multi-
+ *                                       //   comune compare in piu' comuni.
+ *                                       //   Coverage: 100% dei 7.896 comuni.
+ *                                       //   Aggiornamento annuale (~Q4 ISTAT,
+ *                                       //   latency ~2 anni: nel 2026 latest=2023).
  *   }
  *
  * NB sulla cache:
@@ -313,11 +358,12 @@ interface DashboardShard {
   agcom_bbmap: unknown | null;
   carburanti: unknown | null;
   runts: unknown | null;
+  asia: unknown | null;
 }
 
 export const comuneDashboard: ToolDefinition = {
   description:
-    "Vista completa di un comune italiano in una sola chiamata (~250K token, sezioni complete con array dettagliati). PRIMA DI CHIAMARE QUESTO TOOL valuta se comune_kpi (~620 token, KPI sintetici) basta per la tua query: per domande puntuali ('popolazione di X', 'reddito medio di Y') o confronti tra comuni ('X vs Y') preferisci sempre comune_kpi. Usa comune_dashboard SOLO quando servono array dettagliati: top categorie merceologiche ANAC, settori BDAP, missioni PNRR, piramide età demografia, time series SIOPE mensili, mappa civici ANNCSU, punti ricarica EV, stabilimenti ospedalieri con discipline. Sezioni: anagrafica, demografia, censimento, turismo, PNRR (Italia Domani), territorio (ISPRA Suolo/IdroGEO/Rifiuti), qualita aria (ISPRA SNPA: PM10/PM2.5/NO2), opere pubbliche (BDAP-MOP), spese (SIOPE multi-anno), contratti (ANAC), scuole (MIUR), veicoli e incidenti (ISTAT + ACI), redditi IRPEF 2020-2024 (MEF DF), patrimonio immobili PA (MEF DE 2022), ANNCSU civici e strade (Agenzia Entrate + ISTAT), sanita territoriale farmacie/parafarmacie/ospedali (Min. Salute), punti ricarica EV (GSE/MASE PUN), banda larga FTTH (AGCOM BBmap), distributori e prezzi carburanti (MIMIT), enti del Terzo Settore RUNTS (Min. Lavoro - ODV/APS/EF/IS/SMS/ETS, 5x1000, rete associativa). Richiede istat_code (6 cifre, es. '075035' per Lecce). Se hai solo il nome, chiama prima search_comune. Per il dettaglio completo dello schema di output per ogni sezione consulta lo skill cruscotto-italia-workflow.",
+    "Vista completa di un comune italiano in una sola chiamata (~250K token, sezioni complete con array dettagliati). PRIMA DI CHIAMARE QUESTO TOOL valuta se comune_kpi (~620 token, KPI sintetici) basta per la tua query: per domande puntuali ('popolazione di X', 'reddito medio di Y') o confronti tra comuni ('X vs Y') preferisci sempre comune_kpi. Usa comune_dashboard SOLO quando servono array dettagliati: top categorie merceologiche ANAC, settori BDAP, missioni PNRR, piramide età demografia, time series SIOPE mensili, mappa civici ANNCSU, punti ricarica EV, stabilimenti ospedalieri con discipline, top settori ATECO imprese (ASIA). Sezioni: anagrafica, demografia, censimento, turismo, PNRR (Italia Domani), territorio (ISPRA Suolo/IdroGEO/Rifiuti), qualita aria (ISPRA SNPA: PM10/PM2.5/NO2), opere pubbliche (BDAP-MOP), spese (SIOPE multi-anno), contratti (ANAC), scuole (MIUR), veicoli e incidenti (ISTAT + ACI), redditi IRPEF 2020-2024 (MEF DF), patrimonio immobili PA (MEF DE 2022), ANNCSU civici e strade (Agenzia Entrate + ISTAT), sanita territoriale farmacie/parafarmacie/ospedali (Min. Salute), punti ricarica EV (GSE/MASE PUN), banda larga FTTH (AGCOM BBmap), distributori e prezzi carburanti (MIMIT), enti del Terzo Settore RUNTS (Min. Lavoro - ODV/APS/EF/IS/SMS/ETS, 5x1000, rete associativa), imprese e addetti (ISTAT ASIA UL: unità locali, addetti, mix classi dimensionali, top settori ATECO 2 cifre, serie storica 2018-2023). Richiede istat_code (6 cifre, es. '075035' per Lecce). Se hai solo il nome, chiama prima search_comune. Per il dettaglio completo dello schema di output per ogni sezione consulta lo skill cruscotto-italia-workflow.",
   inputSchema: {
     type: "object",
     properties: {
