@@ -248,7 +248,10 @@ ATECO_LABELS = {
 # Cache: 1 file CSV per chunk (asia_chunk_<idx>.csv) in CACHE_DIR.
 
 CHUNK_SIZE = 35  # max codici REF_AREA per chiamata SDMX ISTAT
-PARALLEL_DOWNLOADS = 2  # ISTAT rate-limit a 503 oltre 2 connessioni concorrenti
+PARALLEL_DOWNLOADS = 1  # ISTAT rate-limit: parallelismo=2 ha portato a IP ban
+                        # temporaneo dopo ~30 chunks. Polite mode = sequenziale.
+COURTESY_SLEEP_BETWEEN_CHUNKS = 3.0  # s tra chunk consecutivi
+RETRY_BACKOFF_BASE = 60  # s. 60/120/180/240 per attempt 1..4
 
 
 def sdmx_data_url_chunk(istat_codes: list[str],
@@ -288,7 +291,7 @@ def download_chunk(istat_codes: list[str],
             return out_path
         except urllib.error.HTTPError as e:
             if e.code in (503, 429) and attempt < max_retry:
-                backoff = 15 * attempt
+                backoff = RETRY_BACKOFF_BASE * attempt
                 log.warning("asia_chunk_503_backoff",
                             chunk_file=out_path.name,
                             attempt=attempt, backoff=backoff,
@@ -302,7 +305,7 @@ def download_chunk(istat_codes: list[str],
             raise
         except (urllib.error.URLError, RuntimeError, TimeoutError, OSError) as e:
             if attempt < max_retry:
-                backoff = 15 * attempt
+                backoff = RETRY_BACKOFF_BASE * attempt
                 log.warning("asia_chunk_retry",
                             chunk_file=out_path.name,
                             attempt=attempt, error=str(e), backoff=backoff)
@@ -376,6 +379,10 @@ def download_all_in_chunks(cache_dir: Path,
     def _worker(idx: int, codes: list[str], out: Path) -> tuple[int, bool]:
         try:
             download_chunk(codes, year_start, year_end, out)
+            # Sleep di cortesia post-successo per spaziare le chiamate
+            # verso ISTAT (parallelismo=1 + sleep evita IP ban).
+            if COURTESY_SLEEP_BETWEEN_CHUNKS > 0:
+                time.sleep(COURTESY_SLEEP_BETWEEN_CHUNKS)
             return idx, True
         except Exception as e:
             log.error("asia_chunk_giveup", idx=idx, err=str(e))
