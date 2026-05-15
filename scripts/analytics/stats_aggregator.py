@@ -61,13 +61,17 @@ PATH_ATTACK_PATTERNS = re.compile(
     r"/\.env(?:\.|/|$)|"           # .env, .env.old, .env.backup, .env/...
     r"/\.git(?:/|$)|"              # .git/config, .git/HEAD
     r"/\.aws(?:/|$)|/\.ssh(?:/|$)|"
-    r"/boaform|/HNAP1|"            # router IoT exploit
+    r"/boaform|/HNAP1|"            # router IoT exploit (Boa server, D-Link)
+    r"/setup\.cgi|/cgi-bin/|"      # CGI exploit Netgear (Mozi botnet)
     r"/wp-admin|/wp-login|/wp-content|/wp-includes|/wordpress/|/wp/|"
     r"/phpmyadmin|/pma/|/mysql/|/adminer|"
-    r"/cgi-bin|/fckeditor|/tinymce|"
+    r"/fckeditor|/tinymce|"
     r"/vendor/phpunit|/phpunit/|"
-    r"/HNAP1|/console/|/jenkins/|/gitlab/|"
-    r"/actuator/|/jolokia/|"
+    r"/console/|/jenkins/|/gitlab/|"
+    r"/actuator(?:/|$)|/jolokia/|"  # Spring Boot Actuator exploit
+    r"/configprops|/heapdump|/profiler(?:/|$)|"  # Spring/Symfony diagnostic
+    r"/env(?:\?|$)|"                # endpoint /env exposed (Spring)
+    r"/docker-compose(?:\.[a-z]+)?\.ya?ml|"  # docker-compose.yml e varianti
     r"/webdav/|/\.well-known/security"
     r")",
     re.IGNORECASE,
