@@ -6,6 +6,9 @@ name: ETL · Weekly
 #  - Sanita' territoriale Min. Salute (farmacie/parafarmacie quotidiani,
 #    posti letto ospedalieri annuale: cadenza settimanale e' il giusto
 #    compromesso, churn < 0.1%/settimana sulle farmacie attive)
+#  - RUNTS Min. Lavoro (Registro Unico Nazionale Terzo Settore: XLSX bulk
+#    aggiornato quotidianamente upstream, settimanale lato Cruscotto e'
+#    sufficiente. Snapshot bulk via PostBack ASP.NET ~12 MB, 145k enti)
 #
 # Al termine, ricostruisce dashboard/<istat>.json (single-fetch shard).
 #
@@ -17,7 +20,7 @@ on:
   workflow_dispatch:
     inputs:
       sources:
-        description: 'Comma-separated list (anac,pnrr,sanita_mds,dashboard) or "all"'
+        description: 'Comma-separated list (anac,pnrr,sanita_mds,runts,dashboard) or "all"'
         required: false
         default: 'all'
       anac_years:
@@ -92,13 +95,35 @@ jobs:
         run: python -m etl.sources.sanita_mds --target=r2 --no-cache
 
   # ---------------------------------------------------------------------------
-  # Dashboard: rebuild dei dashboard/<istat>.json shard a valle di ANAC + PNRR + sanita_mds.
+  # RUNTS Min. Lavoro - Registro Unico Nazionale del Terzo Settore.
+  # Snapshot XLSX bulk via PostBack ASP.NET (~12 MB, 145k enti) da
+  # servizi.lavoro.gov.it. Cadenza upstream giornaliera, lato Cruscotto
+  # settimanale e' sufficiente per il churn osservato.
+  runts:
+    name: ETL · RUNTS (Min. Lavoro - Terzo Settore)
+    runs-on: [self-hosted, linux, aruba]
+    if: ${{ github.event_name == 'schedule' || contains(github.event.inputs.sources, 'runts') || github.event.inputs.sources == 'all' || github.event.inputs.sources == '' }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: etl/requirements.txt
+      - run: pip install -r etl/requirements.txt
+      - name: Run RUNTS ETL
+        run: python -m etl.sources.runts --target=r2
+
+  # ---------------------------------------------------------------------------
+  # Dashboard: rebuild dei dashboard/<istat>.json shard a valle di
+  # ANAC + PNRR + sanita_mds + runts.
   # Sempre eseguito (purche' uno almeno degli upstream sia andato a buon fine).
   dashboard:
     name: ETL · Dashboard rebuild (single-fetch shard)
     runs-on: [self-hosted, linux, aruba]
-    needs: [anac, pnrr, sanita_mds]
-    if: ${{ always() && (needs.anac.result == 'success' || needs.pnrr.result == 'success' || needs.sanita_mds.result == 'success') }}
+    needs: [anac, pnrr, sanita_mds, runts]
+    if: ${{ always() && (needs.anac.result == 'success' || needs.pnrr.result == 'success' || needs.sanita_mds.result == 'success' || needs.runts.result == 'success') }}
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4

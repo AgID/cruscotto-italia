@@ -25,6 +25,7 @@ Sorgenti accorpate:
 - pun/<istat>.json               (GSE/MASE - Piattaforma Unica Nazionale punti di ricarica)
 - agcom_bbmap/<istat>.json       (AGCOM - Broadband Map, copertura banda larga)
 - carburanti/<istat>.json        (MIMIT - Osservatorio Prezzi Carburanti, anagrafica impianti + prezzi praticati)
+- runts/<istat>.json             (Min. Lavoro - Registro Unico Nazionale Terzo Settore, enti iscritti)
 - lookup/anac-aggregato.json     (filtrato per CF)
 - lookup/comuni-bundle.json      (anagrafica)
 
@@ -86,6 +87,7 @@ SHARDS = [
     ("pun",        "pun/{istat}.json"),
     ("agcom_bbmap","agcom_bbmap/{istat}.json"),
     ("carburanti", "carburanti/{istat}.json"),
+    ("runts",      "runts/{istat}.json"),
 ]
 
 ETL_VERSION = "0.1.0"

@@ -457,6 +457,32 @@ footer a:hover { color: #fff !important; }
           </td>
           <td class="freq">giornaliera</td>
         </tr>
+        <tr data-fonte-row="MIN-LAVORO-RUNTS">
+          <td>Ministero del Lavoro</td>
+          <td>
+            <strong>RUNTS — Registro Unico Nazionale del Terzo Settore</strong>
+            Anagrafica completa degli enti del Terzo Settore iscritti al RUNTS
+            (D.Lgs&nbsp;117/2017, attivo dal 23 novembre 2021 che ha unificato
+            i precedenti registri di Volontariato, APS e Onlus), pubblicata
+            dal Ministero del Lavoro e delle Politiche Sociali ai sensi
+            dell'art.&nbsp;53 del Codice del Terzo Settore (pubblicità legale).
+            Il dataset comprende codice fiscale, repertorio, denominazione,
+            sezione (Organizzazioni di Volontariato, Associazioni di Promozione
+            Sociale, Enti Filantropici, Imprese Sociali, Società di Mutuo
+            Soccorso, Altri ETS), legale rappresentante, comune e provincia
+            della sede legale, iscrizione al beneficio del <strong>5x1000</strong>
+            (52% degli enti nazionali), partecipazione a una rete associativa,
+            data di iscrizione. Mix nazionale: APS&nbsp;47% &gt; ODV&nbsp;27%
+            &gt; IS&nbsp;15% &gt; ETS&nbsp;11% &gt; EF&nbsp;0,4% &gt;
+            SMS&nbsp;0,1%. Totale <strong>145.898 enti</strong>; copertura
+            <strong>7.547 comuni su 7.918 (95,3%)</strong>. Aggiornamento
+            <strong>quotidiano</strong> (snapshot bulk XLSX
+            <code>YYYYMMDD_iscritti_v1.0.xlsx</code>). Dato pubblico per legge
+            ex D.Lgs&nbsp;117/2017 art.&nbsp;53, riusabile come open data
+            ex D.Lgs&nbsp;36/2006 (recepimento Direttiva UE PSI).
+          </td>
+          <td class="freq">giornaliera</td>
+        </tr>
       </tbody>
     </table>
 
@@ -505,7 +531,7 @@ footer a:hover { color: #fff !important; }
         <h3>1. Estrazione</h3>
         <p>
           Script Python (uno per fonte) scaricano i dataset originali dai
-          portali ufficiali delle 14 istituzioni integrate: ISTAT (POSAS,
+          portali ufficiali delle 15 istituzioni integrate: ISTAT (POSAS,
           censimento, turismo, incidenti) in SDMX-ML via API REST,
           ANAC i contratti come JSON-LD su dati.anticorruzione.it,
           BDAP-MOP le opere via API a paginazione,
@@ -523,7 +549,10 @@ footer a:hover { color: #fff !important; }
           ex art.&nbsp;22 CCE via CSV nazionale ArcGIS aggiornato trimestralmente,
           il MIMIT l'Osservatorio Prezzi Carburanti via CSV bulk quotidiano
           ("Prezzo alle 8 di mattina") con anagrafica impianti e prezzi praticati
-          ex art.&nbsp;51 L.&nbsp;99/2009.
+          ex art.&nbsp;51 L.&nbsp;99/2009,
+          il Ministero del Lavoro e delle Politiche Sociali il Registro Unico
+          Nazionale del Terzo Settore (RUNTS) via XLSX bulk quotidiano in
+          PostBack ASP.NET sulla pagina servizi.lavoro.gov.it (D.Lgs&nbsp;117/2017).
         </p>
         <p>
           Gli script gestiscono le idiosincrasie di ciascun dataset:
@@ -788,6 +817,17 @@ footer a:hover { color: #fff !important; }
           italiani — ex art.&nbsp;22 Codice Comunicazioni Elettroniche.
         </div>
         <div class="aggiorna-when">~30-45 gg dopo fine trimestre</div>
+      </div>
+      <div class="aggiorna-row">
+        <div class="aggiorna-cadence">Giornaliera</div>
+        <div class="aggiorna-what">
+          <strong>Ministero del Lavoro — RUNTS</strong>
+          Registro Unico Nazionale del Terzo Settore: 145.898 enti del
+          Terzo Settore (ODV, APS, EF, IS, SMS, ETS) in 7.547 comuni —
+          ex D.Lgs&nbsp;117/2017 art.&nbsp;53 (pubblicità legale).
+          ETL Cruscotto settimanale (lunedì 04:00).
+        </div>
+        <div class="aggiorna-when">giornaliera upstream &middot; settimanale ETL</div>
       </div>
     </div>
 

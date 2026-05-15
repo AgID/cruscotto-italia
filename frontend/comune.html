@@ -1270,6 +1270,127 @@ footer a {
   text-underline-offset: 3px;
 }
 footer a:hover { color: #fff !important; }
+
+/* ============================================================
+   RUNTS — Terzo Settore (Min. Lavoro, D.Lgs 117/2017)
+   ============================================================ */
+.runts-charts-row{
+  display:grid;grid-template-columns:1fr 1fr;gap:32px;margin:32px 0;
+}
+@media (max-width:880px){.runts-charts-row{grid-template-columns:1fr;gap:24px;}}
+.runts-chart-box{
+  background:var(--surface);border:1px solid var(--border);border-radius:12px;
+  padding:20px 24px;
+}
+.runts-chart-title{
+  font-size:16px;font-weight:600;color:var(--ink);margin:0 0 12px 0;
+  letter-spacing:-0.01em;
+}
+.runts-chart-container{
+  position:relative;height:280px;width:100%;
+}
+.runts-chart-legend{
+  font-size:12px;line-height:1.6;margin-top:14px;color:var(--ink-mute);
+}
+.runts-chart-legend span[style*="color"]{font-weight:bold;}
+
+.runts-trunc-note{
+  background:#fff8e6;border-left:4px solid #d9a200;
+  padding:12px 16px;border-radius:0 8px 8px 0;margin:14px 0;font-size:14px;
+}
+
+.runts-table-controls{
+  display:flex;gap:14px;align-items:center;flex-wrap:wrap;
+  margin:18px 0 14px 0;
+}
+.runts-search-input{
+  flex:1;min-width:240px;padding:10px 14px;border:1px solid var(--border);
+  border-radius:8px;font-size:14px;font-family:inherit;background:var(--surface);
+  color:var(--ink);transition:border-color .15s;
+}
+.runts-search-input:focus{
+  outline:none;border-color:var(--accent);
+  box-shadow:0 0 0 3px rgba(0,102,204,0.18);
+}
+.runts-table-filter-sezione{display:flex;gap:6px;flex-wrap:wrap;}
+.runts-filter-chip{
+  --chip-color:#5C6F82;
+  padding:6px 12px;background:var(--surface);border:1.5px solid var(--border);
+  border-radius:18px;font-size:13px;font-weight:600;color:var(--ink);
+  cursor:pointer;transition:all .12s;font-family:inherit;
+  min-height:28px;
+}
+.runts-filter-chip:hover{border-color:var(--chip-color);color:var(--chip-color);}
+.runts-filter-chip:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+.runts-filter-chip.active{
+  background:var(--chip-color);color:#fff;border-color:var(--chip-color);
+}
+
+.runts-table-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:10px;}
+.runts-table{
+  width:100%;border-collapse:collapse;font-size:14px;background:var(--surface);
+}
+.runts-table thead{background:#f4f7fb;}
+.runts-table thead th{
+  text-align:left;padding:12px 14px;font-weight:600;color:var(--ink);
+  border-bottom:2px solid var(--border);font-size:13px;
+  text-transform:uppercase;letter-spacing:0.03em;white-space:nowrap;
+}
+.runts-table tbody td{
+  padding:10px 14px;border-bottom:1px solid var(--border);
+  vertical-align:middle;
+}
+.runts-table tbody tr:hover{background:#fafbfc;}
+.runts-table tbody tr:last-child td{border-bottom:none;}
+
+.runts-sez-badge{
+  display:inline-block;padding:3px 8px;border-radius:4px;
+  color:#fff;font-size:11px;font-weight:bold;letter-spacing:0.03em;
+  min-width:32px;text-align:center;
+}
+.runts-cf{
+  font-family:'SFMono-Regular',Consolas,'Liberation Mono',monospace;
+  font-size:12px;color:var(--ink-mute);background:#f4f7fb;
+  padding:2px 6px;border-radius:3px;
+}
+.runts-yes{color:#00A86B;font-weight:bold;font-size:16px;}
+.runts-no{color:var(--ink-mute);}
+.runts-noresult{text-align:center;padding:32px 16px;color:var(--ink-mute);font-style:italic;}
+
+.runts-table-pagination{
+  display:flex;justify-content:center;align-items:center;gap:18px;
+  margin:18px 0;
+}
+.runts-page-btn{
+  width:38px;height:38px;border-radius:50%;border:1.5px solid var(--border);
+  background:var(--surface);color:var(--ink);font-size:20px;font-weight:bold;
+  cursor:pointer;transition:all .15s;display:inline-flex;
+  align-items:center;justify-content:center;font-family:inherit;
+}
+.runts-page-btn:not(:disabled):hover{
+  border-color:var(--accent);color:var(--accent);
+}
+.runts-page-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+.runts-page-btn:disabled{opacity:0.35;cursor:not-allowed;}
+#runts-page-info{
+  font-size:14px;color:var(--ink-mute);font-variant-numeric:tabular-nums;
+  min-width:200px;text-align:center;
+}
+
+.section-h-small{
+  font-size:20px;font-weight:600;margin:36px 0 14px 0;
+  color:var(--ink);letter-spacing:-0.01em;
+}
+
+/* WCAG: visually hidden ma accessibile a screen reader */
+.visually-hidden{
+  position:absolute;width:1px;height:1px;padding:0;margin:-1px;
+  overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;
+}
+
+@media (prefers-reduced-motion: reduce){
+  .runts-filter-chip,.runts-search-input,.runts-page-btn{transition:none;}
+}
 </style>
   <script src="/vendor/chart.umd.min.js" integrity="sha384-9nhczxUqK87bcKHh20fSQcTGD4qq5GhayNYSYWqwBkINBhOfQLg/P5HG5lF1urn4" defer></script>
   <link rel="stylesheet" href="/vendor/leaflet.css" integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="anonymous">
@@ -1402,6 +1523,8 @@ function renderComune(data) {
   window.__carburantiInited = false;
   window.__carburantiNazionale = null;        // fetch lazy alla prima apertura tab
   window.__carburantiRegione = a.regione || null;
+  window.__runtsData = k.runts || null;
+  window.__runtsInited = false;
   const tabs = [
     { id: 'panoramica', label: 'Panoramica', kpi: '' },
     { id: 'anncsu', label: 'ANNCSU', kpi: k.anncsu?.kpi?.n_strade != null ? fmtNum(k.anncsu.kpi.n_strade) + (k.anncsu.kpi.n_civici != null ? ' / ' + fmtNum(k.anncsu.kpi.n_civici) : '') : '—' },
@@ -1420,6 +1543,7 @@ function renderComune(data) {
     { id: 'scuole', label: 'Scuole', kpi: k.scuole?.kpi?.n_scuole != null ? fmtNum(k.scuole.kpi.n_scuole) : '—' },
     { id: 'spese', label: 'Spese SIOPE', kpi: '<span data-tab-spese-count><span class="tab-spinner"></span></span>' },
     { id: 'territorio', label: 'Territorio', kpi: '<span data-tab-territorio-pct><span class="tab-spinner"></span></span>' },
+    { id: 'runts', label: 'Terzo Settore', kpi: k.runts?.kpi?.n_totale != null ? fmtNum(k.runts.kpi.n_totale) : '—' },
     { id: 'turismo', label: 'Turismo', kpi: '<span data-tab-turismo-idx><span class="tab-spinner"></span></span>' },
     { id: 'veicoli', label: 'Veicoli e incidenti', kpi: (k.veicoli?.parco_veicoli?._unreliable) ? '—' : (k.veicoli?.parco_veicoli?.tasso_motorizzazione_per_1000_ab != null ? fmtNum(Math.round(k.veicoli.parco_veicoli.tasso_motorizzazione_per_1000_ab)) : '—') }
   ];
@@ -1590,6 +1714,7 @@ function renderComune(data) {
       ${renderPunTab(k.pun)}
       ${renderBandaLargaTab(k.agcom_bbmap, a, k.territorio)}
       ${renderCarburantiTab(k.carburanti)}
+      ${renderRuntsTab(k.runts)}
     </div>
   `;
 }
@@ -3461,7 +3586,7 @@ function renderContrattiTab(contratti) {
         <h2 class="section-h">Nessun contratto ANAC <em>per il periodo coperto</em>.</h2>
         <div class="placeholder">
           Il comune potrebbe non aver registrato aggiudicazioni nel periodo
-          monitorato, oppure l'ETL non ha trovato un match
+          monitorato (marzo 2026), oppure l'ETL non ha trovato un match
           via codice fiscale stazione appaltante.
         </div>
       </div>
@@ -3477,18 +3602,6 @@ function renderContrattiTab(contratti) {
     const [d] = s.split(' ');
     const [y,m,dd] = d.split('-');
     return `${dd}/${m}/${y}`;
-  };
-
-  // Formato esteso "25 marzo 2026" per frasi descrittive
-  const fmtDateExt = s => {
-    if (!s) return null;
-    const MESI = ['gennaio','febbraio','marzo','aprile','maggio','giugno',
-                  'luglio','agosto','settembre','ottobre','novembre','dicembre'];
-    const [d] = s.split(' ');
-    const [y,m,dd] = d.split('-');
-    const mi = parseInt(m, 10) - 1;
-    if (mi < 0 || mi > 11) return null;
-    return `${parseInt(dd, 10)} ${MESI[mi]} ${y}`;
   };
 
   // Top CPV: lista con barra proporzionale al count
@@ -3517,12 +3630,8 @@ function renderContrattiTab(contratti) {
       <h2 class="section-h">${fmtNum(c.count)} aggiudicazioni <em>per €${fmtNum(Math.round(c.importo_totale || 0))}</em>.</h2>
       <p class="section-sub">
         Contratti pubblici dove il Comune è <em>stazione appaltante</em>, secondo lo standard
-        Open Contracting (OCDS). ${(() => {
-          const last = fmtDateExt(c.last_award_date);
-          return last
-            ? `L'ultima aggiudicazione registrata è del <strong>${last}</strong>: per il quadro completo servirà l'aggregazione di altri mesi.`
-            : `Per il quadro completo servirà l'aggregazione di altri mesi.`;
-        })()}
+        Open Contracting (OCDS). Il dato è limitato alle aggiudicazioni di <strong>marzo 2026</strong>:
+        per la copertura completa servirà l'aggregazione di altri mesi.
       </p>
 
       <div class="kpi-cards">
@@ -7603,6 +7712,14 @@ function bindTabSwitching() {
         }
       }
 
+      // Lazy-init chart Chart.js e tabella enti RUNTS al primo click
+      if (tab.dataset.tab === 'runts') {
+        if (window.__runtsData && !window.__runtsInited) {
+          setTimeout(() => initRunts(window.__runtsData), 0);
+          window.__runtsInited = true;
+        }
+      }
+
       // Lazy-load tab Spese: chiamata al primo click
       if (tab.dataset.tab === 'spese') {
         const params = new URLSearchParams(window.location.search);
@@ -8328,6 +8445,7 @@ function adaptDashboardToOverview(d) {
       pun: d.pun,  // pass-through completo per renderPunTab
       agcom_bbmap: d.agcom_bbmap,  // pass-through completo per renderBandaLargaTab
       carburanti: d.carburanti,    // pass-through completo per renderCarburantiTab
+      runts: d.runts,    // pass-through completo per renderRuntsTab
       // Pass-through aggiuntivi (servono alla Panoramica home per i KPI di sintesi):
       profilo: d.profilo,
       turismo: d.turismo,
@@ -8518,7 +8636,7 @@ CONTENUTO DELLO ZIP
 - METADATI.csv         Legenda campi, fonti, periodi di riferimento
 - LICENSE.txt          Licenza d'uso e attribuzioni
 
-FONTI INTEGRATE (18 dataset, 14 istituzioni)
+FONTI INTEGRATE (19 dataset, 15 istituzioni)
 --------------------------------------------
 - ANAC                              Contratti pubblici (OCDS)
 - BDAP-MOP                          Opere pubbliche dei comuni
@@ -8535,6 +8653,7 @@ FONTI INTEGRATE (18 dataset, 14 istituzioni)
 - GSE / MASE                        Piattaforma Unica Nazionale (PUN) — punti di ricarica EV
 - AGCOM                             Broadband Map (BBmap) — copertura banda larga FTTH/FTTC
 - MIMIT                             Osservatorio Prezzi Carburanti — distributori e prezzi praticati
+- Ministero del Lavoro              RUNTS — Registro Unico Nazionale del Terzo Settore (D.Lgs 117/2017)
 
 I dati di origine sono pubblicati dalle istituzioni elencate in
 LICENSE.txt e sono disponibili sui rispettivi portali open data.
@@ -8622,6 +8741,50 @@ Hi-Q Diesel, Supreme Diesel, Blue Diesel) in "prezzi_extra".
 Aggiornamento quotidiano (snapshot "Prezzo alle 8 di mattina"); per
 i comuni piccoli senza distributori la sezione è omessa.
 Licenza IODL 2.0 (attribution-only, compatibile CC BY).
+
+NOTA SUGLI ENTI DEL TERZO SETTORE (RUNTS — MIN. LAVORO)
+-------------------------------------------------------
+La sezione "runts" contiene gli enti del Terzo Settore con SEDE LEGALE
+nel comune iscritti al Registro Unico Nazionale del Terzo Settore (RUNTS),
+istituito dal D.Lgs 117/2017 (Codice del Terzo Settore) e attivo dal
+23 novembre 2021 dopo aver assorbito i precedenti registri di
+Volontariato, APS e Onlus. Pubblicato dal Ministero del Lavoro e delle
+Politiche Sociali ai sensi dell'art. 53 del Codice (pubblicità legale).
+
+Il campo "kpi" aggrega: numero totale enti, mix per sezione (ODV
+Organizzazioni di Volontariato, APS Associazioni di Promozione Sociale,
+EF Enti Filantropici, IS Imprese Sociali, SMS Società di Mutuo Soccorso,
+ETS Altri Enti del Terzo Settore), numero e percentuale enti iscritti al
+beneficio 5x1000 (~52% nazionale), numero enti aderenti a una rete
+associativa, distribuzione delle iscrizioni per anno.
+
+Il campo "enti" è cappato a 5.000 record ordinati per data di iscrizione
+DECRESCENTE (i più recenti per primi). I campi sono: cf (codice fiscale),
+rep (id repertorio RUNTS), denom (denominazione), sez (sigla sezione),
+rapp (legale rappresentante), rete (boolean rete associativa), x1000
+(boolean 5x1000), data_iscr (data iscrizione ISO YYYY-MM-DD). Se "enti"
+è troncato, sono presenti i flag _enti_truncated, _enti_total, _enti_cap.
+Solo Roma è cappata (6.616 enti totali). I KPI aggregati nei grafici
+sono calcolati sul totale completo, non sulla lista cappata.
+
+IMPORTANTE: il RUNTS registra la SEDE LEGALE. Un ente con sede legale a
+Lecce che opera in tutta la Puglia compare SOLO nello shard di Lecce.
+Per domande sulla copertura operativa dei servizi, questo dato è solo
+una proxy. Roma in particolare presenta un bias significativo (sede
+legale di ETS nazionali tipo AVIS Nazionale, ANPAS, Banco Alimentare).
+
+Il picco di iscrizioni nel 2022 è dovuto alla TRASMIGRAZIONE dei
+registri preesistenti (~52% del totale nazionale ha data_iscr=2022),
+non a nuove costituzioni. Per trend reali di crescita del Terzo Settore
+guardare il 2023+. L'anno corrente è ovviamente parziale.
+
+Copertura nazionale: 7.547 comuni su 7.918 hanno almeno un ente
+registrato (95,3%); i ~371 comuni residui sono micro-comuni montani.
+Aggiornamento quotidiano (file XLSX bulk YYYYMMDD_iscritti_v1.0.xlsx
+scaricato via PostBack ASP.NET da servizi.lavoro.gov.it/runts/).
+
+Dato pubblico per legge ex D.Lgs 117/2017 art. 53, riusabile come open
+data ex D.Lgs 36/2006 (recepimento Direttiva UE PSI).
 
 `;
       zip.file('README.txt', readme);
@@ -8727,6 +8890,347 @@ function setupTabsScrollHint() {
   // re-update quando renderComune ha appena disegnato i tab
   new MutationObserver(update).observe(bar, { childList: true, subtree: true });
 }
+// ----------------------------------------------------------------------------
+// RUNTS — Registro Unico Nazionale del Terzo Settore (Min. Lavoro, D.Lgs 117/2017)
+// ----------------------------------------------------------------------------
+// Schema dato in input (window.__runtsData):
+//   { _snapshot_date, _source_url, kpi: { n_totale, mix_sezione, n_5x1000,
+//     pct_5x1000, n_rete_associativa, iscrizioni_per_anno }, enti: [...],
+//     _enti_truncated?, _enti_total?, _enti_cap? }
+// Render: KPI cards + bar chart (mix sezione) + line chart (iscrizioni/anno)
+// + tabella enti paginata client-side (50/pagina) con search testuale.
+// ----------------------------------------------------------------------------
+
+// Mapping sezione -> etichetta verbose + colore + descrizione tooltip
+const RUNTS_SEZIONI = {
+  APS: { lab: 'APS', full: 'Associazione di Promozione Sociale', color: '#0066CC',
+         hint: 'L. 383/2000 — finalità sociali, prevalenza soci attivi non retribuiti' },
+  ODV: { lab: 'ODV', full: 'Organizzazione di Volontariato', color: '#00A86B',
+         hint: 'L. 266/1991 — attività di interesse generale, volontari prevalenti' },
+  IS:  { lab: 'IS',  full: 'Impresa Sociale', color: '#E89400',
+         hint: 'D.Lgs 112/2017 — soggetta anche al Registro Imprese' },
+  ETS: { lab: 'ETS', full: 'Altro Ente del Terzo Settore', color: '#A050BE',
+         hint: 'Sezione residuale (non rientra nelle 5 categorie specifiche)' },
+  EF:  { lab: 'EF',  full: 'Ente Filantropico', color: '#D9364F',
+         hint: 'Novità RUNTS — fondazioni che erogano risorse a terzi' },
+  SMS: { lab: 'SMS', full: 'Società di Mutuo Soccorso', color: '#5C6F82',
+         hint: 'L. 3818/1886 (ancora vigente) — mutualismo' },
+};
+
+function renderRuntsTab(d) {
+  if (!d || !d.kpi || d.kpi.n_totale == null || d.kpi.n_totale === 0) {
+    return `
+      <div class="tab-pane" id="pane-runts">
+        <div class="section-title">§ Terzo Settore</div>
+        <h2 class="section-h">Nessun ente del Terzo Settore <em>registrato</em>.</h2>
+        <p class="muted">Il Registro Unico Nazionale del Terzo Settore (RUNTS) non
+        riporta enti con sede legale in questo comune. Sono coperti
+        <strong>7.547 comuni su 7.918 (95,3%)</strong>; i ~371 comuni residui sono
+        per la quasi totalità micro-comuni di montagna senza enti del Terzo Settore
+        registrati. Il RUNTS registra la <strong>sede legale</strong>, quindi un ente
+        può operare in più comuni pur essendo registrato altrove.</p>
+        <p class="muted">Fonte:
+        <a href="https://servizi.lavoro.gov.it/runts/it-it/Lista-enti" target="_blank" rel="noopener">Min. Lavoro &middot; RUNTS</a>
+        &middot; aggiornamento quotidiano &middot; D.Lgs 117/2017 art. 53.</p>
+      </div>`;
+  }
+  const k = d.kpi;
+  const dataSnap = d._snapshot_date || '—';
+  const totale = k.n_totale;
+  const sezioniSorted = Object.entries(k.mix_sezione || {})
+    .sort((a, b) => b[1] - a[1]);
+  const top1 = sezioniSorted[0] || ['—', 0];
+  const top1PctStr = totale > 0 ? (100 * top1[1] / totale).toFixed(1) : '0';
+  const truncNote = d._enti_truncated
+    ? `<p class="muted runts-trunc-note">Tabella enti limitata ai <strong>${fmtNum(d._enti_cap)}</strong> più recenti per <em>data di iscrizione</em>. Totale enti nel comune: <strong>${fmtNum(d._enti_total)}</strong>. I KPI aggregati nei grafici sopra sono calcolati sul totale completo, non sulla tabella limitata.</p>`
+    : '';
+
+  return `
+    <div class="tab-pane" id="pane-runts">
+      <div class="section-title">§ Terzo Settore</div>
+      <h2 class="section-h">${fmtNum(totale)} ${totale === 1 ? 'ente' : 'enti'} del Terzo Settore con sede legale al <em>${dataSnap}</em>.</h2>
+      <p class="section-sub">
+        Enti iscritti al
+        <a href="https://servizi.lavoro.gov.it/runts/it-it/Lista-enti" target="_blank" rel="noopener">Registro Unico Nazionale del Terzo Settore (RUNTS)</a>
+        del Ministero del Lavoro e delle Politiche Sociali, istituito dal D.Lgs&nbsp;117/2017
+        (Codice del Terzo Settore) e attivo dal 23 novembre 2021.
+        Aggiornamento quotidiano del registro upstream.
+      </p>
+      <div class="kpi-cards">
+        <div class="kpi-card">
+          <div class="kpi-card-lab">Totale enti</div>
+          <div class="kpi-card-val">${fmtNum(totale)}</div>
+          <div class="kpi-card-sub">di cui ${sezioniSorted.length} ${sezioniSorted.length === 1 ? 'sezione' : 'sezioni'} su 6</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-card-lab">Sezione prevalente</div>
+          <div class="kpi-card-val" style="color:${(RUNTS_SEZIONI[top1[0]] || {}).color || '#5C6F82'}">${top1[0]}</div>
+          <div class="kpi-card-sub">${fmtNum(top1[1])} enti · ${top1PctStr}% del totale</div>
+        </div>
+        <div class="kpi-card ${(k.n_5x1000 || 0) > 0 ? '' : 'tbd'}">
+          <div class="kpi-card-lab">Iscritti al 5x1000</div>
+          <div class="kpi-card-val">${fmtNum(k.n_5x1000 || 0)}</div>
+          <div class="kpi-card-sub">${k.pct_5x1000 != null ? k.pct_5x1000.toFixed(1) + '% del totale' : '—'}</div>
+        </div>
+        <div class="kpi-card ${(k.n_rete_associativa || 0) > 0 ? '' : 'tbd'}">
+          <div class="kpi-card-lab">In rete associativa</div>
+          <div class="kpi-card-val">${fmtNum(k.n_rete_associativa || 0)}</div>
+          <div class="kpi-card-sub">${(k.n_rete_associativa || 0) > 0 ? 'aderenti a una rete RUNTS' : 'nessun ente in rete'}</div>
+        </div>
+      </div>
+
+      <div class="runts-charts-row">
+        <div class="runts-chart-box">
+          <h3 class="runts-chart-title">Mix per sezione</h3>
+          <div class="runts-chart-container">
+            <canvas id="runts-chart-sezione" aria-label="Distribuzione enti per sezione RUNTS"></canvas>
+          </div>
+          <p class="muted runts-chart-legend">
+            <span style="color:${RUNTS_SEZIONI.ODV.color}">●</span> ODV: ${RUNTS_SEZIONI.ODV.full} ·
+            <span style="color:${RUNTS_SEZIONI.APS.color}">●</span> APS: ${RUNTS_SEZIONI.APS.full} ·
+            <span style="color:${RUNTS_SEZIONI.IS.color}">●</span> IS: ${RUNTS_SEZIONI.IS.full} ·
+            <span style="color:${RUNTS_SEZIONI.ETS.color}">●</span> ETS: Altri Enti del Terzo Settore ·
+            <span style="color:${RUNTS_SEZIONI.EF.color}">●</span> EF: ${RUNTS_SEZIONI.EF.full} ·
+            <span style="color:${RUNTS_SEZIONI.SMS.color}">●</span> SMS: ${RUNTS_SEZIONI.SMS.full}
+          </p>
+        </div>
+        <div class="runts-chart-box">
+          <h3 class="runts-chart-title">Iscrizioni per anno</h3>
+          <div class="runts-chart-container">
+            <canvas id="runts-chart-iscrizioni" aria-label="Iscrizioni RUNTS per anno"></canvas>
+          </div>
+          <p class="muted runts-chart-legend">
+            Il picco 2022 deriva dalla <strong>trasmigrazione</strong> dei registri preesistenti
+            (Volontariato, APS, Onlus) confluiti nel RUNTS, non da nuove costituzioni.
+            L'anno corrente è ovviamente parziale.
+          </p>
+        </div>
+      </div>
+
+      <h3 class="section-h-small">Elenco enti</h3>
+      ${truncNote}
+      <div class="runts-table-controls">
+        <label for="runts-search" class="visually-hidden">Cerca ente per denominazione o codice fiscale</label>
+        <input type="search" id="runts-search" class="runts-search-input"
+               placeholder="Cerca per denominazione o codice fiscale..."
+               aria-label="Cerca ente">
+        <div class="runts-table-filter-sezione" role="group" aria-label="Filtra per sezione">
+          <button type="button" class="runts-filter-chip active" data-runts-filter="ALL">Tutte</button>
+          ${Object.keys(RUNTS_SEZIONI).map(s => `
+            <button type="button" class="runts-filter-chip" data-runts-filter="${s}"
+                    style="--chip-color:${RUNTS_SEZIONI[s].color}"
+                    title="${RUNTS_SEZIONI[s].full}">${s}</button>`).join('')}
+        </div>
+      </div>
+      <div class="runts-table-wrap">
+        <table class="runts-table" id="runts-table">
+          <thead>
+            <tr>
+              <th scope="col">Denominazione</th>
+              <th scope="col">Sezione</th>
+              <th scope="col">CF</th>
+              <th scope="col">Rappresentante</th>
+              <th scope="col">5x1000</th>
+              <th scope="col">Rete</th>
+              <th scope="col">Data iscr.</th>
+            </tr>
+          </thead>
+          <tbody id="runts-table-tbody"></tbody>
+        </table>
+      </div>
+      <div class="runts-table-pagination">
+        <button type="button" id="runts-prev" class="runts-page-btn" disabled aria-label="Pagina precedente">‹</button>
+        <span id="runts-page-info" aria-live="polite">—</span>
+        <button type="button" id="runts-next" class="runts-page-btn" disabled aria-label="Pagina successiva">›</button>
+      </div>
+    </div>
+  `;
+}
+
+function initRunts(d) {
+  if (!d || !d.kpi || d.kpi.n_totale === 0) return;
+  if (typeof Chart === 'undefined') {
+    console.warn('Chart.js non disponibile per initRunts');
+    return;
+  }
+
+  // ---------- Chart 1: bar orizzontale per mix sezione (count desc) ----------
+  const canvasSez = document.getElementById('runts-chart-sezione');
+  if (canvasSez) {
+    const mix = d.kpi.mix_sezione || {};
+    const entries = Object.entries(mix).sort((a, b) => b[1] - a[1]);
+    const labels = entries.map(([s]) => s);
+    const values = entries.map(([, n]) => n);
+    const colors = entries.map(([s]) => (RUNTS_SEZIONI[s] || {}).color || '#5C6F82');
+    const tooltips = entries.map(([s]) => (RUNTS_SEZIONI[s] || {}).full || s);
+    new Chart(canvasSez.getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [{
+          data: values,
+          backgroundColor: colors,
+          borderWidth: 0,
+          maxBarThickness: 36,
+        }],
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              title: (items) => tooltips[items[0].dataIndex],
+              label: (item) => {
+                const total = values.reduce((s, n) => s + n, 0);
+                const pct = total > 0 ? (100 * item.parsed.x / total).toFixed(1) : '0';
+                return `${item.parsed.x} enti (${pct}%)`;
+              },
+            },
+          },
+        },
+        scales: {
+          x: { beginAtZero: true, ticks: { precision: 0 } },
+          y: { ticks: { font: { size: 13, weight: 'bold' } } },
+        },
+      },
+    });
+  }
+
+  // ---------- Chart 2: line iscrizioni per anno ----------
+  const canvasIsc = document.getElementById('runts-chart-iscrizioni');
+  if (canvasIsc) {
+    const isc = d.kpi.iscrizioni_per_anno || {};
+    const years = Object.keys(isc).sort();
+    const values = years.map(y => isc[y]);
+    new Chart(canvasIsc.getContext('2d'), {
+      type: 'line',
+      data: {
+        labels: years,
+        datasets: [{
+          data: values,
+          borderColor: '#0066CC',
+          backgroundColor: 'rgba(0, 102, 204, 0.12)',
+          fill: true,
+          tension: 0.25,
+          pointRadius: 4,
+          pointBackgroundColor: '#0066CC',
+          borderWidth: 2,
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: (item) => `${item.parsed.y} iscrizioni`,
+            },
+          },
+        },
+        scales: {
+          x: { ticks: { font: { size: 12 } } },
+          y: { beginAtZero: true, ticks: { precision: 0 } },
+        },
+      },
+    });
+  }
+
+  // ---------- Tabella paginata ----------
+  const enti = d.enti || [];
+  const PAGE = 50;
+  let currentPage = 1;
+  let currentFilter = 'ALL';
+  let currentSearch = '';
+  const tbody = document.getElementById('runts-table-tbody');
+  const pageInfo = document.getElementById('runts-page-info');
+  const prevBtn = document.getElementById('runts-prev');
+  const nextBtn = document.getElementById('runts-next');
+  const searchInput = document.getElementById('runts-search');
+
+  function getFiltered() {
+    const s = currentSearch.trim().toLowerCase();
+    return enti.filter(e => {
+      if (currentFilter !== 'ALL' && e.sez !== currentFilter) return false;
+      if (s) {
+        const denom = (e.denom || '').toLowerCase();
+        const cf = (e.cf || '').toLowerCase();
+        if (!denom.includes(s) && !cf.includes(s)) return false;
+      }
+      return true;
+    });
+  }
+
+  function escHtml(v) {
+    return String(v || '').replace(/[&<>"']/g, c =>
+      ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  function render() {
+    const filtered = getFiltered();
+    const total = filtered.length;
+    const totalPages = Math.max(1, Math.ceil(total / PAGE));
+    if (currentPage > totalPages) currentPage = totalPages;
+    const start = (currentPage - 1) * PAGE;
+    const slice = filtered.slice(start, start + PAGE);
+    if (slice.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="7" class="runts-noresult">Nessun ente trovato${currentSearch || currentFilter !== 'ALL' ? ' per i filtri correnti' : ''}.</td></tr>`;
+    } else {
+      tbody.innerHTML = slice.map(e => {
+        const sez = RUNTS_SEZIONI[e.sez];
+        const sezBadge = sez
+          ? `<span class="runts-sez-badge" style="background:${sez.color}" title="${sez.full}">${sez.lab}</span>`
+          : escHtml(e.sez);
+        return `<tr>
+          <td><strong>${escHtml(e.denom)}</strong></td>
+          <td>${sezBadge}</td>
+          <td><code class="runts-cf">${escHtml(e.cf)}</code></td>
+          <td>${escHtml(e.rapp)}</td>
+          <td>${e.x1000 ? '<span class="runts-yes" aria-label="iscritto al 5x1000">✓</span>' : '<span class="runts-no" aria-label="non iscritto">—</span>'}</td>
+          <td>${e.rete ? '<span class="runts-yes" aria-label="aderente a rete">✓</span>' : '<span class="runts-no" aria-label="non aderente">—</span>'}</td>
+          <td><time datetime="${escHtml(e.data_iscr)}">${escHtml(e.data_iscr)}</time></td>
+        </tr>`;
+      }).join('');
+    }
+    pageInfo.textContent = total > 0
+      ? `Pagina ${currentPage} di ${totalPages} · ${fmtNum(total)} ent${total === 1 ? 'e' : 'i'}`
+      : 'Nessun risultato';
+    prevBtn.disabled = currentPage <= 1;
+    nextBtn.disabled = currentPage >= totalPages;
+  }
+
+  prevBtn.addEventListener('click', () => {
+    if (currentPage > 1) { currentPage--; render(); }
+  });
+  nextBtn.addEventListener('click', () => {
+    currentPage++; render();
+  });
+  if (searchInput) {
+    let timer;
+    searchInput.addEventListener('input', () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        currentSearch = searchInput.value;
+        currentPage = 1;
+        render();
+      }, 180);
+    });
+  }
+  document.querySelectorAll('.runts-filter-chip').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.runts-filter-chip').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentFilter = btn.dataset.runtsFilter;
+      currentPage = 1;
+      render();
+    });
+  });
+  render();
+}
+
 init();
 </script>
 

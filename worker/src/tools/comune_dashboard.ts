@@ -44,6 +44,16 @@
  *                                   aggregati nazionali in
  *                                   carburanti/_nazionale.json (separato).
  *                                   Aggiornamento quotidiano.)
+ *   - runts/<istat>.json           (Min. Lavoro e Politiche Sociali - Registro
+ *                                   Unico Nazionale Terzo Settore (D.Lgs
+ *                                   117/2017 art. 53). Dato pubblico per legge
+ *                                   ex D.Lgs 36/2006 (Direttiva PSI). 145.898
+ *                                   enti del Terzo Settore in 7.547 comuni
+ *                                   (95,3%). Anagrafica + sezione (ODV/APS/EF/
+ *                                   IS/SMS/ETS), 5x1000, data iscrizione, rete
+ *                                   associativa. Cap 5000 enti per comune,
+ *                                   ordinati per data iscrizione DESC.
+ *                                   Aggiornamento quotidiano.)
  *   - lookup/anac-aggregato.json[<cf>] (contratti)
  *
  * Schema output (passa-attraverso del file R2):
@@ -220,6 +230,35 @@
  *                                       //   lazy lato frontend). Aggiornamento
  *                                       //   quotidiano (CSV bulk MIMIT "Prezzo
  *                                       //   alle 8 di mattina").
+ *     "runts":       { ... }            // Min. Lavoro - Registro Unico Nazionale
+ *                                       //   Terzo Settore (RUNTS, D.Lgs 117/2017):
+ *                                       //   { _snapshot_date: "YYYY-MM-DD",
+ *                                       //     _source_url: <pagina min. lavoro>,
+ *                                       //     kpi: { n_totale,
+ *                                       //            mix_sezione:
+ *                                       //              {APS,ODV,IS,ETS,EF,SMS}:int
+ *                                       //              (sorted by count desc),
+ *                                       //            n_5x1000,
+ *                                       //            pct_5x1000,
+ *                                       //            n_rete_associativa,
+ *                                       //            iscrizioni_per_anno:
+ *                                       //              {"YYYY":int,...} },
+ *                                       //     enti: [{ cf, rep, denom, sez,
+ *                                       //              rapp, rete, x1000,
+ *                                       //              data_iscr: "YYYY-MM-DD" },
+ *                                       //            ...]
+ *                                       //   }
+ *                                       //   Sezione MAI null (anche per comuni
+ *                                       //   con 0 enti: n_totale=0, enti=[]).
+ *                                       //   Cap enti[] a 5000 ordinati per
+ *                                       //   data_iscr DESC; se cappato, presenti
+ *                                       //   _enti_truncated:true, _enti_total:N,
+ *                                       //   _enti_cap:5000 (es. Roma 6616 enti).
+ *                                       //   Coverage: 7.547 / 7.918 comuni
+ *                                       //   con n_totale>0 (95,3%); 371 comuni
+ *                                       //   con n_totale=0 (piccoli, montani).
+ *                                       //   Aggiornamento quotidiano (XLSX bulk
+ *                                       //   ASP.NET PostBack servizi.lavoro.gov.it).
  *   }
  *
  * NB sulla cache:
@@ -272,11 +311,12 @@ interface DashboardShard {
   pun: unknown | null;
   agcom_bbmap: unknown | null;
   carburanti: unknown | null;
+  runts: unknown | null;
 }
 
 export const comuneDashboard: ToolDefinition = {
   description:
-    "Vista completa di un comune italiano in una sola chiamata. Sezioni: anagrafica, demografia, censimento, turismo, PNRR (Italia Domani), territorio (ISPRA Suolo/IdroGEO/Rifiuti), qualita aria (ISPRA SNPA: PM10/PM2.5/NO2), opere pubbliche (BDAP-MOP), spese (SIOPE multi-anno), contratti (ANAC), scuole (MIUR), veicoli e incidenti (ISTAT + ACI), redditi IRPEF 2020-2024 (MEF DF), patrimonio immobili PA (MEF DE 2022), ANNCSU civici e strade (Agenzia Entrate + ISTAT), sanita territoriale farmacie/parafarmacie/ospedali (Min. Salute), punti ricarica EV (GSE/MASE PUN), banda larga FTTH (AGCOM BBmap), distributori e prezzi carburanti (MIMIT). Tool da preferire per qualsiasi domanda generale su un comune (es. 'mostrami Bergamo', 'dati Milano'). Richiede istat_code (6 cifre, es. '075035' per Lecce). Se hai solo il nome, chiama prima search_comune per ottenerlo (gestisce omonimie/fusioni). Per il dettaglio completo dello schema di output per ogni sezione consulta lo skill cruscotto-italia-workflow.",
+    "Vista completa di un comune italiano in una sola chiamata. Sezioni: anagrafica, demografia, censimento, turismo, PNRR (Italia Domani), territorio (ISPRA Suolo/IdroGEO/Rifiuti), qualita aria (ISPRA SNPA: PM10/PM2.5/NO2), opere pubbliche (BDAP-MOP), spese (SIOPE multi-anno), contratti (ANAC), scuole (MIUR), veicoli e incidenti (ISTAT + ACI), redditi IRPEF 2020-2024 (MEF DF), patrimonio immobili PA (MEF DE 2022), ANNCSU civici e strade (Agenzia Entrate + ISTAT), sanita territoriale farmacie/parafarmacie/ospedali (Min. Salute), punti ricarica EV (GSE/MASE PUN), banda larga FTTH (AGCOM BBmap), distributori e prezzi carburanti (MIMIT), enti del Terzo Settore RUNTS (Min. Lavoro - ODV/APS/EF/IS/SMS/ETS, 5x1000, rete associativa). Tool da preferire per qualsiasi domanda generale su un comune (es. 'mostrami Bergamo', 'dati Milano'). Richiede istat_code (6 cifre, es. '075035' per Lecce). Se hai solo il nome, chiama prima search_comune per ottenerlo (gestisce omonimie/fusioni). Per il dettaglio completo dello schema di output per ogni sezione consulta lo skill cruscotto-italia-workflow.",
   inputSchema: {
     type: "object",
     properties: {

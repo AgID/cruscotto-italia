@@ -9,7 +9,7 @@ import type { ToolDefinition } from "./index.js";
 
 export const mcpInfo: ToolDefinition = {
   description:
-    "Returns server metadata, version, and data freshness for each integrated source (ANAC, BDAP-MOP, SIOPE, Italia Domani PNRR, ISTAT, ISPRA, MIUR, ACI, MEF Federalismo Fiscale, MEF Patrimonio Immobiliare PA, Agenzia delle Entrate/ISTAT ANNCSU, Ministero della Salute Open Data, GSE/MASE Piattaforma Unica Nazionale punti di ricarica, AGCOM Broadband Map, MIMIT Osservatorio Prezzi Carburanti).",
+    "Returns server metadata, version, and data freshness for each integrated source (ANAC, BDAP-MOP, SIOPE, Italia Domani PNRR, ISTAT, ISPRA, MIUR, ACI, MEF Federalismo Fiscale, MEF Patrimonio Immobiliare PA, Agenzia delle Entrate/ISTAT ANNCSU, Ministero della Salute Open Data, GSE/MASE Piattaforma Unica Nazionale punti di ricarica, AGCOM Broadband Map, MIMIT Osservatorio Prezzi Carburanti, Ministero del Lavoro Registro Unico Nazionale Terzo Settore RUNTS).",
   inputSchema: {
     type: "object",
     properties: {},
@@ -25,10 +25,10 @@ export const mcpInfo: ToolDefinition = {
     }
     return {
       service: "cruscotto-italia-mcp",
-      version: "0.10.0",
+      version: "0.11.0",
       protocol: "MCP 2024-11-05",
-      datasets: 18,
-      institutions: 14,
+      datasets: 19,
+      institutions: 15,
       municipalities: 7918,
       sources: {
         anac: {
@@ -128,6 +128,13 @@ export const mcpInfo: ToolDefinition = {
           license: "IODL 2.0",
           datasets: [
             "Ministero delle Imprese e del Made in Italy (MIMIT) - Osservatorio Prezzi Carburanti, dataset 'Carburanti - Prezzi praticati e anagrafica degli impianti' (art. 51 L. 99/2009): anagrafica completa degli ~23.700 impianti attivi con bandiera, gestore, tipo (Stradale/Autostradale), indirizzo geo-referenziato, e prezzi correnti per Benzina, Gasolio, GPL, Metano, HVO (oltre a premium proprietari V-Power, Hi-Q, Supreme Diesel, Blue Diesel). KPI per comune: n_impianti, mix bandiere top 5, n_pompe_bianche, prezzo medio e minimo per carburante self/serv, freshness (% prezzi aggiornati <=7gg). Aggregati nazionali e regionali pre-calcolati in carburanti/_nazionale.json. Copertura ~5.450 comuni su 7.896 (69%; i ~2.450 senza distributore sono micro-comuni montani). Aggiornamento quotidiano (CSV 'Prezzo alle 8 di mattina' MIMIT, skip automatico via hash).",
+          ],
+        },
+        min_lavoro_runts: {
+          canonical: "https://servizi.lavoro.gov.it/runts/it-it/Lista-enti",
+          license: "Dato pubblico ex D.Lgs 117/2017 art. 53 (pubblicita' legale RUNTS), riusabile ex D.Lgs 36/2006 (Direttiva PSI / Open Data)",
+          datasets: [
+            "Ministero del Lavoro e delle Politiche Sociali - Registro Unico Nazionale del Terzo Settore (RUNTS, D.Lgs 117/2017): anagrafica completa degli enti del Terzo Settore iscritti su base comunale (sede legale). 145.898 enti totali in 7.547 comuni (95,3% copertura). Mix nazionale per sezione: APS 47% > ODV 27% > IS 15% > ETS 11% > EF 0,4% > SMS 0,1%. 52% degli enti iscritti al beneficio 5x1000. Campi: codice fiscale, repertorio, denominazione, sezione (ODV/APS/EF/IS/SMS/ETS), legale rappresentante, rete associativa, provincia/comune sede legale, 5x1000, data iscrizione. KPI per comune: n_totale, mix per sezione, n_5x1000 + percentuale, n_rete_associativa, iscrizioni per anno. Aggiornamento quotidiano del file XLSX bulk sulla pagina ASP.NET di servizi.lavoro.gov.it (snapshot YYYYMMDD_iscritti_v1.0.xlsx).",
           ],
         },
       },

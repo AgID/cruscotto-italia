@@ -48,6 +48,18 @@ FONTI ORIGINARIE E LORO LICENZE
   Italy - Osservatorio Prezzi Carburanti,
   anagrafica impianti e prezzi praticati ex
   art. 51 L. 99/2009) ................................ IODL 2.0
+- Ministero del Lavoro e delle Politiche Sociali
+  (RUNTS - Registro Unico Nazionale del Terzo
+  Settore, anagrafica degli enti iscritti ex
+  D.Lgs 117/2017 art. 53) ............................ Dato pubblico
+                                                       ex D.Lgs 117/
+                                                       2017 art. 53
+                                                       (pubblicita'
+                                                       legale RUNTS).
+                                                       Riusabile come
+                                                       open data ex
+                                                       D.Lgs 36/2006
+                                                       (Direttiva PSI)
 - OpenStreetMap (cartografia) ........................ ODbL
 
 Per il dettaglio dei dataset e degli URL originari delle fonti,

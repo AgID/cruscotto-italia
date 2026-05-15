@@ -26,6 +26,7 @@ Cerchi un comune ("Lecce") e ottieni una vista a 360° su:
 - 💊 **Sanità territoriale** (Ministero Salute — farmacie, parafarmacie, posti letto ospedalieri)
 - ⚡ **Punti di ricarica veicoli elettrici** (GSE/MASE — Piattaforma Unica Nazionale)
 - ⛽ **Distributori carburante e prezzi** (MIMIT — Osservatorio Prezzi Carburanti)
+- 🤝 **Enti del Terzo Settore** (Ministero del Lavoro — RUNTS, D.Lgs 117/2017: ODV, APS, EF, IS, SMS, ETS)
 
 L'elenco completo, con licenze, frequenze di aggiornamento e link diretti alle fonti, è in [`about.html`](https://cruscotto-italia.piersoftckan.biz/about.html).
 
@@ -38,7 +39,7 @@ Frontend (HTML statico) → Worker (Cloudflare) → R2 (JSON shard per comune)
                               ↑
               ETL Python (GitHub Actions, cadenze multiple)
                               ↑
-  18 fonti istituzionali · 14 enti emittenti:
+  19 fonti istituzionali · 15 enti emittenti:
    ANAC · BDAP-MOP · SIOPE · Italia Domani (PNRR)
    ISTAT (POSAS, Censimento, Turismo, Veicoli, Incidenti)
    MIUR · ISPRA (Suolo/IdroGEO/Rifiuti, SNPA aria) · ACI LOD
@@ -47,6 +48,7 @@ Frontend (HTML statico) → Worker (Cloudflare) → R2 (JSON shard per comune)
    GSE/MASE (Piattaforma Unica Nazionale punti di ricarica)
    AGCOM (Broadband Map: copertura banda larga FTTH/FTTC)
    MIMIT (Osservatorio Prezzi Carburanti — distributori + prezzi)
+   Ministero del Lavoro (RUNTS — Registro Unico Nazionale Terzo Settore)
 ```
 
 Tutti i dettagli architetturali sono in [`DESIGN.md`](DESIGN.md).
@@ -63,7 +65,7 @@ Cruscotto Italia espone un server [Model Context Protocol](https://modelcontextp
 
 **Tool esposti** (5): `mcp_info`, `search_comune`, `comune_dashboard`, `comune_opere_dettaglio`, `anncsu_civico_search`.
 
-`comune_dashboard` è il tool principale: una sola chiamata restituisce 21 sezioni con tutti i dati del comune. `comune_opere_dettaglio` fornisce la lista dei singoli progetti BDAP filtrati al 2025. `anncsu_civico_search` consente query puntuali sui numeri civici ANNCSU con filtri server-side (odonimo, civico).
+`comune_dashboard` è il tool principale: una sola chiamata restituisce 22 sezioni con tutti i dati del comune. `comune_opere_dettaglio` fornisce la lista dei singoli progetti BDAP filtrati al 2025. `anncsu_civico_search` consente query puntuali sui numeri civici ANNCSU con filtri server-side (odonimo, civico).
 
 **Rate limit**: 60 richieste/minuto per IP.
 
@@ -75,7 +77,7 @@ Cruscotto Italia espone un server [Model Context Protocol](https://modelcontextp
 
 ### Skill Claude opzionale
 
-Per ottenere risposte più mirate è disponibile una skill Claude che documenta l'uso del connettore (inventario dei 5 tool, schema di `comune_dashboard` con tutte le sezioni, endpoint REST `/data/anncsu_full/<istat>.json`, pattern operativi e caveat per sezione). Scaricabile da [`/skills/cruscotto-italia-workflow-v1.5.zip`](https://cruscotto-italia-mcp.piersoftckan.biz/skills/cruscotto-italia-workflow-v1.5.zip).
+Per ottenere risposte più mirate è disponibile una skill Claude che documenta l'uso del connettore (inventario dei 5 tool, schema di `comune_dashboard` con tutte le sezioni — inclusa la nuova `runts` per gli enti del Terzo Settore, endpoint REST `/data/anncsu_full/<istat>.json`, pattern operativi e caveat per sezione). Scaricabile da [`/skills/cruscotto-italia-workflow-v1.6.0.zip`](https://cruscotto-italia-mcp.piersoftckan.biz/skills/cruscotto-italia-workflow-v1.6.0.zip).
 
 ### System prompt suggerito
 
@@ -86,11 +88,11 @@ Hai accesso al connector "Cruscotto Italia" che fornisce dati civici sui ~7.900 
 
 Linee guida:
 - Quando l'utente menziona un comune per nome, chiama PRIMA search_comune per ottenere il codice ISTAT esatto, poi usa quel codice negli altri tool.
-- Per domande generali su un comune ("dimmi di Bergamo", "dati di Milano") usa comune_dashboard: contiene tutto in una chiamata (21 sezioni: anagrafica, demografia, profilo, turismo, PNRR, territorio, aria, opere, contratti ANAC, spese SIOPE, scuole, veicoli, redditi, immobili PA, ANNCSU, sanità, punti di ricarica EV, banda larga FTTH/FTTC, distributori carburanti).
+- Per domande generali su un comune ("dimmi di Bergamo", "dati di Milano") usa comune_dashboard: contiene tutto in una chiamata (22 sezioni: anagrafica, demografia, profilo, turismo, PNRR, territorio, aria, opere, contratti ANAC, spese SIOPE, scuole, veicoli, redditi, immobili PA, ANNCSU, sanità, punti di ricarica EV, banda larga FTTH/FTTC, distributori carburanti, enti del Terzo Settore RUNTS).
 - Per il dettaglio dei progetti BDAP (lista CUP filtrabile al 2025) usa comune_opere_dettaglio; per query puntuali su civici (es. "quote di Via X", "esiste il civico Y in Z") usa anncsu_civico_search.
 - In caso di omonimi (es. "San Teodoro" esiste in Sardegna e Sicilia) mostra all'utente i match e chiedi quale.
 - Se l'utente non specifica il comune, chiedi chiarimento prima di chiamare i tool.
-- Cita sempre la fonte dati primaria nei tuoi output (ANAC, ISTAT, BDAP-MOP, ISPRA, MEF, MIUR, ACI, Agenzia Entrate, Ministero Salute, GSE/MASE, AGCOM, MIMIT).
+- Cita sempre la fonte dati primaria nei tuoi output (ANAC, ISTAT, BDAP-MOP, ISPRA, MEF, MIUR, ACI, Agenzia Entrate, Ministero Salute, GSE/MASE, AGCOM, MIMIT, Ministero del Lavoro).
 ~~~
 
 > Nota: sostituisci `~~~` con triple backtick quando copi nel system prompt.
@@ -105,6 +107,7 @@ Linee guida:
 - "Quanti civici certificati ANNCSU ci sono in via Roma a Lecce?" — civici georeferenziati
 - "Qual è la copertura FTTH a Bergamo? Confronto con Brescia." — banda larga AGCOM
 - "Quanto costa il gasolio self a Lecce rispetto alla media nazionale?" — distributori MIMIT
+- "Quanti enti del Terzo Settore (ODV/APS) ha Matera? Quanti iscritti al 5x1000?" — RUNTS Min. Lavoro
 
 ### Limiti noti
 
@@ -225,6 +228,7 @@ cruscotto-italia/
 │   │   ├── pun.py              ← GSE/MASE punti di ricarica veicoli elettrici
 │   │   ├── agcom_bbmap.py      ← AGCOM Broadband Map (copertura banda larga FTTH/FTTC)
 │   │   ├── carburanti.py       ← MIMIT Osservatorio Prezzi Carburanti (distributori + prezzi)
+│   │   ├── runts.py            ← Min. Lavoro RUNTS (enti del Terzo Settore: ODV/APS/EF/IS/SMS/ETS)
 │   │   └── dashboard.py        ← unified shard A1 (single-fetch per comune)
 │   └── lib/
 │       ├── r2.py
@@ -233,7 +237,7 @@ cruscotto-italia/
 │
 ├── .github/workflows/
 │   ├── etl-daily.yml         ← cron 04:30 UTC (PUN punti ricarica + MIMIT carburanti + dashboard rebuild)
-│   ├── etl-weekly.yml        ← cron lunedì (ANAC + PNRR + dashboard)
+│   ├── etl-weekly.yml        ← cron lunedì 04:00 UTC (ANAC + PNRR + sanità MdS + RUNTS Min. Lavoro + dashboard)
 │   ├── etl-monthly.yml       ← cron 5° del mese (anagrafica + BDAP + SIOPE + ANNCSU + sanità + AGCOM banda larga + dashboard)
 │   ├── etl-annual.yml        ← cron 1 feb / 1 apr / 1 lug (demografia, profilo, turismo, territorio, scuole, veicoli, redditi, immobili PA)
 │   ├── deploy-worker.yml     ← su push main → Cloudflare Workers
@@ -256,6 +260,7 @@ I dati delle fonti sono sotto le rispettive licenze:
 - **IODL 2.0** — BDAP-MOP, BDAP-SIOPE, Ministero della Salute, MIMIT (Osservatorio Prezzi Carburanti)
 - **CC BY 4.0 ex art. 52 c.2 D.Lgs 82/2005 (CAD)** — "open by default" per soggetti art. 2 c.2 CAD che pubblicano dati senza licenza espressa. Si applica per esempio al GSE/MASE per la Piattaforma Unica Nazionale dei punti di ricarica e ad AGCOM per la Broadband Map (copertura banda larga ex art. 22 Codice Comunicazioni Elettroniche), in coerenza con le Linee Guida Open Data AgID (Determinazione 183/2023)
 - **Open Data ai sensi del Regolamento UE 2023/138 (HVD)** — ANNCSU (Agenzia delle Entrate + ISTAT)
+- **Dato pubblico ex D.Lgs 117/2017 art. 53 + D.Lgs 36/2006 (Direttiva PSI)** — RUNTS (Ministero del Lavoro, anagrafica enti del Terzo Settore): pubblicità legale del registro più riusabilità open data secondo la normativa italiana di recepimento della Direttiva UE PSI
 
 Vedi [`docs/data-licenses.md`](docs/data-licenses.md) per il dettaglio per dataset, e [`about.html`](https://cruscotto-italia.piersoftckan.biz/about.html) per i link diretti alle fonti.
 
