@@ -258,9 +258,8 @@ I dati delle fonti sono sotto le rispettive licenze:
 - **CC BY 4.0** — la maggior parte delle fonti (ANAC, ISTAT, MIUR, ACI, ISPRA, MEF DE Patrimonio, Italia Domani PNRR)
 - **CC BY 3.0 IT** — MEF Federalismo Fiscale, alcuni dataset ISTAT storici
 - **IODL 2.0** — BDAP-MOP, BDAP-SIOPE, Ministero della Salute, MIMIT (Osservatorio Prezzi Carburanti)
-- **CC BY 4.0 ex art. 52 c.2 D.Lgs 82/2005 (CAD)** — "open by default" per soggetti art. 2 c.2 CAD che pubblicano dati senza licenza espressa. Si applica per esempio al GSE/MASE per la Piattaforma Unica Nazionale dei punti di ricarica e ad AGCOM per la Broadband Map (copertura banda larga ex art. 22 Codice Comunicazioni Elettroniche), in coerenza con le Linee Guida Open Data AgID (Determinazione 183/2023)
+- **CC BY 4.0 ex art. 52 c.2 D.Lgs 82/2005 (CAD)** — "open by default" per i dati delle PA pubblicati senza licenza esplicita. Si applica per esempio a GSE/MASE (PUN punti di ricarica EV), AGCOM (Broadband Map FTTH/FTTC ex art. 22 Codice Comunicazioni Elettroniche) e Ministero del Lavoro (RUNTS anagrafica enti del Terzo Settore ex D.Lgs 117/2017 art. 53 pubblicità legale), in coerenza con le Linee Guida Open Data AgID (Determinazione 183/2023)
 - **Open Data ai sensi del Regolamento UE 2023/138 (HVD)** — ANNCSU (Agenzia delle Entrate + ISTAT)
-- **Dato pubblico ex D.Lgs 117/2017 art. 53 + D.Lgs 36/2006 (Direttiva PSI)** — RUNTS (Ministero del Lavoro, anagrafica enti del Terzo Settore): pubblicità legale del registro più riusabilità open data secondo la normativa italiana di recepimento della Direttiva UE PSI
 
 Vedi [`docs/data-licenses.md`](docs/data-licenses.md) per il dettaglio per dataset, e [`about.html`](https://cruscotto-italia.piersoftckan.biz/about.html) per i link diretti alle fonti.
 

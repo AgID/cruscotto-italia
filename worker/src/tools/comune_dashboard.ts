@@ -46,13 +46,14 @@
  *                                   Aggiornamento quotidiano.)
  *   - runts/<istat>.json           (Min. Lavoro e Politiche Sociali - Registro
  *                                   Unico Nazionale Terzo Settore (D.Lgs
- *                                   117/2017 art. 53). Dato pubblico per legge
- *                                   ex D.Lgs 36/2006 (Direttiva PSI). 145.898
- *                                   enti del Terzo Settore in 7.547 comuni
- *                                   (95,3%). Anagrafica + sezione (ODV/APS/EF/
- *                                   IS/SMS/ETS), 5x1000, data iscrizione, rete
- *                                   associativa. Cap 5000 enti per comune,
- *                                   ordinati per data iscrizione DESC.
+ *                                   117/2017 art. 53). Licenza CC BY 4.0 ex
+ *                                   art. 52 c.2 D.Lgs 82/2005 (CAD).
+ *                                   145.898 enti del Terzo Settore in 7.547
+ *                                   comuni (95,3%). Anagrafica + sezione
+ *                                   (ODV/APS/EF/IS/SMS/ETS), 5x1000, data
+ *                                   iscrizione, rete associativa. Cap 5000
+ *                                   enti per comune, ordinati per data
+ *                                   iscrizione DESC.
  *                                   Aggiornamento quotidiano.)
  *   - lookup/anac-aggregato.json[<cf>] (contratti)
  *

@@ -132,7 +132,7 @@ export const mcpInfo: ToolDefinition = {
         },
         min_lavoro_runts: {
           canonical: "https://servizi.lavoro.gov.it/runts/it-it/Lista-enti",
-          license: "Dato pubblico ex D.Lgs 117/2017 art. 53 (pubblicita' legale RUNTS), riusabile ex D.Lgs 36/2006 (Direttiva PSI / Open Data)",
+          license: "CC BY 4.0 ex art. 52 c.2 D.Lgs 82/2005 (CAD) - open data di default delle PA; dato pubblicato ex D.Lgs 117/2017 art. 53 (pubblicita' legale RUNTS)",
           datasets: [
             "Ministero del Lavoro e delle Politiche Sociali - Registro Unico Nazionale del Terzo Settore (RUNTS, D.Lgs 117/2017): anagrafica completa degli enti del Terzo Settore iscritti su base comunale (sede legale). 145.898 enti totali in 7.547 comuni (95,3% copertura). Mix nazionale per sezione: APS 47% > ODV 27% > IS 15% > ETS 11% > EF 0,4% > SMS 0,1%. 52% degli enti iscritti al beneficio 5x1000. Campi: codice fiscale, repertorio, denominazione, sezione (ODV/APS/EF/IS/SMS/ETS), legale rappresentante, rete associativa, provincia/comune sede legale, 5x1000, data iscrizione. KPI per comune: n_totale, mix per sezione, n_5x1000 + percentuale, n_rete_associativa, iscrizioni per anno. Aggiornamento quotidiano del file XLSX bulk sulla pagina ASP.NET di servizi.lavoro.gov.it (snapshot YYYYMMDD_iscritti_v1.0.xlsx).",
           ],

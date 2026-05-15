@@ -2,9 +2,8 @@
 
 Fonte istituzionale: Ministero del Lavoro e delle Politiche Sociali.
 Pubblicazione: D.Lgs 117/2017 art. 53 (pubblicita' legale RUNTS).
-Riuso: D.Lgs 36/2006 (Direttiva PSI / Open Data).
-Licenza: dato pubblico per legge, riusabile (no licenza esplicita, ma open
-data ai sensi della normativa italiana sulla pubblicita' legale).
+Licenza: CC BY 4.0 ex art. 52 c.2 D.Lgs 82/2005 (CAD) - open data di
+default delle PA (in coerenza con le Linee Guida AgID Det. 183/2023).
 
 URL ufficiale: https://servizi.lavoro.gov.it/runts/it-it/Lista-enti
 

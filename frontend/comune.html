@@ -3586,7 +3586,7 @@ function renderContrattiTab(contratti) {
         <h2 class="section-h">Nessun contratto ANAC <em>per il periodo coperto</em>.</h2>
         <div class="placeholder">
           Il comune potrebbe non aver registrato aggiudicazioni nel periodo
-          monitorato (marzo 2026), oppure l'ETL non ha trovato un match
+          monitorato, oppure l'ETL non ha trovato un match
           via codice fiscale stazione appaltante.
         </div>
       </div>
@@ -3602,6 +3602,18 @@ function renderContrattiTab(contratti) {
     const [d] = s.split(' ');
     const [y,m,dd] = d.split('-');
     return `${dd}/${m}/${y}`;
+  };
+
+  // Formato esteso "25 marzo 2026" per frasi descrittive
+  const fmtDateExt = s => {
+    if (!s) return null;
+    const MESI = ['gennaio','febbraio','marzo','aprile','maggio','giugno',
+                  'luglio','agosto','settembre','ottobre','novembre','dicembre'];
+    const [d] = s.split(' ');
+    const [y,m,dd] = d.split('-');
+    const mi = parseInt(m, 10) - 1;
+    if (mi < 0 || mi > 11) return null;
+    return `${parseInt(dd, 10)} ${MESI[mi]} ${y}`;
   };
 
   // Top CPV: lista con barra proporzionale al count
@@ -3630,8 +3642,12 @@ function renderContrattiTab(contratti) {
       <h2 class="section-h">${fmtNum(c.count)} aggiudicazioni <em>per €${fmtNum(Math.round(c.importo_totale || 0))}</em>.</h2>
       <p class="section-sub">
         Contratti pubblici dove il Comune è <em>stazione appaltante</em>, secondo lo standard
-        Open Contracting (OCDS). Il dato è limitato alle aggiudicazioni di <strong>marzo 2026</strong>:
-        per la copertura completa servirà l'aggregazione di altri mesi.
+        Open Contracting (OCDS). ${(() => {
+          const last = fmtDateExt(c.last_award_date);
+          return last
+            ? `L'ultima aggiudicazione registrata è del <strong>${last}</strong>: per il quadro completo servirà l'aggregazione di altri mesi.`
+            : `Per il quadro completo servirà l'aggregazione di altri mesi.`;
+        })()}
       </p>
 
       <div class="kpi-cards">
@@ -8783,8 +8799,10 @@ registrato (95,3%); i ~371 comuni residui sono micro-comuni montani.
 Aggiornamento quotidiano (file XLSX bulk YYYYMMDD_iscritti_v1.0.xlsx
 scaricato via PostBack ASP.NET da servizi.lavoro.gov.it/runts/).
 
-Dato pubblico per legge ex D.Lgs 117/2017 art. 53, riusabile come open
-data ex D.Lgs 36/2006 (recepimento Direttiva UE PSI).
+Licenza: CC BY 4.0 ex art. 52 c.2 D.Lgs 82/2005 (CAD) - open data di
+default delle PA, in coerenza con le Linee Guida Open Data AgID
+(Determinazione 183/2023). Dato pubblicato ai sensi del D.Lgs 117/2017
+art. 53 (pubblicita' legale RUNTS).
 
 `;
       zip.file('README.txt', readme);
@@ -8931,7 +8949,8 @@ function renderRuntsTab(d) {
         può operare in più comuni pur essendo registrato altrove.</p>
         <p class="muted">Fonte:
         <a href="https://servizi.lavoro.gov.it/runts/it-it/Lista-enti" target="_blank" rel="noopener">Min. Lavoro &middot; RUNTS</a>
-        &middot; aggiornamento quotidiano &middot; D.Lgs 117/2017 art. 53.</p>
+        &middot; aggiornamento quotidiano &middot; D.Lgs 117/2017 art. 53.
+        Licenza CC BY 4.0 ex art. 52 c.2 D.Lgs 82/2005 (CAD).</p>
       </div>`;
   }
   const k = d.kpi;
@@ -9043,6 +9062,11 @@ function renderRuntsTab(d) {
         <span id="runts-page-info" aria-live="polite">—</span>
         <button type="button" id="runts-next" class="runts-page-btn" disabled aria-label="Pagina successiva">›</button>
       </div>
+
+      <p class="muted" style="font-family:var(--mono);font-size:11px;margin-top:18px;">
+        Fonte: <a href="https://servizi.lavoro.gov.it/runts/it-it/Lista-enti" target="_blank" rel="noopener">Ministero del Lavoro e delle Politiche Sociali — RUNTS</a>.
+        Licenza CC BY 4.0 ex art. 52 c.2 D.Lgs 82/2005 (CAD) — open data di default delle PA. Dato pubblicato ai sensi del D.Lgs 117/2017 art. 53 (pubblicità legale RUNTS).
+      </p>
     </div>
   `;
 }

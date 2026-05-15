@@ -51,15 +51,17 @@ FONTI ORIGINARIE E LORO LICENZE
 - Ministero del Lavoro e delle Politiche Sociali
   (RUNTS - Registro Unico Nazionale del Terzo
   Settore, anagrafica degli enti iscritti ex
-  D.Lgs 117/2017 art. 53) ............................ Dato pubblico
-                                                       ex D.Lgs 117/
-                                                       2017 art. 53
-                                                       (pubblicita'
-                                                       legale RUNTS).
-                                                       Riusabile come
-                                                       open data ex
-                                                       D.Lgs 36/2006
-                                                       (Direttiva PSI)
+  D.Lgs 117/2017 art. 53) ............................ CC BY 4.0 ex
+                                                       art. 52 c.2
+                                                       D.Lgs 82/2005
+                                                       (CAD) - open
+                                                       data di default
+                                                       delle PA. Dato
+                                                       pubblicato per
+                                                       pubblicita' le-
+                                                       gale RUNTS (D.
+                                                       Lgs 117/2017
+                                                       art. 53).
 - OpenStreetMap (cartografia) ........................ ODbL
 
 Per il dettaglio dei dataset e degli URL originari delle fonti,
