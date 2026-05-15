@@ -1,8 +1,12 @@
 """ETL Demografia ISTAT POSAS - matrice eta x sesso per comune.
 
-Fonte: ISTAT POSAS (Popolazione e situazione anagrafica) gia scaricato.
-Path: /tmp/posas-test/extracted/POSAS_2026_it_Comuni.csv
-Schema: codice_istat, comune, eta, maschi, femmine, totale
+Fonte: ISTAT POSAS (Popolazione e situazione anagrafica).
+Auto-download bulk ZIP da https://demo.istat.it/data/posas/POSAS_{YEAR}_it_Comuni.zip
+con auto-detect dell'anno disponibile piu' recente (parte dall'anno
+corrente +1 e scende fino a trovare lo ZIP pubblicato). E' possibile
+forzare l'anno con --year.
+
+Schema CSV upstream: codice_istat, comune, eta, maschi, femmine, totale
         (eta=999 e' la riga di totale comune)
 
 Output:
@@ -20,25 +24,108 @@ KPI calcolati:
 Usage:
   python -m etl.sources.demografia --target=local
   python -m etl.sources.demografia --target=r2
+  python -m etl.sources.demografia --target=r2 --year=2027  # forza anno
+  python -m etl.sources.demografia --target=r2 --csv=/path/to.csv  # bypass download
 """
 from __future__ import annotations
 
 import argparse
+import datetime
 import json
 import os
 import sys
 import tempfile
+import zipfile
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 import duckdb
+import requests
 import structlog
 
 from etl.lib import manifest, r2
 
 log = structlog.get_logger()
 
-POSAS_CSV = Path("/tmp/posas-test/extracted/POSAS_2026_it_Comuni.csv")
+POSAS_URL_TEMPLATE = "https://demo.istat.it/data/posas/POSAS_{year}_it_Comuni.zip"
+
+
+def pull_posas_auto_year(workdir: Path,
+                         forced_year: int | None = None) -> tuple[Path, int]:
+    """Scarica e estrae il bulk POSAS ISTAT, con auto-detect dell'anno.
+
+    ISTAT pubblica POSAS_<YEAR>_it_Comuni.zip dove YEAR si riferisce alla
+    popolazione al 1 gennaio dell'anno indicato. Il file dell'anno corrente
+    viene tipicamente pubblicato in primavera/estate. Per coprire i casi di
+    pubblicazione in ritardo o anticipata, la funzione prova in sequenza
+    [anno_corrente+1, anno_corrente, anno_corrente-1] e si ferma al primo
+    URL che restituisce 200. Con --year la sequenza e' bypassata.
+
+    Args:
+        workdir: directory di lavoro per ZIP + estrazione
+        forced_year: se non None, scarica solo questo anno (fail se 404)
+
+    Returns:
+        tuple (csv_path, year_used)
+    """
+    workdir.mkdir(parents=True, exist_ok=True)
+    extract_dir = workdir / "extracted"
+    extract_dir.mkdir(exist_ok=True)
+
+    current_year = datetime.date.today().year
+    if forced_year is not None:
+        candidates = [forced_year]
+    else:
+        # Prova prima anno+1 (es. POSAS_2027 pubblicato a inizio 2026 e' raro
+        # ma possibile), poi anno corrente, poi anno-1 come fallback robusto.
+        candidates = [current_year + 1, current_year, current_year - 1]
+
+    last_status: int | None = None
+    last_url: str | None = None
+    for year in candidates:
+        url = POSAS_URL_TEMPLATE.format(year=year)
+        log.info("posas_try_year", year=year, url=url)
+        try:
+            head = requests.head(url, timeout=30, allow_redirects=True)
+        except requests.RequestException as e:
+            log.warning("posas_head_failed", year=year, error=str(e))
+            continue
+        last_status, last_url = head.status_code, url
+        if head.status_code != 200:
+            log.info("posas_year_not_found", year=year, status=head.status_code)
+            continue
+        # Trovato: download + extract
+        zip_path = workdir / f"POSAS_{year}_it_Comuni.zip"
+        log.info("posas_downloading", year=year, url=url)
+        resp = requests.get(url, timeout=300, stream=True)
+        resp.raise_for_status()
+        bytes_written = 0
+        with open(zip_path, "wb") as f:
+            for chunk in resp.iter_content(chunk_size=65536):
+                f.write(chunk)
+                bytes_written += len(chunk)
+        log.info("posas_zip_saved", year=year, bytes=bytes_written,
+                 path=str(zip_path))
+        with zipfile.ZipFile(zip_path) as zf:
+            zf.extractall(extract_dir)
+        csv_files = list(extract_dir.glob(f"POSAS_{year}_it_Comuni.csv"))
+        if not csv_files:
+            # Fallback: qualsiasi CSV nell'estratto
+            csv_files = list(extract_dir.glob("*.csv"))
+        if not csv_files:
+            raise RuntimeError(
+                f"POSAS_{year} ZIP estratto ma nessun CSV trovato in {extract_dir}"
+            )
+        csv_path = csv_files[0]
+        log.info("posas_csv_extracted", year=year, path=str(csv_path),
+                 bytes=csv_path.stat().st_size)
+        return csv_path, year
+
+    # Tutti gli anni candidati hanno fallito
+    raise RuntimeError(
+        f"Nessun POSAS scaricabile tra {candidates}. "
+        f"Ultimo URL provato: {last_url} (status: {last_status})"
+    )
 
 
 def build_demografia_shards(csv_path: Path, output_dir: Path) -> Path:
@@ -226,7 +313,12 @@ def push_to_r2_parallel(shard_dir: Path) -> int:
 def main() -> int:
     parser = argparse.ArgumentParser(description="ETL Demografia ISTAT POSAS")
     parser.add_argument("--target", choices=["local", "r2"], default="local")
-    parser.add_argument("--csv", type=Path, default=POSAS_CSV)
+    parser.add_argument("--csv", type=Path, default=None,
+                        help="Bypassa il download e usa questo CSV locale.")
+    parser.add_argument("--year", type=int, default=None,
+                        help="Forza un anno specifico per il download POSAS.")
+    parser.add_argument("--workdir", type=Path, default=None,
+                        help="Directory di lavoro per ZIP+CSV (default: tempdir).")
     parser.add_argument("--output-dir", type=Path, default=None)
     args = parser.parse_args()
 
@@ -242,15 +334,31 @@ def main() -> int:
         output_dir = Path(tempfile.mkdtemp(prefix="cruscotto-demografia-")) / "output"
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    log.info("etl_start", target=args.target, output_dir=str(output_dir),
-             csv=str(args.csv))
+    # Risoluzione CSV: priorità --csv esplicito, altrimenti auto-download.
+    csv_path: Path
+    year_used: int | None = None
+    if args.csv is not None:
+        if not args.csv.exists():
+            log.error("csv_not_found", path=str(args.csv))
+            return 1
+        csv_path = args.csv
+        log.info("posas_csv_from_arg", path=str(csv_path))
+    else:
+        workdir = args.workdir or (
+            Path(tempfile.mkdtemp(prefix="cruscotto-demografia-posas-"))
+        )
+        try:
+            csv_path, year_used = pull_posas_auto_year(workdir,
+                                                       forced_year=args.year)
+        except Exception as e:
+            log.exception("posas_download_failed", error=str(e))
+            return 1
 
-    if not args.csv.exists():
-        log.error("csv_not_found", path=str(args.csv))
-        return 1
+    log.info("etl_start", target=args.target, output_dir=str(output_dir),
+             csv=str(csv_path), year=year_used)
 
     try:
-        shard_dir = build_demografia_shards(args.csv, output_dir)
+        shard_dir = build_demografia_shards(csv_path, output_dir)
 
         if args.target == "r2":
             uploaded = push_to_r2_parallel(shard_dir)
@@ -261,7 +369,7 @@ def main() -> int:
             )
             log.info("manifest_updated")
 
-        log.info("etl_done")
+        log.info("etl_done", year=year_used)
         return 0
     except Exception as e:
         log.exception("etl_failed", error=str(e))
