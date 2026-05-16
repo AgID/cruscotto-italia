@@ -23,6 +23,7 @@ export interface Env {
   CACHE_TTL_SECONDS: string;
   RATE_LIMIT_RPM: string;
   ADMIN_TOKEN?: string;
+  DATA_BASIC_AUTH?: string;
 }
 export default {
   async fetch(req: Request, env: Env, ctx: ExecutionContext): Promise<Response> {

@@ -1000,7 +1000,7 @@ footer .footer-bottom a {
 // ===========================================================================
 const MCP_ENDPOINT = window.location.hostname === 'localhost'
   ? 'http://localhost:8787/mcp'
-  : 'https://cruscotto-italia-mcp.datigovit.workers.dev/mcp';
+  : 'https://cruscotto-italia-mcp.agid.workers.dev/mcp';
 
 async function mcpCall(toolName, args) {
   const res = await fetch(MCP_ENDPOINT, {

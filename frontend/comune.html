@@ -952,6 +952,9 @@ footer a{color:rgba(255,255,255,0.85);text-decoration:none}
 #aria-map .leaflet-top,
 #aria-map .leaflet-bottom,
 #aria-map .leaflet-control{z-index:1 !important;}
+#pendolarismo-map .leaflet-control{z-index:1000 !important;position:relative;}
+#pendolarismo-map .leaflet-top,#pendolarismo-map .leaflet-bottom{z-index:1000 !important;}
+#pendolarismo-map .leaflet-control-zoom{display:block !important;visibility:visible !important;opacity:1 !important;}
 #aria-map .leaflet-popup-pane{z-index:2 !important;}
 @media (max-width:720px){#aria-map{height:280px;}}
 .aria-map-legend{display:flex;flex-wrap:wrap;gap:18px;padding:10px 14px;background:var(--paper-2);font-family:var(--mono);font-size:11px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.08em;border-top:1px solid var(--paper);}
@@ -8909,7 +8912,7 @@ esempio (campo "punti"). Per il dataset completo dei civici di
 questo comune (Lecce ~48mila, Roma ~516mila, ecc.), interroga
 l'endpoint:
 
-  https://cruscotto-italia-mcp.piersoftckan.biz/data/anncsu_full/${istat}.json
+  https://cruscotto-italia-mcp.agid.workers.dev/data/anncsu_full/${istat}.json
 
 NOTA SUI PRESIDI SANITARI MIN. SALUTE
 -------------------------------------

@@ -348,7 +348,10 @@ export async function handleHealth(_req: Request, env: Env): Promise<Response> {
   let r2Ok = false;
   let kvOk = false;
   try {
-    const r = await fetch(`${env.DATA_BASE_URL}/manifest.json`, { method: "HEAD" });
+    const r = await fetch(`${env.DATA_BASE_URL}/manifest.json`, {
+      method: "HEAD",
+      headers: env.DATA_BASIC_AUTH ? { "Authorization": `Basic ${env.DATA_BASIC_AUTH}` } : {},
+    });
     r2Ok = r.ok;
   } catch {
     /* manifest may not exist yet on first deploy — treat as warning */
@@ -406,6 +409,7 @@ export async function handleDataAnncsuFull(istat: string, env: Env): Promise<Res
   try {
     const r = await fetch(`${env.DATA_BASE_URL}/${key}`, {
       cf: { cacheTtl: 86400, cacheEverything: true },
+      headers: env.DATA_BASIC_AUTH ? { "Authorization": `Basic ${env.DATA_BASIC_AUTH}` } : {},
     });
     if (r.status === 404) {
       return new Response(
@@ -458,6 +462,7 @@ export async function handleDataSkill(filename: string, env: Env): Promise<Respo
   try {
     const r = await fetch(`${env.DATA_BASE_URL}/${key}`, {
       cf: { cacheTtl: 86400, cacheEverything: true },
+      headers: env.DATA_BASIC_AUTH ? { "Authorization": `Basic ${env.DATA_BASIC_AUTH}` } : {},
     });
     if (r.status === 404) {
       return new Response(

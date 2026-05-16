@@ -36,7 +36,10 @@ export async function fetchR2Json<T = unknown>(
 
   // 2. Fetch from DATA_BASE_URL (B1: HTTPS instead of R2 binding)
   const url = `${env.DATA_BASE_URL}/${r2Key}`;
-  const r = await fetch(url, { cf: { cacheTtl: 3600, cacheEverything: true } });
+  const r = await fetch(url, {
+    cf: { cacheTtl: 3600, cacheEverything: true },
+    headers: env.DATA_BASIC_AUTH ? { "Authorization": `Basic ${env.DATA_BASIC_AUTH}` } : {},
+  });
   if (r.status === 404) {
     return null;
   }
