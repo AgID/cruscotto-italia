@@ -216,16 +216,24 @@ def _parse_delimited(lines: list[str], delim: str) -> list[dict]:
     # Cerca indici colonne chiave
     idx_res = idx_dest = idx_val = None
     for i, h in enumerate(header):
-        if idx_res is None and any(k in h for k in [
-            "ITTER107_RES", "REF_AREA", "RESIDENZA", "COD_RES", "ORIGINE", "COMUNE_RES",
+        # PRIORITY: cerca prima PROCOM_RES/LAV (schema 2021 confermato)
+        # poi fallback su nomi semantici
+        if idx_res is None and h in ("PROCOM_RES", "ITTER107_RES"):
+            idx_res = i
+        elif idx_dest is None and h in ("PROCOM_LAV", "PROCOM_DEST", "ITTER107_DEST"):
+            idx_dest = i
+        elif idx_val is None and h in ("PENDOLARI", "OBS_VALUE", "VALUE"):
+            idx_val = i
+        elif idx_res is None and any(k in h for k in [
+            "RESIDENZA", "COD_RES", "ORIGINE", "COMUNE_RES",
         ]):
             idx_res = i
         elif idx_dest is None and any(k in h for k in [
-            "ITTER107_DEST", "DESTINAZIONE", "COD_DEST", "COMUNE_DEST", "LOCAL_AREA",
+            "DESTINAZIONE", "COD_DEST", "COMUNE_DEST", "LOCAL_AREA",
         ]):
             idx_dest = i
         elif idx_val is None and any(k in h for k in [
-            "OBS_VALUE", "VALUE", "STIMA", "NUMERO", "INDIVIDUI", "PENDOLARI",
+            "STIMA", "NUMERO", "INDIVIDUI",
         ]):
             idx_val = i
 
