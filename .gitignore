@@ -67,3 +67,30 @@ data/*
 # Eccezione: pendolarismo 2021 committato nel repo (distribuito via git pull,
 # non R2). Replica il pattern delle eccezioni esistenti (es. docs/skills/).
 !data/pendolarismo/
+
+# Shard JSON dati: stanno su filesystem live (Aruba/VM AgID) + R2, NON in repo
+data/pendolarismo/
+data/dashboard/
+data/anncsu/
+data/anncsu_full/
+data/asia/
+data/aria/
+data/anac/
+data/bdap/
+data/carburanti/
+data/agcom_bbmap/
+data/demografia/
+data/profilo/
+data/turismo/
+data/pnrr/
+data/scuole/
+data/siope/
+data/veicoli/
+data/redditi/
+data/immobili_pa/
+data/pun/
+data/runts/
+data/lookup/
+data/raw/
+data/manifest.json
+data/istat-coords.json
