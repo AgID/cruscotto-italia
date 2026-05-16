@@ -1,0 +1,115 @@
+# /etc/cron.d/cruscotto-etl
+#
+# Cron job ETL Cruscotto Italia su VM AgID FastWeb.
+#
+# Replica le cadenze dei workflow GitHub Actions
+# (etl-daily.yml, etl-weekly.yml, etl-monthly.yml, etl-annual.yml).
+# I workflow GitHub restano disponibili come fallback emergenza
+# (workflow_dispatch manuale dalla UI).
+#
+# Convenzioni:
+#   - Tutti i tempi in UTC (timezone VM: imposta TZ=UTC oppure mantieni
+#     awareness Europe/Rome differenza 1-2h)
+#   - --target=local (default) → scrive in /var/www/cruscotto-italia/data/<source>
+#   - Log structlog → /var/log/cruscotto-etl/<source>-YYYYMMDD.log
+#     (cartella va creata: mkdir -p /var/log/cruscotto-etl; chown ubuntu:ubuntu)
+#   - User: ubuntu (deve aver scritto a /var/www/cruscotto-italia/data/
+#     e /var/log/cruscotto-etl/)
+#
+# Setup pre-flight su VM AgID:
+#   sudo mkdir -p /var/www/cruscotto-italia/data /var/log/cruscotto-etl
+#   sudo chown -R ubuntu:www-data /var/www/cruscotto-italia/data
+#   sudo chmod 755 /var/www/cruscotto-italia/data
+#   sudo chown ubuntu:ubuntu /var/log/cruscotto-etl
+
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+MAILTO=""
+REPO=/home/ubuntu/cruscotto-italia
+PY=/usr/bin/python3
+LOG=/var/log/cruscotto-etl
+
+# ──────────────────────────────────────────────────────────────────────
+# DAILY (ogni giorno alle 08:00 UTC, dopo che MIMIT publica i carburanti)
+# Replicava etl-daily.yml su GitHub Actions.
+# Ordine: pun + carburanti in parallelo, poi dashboard (A1 aggregator).
+# ──────────────────────────────────────────────────────────────────────
+0 8 * * * ubuntu cd $REPO && $PY -m etl.sources.pun        2>&1 | tee $LOG/pun-$(date +\%Y\%m\%d).log
+0 8 * * * ubuntu cd $REPO && $PY -m etl.sources.carburanti 2>&1 | tee $LOG/carburanti-$(date +\%Y\%m\%d).log
+30 8 * * * ubuntu cd $REPO && $PY -m etl.sources.dashboard 2>&1 | tee $LOG/dashboard-daily-$(date +\%Y\%m\%d).log
+
+# ──────────────────────────────────────────────────────────────────────
+# WEEKLY (lunedì alle 04:00 UTC)
+# Replicava etl-weekly.yml. ANAC + PNRR + sanita_mds + runts + dashboard.
+# ──────────────────────────────────────────────────────────────────────
+0 4 * * 1 ubuntu cd $REPO && $PY -m etl.sources.anac           --years=$(date +\%Y) 2>&1 | tee $LOG/anac-$(date +\%Y\%m\%d).log
+30 4 * * 1 ubuntu cd $REPO && $PY -m etl.sources.pnrr_progetti 2>&1 | tee $LOG/pnrr-$(date +\%Y\%m\%d).log
+0 5 * * 1 ubuntu cd $REPO && $PY -m etl.sources.sanita_mds --no-cache 2>&1 | tee $LOG/sanita_mds-$(date +\%Y\%m\%d).log
+30 5 * * 1 ubuntu cd $REPO && $PY -m etl.sources.runts          2>&1 | tee $LOG/runts-$(date +\%Y\%m\%d).log
+0 6 * * 1 ubuntu cd $REPO && $PY -m etl.sources.dashboard       2>&1 | tee $LOG/dashboard-weekly-$(date +\%Y\%m\%d).log
+
+# ──────────────────────────────────────────────────────────────────────
+# MONTHLY (giorno 5 di ogni mese, dalle 04:00 UTC)
+# Replicava etl-monthly.yml.
+# anagrafica → bdap → siope → anncsu → agcom_bbmap → dashboard
+# Sequenziati per evitare picchi I/O concorrenti.
+# ──────────────────────────────────────────────────────────────────────
+0 4 5 * * ubuntu cd $REPO && $PY -m etl.sources.anagrafica    2>&1 | tee $LOG/anagrafica-$(date +\%Y\%m\%d).log
+0 5 5 * * ubuntu cd $REPO && $PY -m etl.sources.bdap          2>&1 | tee $LOG/bdap-$(date +\%Y\%m\%d).log
+0 6 5 * * ubuntu cd $REPO && $PY -m etl.sources.siope --anni=$(date +\%Y) 2>&1 | tee $LOG/siope-$(date +\%Y\%m\%d).log
+0 7 5 * * ubuntu cd $REPO && $PY -m etl.sources.anncsu        2>&1 | tee $LOG/anncsu-$(date +\%Y\%m\%d).log
+0 8 5 * * ubuntu cd $REPO && $PY -m etl.sources.agcom_bbmap   2>&1 | tee $LOG/agcom_bbmap-$(date +\%Y\%m\%d).log
+30 8 5 * * ubuntu cd $REPO && $PY -m etl.sources.dashboard    2>&1 | tee $LOG/dashboard-monthly-$(date +\%Y\%m\%d).log
+
+# ──────────────────────────────────────────────────────────────────────
+# ANNUAL (3 finestre: 1° febbraio, 1° aprile, 1° luglio, ore 04:00 UTC)
+# Replicava etl-annual.yml. ETL annuali pesanti (demografia, profilo, aria,
+# asia, turismo, territorio, veicoli, redditi, immobili_pa).
+# Sequenziati per evitare overload.
+# Decisione operativa: ogni finestra gira tutto, dipende dall'anno l'ETL
+# stesso decide se aggiornare (vedi anac --years etc).
+# ──────────────────────────────────────────────────────────────────────
+0 4 1 2 * ubuntu cd $REPO && $PY -m etl.sources.demografia     2>&1 | tee $LOG/demografia-$(date +\%Y\%m\%d).log
+0 5 1 2 * ubuntu cd $REPO && $PY -m etl.sources.istat_profilo  2>&1 | tee $LOG/profilo-$(date +\%Y\%m\%d).log
+0 6 1 2 * ubuntu cd $REPO && $PY -m etl.sources.aria           2>&1 | tee $LOG/aria-$(date +\%Y\%m\%d).log
+0 7 1 2 * ubuntu cd $REPO && $PY -m etl.sources.asia           2>&1 | tee $LOG/asia-$(date +\%Y\%m\%d).log
+0 9 1 2 * ubuntu cd $REPO && $PY -m etl.sources.istat_turismo  2>&1 | tee $LOG/turismo-$(date +\%Y\%m\%d).log
+0 10 1 2 * ubuntu cd $REPO && $PY -m etl.sources.territorio    2>&1 | tee $LOG/territorio-$(date +\%Y\%m\%d).log
+0 11 1 2 * ubuntu cd $REPO && $PY -m etl.sources.veicoli       2>&1 | tee $LOG/veicoli-$(date +\%Y\%m\%d).log
+0 12 1 2 * ubuntu cd $REPO && $PY -m etl.sources.redditi       2>&1 | tee $LOG/redditi-$(date +\%Y\%m\%d).log
+0 13 1 2 * ubuntu cd $REPO && $PY -m etl.sources.immobili_pa   2>&1 | tee $LOG/immobili_pa-$(date +\%Y\%m\%d).log
+0 14 1 2 * ubuntu cd $REPO && $PY -m etl.sources.dashboard     2>&1 | tee $LOG/dashboard-annual-feb-$(date +\%Y\%m\%d).log
+
+# Idem 1° aprile (window 2)
+0 4 1 4 * ubuntu cd $REPO && $PY -m etl.sources.demografia     2>&1 | tee $LOG/demografia-$(date +\%Y\%m\%d).log
+0 5 1 4 * ubuntu cd $REPO && $PY -m etl.sources.istat_profilo  2>&1 | tee $LOG/profilo-$(date +\%Y\%m\%d).log
+0 6 1 4 * ubuntu cd $REPO && $PY -m etl.sources.aria           2>&1 | tee $LOG/aria-$(date +\%Y\%m\%d).log
+0 7 1 4 * ubuntu cd $REPO && $PY -m etl.sources.asia           2>&1 | tee $LOG/asia-$(date +\%Y\%m\%d).log
+0 9 1 4 * ubuntu cd $REPO && $PY -m etl.sources.istat_turismo  2>&1 | tee $LOG/turismo-$(date +\%Y\%m\%d).log
+0 10 1 4 * ubuntu cd $REPO && $PY -m etl.sources.territorio    2>&1 | tee $LOG/territorio-$(date +\%Y\%m\%d).log
+0 11 1 4 * ubuntu cd $REPO && $PY -m etl.sources.veicoli       2>&1 | tee $LOG/veicoli-$(date +\%Y\%m\%d).log
+0 12 1 4 * ubuntu cd $REPO && $PY -m etl.sources.redditi       2>&1 | tee $LOG/redditi-$(date +\%Y\%m\%d).log
+0 13 1 4 * ubuntu cd $REPO && $PY -m etl.sources.immobili_pa   2>&1 | tee $LOG/immobili_pa-$(date +\%Y\%m\%d).log
+0 14 1 4 * ubuntu cd $REPO && $PY -m etl.sources.dashboard     2>&1 | tee $LOG/dashboard-annual-apr-$(date +\%Y\%m\%d).log
+
+# Idem 1° luglio (window 3)
+0 4 1 7 * ubuntu cd $REPO && $PY -m etl.sources.demografia     2>&1 | tee $LOG/demografia-$(date +\%Y\%m\%d).log
+0 5 1 7 * ubuntu cd $REPO && $PY -m etl.sources.istat_profilo  2>&1 | tee $LOG/profilo-$(date +\%Y\%m\%d).log
+0 6 1 7 * ubuntu cd $REPO && $PY -m etl.sources.aria           2>&1 | tee $LOG/aria-$(date +\%Y\%m\%d).log
+0 7 1 7 * ubuntu cd $REPO && $PY -m etl.sources.asia           2>&1 | tee $LOG/asia-$(date +\%Y\%m\%d).log
+0 9 1 7 * ubuntu cd $REPO && $PY -m etl.sources.istat_turismo  2>&1 | tee $LOG/turismo-$(date +\%Y\%m\%d).log
+0 10 1 7 * ubuntu cd $REPO && $PY -m etl.sources.territorio    2>&1 | tee $LOG/territorio-$(date +\%Y\%m\%d).log
+0 11 1 7 * ubuntu cd $REPO && $PY -m etl.sources.veicoli       2>&1 | tee $LOG/veicoli-$(date +\%Y\%m\%d).log
+0 12 1 7 * ubuntu cd $REPO && $PY -m etl.sources.redditi       2>&1 | tee $LOG/redditi-$(date +\%Y\%m\%d).log
+0 13 1 7 * ubuntu cd $REPO && $PY -m etl.sources.immobili_pa   2>&1 | tee $LOG/immobili_pa-$(date +\%Y\%m\%d).log
+0 14 1 7 * ubuntu cd $REPO && $PY -m etl.sources.dashboard     2>&1 | tee $LOG/dashboard-annual-jul-$(date +\%Y\%m\%d).log
+
+# ──────────────────────────────────────────────────────────────────────
+# ANALYTICS aggregation
+# Cron analytics MCP stats + nginx logs (esistente su Aruba, replicato).
+# Richiede /etc/cruscotto-analytics.env con CF_API_TOKEN per leggere KV.
+# ──────────────────────────────────────────────────────────────────────
+0 4 * * * root set -a && . /etc/cruscotto-analytics.env && set +a && $PY $REPO/scripts/analytics/mcp_stats_fetcher.py --out /var/www/cruscotto-stats --istat-names /var/www/cruscotto-stats/istat-names.json --days 30 >> /var/log/cruscotto-stats/cron.log 2>&1 ; $PY $REPO/scripts/analytics/stats_aggregator.py --logs /var/log/nginx/access.log --out /var/www/cruscotto-stats --istat-names /var/www/cruscotto-stats/istat-names.json --mcp-stats /var/www/cruscotto-stats/mcp_stats.json >> /var/log/cruscotto-stats/cron.log 2>&1 && /bin/chown -R www-data:www-data /var/www/cruscotto-stats
+
+# Aggregator orario per stats real-time
+0 * * * * root $PY $REPO/scripts/analytics/stats_aggregator.py --logs /var/log/nginx/access.log --out /var/www/cruscotto-stats --istat-names /var/www/cruscotto-stats/istat-names.json --mcp-stats /var/www/cruscotto-stats/mcp_stats.json >> /var/log/cruscotto-stats/cron-hourly.log 2>&1 && set -a && . /etc/cruscotto-analytics.env && set +a && $PY $REPO/scripts/analytics/alert_attacks.py --threshold 50 >> /var/log/cruscotto-stats/cron-hourly.log 2>&1
