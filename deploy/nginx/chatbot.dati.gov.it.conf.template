@@ -1,0 +1,63 @@
+# /etc/nginx/conf.d/chatbot.dati.gov.it.conf
+#
+# Template vhost SIMBA chatbot su VM AgID FastWeb.
+# Da copiare/adattare quando SIMBA verra' deployato sulla VM AgID
+# (lo stack SIMBA non e' parte di questo repo, ma le 2 app condividono
+# la VM in produzione: vedi handoff DEPLOY_AGID_VM_HANDOFF.md sezione 1).
+#
+# Punti chiave allineati con vhost Cruscotto:
+#   - access_log / error_log dedicati (no log promiscui)
+#   - /simba-stats/ dashboard analytics protetta htpasswd
+#   - security headers
+#
+# Il proxy_pass verso i container Docker SIMBA (porte 3001, 8080, 3004, ecc.)
+# va completato seguendo la config attuale Aruba (/etc/nginx/conf.d/chatbot.conf
+# su Aruba e' la fonte autorevole; copiarla sostituendo server_name e cert).
+#
+# Cert SSL: gestito separatamente (ticket provider AgID per dati.gov.it).
+
+server {
+    server_name chatbot.dati.gov.it;
+
+    # Log dedicati per vhost (separazione da Cruscotto Italia)
+    access_log /var/log/nginx/chatbot.access.log;
+    error_log  /var/log/nginx/chatbot.error.log;
+
+    # Statistiche SIMBA private (htpasswd)
+    # Aggregator: cron orario (vedi deploy/cron/cruscotto-etl, sezione SIMBA stats)
+    # Output: /var/www/simba-stats/{stats.json,index.html}
+    location ^~ /simba-stats/ {
+        set $service "simba-stats";
+        alias /var/www/simba-stats/;
+        index index.html;
+        auth_basic "Statistiche SIMBA";
+        auth_basic_user_file /etc/nginx/.htpasswd-stats;
+        add_header X-Robots-Tag "noindex, nofollow" always;
+        add_header X-Content-Type-Options "nosniff" always;
+    }
+
+    # Security headers comuni
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+    add_header Referrer-Policy "no-referrer" always;
+    add_header Content-Security-Policy "default-src 'self'; connect-src 'self' https: http:; frame-ancestors 'self';" always;
+    add_header X-Frame-Options "SAMEORIGIN" always;
+
+    # NOTA: i location proxy_pass verso container Docker SIMBA
+    # (es. /api/, /chatbot/, /analytics-api/, /admin, ecc.) NON sono inclusi
+    # in questo template. Copiare da /etc/nginx/conf.d/chatbot.conf su Aruba,
+    # sostituendo solo server_name e cert path.
+
+    listen 443 ssl;
+    http2 on;
+    ssl_certificate     /etc/ssl/dati.gov.it/chatbot.dati.gov.it.fullchain.pem;
+    ssl_certificate_key /etc/ssl/dati.gov.it/chatbot.dati.gov.it.privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers off;
+}
+
+server {
+    listen 80;
+    server_name chatbot.dati.gov.it;
+    return 301 https://$host$request_uri;
+}
