@@ -1408,6 +1408,46 @@ footer a:hover { color: #fff !important; }
   font-weight:400;
 }
 
+/* Mappa flussi pendolari */
+.pendolarismo-map-controls{
+  display:flex;gap:12px;flex-wrap:wrap;margin:16px 0 8px;
+}
+.pendolarismo-map-btn{
+  display:inline-flex;align-items:center;gap:8px;padding:6px 14px;
+  border:1px solid var(--border);border-radius:20px;background:var(--surface);
+  font-size:13px;font-family:inherit;color:var(--ink);cursor:pointer;
+  transition:all 0.15s;
+}
+.pendolarismo-map-btn:hover{background:#f4f7fb;}
+.pendolarismo-map-btn[aria-pressed="false"]{opacity:0.45;background:#f8f9fa;}
+.pendolarismo-legend-dot{
+  display:inline-block;width:10px;height:10px;border-radius:50%;
+}
+.pendolarismo-map{
+  width:100%;height:480px;border:1px solid var(--border);border-radius:10px;
+  margin-top:8px;background:#f4f7fb;
+  position:relative;z-index:1;
+}
+.pendolarismo-map .leaflet-top, .pendolarismo-map .leaflet-bottom{z-index:5;}
+/* Animazione flusso pendolari: tratteggio mobile per dare senso direzionale */
+.pendolarismo-flow-line{
+  stroke-dasharray: 16, 8;
+  animation: pendolarismo-flow-march 1.2s linear infinite;
+}
+.pendolarismo-flow-in{
+  animation-direction: reverse;
+}
+@keyframes pendolarismo-flow-march{
+  from{stroke-dashoffset:24;}
+  to{stroke-dashoffset:0;}
+}
+@media (prefers-reduced-motion: reduce){
+  .pendolarismo-flow-line{animation:none;stroke-dasharray:none;}
+}
+@media (max-width: 720px){
+  .pendolarismo-map{height:380px;}
+}
+
 .runts-page-btn{
   width:38px;height:38px;border-radius:50%;border:1.5px solid var(--border);
   background:var(--surface);color:var(--ink);font-size:20px;font-weight:bold;
@@ -1507,6 +1547,8 @@ footer a:hover { color: #fff !important; }
   <script src="/vendor/chart.umd.min.js" integrity="sha384-9nhczxUqK87bcKHh20fSQcTGD4qq5GhayNYSYWqwBkINBhOfQLg/P5HG5lF1urn4" defer></script>
   <link rel="stylesheet" href="/vendor/leaflet.css" integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="anonymous">
   <script src="/vendor/leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin="anonymous" defer></script>
+  <script src="/vendor/tween.umd.js" integrity="sha384-mC3fM+AqoLJ/wejJW/hH8Qttg09iYQYsj9OUXbywLVh2T0N5FRnPWropXNLsVcza" crossorigin="anonymous" defer></script>
+  <script src="/vendor/CanvasFlowmapLayer.js" integrity="sha384-OH07Sw2MOqwS9hs60vR2EGdEiCZIbuCqQqY1IkjZNiVEfkFFo5MuFbgMLBVUSLO3" crossorigin="anonymous" defer></script>
   <script src="/vendor/jszip.min.js" integrity="sha384-+mbV2IY1Zk/X1p/nWllGySJSUN8uMs+gUAN10Or95UBH0fpj6GfKgPmgC5EXieXG" defer></script>
 </head>
 <body>
@@ -1639,6 +1681,8 @@ function renderComune(data) {
   window.__runtsInited = false;
   window.__asiaData = k.asia || null;
   window.__asiaInited = false;
+  window.__pendolarismoData = k.pendolarismo || null;
+  window.__pendolarismoInited = false;
   const tabs = [
     { id: 'panoramica', label: 'Panoramica', kpi: '' },
     { id: 'anncsu', label: 'ANNCSU', kpi: k.anncsu?.kpi?.n_strade != null ? fmtNum(k.anncsu.kpi.n_strade) + (k.anncsu.kpi.n_civici != null ? ' / ' + fmtNum(k.anncsu.kpi.n_civici) : '') : '—' },
@@ -7855,6 +7899,14 @@ function bindTabSwitching() {
       }
 
       // Lazy-init chart Chart.js ASIA al primo click
+      // Lazy-init mappa Leaflet flussi pendolari al primo click
+      if (tab.dataset.tab === 'pendolarismo') {
+        if (window.__pendolarismoData && !window.__pendolarismoInited) {
+          setTimeout(() => initPendolarismoMap(window.__pendolarismoData), 0);
+          window.__pendolarismoInited = true;
+        }
+      }
+
       if (tab.dataset.tab === 'asia') {
         if (window.__asiaData && !window.__asiaInited) {
           setTimeout(() => initAsia(window.__asiaData), 0);
@@ -9029,6 +9081,10 @@ async function init() {
         .then(r => r.ok ? r.json() : null)
         .then(names => { if (names) window.__istatNames = names; })
         .catch(() => { window.__istatNames = window.__istatNames || {}; }),
+      window.__istatCoords ? Promise.resolve(null) : fetch('/data/istat-coords.json')
+        .then(r => r.ok ? r.json() : null)
+        .then(coords => { if (coords) window.__istatCoords = coords; })
+        .catch(() => { window.__istatCoords = window.__istatCoords || {}; }),
     ]);
     if (dashboard?.error) {
       throw new Error(dashboard.error);
@@ -9103,6 +9159,217 @@ const RUNTS_SEZIONI = {
   SMS: { lab: 'SMS', full: 'Società di Mutuo Soccorso', color: '#5C6F82',
          hint: 'L. 3818/1886 (ancora vigente) — mutualismo' },
 };
+
+// ----------------------------------------------------------------------------
+// Tab Pendolarismo - Mappa flussi (Leaflet)
+// ----------------------------------------------------------------------------
+
+function initPendolarismoMap(d) {
+  if (typeof L === 'undefined' || typeof L.canvasFlowmapLayer !== 'function') {
+    console.warn('CanvasFlowmapLayer non caricato, skip mappa pendolarismo');
+    return;
+  }
+  if (!d || !d.kpi) return;
+
+  const mapEl = document.getElementById('pendolarismo-map');
+  if (!mapEl) return;
+
+  const coords = window.__istatCoords || {};
+  const names = window.__istatNames || {};
+  const k = d.kpi;
+  const istatSelf = new URLSearchParams(window.location.search).get('istat');
+  const selfCoord = coords[istatSelf];
+
+  if (!selfCoord) {
+    mapEl.innerHTML = '<div style="padding:24px;text-align:center;color:#5C6F82;">Coordinate del comune non disponibili: mappa non disponibile.</div>';
+    return;
+  }
+
+  const selfName = names[istatSelf] || istatSelf;
+
+  // Costruisco le 2 FeatureCollection (una per uscenti, una per entranti)
+  // Schema FlowmapLayer: ogni Feature ha geometry origine + properties con dest
+  function makeFeatures(items, originIstat, originCoord, originName, kind) {
+    const features = [];
+    items.forEach((it) => {
+      const dc = coords[it.istat];
+      if (!dc) return;
+      const dn = names[it.istat] || it.istat;
+      features.push({
+        type: 'Feature',
+        geometry: { type: 'Point', coordinates: [originCoord[1], originCoord[0]] },  // [lon, lat]
+        properties: {
+          origin_id: originIstat,
+          origin_name: originName,
+          origin_lat: originCoord[0],
+          origin_lon: originCoord[1],
+          destination_id: it.istat,
+          destination_name: dn,
+          destination_lat: dc[0],
+          destination_lon: dc[1],
+          count: it.count,
+          kind: kind,  // 'out' (uscenti) o 'in' (entranti)
+        },
+      });
+    });
+    return { type: 'FeatureCollection', features };
+  }
+
+  const dests = (k.top_destinazioni || []).slice(0, 10);
+  const origs = (k.top_origini || []).slice(0, 10);
+
+  // Per le destinazioni: origine = comune corrente, dest = satellite
+  const fcDest = makeFeatures(dests, istatSelf, selfCoord, selfName, 'out');
+  // Per le origini: la "origine" del flusso è il satellite e la "destinazione" è il comune corrente
+  const fcOrig = { type: 'FeatureCollection', features: [] };
+  fcOrig.features = origs.flatMap((it) => {
+    const dc = coords[it.istat];
+    if (!dc) return [];
+    const dn = names[it.istat] || it.istat;
+    return [{
+      type: 'Feature',
+      geometry: { type: 'Point', coordinates: [dc[1], dc[0]] },
+      properties: {
+        origin_id: it.istat,
+        origin_name: dn,
+        origin_lat: dc[0],
+        origin_lon: dc[1],
+        destination_id: istatSelf,
+        destination_name: selfName,
+        destination_lat: selfCoord[0],
+        destination_lon: selfCoord[1],
+        count: it.count,
+        kind: 'in',
+      },
+    }];
+  });
+
+  // Inizializza mappa
+  const map = L.map(mapEl, {
+    zoomControl: true,
+    scrollWheelZoom: false,
+    attributionControl: true,
+  }).setView(selfCoord, 9);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 18,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors',
+  }).addTo(map);
+
+  const fieldIds = {
+    originUniqueIdField: 'origin_id',
+    originGeometry: { x: 'origin_lon', y: 'origin_lat' },
+    destinationUniqueIdField: 'destination_id',
+    destinationGeometry: { x: 'destination_lon', y: 'destination_lat' },
+  };
+
+  // Layer destinazioni (uscenti, blu)
+  const destLayer = L.canvasFlowmapLayer(fcDest, {
+    originAndDestinationFieldIds: fieldIds,
+    pathDisplayMode: 'all',
+    animationStarted: true,
+    animationEasingFamily: 'Cubic',
+    animationEasingType: 'InOut',
+    animationDuration: 2500,
+    canvasBezierStyle: {
+      type: 'simple',
+      symbol: { strokeStyle: '#0066CC', lineWidth: 1.5, lineCap: 'round', shadowColor: '#0066CC', shadowBlur: 2 },
+    },
+    animatedCanvasBezierStyle: {
+      type: 'simple',
+      symbol: { strokeStyle: '#0066CC', lineWidth: 3, lineCap: 'round', lineDashOffsetSize: 4, shadowColor: '#0066CC', shadowBlur: 2 },
+    },
+    style: function (geoJsonFeature) {
+      return { radius: 5, color: '#0066CC', fillColor: '#0066CC', fillOpacity: 0.85, weight: 1.5 };
+    },
+  });
+
+  // Layer origini (entranti, arancio)
+  const origLayer = L.canvasFlowmapLayer(fcOrig, {
+    originAndDestinationFieldIds: fieldIds,
+    pathDisplayMode: 'all',
+    animationStarted: true,
+    animationEasingFamily: 'Cubic',
+    animationEasingType: 'InOut',
+    animationDuration: 2500,
+    canvasBezierStyle: {
+      type: 'simple',
+      symbol: { strokeStyle: '#E89400', lineWidth: 1.5, lineCap: 'round', shadowColor: '#E89400', shadowBlur: 2 },
+    },
+    animatedCanvasBezierStyle: {
+      type: 'simple',
+      symbol: { strokeStyle: '#E89400', lineWidth: 3, lineCap: 'round', lineDashOffsetSize: 4, shadowColor: '#E89400', shadowBlur: 2 },
+    },
+    style: function (geoJsonFeature) {
+      return { radius: 5, color: '#E89400', fillColor: '#E89400', fillOpacity: 0.85, weight: 1.5 };
+    },
+  });
+
+  destLayer.addTo(map);
+  origLayer.addTo(map);
+
+  // Click sui marker (origin o destination): mostra popup col nome + numero pendolari
+  function handleFlowmapClick(e) {
+    const isOrig = e.isOriginFeature;
+    const p = e.layer && e.layer.feature ? e.layer.feature.properties : null;
+    if (!p) {
+      return;
+    }
+    let html;
+    if (isOrig) {
+      // L'utente ha cliccato il marker che rappresenta l'origine del flusso
+      html = '<b>' + p.origin_name + '</b><br>' + p.origin_id + '<br>' +
+             (p.kind === 'out'
+               ? 'Saldo netto: <b>' + ((k.saldo_netto >= 0 ? '+' : '') + k.saldo_netto.toLocaleString('it-IT')) + '</b>'
+               : p.count.toLocaleString('it-IT') + ' pendolari verso ' + p.destination_name);
+    } else {
+      // Cliccato il marker destinazione del flusso
+      html = '<b>' + p.destination_name + '</b><br>' + p.destination_id + '<br>' +
+             (p.kind === 'in'
+               ? 'Saldo netto: <b>' + ((k.saldo_netto >= 0 ? '+' : '') + k.saldo_netto.toLocaleString('it-IT')) + '</b>'
+               : p.count.toLocaleString('it-IT') + ' pendolari da ' + p.origin_name);
+    }
+    // Apro popup direttamente sul layer (CircleMarker) cliccato — più affidabile
+    if (e.layer && e.layer.bindPopup) {
+      e.layer.bindPopup(html).openPopup();
+    } else {
+      L.popup({offset: [0, -6]}).setLatLng(e.latlng || e.layer._latlng).setContent(html).openOn(map);
+    }
+  }
+  destLayer.on('click', handleFlowmapClick);
+  origLayer.on('click', handleFlowmapClick);
+
+  // Marker comune origine al centro (cerchio rosso evidenziato sopra tutto)
+  L.circleMarker(selfCoord, {
+    radius: 9, color: '#C9302C', fillColor: '#C9302C', fillOpacity: 0.95, weight: 2.5,
+  }).addTo(map).bindPopup('<b>' + selfName + '</b><br>' + istatSelf + '<br>Saldo netto: <b>' + (k.saldo_netto >= 0 ? '+' : '') + k.saldo_netto.toLocaleString('it-IT') + '</b>');
+
+  // Fit bounds su tutti i marker
+  const allBounds = [selfCoord];
+  fcDest.features.forEach(f => allBounds.push([f.properties.destination_lat, f.properties.destination_lon]));
+  fcOrig.features.forEach(f => allBounds.push([f.properties.origin_lat, f.properties.origin_lon]));
+  if (allBounds.length > 1) {
+    map.fitBounds(L.latLngBounds(allBounds), { padding: [30, 30] });
+  }
+
+  // Toggle layer dai bottoni
+  document.querySelectorAll('#pendolarismo-map-controls .pendolarismo-map-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const which = btn.dataset.toggle;
+      const layer = which === 'dest' ? destLayer : origLayer;
+      const isActive = btn.getAttribute('aria-pressed') === 'true';
+      if (isActive) {
+        map.removeLayer(layer);
+        btn.setAttribute('aria-pressed', 'false');
+        btn.classList.remove('active');
+      } else {
+        map.addLayer(layer);
+        btn.setAttribute('aria-pressed', 'true');
+        btn.classList.add('active');
+      }
+    });
+  });
+}
 
 // ----------------------------------------------------------------------------
 // Tab Pendolarismo - Matrice OD ISTAT 2021 (motivo: lavoro)
@@ -9200,12 +9467,32 @@ function renderPendolarismoTab(d) {
         </div>
       </div>
 
+      <h3 class="section-h-small">Mappa flussi pendolari</h3>
+      <p class="muted">
+        Visualizzazione dei flussi pendolari del comune verso le sue top destinazioni
+        (linee blu, in uscita) e dalle sue top origini (linee arancio, in entrata).
+        Lo spessore della linea &egrave; proporzionale al numero di pendolari.
+        Marker rosso = comune corrente.
+      </p>
+      <div id="pendolarismo-map-controls" class="pendolarismo-map-controls">
+        <button type="button" class="pendolarismo-map-btn active" data-toggle="dest" aria-pressed="true">
+          <span class="pendolarismo-legend-dot" style="background:#0066CC"></span>
+          Destinazioni (uscenti)
+        </button>
+        <button type="button" class="pendolarismo-map-btn active" data-toggle="orig" aria-pressed="true">
+          <span class="pendolarismo-legend-dot" style="background:#E89400"></span>
+          Origini (entranti)
+        </button>
+      </div>
+      <div id="pendolarismo-map" class="pendolarismo-map" aria-label="Mappa flussi pendolari del comune"></div>
+
       <p class="muted">
         Fonte:
         <a href="https://www.istat.it/it/censimenti/popolazione-e-abitazioni/dati-censimento" target="_blank" rel="noopener">ISTAT &middot; Censimento permanente 2021</a>
         &middot; matrice spostamenti per lavoro &middot; Licenza
         <a href="https://creativecommons.org/licenses/by/3.0/it/" target="_blank" rel="noopener">CC BY 3.0 IT</a>.
         I codici ISTAT mostrati a fianco del nome comune sono i ProCom 6-digit.
+        Coordinate da OpenStreetMap (centroide bounding box comune).
       </p>
     </div>`;
 }
