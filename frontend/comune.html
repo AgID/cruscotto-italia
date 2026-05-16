@@ -171,6 +171,16 @@ a:hover{color:var(--accent)}
 .btn-download:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
 .btn-download:disabled{opacity:0.6;cursor:wait}
 .btn-download .ico{font-size:14px}
+/* Mobile: pulsante non sovrapposto al titolo, dimensione ridotta */
+@media (max-width: 720px){
+  .comune-actions{position:static;margin-top:12px;display:flex;justify-content:flex-end}
+  .btn-download{font-size:10px;padding:6px 10px;gap:4px;letter-spacing:0.04em}
+  .btn-download .ico{font-size:11px}
+}
+@media (max-width: 380px){
+  .btn-download{padding:7px 10px}
+  .btn-download .label{font-size:9px}
+}
 
 /* Tabs: vedi base.css (grid layout) */
 /* Tab content */
