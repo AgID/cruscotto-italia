@@ -1384,6 +1384,64 @@ footer a:hover { color: #fff !important; }
   min-width:200px;text-align:center;
 }
 
+/* ============================================================
+   ASIA — Imprese e addetti (ISTAT, CC BY 3.0 IT)
+   ============================================================ */
+.asia-charts-row{
+  display:grid;grid-template-columns:2fr 1fr;gap:32px;margin:32px 0;
+}
+@media (max-width:880px){.asia-charts-row{grid-template-columns:1fr;gap:24px;}}
+.asia-chart-box{
+  background:var(--surface);border:1px solid var(--border);border-radius:12px;
+  padding:20px 24px;margin:16px 0;
+}
+.asia-chart-title{
+  font-size:16px;font-weight:600;color:var(--ink);margin:0 0 12px 0;
+  letter-spacing:-0.01em;
+}
+.asia-chart-container{
+  position:relative;height:280px;width:100%;
+}
+.asia-chart-tall{height:420px;}
+.asia-chart-legend{
+  font-size:12px;line-height:1.6;margin-top:14px;color:var(--ink-mute);
+}
+.asia-chart-legend span[style*="color"]{font-weight:bold;}
+
+.kpi-card.positive .kpi-card-val{color:#00875f;}
+.kpi-card.negative .kpi-card-val{color:#c0392b;}
+
+.asia-details{
+  margin:28px 0;border:1px solid var(--border);border-radius:12px;
+  padding:14px 20px;background:var(--surface);
+}
+.asia-details summary{
+  cursor:pointer;font-size:15px;padding:6px 0;outline-offset:4px;
+}
+.asia-details summary:focus-visible{outline:2px solid var(--accent);}
+.asia-details[open] summary{margin-bottom:10px;}
+
+.asia-table-wrap{
+  overflow-x:auto;margin-top:14px;border-radius:8px;border:1px solid var(--border);
+}
+.asia-table{
+  width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums;
+}
+.asia-table thead{background:#f4f7fb;}
+.asia-table th{
+  text-align:left;padding:10px 12px;font-weight:600;color:var(--ink);
+  border-bottom:2px solid var(--border);
+}
+.asia-table th[scope="col"]{
+  border-bottom:1px solid var(--border);font-size:12px;color:var(--ink-mute);
+}
+.asia-table td{
+  padding:8px 12px;border-bottom:1px solid var(--border);color:var(--ink);
+}
+.asia-table td.num{text-align:right;}
+.asia-table tbody tr:hover{background:#fafbfd;}
+.asia-table tbody tr:last-child td{border-bottom:none;}
+
 .section-h-small{
   font-size:20px;font-weight:600;margin:36px 0 14px 0;
   color:var(--ink);letter-spacing:-0.01em;
@@ -1532,6 +1590,8 @@ function renderComune(data) {
   window.__carburantiRegione = a.regione || null;
   window.__runtsData = k.runts || null;
   window.__runtsInited = false;
+  window.__asiaData = k.asia || null;
+  window.__asiaInited = false;
   const tabs = [
     { id: 'panoramica', label: 'Panoramica', kpi: '' },
     { id: 'anncsu', label: 'ANNCSU', kpi: k.anncsu?.kpi?.n_strade != null ? fmtNum(k.anncsu.kpi.n_strade) + (k.anncsu.kpi.n_civici != null ? ' / ' + fmtNum(k.anncsu.kpi.n_civici) : '') : '—' },
@@ -1540,6 +1600,7 @@ function renderComune(data) {
     { id: 'contratti', label: 'Contratti ANAC', kpi: fmtNum(k.contratti?.count || 0) },
     { id: 'demografia', label: 'Demografia', kpi: k.popolazione != null ? fmtNum(k.popolazione) : '—' },
     { id: 'carburanti', label: 'Distributori e prezzi', kpi: k.carburanti?.kpi?.n_impianti != null ? fmtNum(k.carburanti.kpi.n_impianti) : '—' },
+    { id: 'asia', label: 'Imprese e addetti', kpi: k.asia?.kpi?.ul_totali != null ? fmtNum(k.asia.kpi.ul_totali) : '—' },
     { id: 'opere', label: 'Opere', kpi: k.opere?.count != null ? fmtNum(k.opere.count) : '—' },
     { id: 'patrimonio-pa', label: 'Patrimonio PA', kpi: k.immobili_pa?.kpi?.n_totale != null ? fmtNum(k.immobili_pa.kpi.n_totale) : '—' },
     { id: 'pnrr', label: 'PNRR', kpi: '<span data-tab-pnrr-count><span class="tab-spinner"></span></span>' },
@@ -1722,6 +1783,7 @@ function renderComune(data) {
       ${renderBandaLargaTab(k.agcom_bbmap, a, k.territorio)}
       ${renderCarburantiTab(k.carburanti)}
       ${renderRuntsTab(k.runts)}
+      ${renderAsiaTab(k.asia)}
     </div>
   `;
 }
@@ -7743,6 +7805,14 @@ function bindTabSwitching() {
         }
       }
 
+      // Lazy-init chart Chart.js ASIA al primo click
+      if (tab.dataset.tab === 'asia') {
+        if (window.__asiaData && !window.__asiaInited) {
+          setTimeout(() => initAsia(window.__asiaData), 0);
+          window.__asiaInited = true;
+        }
+      }
+
       // Lazy-load tab Spese: chiamata al primo click
       if (tab.dataset.tab === 'spese') {
         const params = new URLSearchParams(window.location.search);
@@ -8469,6 +8539,7 @@ function adaptDashboardToOverview(d) {
       agcom_bbmap: d.agcom_bbmap,  // pass-through completo per renderBandaLargaTab
       carburanti: d.carburanti,    // pass-through completo per renderCarburantiTab
       runts: d.runts,    // pass-through completo per renderRuntsTab
+      asia: d.asia,      // pass-through completo per renderAsiaTab
       // Pass-through aggiuntivi (servono alla Panoramica home per i KPI di sintesi):
       profilo: d.profilo,
       turismo: d.turismo,
@@ -9302,6 +9373,374 @@ function initRunts(d) {
     });
   });
   render();
+}
+
+// ----------------------------------------------------------------------------
+// ASIA — Archivio Statistico Imprese Attive, Unità Locali (ISTAT, CC BY 3.0 IT)
+// ----------------------------------------------------------------------------
+// Schema dato in input (window.__asiaData):
+//   { _source_url, _license, _latest_year, _years_available: [2018..2023],
+//     kpi: { ul_totali, addetti_totali, addetti_per_ul, ul_yoy_pct,
+//            mix_classe_addetti: {W0_9, W10_49, W50_249, W_GE250}: pct,
+//            top_settori_ul: [{code, label, ul, addetti}, ...10],
+//            top_settori_addetti: [{code, label, ul, addetti}, ...10] },
+//     serie_storica: { anni: [int...], ul: [int...], addetti: [float...] },
+//     ateco_dettaglio: { "<year>": { "<ateco>": { "<class>": {ul, addetti} } } } }
+// Render: 4 KPI cards + chart bar top settori + chart line serie storica
+// + chart doughnut mix classi addetti + tabella ATECO×classe (collapsable).
+// ----------------------------------------------------------------------------
+
+// Mapping classe addetti -> etichetta verbose + colore
+const ASIA_CLASSI = {
+  W0_9:     { lab: 'Micro 1-9',  color: '#0066CC', hint: '1-9 addetti (microimprese)' },
+  W10_49:   { lab: 'Piccole 10-49',  color: '#00A86B', hint: '10-49 addetti' },
+  W50_249:  { lab: 'Medie 50-249',   color: '#E89400', hint: '50-249 addetti' },
+  W_GE250:  { lab: 'Grandi 250+',  color: '#D9364F', hint: '250+ addetti' },
+};
+
+function renderAsiaTab(d) {
+  if (!d || !d.kpi || d.kpi.ul_totali == null || d.kpi.ul_totali === 0) {
+    return `
+      <div class="tab-pane" id="pane-asia">
+        <div class="section-title">§ Imprese e addetti</div>
+        <h2 class="section-h">Nessuna unità locale <em>rilevata</em>.</h2>
+        <p class="muted">L'Archivio Statistico delle Imprese Attive (ASIA UL) dell'ISTAT
+        non riporta unità locali con sede in questo comune per l'ultimo anno
+        disponibile. La copertura ASIA è 100% sui 7.896 comuni italiani, ma per
+        i micro-comuni di alta montagna con popolazione molto bassa può capitare
+        che non vi siano imprese attive registrate.</p>
+        <p class="muted">Fonte:
+        <a href="https://esploradati.istat.it/databrowser/#/it/dw/categories/IT1,Z0500DICA,1.0/DICA_ASIA/DICA_ASIAULP" target="_blank" rel="noopener">ISTAT &middot; ASIA UL</a>
+        &middot; aggiornamento annuale &middot; licenza CC BY 3.0 IT.</p>
+      </div>`;
+  }
+  const k = d.kpi;
+  const year = d._latest_year || 2023;
+  const ul = k.ul_totali;
+  const addetti = k.addetti_totali;
+  const dim = k.addetti_per_ul;
+  const yoy = k.ul_yoy_pct;
+  const yoyClass = yoy == null ? 'tbd' : (yoy > 0 ? 'positive' : (yoy < 0 ? 'negative' : ''));
+  const yoyStr = yoy == null ? '—' : (yoy > 0 ? '+' : '') + yoy.toFixed(2) + '%';
+  // Suppress yoy reliability for piccoli comuni (ul < 10 → variazione rumorosa)
+  const yoyNote = (ul < 10 && yoy != null)
+    ? ' <span class="muted" style="font-size:.85em">(poco significativo)</span>' : '';
+
+  const mix = k.mix_classe_addetti || {};
+  const topUl = (k.top_settori_ul || []).slice(0, 10);
+  const topAdd = (k.top_settori_addetti || []).slice(0, 10);
+  const top1Lab = topUl.length > 0 ? topUl[0].label : '—';
+  const top1Ul = topUl.length > 0 ? topUl[0].ul : 0;
+  const top1Pct = ul > 0 && topUl.length > 0 ? (100 * top1Ul / ul).toFixed(1) : '0';
+
+  const yearsAvail = (d._years_available || []).join(', ');
+
+  return `
+    <div class="tab-pane" id="pane-asia">
+      <div class="section-title">§ Imprese e addetti</div>
+      <h2 class="section-h">${fmtNum(ul)} ${ul === 1 ? 'unità locale' : 'unità locali'} attive nel <em>${year}</em>.</h2>
+      <p class="section-sub">
+        Dati dall'<a href="https://esploradati.istat.it/databrowser/#/it/dw/categories/IT1,Z0500DICA,1.0/DICA_ASIA/DICA_ASIAULP" target="_blank" rel="noopener">Archivio Statistico delle Imprese Attive (ASIA) — Unità Locali</a>
+        dell'ISTAT, dataflow SDMX comunale × ATECO 2 cifre × classe addetti.
+        Serie storica disponibile per ${yearsAvail}.
+        <em>Caveat:</em> ASIA conta unità locali (UL), non imprese giuridiche: un'impresa con sedi in più comuni
+        compare in ciascun comune in cui ha una UL operativa.
+      </p>
+      <div class="kpi-cards">
+        <div class="kpi-card">
+          <div class="kpi-card-lab">Unità locali</div>
+          <div class="kpi-card-val">${fmtNum(ul)}</div>
+          <div class="kpi-card-sub">stock al ${year}</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-card-lab">Addetti</div>
+          <div class="kpi-card-val">${fmtNum(addetti)}</div>
+          <div class="kpi-card-sub">media annua ${year}</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-card-lab">Dimensione media</div>
+          <div class="kpi-card-val">${dim != null ? dim.toFixed(2) : '—'}</div>
+          <div class="kpi-card-sub">addetti per unità locale</div>
+        </div>
+        <div class="kpi-card ${yoyClass}">
+          <div class="kpi-card-lab">Crescita UL</div>
+          <div class="kpi-card-val">${yoyStr}</div>
+          <div class="kpi-card-sub">vs ${year - 1}${yoyNote}</div>
+        </div>
+      </div>
+
+      <div class="asia-charts-row">
+        <div class="asia-chart-box asia-chart-wide">
+          <h3 class="asia-chart-title">Top 10 settori ATECO per unità locali (${year})</h3>
+          <div class="asia-chart-container asia-chart-tall">
+            <canvas id="asia-chart-settori" aria-label="Top 10 settori ATECO per numero unità locali"></canvas>
+          </div>
+          <p class="muted asia-chart-legend">
+            Top settore: <strong>${top1Lab}</strong> · ${fmtNum(top1Ul)} UL (${top1Pct}% del totale).
+            Classificazione ATECO 2 cifre (NACE Rev.2 — 88 divisioni economiche).
+          </p>
+        </div>
+        <div class="asia-chart-box">
+          <h3 class="asia-chart-title">Mix dimensionale (${year})</h3>
+          <div class="asia-chart-container">
+            <canvas id="asia-chart-classi" aria-label="Mix UL per classe dimensionale"></canvas>
+          </div>
+          <p class="muted asia-chart-legend">
+            <span style="color:${ASIA_CLASSI.W0_9.color}">●</span> ${ASIA_CLASSI.W0_9.lab} ·
+            <span style="color:${ASIA_CLASSI.W10_49.color}">●</span> ${ASIA_CLASSI.W10_49.lab} ·
+            <span style="color:${ASIA_CLASSI.W50_249.color}">●</span> ${ASIA_CLASSI.W50_249.lab} ·
+            <span style="color:${ASIA_CLASSI.W_GE250.color}">●</span> ${ASIA_CLASSI.W_GE250.lab}
+          </p>
+        </div>
+      </div>
+
+      <div class="asia-chart-box">
+        <h3 class="asia-chart-title">Serie storica unità locali e addetti</h3>
+        <div class="asia-chart-container">
+          <canvas id="asia-chart-serie" aria-label="Serie storica unità locali e addetti per anno"></canvas>
+        </div>
+        <p class="muted asia-chart-legend">
+          <span style="color:#0066CC">●</span> Unità locali (asse sinistro) ·
+          <span style="color:#E89400">●</span> Addetti media annua (asse destro)
+        </p>
+      </div>
+
+      <details class="asia-details">
+        <summary><strong>Dettaglio per settore ATECO e classe dimensionale</strong></summary>
+        <p class="muted" style="margin-top:.5rem">
+          Ripartizione completa delle UL e degli addetti per ciascuna divisione ATECO
+          (2 cifre) e classe dimensionale, per l'anno ${year}.
+          Le righe sono ordinate per numero di UL totali decrescente.
+        </p>
+        <div class="asia-table-wrap">
+          <table class="asia-table" id="asia-table-dettaglio">
+            <thead>
+              <tr>
+                <th rowspan="2" scope="col">Settore ATECO</th>
+                <th colspan="4" scope="colgroup">Unità locali per classe</th>
+                <th rowspan="2" scope="col">Tot. UL</th>
+                <th rowspan="2" scope="col">Tot. Addetti</th>
+              </tr>
+              <tr>
+                <th scope="col">${ASIA_CLASSI.W0_9.lab}</th>
+                <th scope="col">${ASIA_CLASSI.W10_49.lab}</th>
+                <th scope="col">${ASIA_CLASSI.W50_249.lab}</th>
+                <th scope="col">${ASIA_CLASSI.W_GE250.lab}</th>
+              </tr>
+            </thead>
+            <tbody id="asia-table-tbody"></tbody>
+          </table>
+        </div>
+      </details>
+
+      <p class="muted" style="margin-top:1rem">
+        <em>Licenza:</em> CC BY 3.0 IT &middot; Fonte ISTAT &middot; aggiornamento annuale ~Q4
+        (latency ~2 anni: nel ${new Date().getFullYear()} l'ultimo anno disponibile è ${year}).
+      </p>
+    </div>`;
+}
+
+function initAsia(d) {
+  if (!d || !d.kpi || d.kpi.ul_totali == null || d.kpi.ul_totali === 0) return;
+  if (typeof Chart === 'undefined') {
+    console.warn('Chart.js non disponibile per initAsia');
+    return;
+  }
+
+  const year = d._latest_year || 2023;
+  const yearKey = String(year);
+
+  // ---------- Chart 1: bar orizzontale top 10 settori per UL ----------
+  const canvasSet = document.getElementById('asia-chart-settori');
+  if (canvasSet) {
+    const top = (d.kpi.top_settori_ul || []).slice(0, 10);
+    const labels = top.map(s => s.label);
+    const values = top.map(s => s.ul);
+    const addetti = top.map(s => s.addetti);
+    new Chart(canvasSet.getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [{
+          data: values,
+          backgroundColor: '#0066CC',
+          borderWidth: 0,
+          maxBarThickness: 28,
+        }],
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              title: (items) => labels[items[0].dataIndex],
+              label: (item) => {
+                const idx = item.dataIndex;
+                return [
+                  `${fmtNum(values[idx])} unità locali`,
+                  `${fmtNum(addetti[idx])} addetti`,
+                ];
+              },
+            },
+          },
+        },
+        scales: {
+          x: { beginAtZero: true, ticks: { precision: 0 } },
+          y: { ticks: { font: { size: 12 } } },
+        },
+      },
+    });
+  }
+
+  // ---------- Chart 2: doughnut mix classi dimensionali ----------
+  const canvasCl = document.getElementById('asia-chart-classi');
+  if (canvasCl) {
+    const mix = d.kpi.mix_classe_addetti || {};
+    const order = ['W0_9', 'W10_49', 'W50_249', 'W_GE250'];
+    const labels = order.map(c => ASIA_CLASSI[c].lab);
+    const values = order.map(c => mix[c] || 0);
+    const colors = order.map(c => ASIA_CLASSI[c].color);
+    new Chart(canvasCl.getContext('2d'), {
+      type: 'doughnut',
+      data: {
+        labels,
+        datasets: [{
+          data: values,
+          backgroundColor: colors,
+          borderWidth: 2,
+          borderColor: '#fff',
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '58%',
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: (item) => `${item.label}: ${item.parsed.toFixed(2)}% delle UL`,
+            },
+          },
+        },
+      },
+    });
+  }
+
+  // ---------- Chart 3: line serie storica UL + addetti (doppio asse) ----------
+  const canvasSer = document.getElementById('asia-chart-serie');
+  if (canvasSer) {
+    const s = d.serie_storica || {};
+    const anni = s.anni || [];
+    const ulSerie = s.ul || [];
+    const addSerie = s.addetti || [];
+    new Chart(canvasSer.getContext('2d'), {
+      type: 'line',
+      data: {
+        labels: anni.map(String),
+        datasets: [
+          {
+            label: 'Unità locali',
+            data: ulSerie,
+            borderColor: '#0066CC',
+            backgroundColor: 'rgba(0, 102, 204, 0.10)',
+            fill: false,
+            tension: 0.25,
+            pointRadius: 4,
+            pointBackgroundColor: '#0066CC',
+            borderWidth: 2,
+            yAxisID: 'yUL',
+          },
+          {
+            label: 'Addetti',
+            data: addSerie,
+            borderColor: '#E89400',
+            backgroundColor: 'rgba(232, 148, 0, 0.10)',
+            fill: false,
+            tension: 0.25,
+            pointRadius: 4,
+            pointBackgroundColor: '#E89400',
+            borderWidth: 2,
+            borderDash: [4, 4],
+            yAxisID: 'yADD',
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: (item) => {
+                const v = item.parsed.y;
+                return `${item.dataset.label}: ${fmtNum(v)}`;
+              },
+            },
+          },
+        },
+        scales: {
+          x: { ticks: { font: { size: 12 } } },
+          yUL: {
+            type: 'linear',
+            position: 'left',
+            beginAtZero: false,
+            title: { display: true, text: 'Unità locali', color: '#0066CC' },
+            ticks: { precision: 0, color: '#0066CC' },
+          },
+          yADD: {
+            type: 'linear',
+            position: 'right',
+            beginAtZero: false,
+            title: { display: true, text: 'Addetti', color: '#E89400' },
+            ticks: { precision: 0, color: '#E89400' },
+            grid: { drawOnChartArea: false },
+          },
+        },
+      },
+    });
+  }
+
+  // ---------- Tabella dettaglio ATECO × classe (statica, no paginazione) ----------
+  const tbody = document.getElementById('asia-table-tbody');
+  if (tbody) {
+    const detail = (d.ateco_dettaglio || {})[yearKey] || {};
+    const rows = Object.entries(detail).map(([code, byClass]) => {
+      const get = (c) => byClass?.[c]?.ul || 0;
+      const getAdd = (c) => byClass?.[c]?.addetti || 0;
+      const ulTot = byClass?.TOTAL?.ul || (get('W0_9') + get('W10_49') + get('W50_249') + get('W_GE250'));
+      const addTot = byClass?.TOTAL?.addetti || (getAdd('W0_9') + getAdd('W10_49') + getAdd('W50_249') + getAdd('W_GE250'));
+      return {
+        code,
+        label: (d.kpi.top_settori_ul || []).find(s => s.code === code)?.label
+            || (d.kpi.top_settori_addetti || []).find(s => s.code === code)?.label
+            || `ATECO ${code}`,
+        w0_9: get('W0_9'),
+        w10_49: get('W10_49'),
+        w50_249: get('W50_249'),
+        w_ge250: get('W_GE250'),
+        ulTot,
+        addTot,
+      };
+    }).filter(r => r.ulTot > 0).sort((a, b) => b.ulTot - a.ulTot);
+
+    tbody.innerHTML = rows.map(r => `
+      <tr>
+        <td><strong>${r.code}</strong> · ${r.label}</td>
+        <td class="num">${r.w0_9 > 0 ? fmtNum(r.w0_9) : '—'}</td>
+        <td class="num">${r.w10_49 > 0 ? fmtNum(r.w10_49) : '—'}</td>
+        <td class="num">${r.w50_249 > 0 ? fmtNum(r.w50_249) : '—'}</td>
+        <td class="num">${r.w_ge250 > 0 ? fmtNum(r.w_ge250) : '—'}</td>
+        <td class="num"><strong>${fmtNum(r.ulTot)}</strong></td>
+        <td class="num">${fmtNum(r.addTot)}</td>
+      </tr>
+    `).join('');
+  }
 }
 
 init();
