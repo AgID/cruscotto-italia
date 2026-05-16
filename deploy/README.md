@@ -119,6 +119,20 @@ cd worker
 npm run deploy
 ```
 
+## SIMBA chatbot — repo separato
+
+Il template nginx + cron per SIMBA sta nel suo repo:
+**`AgID/simba-chatbot/deploy/`**.
+
+Sulla VM AgID, dopo aver clonato anche quel repo:
+```bash
+sudo cp /home/ubuntu/simba-chatbot/deploy/nginx/chatbot.dati.gov.it.conf.template \
+  /etc/nginx/conf.d/chatbot.dati.gov.it.conf
+sudo cp /home/ubuntu/simba-chatbot/deploy/cron/simba-monitoring /etc/cron.d/
+```
+
+Vedi `AgID/simba-chatbot/deploy/README.md` per dettagli SIMBA.
+
 ## Note operative
 
 - **Default --target=local + --outdir produzione** in tutti gli ETL: il cron

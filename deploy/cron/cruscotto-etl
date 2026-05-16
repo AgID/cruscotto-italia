@@ -114,9 +114,6 @@ LOG=/var/log/cruscotto-etl
 # Aggregator orario per stats real-time
 0 * * * * root $PY $REPO/scripts/analytics/stats_aggregator.py --logs /var/log/nginx/cruscotto-italia.access.log --out /var/www/cruscotto-stats --istat-names /var/www/cruscotto-stats/istat-names.json --mcp-stats /var/www/cruscotto-stats/mcp_stats.json >> /var/log/cruscotto-stats/cron-hourly.log 2>&1 && set -a && . /etc/cruscotto-analytics.env && set +a && $PY $REPO/scripts/analytics/alert_attacks.py --log /var/log/nginx/cruscotto-italia.access.log --threshold 50 >> /var/log/cruscotto-stats/cron-hourly.log 2>&1
 
-# ──────────────────────────────────────────────────────────────────────
-# SIMBA stats & alert (vhost chatbot.dati.gov.it sulla stessa VM)
-# Dashboard: https://chatbot.dati.gov.it/simba-stats/ (htpasswd)
-# ──────────────────────────────────────────────────────────────────────
-0 * * * * root $PY $REPO/scripts/analytics/alert_attacks.py --log /var/log/nginx/chatbot.access.log --state-dir /var/lib/cruscotto-alert/simba --threshold 50 >> /var/log/cruscotto-stats/cron-hourly-simba.log 2>&1
-15 * * * * root $PY $REPO/scripts/analytics/stats_aggregator.py --logs /var/log/nginx/chatbot.access.log --out /var/www/simba-stats --istat-names /var/www/simba-stats/istat-names.json >> /var/log/cruscotto-stats/cron-hourly-simba.log 2>&1 && /bin/chown -R www-data:www-data /var/www/simba-stats
+# SIMBA monitoring (alert + stats) e' gestito nel repo SIMBA:
+#   AgID/simba-chatbot/deploy/cron/simba-monitoring
+# Su VM AgID basta cp anche quel file in /etc/cron.d/
