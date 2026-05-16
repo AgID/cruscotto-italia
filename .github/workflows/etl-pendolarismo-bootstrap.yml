@@ -1,38 +1,24 @@
-# Workflow ad hoc per primo pull pendolarismo 2021, da girare su
-# GitHub-hosted runner (Azure datacenter, IP non bannato da ISTAT).
-#
-# Motivo: IP Aruba bannato da esploradati.istat.it (ban host-based confermato
-# 2026-05-16, TCP timeout su qualsiasi path). Soluzione: scaricamento ZIP
-# diretto via runner GitHub.
-#
-# Output: shard JSON in data/pendolarismo/ committati direttamente su main.
-# Aruba/VM AgID prelevano i shard con un semplice "git pull" sul repo.
-#
-# Sorgente: https://esploradati.istat.it/databrowser/DWL/PERMPOP/MATPEN/
-#           matrix_pendoLAVORO_2021.zip (Censimento permanente, lavoro 2021)
+name: ETL Pendolarismo bootstrap
+
+# Workflow ad hoc per primo pull pendolarismo 2021 via GitHub-hosted runner
+# (IP Azure non bannato da ISTAT). Output: shard JSON in data/pendolarismo/
+# committati direttamente su main.
+
 on:
   workflow_dispatch:
     inputs:
       limit:
-        description: 'Smoke test: lista comma-separated ISTAT (es. 075035,058091). Vuoto = full pull.'
+        description: 'Smoke test: ISTAT comma-separated (vuoto = full).'
         required: false
         default: ''
         type: string
-      run_dashboard:
-        description: 'Anche rebuild dashboard A1 su R2 dopo il push?'
-        required: false
-        default: 'false'
-        type: choice
-        options:
-          - 'true'
-          - 'false'
 
 permissions:
   contents: write
 
 jobs:
   pendolarismo-bootstrap:
-    name: ETL · Pendolarismo 2021 (download + parsing + commit)
+    name: ETL pendolarismo 2021
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -50,28 +36,33 @@ jobs:
       - name: Install requirements
         run: pip install -r etl/requirements.txt
 
-      - name: Show runner IP (debug)
+      - name: Show runner IP
         run: |
           echo "Runner public IP:"
           curl -sS -m 5 https://api.ipify.org || echo "(unable to detect)"
           echo ""
 
-      - name: Pendolarismo ETL (download + parsing + sharding)
+      - name: Run pendolarismo ETL
         run: |
-          python -m etl.sources.pendolarismo \
-            --target=local-repo \
-            --outdir=data/pendolarismo \
-            ${{ inputs.limit && format('--limit={0}', inputs.limit) || '' }} \
-            2>&1 | tee /tmp/pendolarismo.log
+          if [ -n "${{ inputs.limit }}" ]; then
+            python -m etl.sources.pendolarismo --target=local-repo --outdir=data/pendolarismo --limit="${{ inputs.limit }}" 2>&1 | tee /tmp/pend.log
+          else
+            python -m etl.sources.pendolarismo --target=local-repo --outdir=data/pendolarismo 2>&1 | tee /tmp/pend.log
+          fi
 
-      - name: Stats shard prodotti
+      - name: Statistiche shard prodotti
         run: |
           echo "=== Shard prodotti ==="
           ls data/pendolarismo/*.json 2>/dev/null | wc -l
           echo "=== Size totale ==="
           du -sh data/pendolarismo/ 2>/dev/null || echo "no directory"
-          echo "=== Sample primi 3 ==="
-          ls data/pendolarismo/*.json 2>/dev/null | head -3 | xargs -I{} sh -c 'echo "--- {} ---"; head -c 800 {}; echo ""'
+          echo "=== Sample primo shard ==="
+          first=$(ls data/pendolarismo/*.json 2>/dev/null | head -1)
+          if [ -n "$first" ]; then
+            echo "File: $first"
+            head -c 1500 "$first"
+            echo ""
+          fi
 
       - name: Commit shard su main
         run: |
@@ -83,9 +74,5 @@ jobs:
             exit 0
           fi
           N=$(ls data/pendolarismo/*.json 2>/dev/null | wc -l)
-          git commit -m "data(pendolarismo): bootstrap ISTAT 2021 LAVORO — ${N} shard comuni
-
-Pull automatico da GitHub-hosted runner (IP Azure).
-Sorgente: matrix_pendoLAVORO_2021.zip (ISTAT esploradati).
-Schema: KPI uscenti/entranti/saldo/auto-contenim + top 10 OD per comune."
+          git commit -m "data(pendolarismo): bootstrap ISTAT 2021 LAVORO - ${N} shard"
           git push origin HEAD:main
