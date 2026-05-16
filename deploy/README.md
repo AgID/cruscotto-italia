@@ -20,6 +20,10 @@ sudo mkdir -p /var/www/cruscotto-italia/{frontend,data}
 sudo mkdir -p /var/www/cruscotto-stats
 sudo mkdir -p /var/log/cruscotto-etl /var/log/cruscotto-stats
 
+# 1b. nginx log dedicati (creati automaticamente dal vhost al primo write,
+# ma confermare /var/log/nginx/ esiste già con permessi nginx user)
+sudo ls -la /var/log/nginx/ | head -3
+
 # 2. Ownership
 sudo chown -R ubuntu:www-data /var/www/cruscotto-italia
 sudo chown -R www-data:www-data /var/www/cruscotto-stats
