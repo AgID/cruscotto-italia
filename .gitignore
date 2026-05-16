@@ -59,8 +59,11 @@ htmlcov/
 *.bak*
 output/
 
-# ETL scratch locale (non versionato; i dati live sono su R2)
-data/
-# Eccezione: pendolarismo 2021 e' committato (no R2, distribuito via repo+git pull)
+# ETL scratch locale (non versionato; i dati live sono su R2).
+# Uso 'data/*' invece di 'data/' per permettere eccezioni mirate per
+# sotto-directory specifiche (pattern git noto: 'data/' ignora la dir
+# completa pre-traversal e neutralizza le eccezioni interne).
+data/*
+# Eccezione: pendolarismo 2021 committato nel repo (distribuito via git pull,
+# non R2). Replica il pattern delle eccezioni esistenti (es. docs/skills/).
 !data/pendolarismo/
-!data/pendolarismo/*.json
