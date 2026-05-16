@@ -1406,7 +1406,14 @@ footer a:hover { color: #fff !important; }
 .asia-chart-legend{
   font-size:12px;line-height:1.6;margin-top:14px;color:var(--ink-mute);
 }
-.asia-chart-legend span[style*="color"]{font-weight:bold;}
+/* WCAG-friendly legend dot: visual decoration only (aria-hidden in HTML).
+   Background-color via inline style nel render, niente glyph "●" perché
+   il colore del testo non passerebbe il contrasto 4.5:1 (arancione/verde
+   chiari su sfondo bianco). Stesso pattern di .anncsu-legend-dot. */
+.asia-legend-dot{
+  display:inline-block;width:.7em;height:.7em;border-radius:50%;
+  vertical-align:-1px;margin-right:.15em;
+}
 
 .kpi-card.positive .kpi-card-val{color:#00875f;}
 .kpi-card.negative .kpi-card-val{color:#c0392b;}
@@ -9486,10 +9493,10 @@ function renderAsiaTab(d) {
             <canvas id="asia-chart-classi" aria-label="Mix UL per classe dimensionale"></canvas>
           </div>
           <p class="muted asia-chart-legend">
-            <span style="color:${ASIA_CLASSI.W0_9.color}">●</span> ${ASIA_CLASSI.W0_9.lab} ·
-            <span style="color:${ASIA_CLASSI.W10_49.color}">●</span> ${ASIA_CLASSI.W10_49.lab} ·
-            <span style="color:${ASIA_CLASSI.W50_249.color}">●</span> ${ASIA_CLASSI.W50_249.lab} ·
-            <span style="color:${ASIA_CLASSI.W_GE250.color}">●</span> ${ASIA_CLASSI.W_GE250.lab}
+            <span class="asia-legend-dot" style="background:${ASIA_CLASSI.W0_9.color}" aria-hidden="true"></span>${ASIA_CLASSI.W0_9.lab} ·
+            <span class="asia-legend-dot" style="background:${ASIA_CLASSI.W10_49.color}" aria-hidden="true"></span>${ASIA_CLASSI.W10_49.lab} ·
+            <span class="asia-legend-dot" style="background:${ASIA_CLASSI.W50_249.color}" aria-hidden="true"></span>${ASIA_CLASSI.W50_249.lab} ·
+            <span class="asia-legend-dot" style="background:${ASIA_CLASSI.W_GE250.color}" aria-hidden="true"></span>${ASIA_CLASSI.W_GE250.lab}
           </p>
         </div>
       </div>
@@ -9500,8 +9507,8 @@ function renderAsiaTab(d) {
           <canvas id="asia-chart-serie" aria-label="Serie storica unità locali e addetti per anno"></canvas>
         </div>
         <p class="muted asia-chart-legend">
-          <span style="color:#0066CC">●</span> Unità locali (asse sinistro) ·
-          <span style="color:#E89400">●</span> Addetti media annua (asse destro)
+          <span class="asia-legend-dot" style="background:#0066CC" aria-hidden="true"></span>Unità locali (asse sinistro) ·
+          <span class="asia-legend-dot" style="background:#E89400" aria-hidden="true"></span>Addetti media annua (asse destro)
         </p>
       </div>
 
@@ -9516,16 +9523,16 @@ function renderAsiaTab(d) {
           <table class="asia-table" id="asia-table-dettaglio">
             <thead>
               <tr>
-                <th rowspan="2" scope="col">Settore ATECO</th>
-                <th colspan="4" scope="colgroup">Unità locali per classe</th>
-                <th rowspan="2" scope="col">Tot. UL</th>
-                <th rowspan="2" scope="col">Tot. Addetti</th>
+                <th id="asia-h-set" rowspan="2" scope="col">Settore ATECO</th>
+                <th id="asia-h-clgrp" colspan="4" scope="colgroup">Unità locali per classe</th>
+                <th id="asia-h-totul" rowspan="2" scope="col">Tot. UL</th>
+                <th id="asia-h-totadd" rowspan="2" scope="col">Tot. Addetti</th>
               </tr>
               <tr>
-                <th scope="col">${ASIA_CLASSI.W0_9.lab}</th>
-                <th scope="col">${ASIA_CLASSI.W10_49.lab}</th>
-                <th scope="col">${ASIA_CLASSI.W50_249.lab}</th>
-                <th scope="col">${ASIA_CLASSI.W_GE250.lab}</th>
+                <th id="asia-h-w09" scope="col">${ASIA_CLASSI.W0_9.lab}</th>
+                <th id="asia-h-w1049" scope="col">${ASIA_CLASSI.W10_49.lab}</th>
+                <th id="asia-h-w50249" scope="col">${ASIA_CLASSI.W50_249.lab}</th>
+                <th id="asia-h-wge250" scope="col">${ASIA_CLASSI.W_GE250.lab}</th>
               </tr>
             </thead>
             <tbody id="asia-table-tbody"></tbody>
@@ -9731,13 +9738,13 @@ function initAsia(d) {
 
     tbody.innerHTML = rows.map(r => `
       <tr>
-        <td><strong>${r.code}</strong> · ${r.label}</td>
-        <td class="num">${r.w0_9 > 0 ? fmtNum(r.w0_9) : '—'}</td>
-        <td class="num">${r.w10_49 > 0 ? fmtNum(r.w10_49) : '—'}</td>
-        <td class="num">${r.w50_249 > 0 ? fmtNum(r.w50_249) : '—'}</td>
-        <td class="num">${r.w_ge250 > 0 ? fmtNum(r.w_ge250) : '—'}</td>
-        <td class="num"><strong>${fmtNum(r.ulTot)}</strong></td>
-        <td class="num">${fmtNum(r.addTot)}</td>
+        <th scope="row" headers="asia-h-set"><strong>${r.code}</strong> · ${r.label}</th>
+        <td class="num" headers="asia-h-clgrp asia-h-w09">${r.w0_9 > 0 ? fmtNum(r.w0_9) : '—'}</td>
+        <td class="num" headers="asia-h-clgrp asia-h-w1049">${r.w10_49 > 0 ? fmtNum(r.w10_49) : '—'}</td>
+        <td class="num" headers="asia-h-clgrp asia-h-w50249">${r.w50_249 > 0 ? fmtNum(r.w50_249) : '—'}</td>
+        <td class="num" headers="asia-h-clgrp asia-h-wge250">${r.w_ge250 > 0 ? fmtNum(r.w_ge250) : '—'}</td>
+        <td class="num" headers="asia-h-totul"><strong>${fmtNum(r.ulTot)}</strong></td>
+        <td class="num" headers="asia-h-totadd">${fmtNum(r.addTot)}</td>
       </tr>
     `).join('');
   }
