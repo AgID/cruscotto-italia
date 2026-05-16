@@ -17,13 +17,19 @@ name: ETL · Daily
 # Al termine, se almeno un ETL upstream ha effettivamente prodotto
 # aggiornamenti, ricostruisce dashboard/<istat>.json e notifica la worker.
 #
-# Cron: ogni giorno alle 04:30 UTC = 05:30/06:30 ora di Roma (DST).
-# 04:30 UTC scelto per dare ~90 minuti di margine dopo il rigenero GSE
-# delle ~03:00 UTC (osservato 2026-05-09 LastModified=03:00:10 UTC).
+# Cron: ogni giorno alle 08:00 UTC = 09:00/10:00 ora di Roma (DST).
+# 08:00 UTC scelto come compromesso solido per le 2 sorgenti upstream:
+#   - GSE PUN: rigenera ~03:00 UTC (Last-Modified osservato 2026-05-09)
+#   - MIMIT carburanti: pubblica prezzo_alle_8.csv e anagrafica
+#     ~06:45-06:51 UTC (= 08:45/08:51 IT DST), nonostante il nome
+#     'prezzo_alle_8' si riferisca al momento di RILEVAZIONE delle 8 IT
+#     non a quello di pubblicazione del CSV.
+# Margine: ~70 min post-MIMIT. Il job termina entro le 09:00 UTC
+# pubblicando dati freschi per quando l'utente apre il sito al mattino.
 
 on:
   schedule:
-    - cron: '30 4 * * *'
+    - cron: '0 8 * * *'
   workflow_dispatch:
     inputs:
       sources:
