@@ -175,6 +175,7 @@ def compute_kpi_summary(out: dict) -> dict:
     runts = out.get("runts") or {}
     sanita = out.get("sanita_mds") or {}
     asia = out.get("asia") or {}
+    pendolarismo = out.get("pendolarismo") or {}
 
     # Popolazione (riferimento per molti pro-capite/per-1000)
     pop = _safe(demo, "popolazione_totale")
@@ -351,6 +352,15 @@ def compute_kpi_summary(out: dict) -> dict:
             "n_ospedali": n_ospedali,
             "posti_letto_ospedalieri": posti_letto,
             "farmacie_per_1000_ab": _per_1000(n_farmacie, pop),
+        },
+        "pendolarismo": {
+            "anno": _safe(pendolarismo, "kpi", "anno") or 2021,
+            "uscenti_totali": _safe(pendolarismo, "kpi", "uscenti_totali"),
+            "entranti_totali": _safe(pendolarismo, "kpi", "entranti_totali"),
+            "saldo_netto": _safe(pendolarismo, "kpi", "saldo_netto"),
+            "auto_contenimento_pct": _safe(pendolarismo, "kpi", "auto_contenimento_pct"),
+            "n_destinazioni": _safe(pendolarismo, "kpi", "n_destinazioni"),
+            "n_origini": _safe(pendolarismo, "kpi", "n_origini"),
         },
     }
     return summary

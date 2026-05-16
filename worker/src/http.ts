@@ -270,7 +270,7 @@ pre code {
   <h3>Skill <em>opzionale</em> per Claude</h3>
   <p>Per ottenere risposte pi&ugrave; mirate quando l'utente chiede dati su uno o pi&ugrave; comuni italiani, &egrave; disponibile una <em>skill</em> Claude che documenta l'uso del connettore: inventario dei tool, schema completo di <code>comune_kpi</code> (~55 KPI sintetici, ~620 token) e <code>comune_dashboard</code> (vista completa con sezioni <code>immobili_pa</code>, <code>anncsu</code>, <code>sanita_mds</code> per farmacie/ospedali, <code>pun</code> per ricarica EV, <code>agcom_bbmap</code> per banda larga FTTH/FTTC, <code>carburanti</code> per prezzi MIMIT, <code>runts</code> per Terzo Settore, <code>asia</code> per imprese e addetti, <code>pendolarismo</code> per matrice flussi casa-lavoro/studio), endpoint REST <code>/data/anncsu_full/&lt;istat&gt;.json</code>, pattern operativi e <em>caveat</em> per sezione.</p>
   <p>Scarica il pacchetto e caricalo nelle <em>Skills</em> di Claude (UI o API):</p>
-  <p><a href="/skills/cruscotto-italia-workflow-v1.8.0.zip" download><strong>cruscotto-italia-workflow-v1.8.0.zip</strong></a></p>
+  <p><a href="/skills/cruscotto-italia-workflow-v1.8.1.zip" download><strong>cruscotto-italia-workflow-v1.8.1.zip</strong></a></p>
 
   <h3>ChatGPT (Custom GPT)</h3>
   <p>Nei custom GPT con supporto MCP, aggiungi un nuovo server con URL <code>https://cruscotto-italia-mcp.agid.workers.dev/mcp</code> e tipo JSON-RPC 2.0. Nessuna autenticazione richiesta.</p>
