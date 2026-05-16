@@ -1876,6 +1876,12 @@ function renderComune(data) {
             <div class="kpi-card-sub">tasso motorizzazione</div>
           </div>
 
+          <div class="kpi-card ${k.pendolarismo?.kpi?.saldo_netto != null ? '' : 'tbd'}" data-go-tab="pendolarismo" tabindex="0" role="button" aria-label="Vai alla tab Pendolarismo">
+            <div class="kpi-card-lab">Pendolarismo</div>
+            <div class="kpi-card-val">${k.pendolarismo?.kpi?.saldo_netto != null ? (k.pendolarismo.kpi.saldo_netto > 0 ? '+' : '') + fmtNum(k.pendolarismo.kpi.saldo_netto) : '—'}</div>
+            <div class="kpi-card-sub">${k.pendolarismo?.kpi?.auto_contenimento_pct != null ? 'auto-contenimento ' + k.pendolarismo.kpi.auto_contenimento_pct + '%' : 'saldo casa-lavoro/studio'}</div>
+          </div>
+
         </div>
       </div>
 
