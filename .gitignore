@@ -61,3 +61,6 @@ output/
 
 # ETL scratch locale (non versionato; i dati live sono su R2)
 data/
+# Eccezione: pendolarismo 2021 e' committato (no R2, distribuito via repo+git pull)
+!data/pendolarismo/
+!data/pendolarismo/*.json
