@@ -777,6 +777,7 @@ def render_html(stats: dict, mcp_stats_path: Path | None = None) -> str:
         )
 
     return HTML_TEMPLATE.format(
+        title=title,
         generated_at=stats["_generated_at"],
         days_range=days_range,
         exclude_note=exclude_note,
@@ -810,6 +811,8 @@ def main() -> int:
                     help="JSON mapping {istat: nome} per labelare i comuni (opzionale)")
     ap.add_argument("--mcp-stats",
                     help="JSON di analytics MCP (output di mcp_stats_fetcher.py)")
+    ap.add_argument("--title", default="Cruscotto Italia",
+                    help="Titolo dashboard (default: Cruscotto Italia, override per altri tenant es. SIMBA Chatbot)")
     args = ap.parse_args()
 
     log_paths = [Path(p) for p in args.logs]
@@ -827,7 +830,7 @@ def main() -> int:
 
     json_out.write_text(json.dumps(stats, indent=2, ensure_ascii=False), encoding="utf-8")
     mcp_stats_path = Path(args.mcp_stats) if args.mcp_stats else None
-    html_out.write_text(render_html(stats, mcp_stats_path), encoding="utf-8")
+    html_out.write_text(render_html(stats, mcp_stats_path, title=args.title), encoding="utf-8")
 
     print(f"✓ Linee processate: {stats['totals']['lines_parsed']:,} / {stats['totals']['lines_total']:,}")
     print(f"✓ Visite umane: {stats['totals']['hits_human']:,}")
