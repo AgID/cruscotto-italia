@@ -1403,6 +1403,10 @@ footer a:hover { color: #fff !important; }
 .pendolarismo-table .num{
   font-variant-numeric:tabular-nums;font-weight:600;
 }
+.pendolarismo-table .istat-code-mini{
+  font-family:var(--mono);font-size:11px;color:var(--muted);margin-left:6px;
+  font-weight:400;
+}
 
 .runts-page-btn{
   width:38px;height:38px;border-radius:50%;border:1.5px solid var(--border);
@@ -9016,7 +9020,16 @@ async function init() {
     //   - le 7 cache window.__<X>Cache vengono pre-popolate
     //   - i 5 badge delle pillole vengono aggiornati subito
     //   - i tab loaders trovano cache hit e non chiamano MCP
-    const dashboard = await mcpCall('comune_dashboard', { istat_code: istat });
+    // A1: una chiamata MCP per i dati del comune in parallelo con il
+    // fetch del lookup nomi ISTAT (~195KB cachato dal browser, blocca solo
+    // il primo accesso; le pagine successive lo trovano cached).
+    const [dashboard] = await Promise.all([
+      mcpCall('comune_dashboard', { istat_code: istat }),
+      window.__istatNames ? Promise.resolve(null) : fetch('/istat-names.json')
+        .then(r => r.ok ? r.json() : null)
+        .then(names => { if (names) window.__istatNames = names; })
+        .catch(() => { window.__istatNames = window.__istatNames || {}; }),
+    ]);
     if (dashboard?.error) {
       throw new Error(dashboard.error);
     }
@@ -9117,12 +9130,18 @@ function renderPendolarismoTab(d) {
   const saldoLabel = saldo > 0 ? 'attrattore netto' : saldo < 0 ? 'esportatore netto' : 'in equilibrio';
   const autoPct = k.auto_contenimento_pct != null ? k.auto_contenimento_pct.toFixed(1) : '—';
 
+  const namesMap = window.__istatNames || {};
+  const istatLabel = (code) => {
+    const nome = namesMap[code];
+    return nome ? `${nome} <span class="muted istat-code-mini">(${code})</span>` : `<span class="istat-code">${code}</span>`;
+  };
+
   const topDestRows = (k.top_destinazioni || []).slice(0, 10).map((it, i) =>
-    `<tr><td class="rank">${i+1}</td><td class="istat-code">${it.istat}</td><td class="num">${fmtNum(it.count)}</td></tr>`
+    `<tr><td class="rank">${i+1}</td><td>${istatLabel(it.istat)}</td><td class="num">${fmtNum(it.count)}</td></tr>`
   ).join('');
 
   const topOrigRows = (k.top_origini || []).slice(0, 10).map((it, i) =>
-    `<tr><td class="rank">${i+1}</td><td class="istat-code">${it.istat}</td><td class="num">${fmtNum(it.count)}</td></tr>`
+    `<tr><td class="rank">${i+1}</td><td>${istatLabel(it.istat)}</td><td class="num">${fmtNum(it.count)}</td></tr>`
   ).join('');
 
   return `
@@ -9166,7 +9185,7 @@ function renderPendolarismoTab(d) {
           <p class="muted">Comuni di destinazione dei pendolari residenti, ordinati per numero di spostamenti giornalieri.
           ${k.n_destinazioni != null ? 'Destinazioni distinte totali: <strong>' + fmtNum(k.n_destinazioni) + '</strong>.' : ''}</p>
           <table class="pendolarismo-table">
-            <thead><tr><th>#</th><th>Comune ISTAT</th><th>Pendolari</th></tr></thead>
+            <thead><tr><th>#</th><th>Comune</th><th>Pendolari</th></tr></thead>
             <tbody>${topDestRows || '<tr><td colspan="3" class="muted">Nessuna destinazione registrata.</td></tr>'}</tbody>
           </table>
         </div>
@@ -9175,7 +9194,7 @@ function renderPendolarismoTab(d) {
           <p class="muted">Comuni di origine dei lavoratori che entrano nel comune, ordinati per numero di spostamenti.
           ${k.n_origini != null ? 'Origini distinte totali: <strong>' + fmtNum(k.n_origini) + '</strong>.' : ''}</p>
           <table class="pendolarismo-table">
-            <thead><tr><th>#</th><th>Comune ISTAT</th><th>Pendolari</th></tr></thead>
+            <thead><tr><th>#</th><th>Comune</th><th>Pendolari</th></tr></thead>
             <tbody>${topOrigRows || '<tr><td colspan="3" class="muted">Nessuna origine registrata.</td></tr>'}</tbody>
           </table>
         </div>
@@ -9186,7 +9205,7 @@ function renderPendolarismoTab(d) {
         <a href="https://www.istat.it/it/censimenti/popolazione-e-abitazioni/dati-censimento" target="_blank" rel="noopener">ISTAT &middot; Censimento permanente 2021</a>
         &middot; matrice spostamenti per lavoro &middot; Licenza
         <a href="https://creativecommons.org/licenses/by/3.0/it/" target="_blank" rel="noopener">CC BY 3.0 IT</a>.
-        I codici ISTAT mostrati nelle tabelle sono i ProCom 6-digit.
+        I codici ISTAT mostrati a fianco del nome comune sono i ProCom 6-digit.
       </p>
     </div>`;
 }

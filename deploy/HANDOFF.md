@@ -111,11 +111,32 @@ sudo cp -r /home/ubuntu/cruscotto-italia/frontend/* /var/www/cruscotto-italia/fr
 ```bash
 # Sul lato Aruba:
 sudo cat /etc/nginx/.htpasswd-stats
-sudo cat /etc/cruscotto-analytics.env
-sudo cat /etc/nginx/snippets/security-headers.conf
 
 # Sulla VM AgID, riproduci questi 3 file (chmod 600 per env, 644 per altri):
 ```
+
+### Installa nginx snippets (security headers, CSP, anti-scanner)
+
+sudo mkdir -p /etc/nginx/snippets
+sudo cp deploy/nginx/snippets/security-headers.conf /etc/nginx/snippets/
+
+Lo snippet include CSP con connect-src che whitelist il Worker MCP AgID
+(cruscotto-italia-mcp.agid.workers.dev) oltre agli endpoint transitori
+piersoft. Modificarlo solo per nuovi domini Worker.
+
+### Symlink istat-names.json (lookup nomi comuni per tab Pendolarismo)
+
+Il file e' generato dalla pipeline analytics in
+/var/www/cruscotto-stats/istat-names.json (vedi
+scripts/analytics/stats_aggregator.py).
+Per il bootstrap immediato copialo da Aruba:
+
+sudo mkdir -p /var/www/cruscotto-stats
+sudo rsync -avz ubuntu@<aruba-ip>:/var/www/cruscotto-stats/istat-names.json /var/www/cruscotto-stats/
+sudo chown -R www-data:www-data /var/www/cruscotto-stats
+
+L'esposizione web e' gia' configurata nel vhost (location
+= /istat-names.json -> alias /var/www/cruscotto-stats/...).
 
 ### Installa nginx config
 
