@@ -138,6 +138,19 @@ sudo chown -R www-data:www-data /var/www/cruscotto-stats
 L'esposizione web e' gia' configurata nel vhost (location
 = /istat-names.json -> alias /var/www/cruscotto-stats/...).
 
+### Genera istat-coords.json (centroidi comuni per mappa Pendolarismo)
+
+Il file e' calcolato a partire dagli shard A1 (territorio.geo.extent
+da OSM). Lanciare DOPO aver popolato i dashboard:
+
+sudo python3 scripts/build/build_istat_coords.py
+
+Output: /var/www/cruscotto-italia/data/istat-coords.json
+(~220KB, copertura 7895/7896 = 99.99%, fallback ANNCSU).
+
+L'esposizione web e' gia' configurata nel vhost
+(location = /data/istat-coords.json -> alias).
+
 ### Installa nginx config
 
 ```bash
