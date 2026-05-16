@@ -28,8 +28,8 @@ name: ETL · Daily
 # pubblicando dati freschi per quando l'utente apre il sito al mattino.
 
 on:
-  schedule:
-    - cron: '0 8 * * *'
+  # Schedule rimosso: ETL daily girano via cron VM AgID (vedi deploy/cron/cruscotto-etl).
+  # GitHub Actions resta come fallback emergenza, attivabile manualmente dalla UI.
   workflow_dispatch:
     inputs:
       sources:

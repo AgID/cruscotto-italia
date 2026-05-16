@@ -16,8 +16,8 @@ name: ETL · Monthly
 # Cron: 5° giorno di ogni mese alle 04:00 UTC = 05:00/06:00 ora di Roma (DST).
 
 on:
-  schedule:
-    - cron: '0 4 5 * *'
+  # Schedule rimosso: ETL monthly girano via cron VM AgID (vedi deploy/cron/cruscotto-etl).
+  # GitHub Actions resta come fallback emergenza, attivabile manualmente dalla UI.
   workflow_dispatch:
     inputs:
       sources:

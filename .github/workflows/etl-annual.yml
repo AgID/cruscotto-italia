@@ -14,10 +14,8 @@ name: ETL · Annual
 # Cron tutti alle 04:00 UTC = 05:00/06:00 ora di Roma (DST).
 
 on:
-  schedule:
-    - cron: '0 4 1 2 *'   # 1° febbraio
-    - cron: '0 4 1 4 *'   # 1° aprile
-    - cron: '0 4 1 7 *'   # 1° luglio
+  # Schedule rimosso: ETL annual girano via cron VM AgID (vedi deploy/cron/cruscotto-etl).
+  # GitHub Actions resta come fallback emergenza, attivabile manualmente dalla UI.
   workflow_dispatch:
     inputs:
       window:
