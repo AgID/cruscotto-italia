@@ -1806,6 +1806,12 @@ function renderComune(data) {
             <div class="kpi-card-sub">beni immobili pubblici</div>
           </div>
 
+          <div class="kpi-card ${k.pendolarismo?.kpi?.saldo_netto != null ? '' : 'tbd'}" data-go-tab="pendolarismo" tabindex="0" role="button" aria-label="Vai alla tab Pendolarismo">
+            <div class="kpi-card-lab">Pendolarismo</div>
+            <div class="kpi-card-val">${k.pendolarismo?.kpi?.saldo_netto != null ? (k.pendolarismo.kpi.saldo_netto > 0 ? '+' : '') + fmtNum(k.pendolarismo.kpi.saldo_netto) : '—'}</div>
+            <div class="kpi-card-sub">${k.pendolarismo?.kpi?.auto_contenimento_pct != null ? 'auto-contenimento ' + k.pendolarismo.kpi.auto_contenimento_pct + '%' : 'saldo casa-lavoro/studio'}</div>
+          </div>
+
           <div class="kpi-card ${k.pnrr?.kpi?.n_progetti != null ? '' : 'tbd'}" data-go-tab="pnrr" tabindex="0" role="button" aria-label="Vai alla tab PNRR">
             <div class="kpi-card-lab">PNRR</div>
             <div class="kpi-card-val">${k.pnrr?.kpi?.n_progetti != null ? fmtNum(k.pnrr.kpi.n_progetti) : '—'}</div>
@@ -1874,12 +1880,6 @@ function renderComune(data) {
               return Math.round(t / p * 1000);
             })()}<span class="kpi-card-unit">${(k.veicoli?.parco_veicoli?.totale != null && k.veicoli?.popolazione) ? '/ 1000 ab' : ''}</span></div>
             <div class="kpi-card-sub">tasso motorizzazione</div>
-          </div>
-
-          <div class="kpi-card ${k.pendolarismo?.kpi?.saldo_netto != null ? '' : 'tbd'}" data-go-tab="pendolarismo" tabindex="0" role="button" aria-label="Vai alla tab Pendolarismo">
-            <div class="kpi-card-lab">Pendolarismo</div>
-            <div class="kpi-card-val">${k.pendolarismo?.kpi?.saldo_netto != null ? (k.pendolarismo.kpi.saldo_netto > 0 ? '+' : '') + fmtNum(k.pendolarismo.kpi.saldo_netto) : '—'}</div>
-            <div class="kpi-card-sub">${k.pendolarismo?.kpi?.auto_contenimento_pct != null ? 'auto-contenimento ' + k.pendolarismo.kpi.auto_contenimento_pct + '%' : 'saldo casa-lavoro/studio'}</div>
           </div>
 
         </div>
