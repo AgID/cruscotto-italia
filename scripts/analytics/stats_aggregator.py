@@ -441,7 +441,7 @@ HTML_TEMPLATE = """<!doctype html>
 <html lang="it">
 <head>
 <meta charset="utf-8">
-<title>Cruscotto Italia — Statistiche di accesso</title>
+<title>{title} — Statistiche di accesso</title>
 <meta name="robots" content="noindex,nofollow">
 <style>
   :root {{
@@ -480,7 +480,7 @@ HTML_TEMPLATE = """<!doctype html>
 </style>
 </head>
 <body>
-<h1>Cruscotto Italia — Statistiche</h1>
+<h1>{title} — Statistiche</h1>
 <p class="meta">
   Generato: {generated_at}<br>
   {days_range}{exclude_note}
@@ -706,7 +706,7 @@ def _render_heatmap(by_day_tool: list[dict]) -> str:
     )
 
 
-def render_html(stats: dict, mcp_stats_path: Path | None = None) -> str:
+def render_html(stats: dict, mcp_stats_path: Path | None = None, title: str = "Cruscotto Italia") -> str:
     days = list(stats["per_day"].keys())
     if len(days) == 1:
         days_range = f"Statistiche del giorno {days[0]}"
