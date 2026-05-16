@@ -11,10 +11,10 @@ export async function handleInfo(_req: Request, _env: Env): Promise<Response> {
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>Cruscotto Italia · MCP Server</title>
-<meta name="description" content="Server Model Context Protocol che federa diciannove dataset pubblici sui comuni italiani. Connettilo a Claude.ai (web e mobile), Claude Desktop, ChatGPT o client MCP generici.">
+<meta name="description" content="Server Model Context Protocol che federa ventuno dataset pubblici sui comuni italiani. Connettilo a Claude.ai (web e mobile), Claude Desktop, ChatGPT o client MCP generici.">
 <!-- Design Italia: stessi token e font del frontend Cruscotto Italia -->
-<link rel="stylesheet" href="https://cruscotto-italia.piersoftckan.biz/css/tokens.css">
-<link rel="stylesheet" href="https://cruscotto-italia.piersoftckan.biz/css/base.css">
+<link rel="stylesheet" href="https://cruscotto-italia.dati.gov.it/css/tokens.css">
+<link rel="stylesheet" href="https://cruscotto-italia.dati.gov.it/css/base.css">
 <style>
 /* === MCP server landing — stili specifici === */
 body { padding: 0; }
@@ -221,8 +221,8 @@ pre code {
 <div class="mini-mast">
   <div class="wrap">
     <div class="mini-brand-wrap">
-      <a href="https://cruscotto-italia.piersoftckan.biz" class="mini-brand">Cruscotto <span class="it">Italia</span></a>
-      <span class="mini-brand-sub">MCP Server · 20 fonti istituzionali</span>
+      <a href="https://cruscotto-italia.dati.gov.it" class="mini-brand">Cruscotto <span class="it">Italia</span></a>
+      <span class="mini-brand-sub">MCP Server · 22 fonti istituzionali</span>
     </div>
   </div>
 </div>
@@ -231,7 +231,7 @@ pre code {
 
   <div class="eyebrow">§ MCP Server</div>
   <h1>Cruscotto Italia <em>MCP</em>.</h1>
-  <p class="lead">Server <a href="https://modelcontextprotocol.io" target="_blank" rel="noopener">Model Context Protocol</a> che federa diciannove dataset pubblici sui comuni italiani (ANAC, BDAP-MOP, SIOPE, PNRR, ISPRA Suolo/IdroGEO/Rifiuti, ISPRA SNPA qualit&agrave; aria, ISTAT POSAS/Censimento/Veicoli/Incidenti, MIUR scuole, ACI nuove iscrizioni, MEF Federalismo Fiscale, MEF Patrimonio Immobiliare, Agenzia delle Entrate ANNCSU civici e strade, Ministero della Salute farmacie/parafarmacie/posti letto ospedalieri, GSE/MASE Piattaforma Unica Nazionale punti di ricarica veicoli elettrici, AGCOM Broadband Map copertura banda larga, MIMIT Osservatorio Prezzi Carburanti, Ministero del Lavoro Registro Unico Nazionale Terzo Settore RUNTS). Connettilo al tuo client LLM per interrogare i dati ufficiali con linguaggio naturale.</p>
+  <p class="lead">Server <a href="https://modelcontextprotocol.io" target="_blank" rel="noopener">Model Context Protocol</a> che federa ventuno dataset pubblici sui comuni italiani (ANAC, BDAP-MOP, SIOPE, PNRR, ISPRA Suolo/IdroGEO/Rifiuti, ISPRA SNPA qualit&agrave; aria, ISTAT POSAS/Censimento/Veicoli/Incidenti, MIUR scuole, ACI nuove iscrizioni, MEF Federalismo Fiscale, MEF Patrimonio Immobiliare, Agenzia delle Entrate ANNCSU civici e strade, Ministero della Salute farmacie/parafarmacie/posti letto ospedalieri, GSE/MASE Piattaforma Unica Nazionale punti di ricarica veicoli elettrici, AGCOM Broadband Map copertura banda larga, MIMIT Osservatorio Prezzi Carburanti, Ministero del Lavoro Registro Unico Nazionale Terzo Settore RUNTS, ISTAT Archivio Statistico Imprese Attive ASIA UL, ISTAT Matrice Pendolarismo 2021 Censimento permanente). Connettilo al tuo client LLM per interrogare i dati ufficiali con linguaggio naturale.</p>
 
   <h2>Come <em>connetterlo</em></h2>
 
@@ -243,7 +243,7 @@ pre code {
     <li>Compila il form:
       <ul>
         <li><strong>Name</strong>: <code>Cruscotto Italia</code></li>
-        <li><strong>Remote MCP server URL</strong>: <code>https://cruscotto-italia-mcp.piersoftckan.biz/mcp</code></li>
+        <li><strong>Remote MCP server URL</strong>: <code>https://cruscotto-italia-mcp.agid.workers.dev/mcp</code></li>
       </ul>
     </li>
     <li>Lascia <em>Advanced settings</em> vuoto (nessuna autenticazione richiesta).</li>
@@ -260,7 +260,7 @@ pre code {
       "args": [
         "-y",
         "mcp-remote",
-        "https://cruscotto-italia-mcp.piersoftckan.biz/mcp"
+        "https://cruscotto-italia-mcp.agid.workers.dev/mcp"
       ]
     }
   }
@@ -268,21 +268,21 @@ pre code {
   <p>Riavvia Claude Desktop. Il file di configurazione si trova in <code>~/Library/Application Support/Claude/</code> (macOS) o <code>%APPDATA%\\Claude\\</code> (Windows).</p>
 
   <h3>Skill <em>opzionale</em> per Claude</h3>
-  <p>Per ottenere risposte pi&ugrave; mirate quando l'utente chiede dati su uno o pi&ugrave; comuni italiani, &egrave; disponibile una <em>skill</em> Claude che documenta l'uso del connettore: inventario dei 6 tool, schema completo di <code>comune_kpi</code> (~55 KPI sintetici, ~620 token) e <code>comune_dashboard</code> (vista completa con sezioni <code>immobili_pa</code>, <code>anncsu</code>, <code>sanita_mds</code> per farmacie/ospedali, <code>pun</code> per ricarica EV, <code>agcom_bbmap</code> per banda larga FTTH/FTTC, <code>carburanti</code> per prezzi MIMIT, <code>runts</code> per Terzo Settore, <code>asia</code> per imprese e addetti), endpoint REST <code>/data/anncsu_full/&lt;istat&gt;.json</code>, pattern operativi e <em>caveat</em> per sezione.</p>
+  <p>Per ottenere risposte pi&ugrave; mirate quando l'utente chiede dati su uno o pi&ugrave; comuni italiani, &egrave; disponibile una <em>skill</em> Claude che documenta l'uso del connettore: inventario dei 6 tool, schema completo di <code>comune_kpi</code> (~55 KPI sintetici, ~620 token) e <code>comune_dashboard</code> (vista completa con sezioni <code>immobili_pa</code>, <code>anncsu</code>, <code>sanita_mds</code> per farmacie/ospedali, <code>pun</code> per ricarica EV, <code>agcom_bbmap</code> per banda larga FTTH/FTTC, <code>carburanti</code> per prezzi MIMIT, <code>runts</code> per Terzo Settore, <code>asia</code> per imprese e addetti, <code>pendolarismo</code> per matrice flussi casa-lavoro/studio), endpoint REST <code>/data/anncsu_full/&lt;istat&gt;.json</code>, pattern operativi e <em>caveat</em> per sezione.</p>
   <p>Scarica il pacchetto e caricalo nelle <em>Skills</em> di Claude (UI o API):</p>
-  <p><a href="/skills/cruscotto-italia-workflow-v1.7.0.zip" download><strong>cruscotto-italia-workflow-v1.7.0.zip</strong></a></p>
+  <p><a href="/skills/cruscotto-italia-workflow-v1.8.0.zip" download><strong>cruscotto-italia-workflow-v1.8.0.zip</strong></a></p>
 
   <h3>ChatGPT (Custom GPT)</h3>
-  <p>Nei custom GPT con supporto MCP, aggiungi un nuovo server con URL <code>https://cruscotto-italia-mcp.piersoftckan.biz/mcp</code> e tipo JSON-RPC 2.0. Nessuna autenticazione richiesta.</p>
+  <p>Nei custom GPT con supporto MCP, aggiungi un nuovo server con URL <code>https://cruscotto-italia-mcp.agid.workers.dev/mcp</code> e tipo JSON-RPC 2.0. Nessuna autenticazione richiesta.</p>
 
   <h3>Client generico / curl</h3>
-  <pre><code>curl -X POST https://cruscotto-italia-mcp.piersoftckan.biz/mcp \\
+  <pre><code>curl -X POST https://cruscotto-italia-mcp.agid.workers.dev/mcp \\
   -H "Content-Type: application/json" \\
   -H "Accept: application/json, text/event-stream" \\
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'</code></pre>
 
   <h2>Tool <em>disponibili</em></h2>
-  <p>6 strumenti MCP. <code>search_comune</code> va sempre chiamato per primo quando l'utente fornisce un nome di comune, per ottenere il codice ISTAT. Per <strong>query puntuali e confronti tra comuni</strong> (es. "popolazione di Bari", "Verona vs Bari su PNRR") usa <code>comune_kpi</code> (~620 token, 55 KPI sintetici). Per <strong>vista dettagliata di un singolo comune</strong> con tutte le sezioni complete (mappe, top liste, time series) usa <code>comune_dashboard</code> (vista completa 23 sezioni).</p>
+  <p>6 strumenti MCP. <code>search_comune</code> va sempre chiamato per primo quando l'utente fornisce un nome di comune, per ottenere il codice ISTAT. Per <strong>query puntuali e confronti tra comuni</strong> (es. "popolazione di Bari", "Verona vs Bari su PNRR") usa <code>comune_kpi</code> (~620 token, 55 KPI sintetici). Per <strong>vista dettagliata di un singolo comune</strong> con tutte le sezioni complete (mappe, top liste, time series) usa <code>comune_dashboard</code> (vista completa 25 sezioni).</p>
 
   <div class="tools">
     <div class="tool-row"><div class="tool-name">mcp_info</div><div class="tool-desc">Metadata del server: versione, sorgenti integrate (20), freshness di ogni dataset.</div></div>
@@ -308,6 +308,7 @@ pre code {
     <div class="tool-row"><div class="tool-name">.carburanti</div><div class="tool-desc">Distributori di carburante e prezzi praticati (MIMIT Osservatorio Prezzi Carburanti, art. 51 L.99/2009): ~23.700 impianti su 5.324 comuni (69%), snapshot quotidiano "Prezzo alle 8 di mattina". KPI: totale impianti, split Stradali/Autostradali, pompe bianche %, mix bandiere (top 5 + Altre), prezzo medio per 7 carburanti (Benzina/Gasolio self e servito, GPL, Metano, HVO), prezzo minimo nel comune, freshness % prezzi aggiornati negli ultimi 7 giorni. Tutti i punti georeferenziati con prezzi correnti e carburanti premium proprietari (Shell V-Power, Hi-Q, ecc.) in prezzi_extra. Licenza IODL 2.0 (compatibile CC BY).</div></div>
     <div class="tool-row"><div class="tool-name">.runts</div><div class="tool-desc">Enti del Terzo Settore iscritti al Registro Unico Nazionale (Min. Lavoro RUNTS, D.Lgs 117/2017 art. 53): 145.898 enti su 7.547 comuni (95,3% copertura). KPI: totale enti, mix per sezione (ODV organizzazioni di volontariato, APS associazioni di promozione sociale, EF enti filantropici, IS imprese sociali, SMS societ&agrave; di mutuo soccorso, ETS altri enti del Terzo Settore), numero e percentuale enti iscritti al beneficio 5x1000, n. enti aderenti a reti associative, iscrizioni per anno. Mix nazionale: APS 47% &gt; ODV 27% &gt; IS 15% &gt; ETS 11% &gt; EF 0,4% &gt; SMS 0,1%. Lista enti con codice fiscale, repertorio, denominazione, sezione, legale rappresentante, rete, 5x1000, data iscrizione (cap 5000 enti ordinati per data discendente; Roma 6.616, Milano 3.716). Aggiornamento quotidiano (XLSX bulk PostBack ASP.NET). Licenza CC BY 4.0 ex art. 52 c.2 D.Lgs 82/2005 (CAD) - open data di default delle PA; pubblicato ai sensi del D.Lgs 117/2017 art. 53 (pubblicit&agrave; legale RUNTS).</div></div>
     <div class="tool-row"><div class="tool-name">.asia</div><div class="tool-desc">Imprese e addetti per comune (ISTAT - Archivio Statistico Imprese Attive Unit&agrave; Locali, ASIA UL): copertura 100% dei 7.896 comuni. KPI: numero unit&agrave; locali (UL) attive, addetti media annua, dimensione media UL (addetti/UL), variazione % year-on-year, mix per classe dimensionale (W0_9 micro, W10_49 piccole, W50_249 medie, W_GE250 grandi), top 10 settori per UL e per addetti (ATECO 2 cifre NACE Rev.2 - 88 divisioni economiche), serie storica 2018-2023 (6 anni), dettaglio completo per ogni settore × classe addetti per l'anno pi&ugrave; recente. Dataflow SDMX 183_1163_DF_DICA_ASIAULP_TERRIFDATA_7 da esploradati.istat.it. Caveat: ASIA conta unit&agrave; locali, non imprese giuridiche — un'impresa con pi&ugrave; sedi in comuni diversi compare in ciascun comune. Aggiornamento annuale (~Q4 ISTAT, latency ~2 anni: nel 2026 latest_year=2023). Licenza CC BY 3.0 IT.</div></div>
+    <div class="tool-row"><div class="tool-name">.pendolarismo</div><div class="tool-desc">Matrice di pendolarismo casa&ndash;lavoro e casa&ndash;studio del Censimento permanente 2021 (ISTAT, pubblicato il 2 ottobre 2025): rilevazione degli spostamenti quotidiani della popolazione residente per coppia origine&ndash;destinazione tra comuni italiani. KPI per comune: pendolari totali in uscita, pendolari in entrata, saldo giornaliero, indice di auto-contenimento (% di residenti che lavorano o studiano nel proprio comune), top 10 destinazioni e top 10 origini dei flussi. Copertura 100% dei 7.896 comuni, ~17,3M flussi pendolari totali. Aggiornamento decennale (prossimo: Censimento permanente 2031). Licenza CC BY 3.0 IT.</div></div>
   </div>
 
   <h2>Esempi di <em>prompt</em></h2>
@@ -331,8 +332,8 @@ pre code {
   <p>Tutti i dati provengono da open data ufficiali con licenza CC-BY 4.0, IODL 2.0 o, in assenza di licenza espressa da parte di soggetti art. 2 c.2 CAD, CC BY 4.0 ai sensi del principio "open by default" di cui all'art. 52 c.2 D.Lgs 82/2005 (Codice dell'Amministrazione Digitale) e delle Linee Guida Open Data AgID (Det. 183/2023). L'aggregazione per codice ISTAT è eseguita da pipeline Python che pubblicano su Cloudflare R2; il worker fa solo lookup e composizione.</p>
 
   <footer class="mcp-footer">
-    <a href="https://cruscotto-italia.piersoftckan.biz">↗ Frontend Cruscotto Italia</a>
-    <a href="https://github.com/piersoft/cruscotto-italia">↗ Codice GitHub</a>
+    <a href="https://cruscotto-italia.dati.gov.it">↗ Frontend Cruscotto Italia</a>
+    <a href="https://github.com/AgID/cruscotto-italia">↗ Codice GitHub</a>
     <a href="https://modelcontextprotocol.io">↗ Model Context Protocol</a>
   </footer>
 
