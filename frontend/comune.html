@@ -8829,38 +8829,6 @@ async function setupDownloadButton(istat, dashboard) {
   const btn = document.getElementById('btn-download-zip');
   if (!btn || typeof JSZip === 'undefined') return;
 
-  // [MAINTENANCE 2026-05-15] Download ZIP temporaneamente disabilitato.
-  // Per riattivare: rimuovere questo blocco fino al commento END MAINTENANCE.
-  // Il bottone resta visibile e cliccabile per non rompere il layout, ma
-  // il click mostra solo un messaggio informativo e non genera lo ZIP.
-  btn.addEventListener('click', (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    // Banner inline gentile invece di alert nativo (UX migliore + accessibile)
-    let banner = document.getElementById('download-maintenance-banner');
-    if (!banner) {
-      banner = document.createElement('div');
-      banner.id = 'download-maintenance-banner';
-      banner.setAttribute('role', 'status');
-      banner.setAttribute('aria-live', 'polite');
-      banner.style.cssText = 'position:fixed;top:80px;left:50%;transform:translateX(-50%);' +
-        'background:#fff8e6;border:1px solid #d9a200;border-left:4px solid #d9a200;' +
-        'border-radius:8px;padding:14px 22px;box-shadow:0 4px 14px rgba(0,0,0,0.12);' +
-        'z-index:9999;max-width:520px;font-size:14px;line-height:1.5;color:#3a3a3a;' +
-        'font-family:inherit;';
-      banner.innerHTML = '<strong>Download temporaneamente non disponibile.</strong><br>' +
-        'Il servizio di esportazione ZIP è in manutenzione. ' +
-        'I dati restano consultabili online in tutte le tab. ' +
-        'Per accordi di riuso massivo dei dati aggregati, contattare ' +
-        '<a href="mailto:piersoft2@gmail.com" style="color:#0066CC;">piersoft2@gmail.com</a>.';
-      document.body.appendChild(banner);
-      setTimeout(() => { banner.style.transition = 'opacity .4s'; banner.style.opacity = '0';
-        setTimeout(() => banner.remove(), 400); }, 5500);
-    }
-  });
-  return;
-  // [END MAINTENANCE — il codice originale segue, intoccato] ---------------
-
   btn.addEventListener('click', async () => {
     const originalLabel = btn.querySelector('.label').textContent;
     btn.disabled = true;
