@@ -13,8 +13,8 @@ export async function handleInfo(_req: Request, _env: Env): Promise<Response> {
 <title>Cruscotto Italia · MCP Server</title>
 <meta name="description" content="Server Model Context Protocol che federa dataset pubblici sui comuni italiani. Connettilo a Claude.ai (web e mobile), Claude Desktop, ChatGPT o client MCP generici.">
 <!-- Design Italia: stessi token e font del frontend Cruscotto Italia -->
-<link rel="stylesheet" href="https://cruscotto-italia.dati.gov.it/css/tokens.css">
-<link rel="stylesheet" href="https://cruscotto-italia.dati.gov.it/css/base.css">
+<link rel="stylesheet" href="https://cruscotto-italia.piersoftckan.biz/css/tokens.css">
+<link rel="stylesheet" href="https://cruscotto-italia.piersoftckan.biz/css/base.css">
 <style>
 /* === MCP server landing — stili specifici === */
 body { padding: 0; }
