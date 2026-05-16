@@ -27,6 +27,7 @@ Cerchi un comune ("Lecce") e ottieni una vista a 360° su:
 - ⚡ **Punti di ricarica veicoli elettrici** (GSE/MASE — Piattaforma Unica Nazionale)
 - ⛽ **Distributori carburante e prezzi** (MIMIT — Osservatorio Prezzi Carburanti)
 - 🤝 **Enti del Terzo Settore** (Ministero del Lavoro — RUNTS, D.Lgs 117/2017: ODV, APS, EF, IS, SMS, ETS)
+- 🏭 **Imprese e addetti** (ISTAT — ASIA UL: unità locali, addetti, ATECO 2 cifre, classi dimensionali, serie 2018-2023)
 
 L'elenco completo, con licenze, frequenze di aggiornamento e link diretti alle fonti, è in [`about.html`](https://cruscotto-italia.piersoftckan.biz/about.html).
 
@@ -39,7 +40,7 @@ Frontend (HTML statico) → Worker (Cloudflare) → R2 (JSON shard per comune)
                               ↑
               ETL Python (GitHub Actions, cadenze multiple)
                               ↑
-  19 fonti istituzionali · 15 enti emittenti:
+  20 fonti istituzionali · 15 enti emittenti:
    ANAC · BDAP-MOP · SIOPE · Italia Domani (PNRR)
    ISTAT (POSAS, Censimento, Turismo, Veicoli, Incidenti)
    MIUR · ISPRA (Suolo/IdroGEO/Rifiuti, SNPA aria) · ACI LOD
@@ -65,7 +66,7 @@ Cruscotto Italia espone un server [Model Context Protocol](https://modelcontextp
 
 **Tool esposti** (5): `mcp_info`, `search_comune`, `comune_dashboard`, `comune_opere_dettaglio`, `anncsu_civico_search`.
 
-`comune_dashboard` è il tool principale: una sola chiamata restituisce 22 sezioni con tutti i dati del comune. `comune_opere_dettaglio` fornisce la lista dei singoli progetti BDAP filtrati al 2025. `anncsu_civico_search` consente query puntuali sui numeri civici ANNCSU con filtri server-side (odonimo, civico).
+`comune_dashboard` è il tool principale: una sola chiamata restituisce 23 sezioni con tutti i dati del comune. `comune_opere_dettaglio` fornisce la lista dei singoli progetti BDAP filtrati al 2025. `anncsu_civico_search` consente query puntuali sui numeri civici ANNCSU con filtri server-side (odonimo, civico).
 
 **Rate limit**: 60 richieste/minuto per IP.
 
@@ -77,7 +78,7 @@ Cruscotto Italia espone un server [Model Context Protocol](https://modelcontextp
 
 ### Skill Claude opzionale
 
-Per ottenere risposte più mirate è disponibile una skill Claude che documenta l'uso del connettore (inventario dei 5 tool, schema di `comune_dashboard` con tutte le sezioni — inclusa la nuova `runts` per gli enti del Terzo Settore, endpoint REST `/data/anncsu_full/<istat>.json`, pattern operativi e caveat per sezione). Scaricabile da [`/skills/cruscotto-italia-workflow-v1.6.0.zip`](https://cruscotto-italia-mcp.piersoftckan.biz/skills/cruscotto-italia-workflow-v1.6.0.zip).
+Per ottenere risposte più mirate è disponibile una skill Claude che documenta l'uso del connettore (inventario dei 5 tool, schema di `comune_dashboard` con tutte le sezioni — inclusa la nuova `asia` per imprese e addetti ISTAT ASIA UL, endpoint REST `/data/anncsu_full/<istat>.json`, pattern operativi e caveat per sezione). Scaricabile da [`/skills/cruscotto-italia-workflow-v1.7.0.zip`](https://cruscotto-italia-mcp.piersoftckan.biz/skills/cruscotto-italia-workflow-v1.7.0.zip).
 
 ### System prompt suggerito
 
@@ -88,7 +89,7 @@ Hai accesso al connector "Cruscotto Italia" che fornisce dati civici sui ~7.900 
 
 Linee guida:
 - Quando l'utente menziona un comune per nome, chiama PRIMA search_comune per ottenere il codice ISTAT esatto, poi usa quel codice negli altri tool.
-- Per domande generali su un comune ("dimmi di Bergamo", "dati di Milano") usa comune_dashboard: contiene tutto in una chiamata (22 sezioni: anagrafica, demografia, profilo, turismo, PNRR, territorio, aria, opere, contratti ANAC, spese SIOPE, scuole, veicoli, redditi, immobili PA, ANNCSU, sanità, punti di ricarica EV, banda larga FTTH/FTTC, distributori carburanti, enti del Terzo Settore RUNTS).
+- Per domande generali su un comune ("dimmi di Bergamo", "dati di Milano") usa comune_dashboard: contiene tutto in una chiamata (23 sezioni: anagrafica, demografia, profilo, turismo, PNRR, territorio, aria, opere, contratti ANAC, spese SIOPE, scuole, veicoli, redditi, immobili PA, ANNCSU, sanità, punti di ricarica EV, banda larga FTTH/FTTC, distributori carburanti, enti del Terzo Settore RUNTS, imprese e addetti ISTAT ASIA UL).
 - Per il dettaglio dei progetti BDAP (lista CUP filtrabile al 2025) usa comune_opere_dettaglio; per query puntuali su civici (es. "quote di Via X", "esiste il civico Y in Z") usa anncsu_civico_search.
 - In caso di omonimi (es. "San Teodoro" esiste in Sardegna e Sicilia) mostra all'utente i match e chiedi quale.
 - Se l'utente non specifica il comune, chiedi chiarimento prima di chiamare i tool.
@@ -228,6 +229,7 @@ cruscotto-italia/
 │   │   ├── agcom_bbmap.py      ← AGCOM Broadband Map (copertura banda larga FTTH/FTTC)
 │   │   ├── carburanti.py       ← MIMIT Osservatorio Prezzi Carburanti (distributori + prezzi)
 │   │   ├── runts.py            ← Min. Lavoro RUNTS (enti del Terzo Settore: ODV/APS/EF/IS/SMS/ETS)
+│   │   ├── asia.py             ← ISTAT ASIA UL (imprese e addetti per comune × ATECO × classi dimensionali, serie 2018-2023)
 │   │   └── dashboard.py        ← unified shard A1 (single-fetch per comune)
 │   └── lib/
 │       ├── r2.py
