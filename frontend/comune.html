@@ -8891,133 +8891,23 @@ LICENSE.txt e sono disponibili sui rispettivi portali open data.
 L'aggregazione in formato unico (dati-completi.json) è opera di
 Cruscotto Italia.
 
-NOTA SUI CIVICI ANNCSU
-----------------------
-La sezione "anncsu" del JSON contiene fino a 1000 numeri civici di
-esempio (campo "punti"). Per il dataset completo dei civici di
-questo comune (Lecce ~48mila, Roma ~516mila, ecc.), interroga
-l'endpoint:
+NOTE TECNICHE
+-------------
+Per il dettaglio dei campi, delle frequenze di aggiornamento e dei
+caveat per fonte, consultare il file METADATI.csv accluso e la pagina
+/about.html del sito Cruscotto Italia.
 
-  https://cruscotto-italia-mcp.agid.workers.dev/data/anncsu_full/${istat}.json
+Alcune sezioni dello ZIP hanno cap quantitativi per limitare la
+dimensione del file:
+- anncsu.punti: max 1000 civici di esempio (full set su endpoint
+  REST /data/anncsu_full/<istat>.json)
+- pun.punti, immobili_pa.punti, carburanti.punti: max 500 punti
+- runts.enti: max 5.000 enti (solo Roma è cappata, 6.616 totali)
 
-NOTA SUI PRESIDI SANITARI MIN. SALUTE
--------------------------------------
-Le sezioni "farmacie" e "parafarmacie" includono i campi "lat_raw" e
-"lon_raw" che preservano sempre le coordinate originali dichiarate
-dal Ministero della Salute. Il tasso di errore upstream osservato
-(coord fuori comune dichiarato) è del 5-15%. Per i record con
-coordinate errate o mancanti, "lat" e "lon" sono state ricalcolate
-incrociando l'odonimo+civico con l'archivio ANNCSU. Il campo
-"coord_source" indica la provenienza finale:
-  - "mds":      coordinate originali (dentro centroide comune)
-  - "anncsu":   ricalcolate via ANNCSU (specificare strategia in
-                "coord_strategy": odo_civ_exact / odo_civ_no_esp / odo_only)
-  - "dropped":  coord MdS fuori comune, no match ANNCSU (no marker)
-  - "no_coord": no coord upstream, no match ANNCSU
-
-Gli stabilimenti ospedalieri (anno 2023) non hanno lat/lon nel
-dataset MdS originale e quindi non sono georeferenziati nei punti
-individuali; per la mappa visuale del sito web vengono disposti
-attorno al centroide farmacie del comune con offset radiale.
-
-NOTA SUI PUNTI DI RICARICA PUN
-------------------------------
-La sezione "pun" contiene i punti di ricarica EVSE registrati sulla
-Piattaforma Unica Nazionale (PUN) gestita da GSE per conto del MASE.
-Il campo "kpi" aggrega potenza totale (kW), mix per categoria (Slow/
-Quick/Fast/HPC/Ultra fast), distribuzione AC/DC, conteggio attivi/
-non attivi. Il campo "punti" contiene un campione fino a 500 punti
-con lat, lon, indirizzo, categoria potenza, stato, tipologia
-corrente. La pubblicazione di questi dati avviene ai sensi
-dell'art. 52 c.2 D.Lgs 82/2005 (CAD) come open data di default
-delle Pubbliche Amministrazioni — CC BY 4.0 con attribuzione a
-GSE / Piattaforma Unica Nazionale. Aggiornamento quotidiano
-(~03:00 UTC).
-
-NOTA SULLA COPERTURA BANDA LARGA AGCOM
---------------------------------------
-La sezione "agcom_bbmap" contiene la reportistica delle consistenze
-dei punti raggiunti dalla rete cablata, pubblicata dall'Autorità per
-le Garanzie nelle Comunicazioni (AGCOM) ai sensi dell'art. 22 del
-Codice delle Comunicazioni Elettroniche. Il campo "kpi" include:
-copertura FTTH DESI (metrica UE ufficiale, Digital Economy and Society
-Index), copertura FTTH entro 20m dall'abitazione (metrica stringente
-"fibra effettiva"), confidenza DESI, famiglie residenti e raggiunte
-(totali + entro 20m), celle 20×20m raggiunte da FTTH/FTTC, punti
-dichiarati e geograficamente distinti, indirizzi postali raggiunti.
-Copertura nazionale completa: 7.896 comuni su 7.896 (100%). Dato
-corrente al 31/12/2025 (rilascio AGCOM 10/02/2026). Aggiornamento
-trimestrale. Pubblicato ai sensi dell'art. 52 c.2 D.Lgs 82/2005 (CAD)
-come open data di default delle PA — CC BY 4.0 con attribuzione ad
-AGCOM. Le geometrie dettagliate (polilinee strade FTTH/rame) NON sono
-incluse nel JSON: la mappa di dettaglio è disponibile sul portale
-ufficiale AGCOM (https://geo.agcom.it/agcomapps/BB4/BB4_BBwired_na_app16_4/),
-linkata da Cruscotto Italia via deep-link con centro e zoom calcolati
-in base alla taglia del comune.
-
-NOTA SUI DISTRIBUTORI DI CARBURANTE (MIMIT)
--------------------------------------------
-La sezione "carburanti" contiene l'anagrafica completa dei distributori
-di carburante attivi nel comune e i prezzi correnti comunicati dai
-gestori al MIMIT, pubblicati ai sensi dell'art. 51 della Legge 99/2009.
-Il campo "kpi" aggrega: numero totale impianti, split Stradali vs
-Autostradali, numero pompe bianche, mix bandiere (top 5 + Altre),
-prezzo medio per i 7 carburanti core (Benzina e Gasolio in versione
-self e servito, GPL, Metano, HVO), prezzo minimo nel comune per Benzina
-e Gasolio self, freshness (% di impianti con prezzo aggiornato negli
-ultimi 7 giorni). Il campo "punti" contiene TUTTI gli impianti del
-comune (senza cap) con lat, lon, indirizzo, bandiera, tipo, prezzi
-correnti per i carburanti core e premium proprietari (Shell V-Power,
-Hi-Q Diesel, Supreme Diesel, Blue Diesel) in "prezzi_extra".
-Aggiornamento quotidiano (snapshot "Prezzo alle 8 di mattina"); per
-i comuni piccoli senza distributori la sezione è omessa.
-Licenza IODL 2.0 (attribution-only, compatibile CC BY).
-
-NOTA SUGLI ENTI DEL TERZO SETTORE (RUNTS — MIN. LAVORO)
--------------------------------------------------------
-La sezione "runts" contiene gli enti del Terzo Settore con SEDE LEGALE
-nel comune iscritti al Registro Unico Nazionale del Terzo Settore (RUNTS),
-istituito dal D.Lgs 117/2017 (Codice del Terzo Settore) e attivo dal
-23 novembre 2021 dopo aver assorbito i precedenti registri di
-Volontariato, APS e Onlus. Pubblicato dal Ministero del Lavoro e delle
-Politiche Sociali ai sensi dell'art. 53 del Codice (pubblicità legale).
-
-Il campo "kpi" aggrega: numero totale enti, mix per sezione (ODV
-Organizzazioni di Volontariato, APS Associazioni di Promozione Sociale,
-EF Enti Filantropici, IS Imprese Sociali, SMS Società di Mutuo Soccorso,
-ETS Altri Enti del Terzo Settore), numero e percentuale enti iscritti al
-beneficio 5x1000 (~52% nazionale), numero enti aderenti a una rete
-associativa, distribuzione delle iscrizioni per anno.
-
-Il campo "enti" è cappato a 5.000 record ordinati per data di iscrizione
-DECRESCENTE (i più recenti per primi). I campi sono: cf (codice fiscale),
-rep (id repertorio RUNTS), denom (denominazione), sez (sigla sezione),
-rapp (legale rappresentante), rete (boolean rete associativa), x1000
-(boolean 5x1000), data_iscr (data iscrizione ISO YYYY-MM-DD). Se "enti"
-è troncato, sono presenti i flag _enti_truncated, _enti_total, _enti_cap.
-Solo Roma è cappata (6.616 enti totali). I KPI aggregati nei grafici
-sono calcolati sul totale completo, non sulla lista cappata.
-
-IMPORTANTE: il RUNTS registra la SEDE LEGALE. Un ente con sede legale a
-Lecce che opera in tutta la Puglia compare SOLO nello shard di Lecce.
-Per domande sulla copertura operativa dei servizi, questo dato è solo
-una proxy. Roma in particolare presenta un bias significativo (sede
-legale di ETS nazionali tipo AVIS Nazionale, ANPAS, Banco Alimentare).
-
-Il picco di iscrizioni nel 2022 è dovuto alla TRASMIGRAZIONE dei
-registri preesistenti (~52% del totale nazionale ha data_iscr=2022),
-non a nuove costituzioni. Per trend reali di crescita del Terzo Settore
-guardare il 2023+. L'anno corrente è ovviamente parziale.
-
-Copertura nazionale: 7.547 comuni su 7.918 hanno almeno un ente
-registrato (95,3%); i ~371 comuni residui sono micro-comuni montani.
-Aggiornamento quotidiano (file XLSX bulk YYYYMMDD_iscritti_v1.0.xlsx
-scaricato via PostBack ASP.NET da servizi.lavoro.gov.it/runts/).
-
-Licenza: CC BY 4.0 ex art. 52 c.2 D.Lgs 82/2005 (CAD) - open data di
-default delle PA, in coerenza con le Linee Guida Open Data AgID
-(Determinazione 183/2023). Dato pubblicato ai sensi del D.Lgs 117/2017
-art. 53 (pubblicita' legale RUNTS).
+I dati di origine sono pubblicati dalle istituzioni elencate in
+LICENSE.txt e disponibili sui rispettivi portali open data.
+L'aggregazione in formato unico (dati-completi.json) è opera di
+Cruscotto Italia.
 
 `;
       zip.file('README.txt', readme);
