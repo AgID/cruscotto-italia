@@ -18,8 +18,10 @@ export const mcpInfo: ToolDefinition = {
   handler: async (_args: Record<string, unknown>, env: Env) => {
     let manifest: Record<string, unknown> | null = null;
     try {
-      const obj = await env.DATA.get("manifest.json");
-      if (obj) manifest = (await obj.json()) as Record<string, unknown>;
+      const r = await fetch(`${env.DATA_BASE_URL}/manifest.json`, {
+        cf: { cacheTtl: 3600, cacheEverything: true },
+      });
+      if (r.ok) manifest = (await r.json()) as Record<string, unknown>;
     } catch {
       /* manifest may not exist on first deploy */
     }

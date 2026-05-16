@@ -34,12 +34,16 @@ export async function fetchR2Json<T = unknown>(
     }
   }
 
-  // 2. Fetch from R2
-  const obj = await env.DATA.get(r2Key);
-  if (!obj) {
+  // 2. Fetch from DATA_BASE_URL (B1: HTTPS instead of R2 binding)
+  const url = `${env.DATA_BASE_URL}/${r2Key}`;
+  const r = await fetch(url, { cf: { cacheTtl: 3600, cacheEverything: true } });
+  if (r.status === 404) {
     return null;
   }
-  const text = await obj.text();
+  if (!r.ok) {
+    throw new Error(`fetch ${r.status} on ${r2Key}`);
+  }
+  const text = await r.text();
   let parsed: T;
   try {
     parsed = JSON.parse(text) as T;

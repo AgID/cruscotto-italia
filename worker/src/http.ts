@@ -344,12 +344,12 @@ pre code {
 }
 
 export async function handleHealth(_req: Request, env: Env): Promise<Response> {
-  // Verifica che R2 e KV siano raggiungibili
+  // Verifica che DATA_BASE_URL e KV siano raggiungibili (B1: no R2 binding)
   let r2Ok = false;
   let kvOk = false;
   try {
-    await env.DATA.head("manifest.json");
-    r2Ok = true;
+    const r = await fetch(`${env.DATA_BASE_URL}/manifest.json`, { method: "HEAD" });
+    r2Ok = r.ok;
   } catch {
     /* manifest may not exist yet on first deploy — treat as warning */
   }
@@ -404,8 +404,10 @@ export async function handleAdmin(req: Request, env: Env): Promise<Response> {
 export async function handleDataAnncsuFull(istat: string, env: Env): Promise<Response> {
   const key = `anncsu_full/${istat}.json`;
   try {
-    const obj = await env.DATA.get(key);
-    if (!obj) {
+    const r = await fetch(`${env.DATA_BASE_URL}/${key}`, {
+      cf: { cacheTtl: 86400, cacheEverything: true },
+    });
+    if (r.status === 404) {
       return new Response(
         JSON.stringify({ error: "not_found", istat, key }),
         {
@@ -417,15 +419,18 @@ export async function handleDataAnncsuFull(istat: string, env: Env): Promise<Res
         }
       );
     }
-    return new Response(obj.body, {
+    if (!r.ok) {
+      throw new Error(`fetch ${r.status} on ${key}`);
+    }
+    return new Response(r.body, {
       status: 200,
       headers: {
         "Content-Type": "application/json; charset=utf-8",
-        // R2 invia già il body gzippato se Accept-Encoding lo permette.
+        // Body gzippato passthrough.
         "Cache-Control": "public, max-age=86400, immutable",
         "Access-Control-Allow-Origin": "*",
         // ETag già fornito da R2 per cache validation lato browser.
-        ...(obj.httpEtag ? { "ETag": obj.httpEtag } : {}),
+        ...(r.headers.get("etag") ? { "ETag": r.headers.get("etag") as string } : {}),
       },
     });
   } catch (err) {
@@ -451,8 +456,10 @@ export async function handleDataAnncsuFull(istat: string, env: Env): Promise<Res
 export async function handleDataSkill(filename: string, env: Env): Promise<Response> {
   const key = `skills/${filename}`;
   try {
-    const obj = await env.DATA.get(key);
-    if (!obj) {
+    const r = await fetch(`${env.DATA_BASE_URL}/${key}`, {
+      cf: { cacheTtl: 86400, cacheEverything: true },
+    });
+    if (r.status === 404) {
       return new Response(
         JSON.stringify({ error: "not_found", key }),
         {
@@ -464,14 +471,17 @@ export async function handleDataSkill(filename: string, env: Env): Promise<Respo
         }
       );
     }
-    return new Response(obj.body, {
+    if (!r.ok) {
+      throw new Error(`fetch ${r.status} on ${key}`);
+    }
+    return new Response(r.body, {
       status: 200,
       headers: {
         "Content-Type": "application/zip",
         "Content-Disposition": `attachment; filename="${filename}"`,
         "Cache-Control": "public, max-age=3600",
         "Access-Control-Allow-Origin": "*",
-        ...(obj.httpEtag ? { "ETag": obj.httpEtag } : {}),
+        ...(r.headers.get("etag") ? { "ETag": r.headers.get("etag") as string } : {}),
       },
     });
   } catch (err) {

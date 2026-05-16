@@ -2,25 +2,25 @@ name = "cruscotto-italia-mcp"
 main = "src/index.ts"
 compatibility_date = "2026-05-01"
 compatibility_flags = ["nodejs_compat"]
+
+# Account AgID (Dati@agid.gov.it's Account)
+account_id = "9e615f727c341cba62841a333b2a42a4"
+
+# Deploy iniziale su <name>.<account>.workers.dev
+# Il custom domain "cruscotto-italia-mcp.dati.gov.it" verra aggiunto via
+# dashboard dopo che il CNAME DNS sara propagato.
 workers_dev = true
-preview_urls = true
+preview_urls = false
 
-# Custom domain
-routes = [
-  { pattern = "cruscotto-italia-mcp.piersoftckan.biz", custom_domain = true }
-]
+# Architettura B1: NESSUN R2 binding
+# I dati shard JSON sono fetched via HTTPS dalla VM AgID (DATA_BASE_URL)
+# Durante il transitorio, DATA_BASE_URL punta al bucket R2 piersoft pubblico
+# (Public Development URL R2.dev).
 
-# R2 bucket per i Parquet
-[[r2_buckets]]
-binding = "DATA"
-bucket_name = "cruscotto-italia-data"
-preview_bucket_name = "cruscotto-italia-data-preview"
-
-# KV per cache delle query frequenti
+# KV CACHE (analytics + query cache)
 [[kv_namespaces]]
 binding = "CACHE"
-id = "9251e463afc3406b83f81e555a6e12b7"
-preview_id = "57a470d2e41d4e519a532e42713e9382"
+id = "25da2df609974316a22cdcb71f92228e"
 
 # Rate limiting binding nativo Cloudflare
 [[ratelimits]]
@@ -33,13 +33,18 @@ simple = { limit = 60, period = 60 }
 LOG_LEVEL = "info"
 CACHE_TTL_SECONDS = "3600"
 RATE_LIMIT_RPM = "60"
+# Base URL transitorio: R2.dev piersoft pubblico
+# Dopo migrazione VM AgID, verra cambiato in https://cruscotto-italia.dati.gov.it/data
+DATA_BASE_URL = "https://pub-ef6fc3efe6a3426292508de9d233334f.r2.dev"
 
 # Observability
 [observability]
 enabled = true
 
-# Production env (overrides)
+# Production env (overrides per deploy --env production)
 [env.production]
 name = "cruscotto-italia-mcp-prod"
+
 [env.production.vars]
 LOG_LEVEL = "warn"
+DATA_BASE_URL = "https://pub-ef6fc3efe6a3426292508de9d233334f.r2.dev"

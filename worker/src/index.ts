@@ -16,7 +16,7 @@ import { handleHealth, handleInfo, handleAdmin, handleDataAnncsuFull, handleData
 import { rateLimit } from "./lib/ratelimit.js";
 
 export interface Env {
-  DATA: R2Bucket;
+  DATA_BASE_URL: string;
   CACHE: KVNamespace;
   MCP_RATE_LIMITER: RateLimit;
   LOG_LEVEL: string;
