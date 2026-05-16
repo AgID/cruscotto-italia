@@ -737,8 +737,8 @@ def main() -> int:
     )
     ap.add_argument("--target", choices=["local", "r2"], default="local",
                     help="local: scrive solo in --outdir; r2: scrive shard + push R2")
-    ap.add_argument("--outdir", default="dist/asia",
-                    help="Directory shard locali (default: dist/asia)")
+    ap.add_argument("--outdir", default="/var/www/cruscotto-italia/data/asia",
+                    help="Directory shard locali (default: /var/www/cruscotto-italia/data/asia)")
     ap.add_argument("--skip-download", action="store_true",
                     help="Riusa cache CSV in /tmp/cruscotto_asia/")
     ap.add_argument("--force-download", action="store_true",

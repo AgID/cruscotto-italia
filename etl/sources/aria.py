@@ -735,8 +735,8 @@ def main() -> int:
     )
     parser.add_argument("--target", choices=["local", "r2"], default="local",
                         help="Output target: local files or R2 push")
-    parser.add_argument("--output-dir", default="output/aria",
-                        help="Local output directory for shards")
+    parser.add_argument("--outdir", default="/var/www/cruscotto-italia/data/aria",
+                        help="Local output directory for shards (default: /var/www/cruscotto-italia/data/aria)")
     parser.add_argument("--no-cache", action="store_true",
                         help="Re-download CSV ISPRA ignorando la cache locale")
     parser.add_argument("--force-shard-upload", action="store_true",
@@ -745,7 +745,7 @@ def main() -> int:
                         help="(debug) processa solo N comuni")
     args = parser.parse_args()
 
-    output_dir = Path(args.output_dir)
+    output_dir = Path(args.outdir)
     shard_dir = output_dir / "shards"
     aggr_path = output_dir / "aria-aggregato.json"
     output_dir.mkdir(parents=True, exist_ok=True)

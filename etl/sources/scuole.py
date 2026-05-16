@@ -320,7 +320,7 @@ def main() -> int:
                    help="A.S. codice (es '202526'). Default: A.S. corrente.")
     p.add_argument("--no-cache", action="store_true",
                    help="Forza re-download CSV upstream.")
-    p.add_argument("--outdir", default="dist/scuole",
+    p.add_argument("--outdir", default="/var/www/cruscotto-italia/data/scuole",
                    help="Output dir per --target=local")
     args = p.parse_args()
 

@@ -120,8 +120,8 @@ AGCOM_MAP_BASE = (
 R2_PREFIX = "agcom_bbmap"   # → R2: agcom_bbmap/<istat>.json
 R2_META_KEY = "agcom_bbmap/_meta.json"
 
-# Output locale
-DATA_DIR = Path("data/agcom_bbmap")
+# Output locale (default produzione VM AgID; override via --outdir)
+DEFAULT_OUTDIR = Path("/var/www/cruscotto-italia/data/agcom_bbmap")
 CACHE_DIR = Path(".cache/agcom_bbmap")
 
 USER_AGENT = (
@@ -484,15 +484,15 @@ def push_shards_r2(shards: dict[str, dict],
     return uploaded, n_same
 
 
-def write_shards_local(shards: dict[str, dict]) -> int:
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
+def write_shards_local(shards: dict[str, dict], outdir: Path) -> int:
+    outdir.mkdir(parents=True, exist_ok=True)
     n = 0
     for istat, payload in shards.items():
-        (DATA_DIR / f"{istat}.json").write_text(
+        (outdir / f"{istat}.json").write_text(
             json.dumps(payload, ensure_ascii=False, indent=2),
             encoding="utf-8")
         n += 1
-    log.info("agcom_local_done", written=n, dir=str(DATA_DIR))
+    log.info("agcom_local_done", written=n, dir=str(outdir))
     return n
 
 
@@ -502,6 +502,8 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         description="ETL AGCOM Broadband Map — copertura banda larga comunale")
     parser.add_argument("--target", choices=["local", "r2"], default="local")
+    parser.add_argument("--outdir", type=Path, default=DEFAULT_OUTDIR,
+                        help=f"Output dir per --target=local (default: {DEFAULT_OUTDIR})")
     parser.add_argument("--force", action="store_true",
                         help="Forza upload anche se SHA del CSV invariato")
     args = parser.parse_args()
@@ -550,7 +552,7 @@ def main() -> int:
 
     # Write
     if args.target == "local":
-        write_shards_local(shards)
+        write_shards_local(shards, args.outdir)
     else:
         push_shards_r2(shards, force=args.force)
         write_meta(sha, len(shards))

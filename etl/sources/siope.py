@@ -596,8 +596,9 @@ def main() -> int:
         help="Destinazione output shard"
     )
     parser.add_argument(
-        "--output-dir", type=Path, default=None,
-        help="Directory output locale (default: tempdir)"
+        "--outdir", type=Path,
+        default=Path("/var/www/cruscotto-italia/data/siope"),
+        help="Directory output locale (default: /var/www/cruscotto-italia/data/siope)"
     )
     parser.add_argument(
         "--regioni", type=str, default=None,
@@ -651,7 +652,7 @@ def main() -> int:
     else:
         regioni = all_regs
 
-    output_dir = args.output_dir or Path(tempfile.mkdtemp(prefix="cruscotto-siope-"))
+    output_dir = args.outdir
     log.info("etl_start",
              target=args.target,
              regioni=regioni,

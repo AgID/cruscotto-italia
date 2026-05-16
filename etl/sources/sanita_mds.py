@@ -1289,8 +1289,8 @@ def main() -> int:
     )
     parser.add_argument("--target", choices=["local", "r2"], default="local",
                         help="Output target: local files or R2 push")
-    parser.add_argument("--output-dir", default="output/sanita_mds",
-                        help="Local output directory")
+    parser.add_argument("--outdir", default="/var/www/cruscotto-italia/data/sanita_mds",
+                        help="Local output directory (default: /var/www/cruscotto-italia/data/sanita_mds)")
     parser.add_argument("--cache-dir", default="cache/sanita_mds",
                         help="Cache directory for downloaded CSVs")
     parser.add_argument("--no-cache", action="store_true",
@@ -1302,7 +1302,7 @@ def main() -> int:
                              "(default: abilitato se ENV R2_* presenti)")
     args = parser.parse_args()
 
-    output_dir = Path(args.output_dir)
+    output_dir = Path(args.outdir)
     shard_dir = output_dir / "shards"
     cache_dir = Path(args.cache_dir)
     aggr_path = output_dir / "sanita_mds-lookup.json"

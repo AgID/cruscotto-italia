@@ -967,8 +967,8 @@ def main() -> int:
     ap = argparse.ArgumentParser(description="ETL ANNCSU (toponomastica nazionale)")
     ap.add_argument("--target", choices=["local", "r2"], default="local",
                     help="local: scrive solo in --outdir; r2: scrive shard + push R2")
-    ap.add_argument("--outdir", default="dist/anncsu",
-                    help="Directory shard locali (default: dist/anncsu)")
+    ap.add_argument("--outdir", default="/var/www/cruscotto-italia/data/anncsu",
+                    help="Directory shard locali (default: /var/www/cruscotto-italia/data/anncsu)")
     ap.add_argument("--regioni", default="",
                     help="Sottoinsieme regioni (CSV, es. BASI,PUGL). Default: tutte 20.")
     ap.add_argument("--skip-download", action="store_true",
@@ -987,7 +987,7 @@ def main() -> int:
     ap.add_argument("--skip-sample", action="store_true",
                     help="Non genera/pusha gli shard sample (anncsu/). Utile "
                          "se --full-shards e gli sample sono già su R2.")
-    ap.add_argument("--full-outdir", default="dist/anncsu_full",
+    ap.add_argument("--full-outdir", default="/var/www/cruscotto-italia/data/anncsu_full",
                     help="Directory shard FULL locali (default: dist/anncsu_full)")
     args = ap.parse_args()
 

@@ -132,8 +132,8 @@ R2_PREFIX = "carburanti"               # → R2: carburanti/<istat>.json
 R2_META_KEY = "carburanti/_meta.json"
 R2_NAZIONALE_KEY = "carburanti/_nazionale.json"
 
-# Output locale
-DATA_DIR = Path("data/carburanti")
+# Output locale (default produzione VM AgID; override via --outdir)
+DEFAULT_OUTDIR = Path("/var/www/cruscotto-italia/data/carburanti")
 CACHE_DIR = Path(".cache/carburanti")
 
 # Elenco comuni ISTAT (riusa pattern di anagrafica/pun)
@@ -731,20 +731,20 @@ def push_shards_r2(shards: dict[str, dict],
     return uploaded, n_same
 
 
-def write_shards_local(shards: dict[str, dict], aggregati: dict) -> int:
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
+def write_shards_local(shards: dict[str, dict], aggregati: dict, outdir: Path) -> int:
+    outdir.mkdir(parents=True, exist_ok=True)
     n = 0
     for istat, payload in shards.items():
-        (DATA_DIR / f"{istat}.json").write_text(
+        (outdir / f"{istat}.json").write_text(
             json.dumps(payload, ensure_ascii=False, indent=2),
             encoding="utf-8",
         )
         n += 1
-    (DATA_DIR / "_nazionale.json").write_text(
+    (outdir / "_nazionale.json").write_text(
         json.dumps(aggregati, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
-    log.info("carburanti_local_done", written=n, dir=str(DATA_DIR))
+    log.info("carburanti_local_done", written=n, dir=str(outdir))
     return n
 
 
@@ -755,6 +755,8 @@ def main() -> int:
         description="ETL Carburanti — anagrafica impianti + prezzi MIMIT"
     )
     parser.add_argument("--target", choices=["local", "r2"], default="local")
+    parser.add_argument("--outdir", type=Path, default=DEFAULT_OUTDIR,
+                        help=f"Output dir per --target=local (default: {DEFAULT_OUTDIR})")
     parser.add_argument("--force", action="store_true",
                         help="Forza esecuzione anche se hash CSV invariato")
     parser.add_argument("--no-cache", action="store_true",
@@ -811,7 +813,7 @@ def main() -> int:
 
     # Write
     if args.target == "local":
-        write_shards_local(shards, aggregati)
+        write_shards_local(shards, aggregati, args.outdir)
     else:
         push_shards_r2(shards, aggregati, force=args.force)
         write_last_known_hash(combined_hash, snapshot)

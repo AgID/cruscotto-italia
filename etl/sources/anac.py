@@ -240,7 +240,7 @@ def main() -> int:
     parser.add_argument("--years", type=str, default="2026", help="Comma-separated, e.g. 2025,2026")
     parser.add_argument("--months", type=str, default="1,2,3,4,5,6,7,8,9,10,11,12",
                         help="Comma-separated month list, default all 12")
-    parser.add_argument("--output-dir", type=Path, default=None)
+    parser.add_argument("--outdir", type=Path, default=Path("/var/www/cruscotto-italia/data"))
     parser.add_argument("--workdir", type=Path, default=Path("/tmp/cruscotto-anac-cache"),
                         help="Persistent download cache (won't re-download)")
     args = parser.parse_args()
@@ -256,11 +256,7 @@ def main() -> int:
     years = parse_years(args.years)
     months = parse_months(args.months)
 
-    if args.output_dir:
-        output_dir = args.output_dir
-    else:
-        tmpdir = tempfile.mkdtemp(prefix="cruscotto-anac-")
-        output_dir = Path(tmpdir) / "output"
+    output_dir = args.outdir
     output_dir.mkdir(parents=True, exist_ok=True)
     args.workdir.mkdir(parents=True, exist_ok=True)
 

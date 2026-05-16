@@ -21,7 +21,7 @@ Schema anagrafica_unificata:
     nome_categoria STRING (es. "Comuni e loro Consorzi e Associazioni")
 
 Usage (locale):
-    python -m etl.sources.anagrafica --target=local --output-dir=/tmp/cruscotto
+    python -m etl.sources.anagrafica --target=local --outdir=/tmp/cruscotto
 
 Usage (R2):
     python -m etl.sources.anagrafica --target=r2
@@ -571,8 +571,9 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="ETL anagrafica unificata (ISTAT + IPA)")
     parser.add_argument("--target", choices=["local", "r2"], default="local",
                         help="Where to write output (local=disk only, r2=upload to Cloudflare R2)")
-    parser.add_argument("--output-dir", type=Path, default=None,
-                        help="Local output dir (default: tempdir)")
+    parser.add_argument("--outdir", type=Path,
+                        default=Path("/var/www/cruscotto-italia/data"),
+                        help="Local output root (default: /var/www/cruscotto-italia/data)")
     parser.add_argument("--keep-workdir", action="store_true",
                         help="Don't delete temp workdir after run (debugging)")
     args = parser.parse_args()
@@ -585,13 +586,8 @@ def main() -> int:
         ]
     )
 
-    if args.output_dir:
-        output_dir = args.output_dir
-        workdir = output_dir / "_work"
-    else:
-        tmpdir = tempfile.mkdtemp(prefix="cruscotto-anag-")
-        output_dir = Path(tmpdir) / "output"
-        workdir = Path(tmpdir) / "work"
+    output_dir = args.outdir
+    workdir = output_dir / "_work"
 
     log.info("etl_start", target=args.target, output_dir=str(output_dir))
 

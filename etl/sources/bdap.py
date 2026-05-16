@@ -366,7 +366,7 @@ def push_to_r2(local_path: Path, key: str) -> dict:
 def main() -> int:
     parser = argparse.ArgumentParser(description="ETL BDAP MOP — opere pubbliche per comune")
     parser.add_argument("--target", choices=["local", "r2"], default="local")
-    parser.add_argument("--output-dir", type=Path, default=None)
+    parser.add_argument("--outdir", type=Path, default=Path("/var/www/cruscotto-italia/data"))
     parser.add_argument("--workdir", type=Path, default=Path("/tmp/cruscotto-bdap-cache"))
     parser.add_argument("--skip-shard", action="store_true",
                         help="Skip generation of per-comune detail shards")
@@ -386,10 +386,7 @@ def main() -> int:
         ]
     )
 
-    if args.output_dir:
-        output_dir = args.output_dir
-    else:
-        output_dir = Path(tempfile.mkdtemp(prefix="cruscotto-bdap-")) / "output"
+    output_dir = args.outdir
     output_dir.mkdir(parents=True, exist_ok=True)
     args.workdir.mkdir(parents=True, exist_ok=True)
 

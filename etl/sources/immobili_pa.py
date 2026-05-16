@@ -377,7 +377,7 @@ def main() -> int:
                    help="Destinazione output: local (file system) o r2 (Cloudflare)")
     p.add_argument("--no-cache", action="store_true",
                    help="Forza re-download dello ZIP")
-    p.add_argument("--outdir", default="dist/immobili_pa",
+    p.add_argument("--outdir", default="/var/www/cruscotto-italia/data/immobili_pa",
                    help="Directory output shard locali (solo --target=local)")
     args = p.parse_args()
 

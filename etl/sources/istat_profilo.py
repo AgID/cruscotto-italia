@@ -535,7 +535,7 @@ def main() -> int:
     parser.add_argument("--target", choices=["local", "r2"], default="local")
     parser.add_argument("--cache-dir", type=Path,
                         default=Path("/tmp/cruscotto-istat-profilo-cache"))
-    parser.add_argument("--output-dir", type=Path, default=None)
+    parser.add_argument("--outdir", type=Path, default=Path("/var/www/cruscotto-italia/data"))
     parser.add_argument("--no-cache", action="store_true",
                         help="Forza re-download dei CSV ISTAT anche se gia in cache")
     args = parser.parse_args()
@@ -549,11 +549,7 @@ def main() -> int:
     cache_dir = args.cache_dir
     cache_dir.mkdir(parents=True, exist_ok=True)
 
-    if args.output_dir:
-        output_dir = args.output_dir
-    else:
-        output_dir = Path(tempfile.mkdtemp(
-            prefix="cruscotto-istat-profilo-")) / "output"
+    output_dir = args.outdir
     output_dir.mkdir(parents=True, exist_ok=True)
 
     log.info("etl_start", target=args.target,

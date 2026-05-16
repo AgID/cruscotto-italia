@@ -90,7 +90,8 @@ EURO_CODES = {
 }
 
 CACHE_DIR = Path("/tmp/cruscotto-veicoli-cache")
-OUTPUT_DIR = Path("output/veicoli")
+# Output locale (default produzione VM AgID; override via --outdir)
+DEFAULT_OUTDIR = Path("/var/www/cruscotto-italia/data/veicoli")
 
 # Capoluoghi delle aree a statuto speciale con PRA autonomo (VdA, PA Trento,
 # PA Bolzano): ISTAT 41_993 attribuisce a questi 3 comuni veicoli che in
@@ -623,13 +624,13 @@ def _md5_of_bytes(b: bytes) -> str:
     return hashlib.md5(b).hexdigest()
 
 
-def write_shards_local(shards: dict[str, dict]) -> int:
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+def write_shards_local(shards: dict[str, dict], outdir: Path) -> int:
+    outdir.mkdir(parents=True, exist_ok=True)
     for istat, shard in shards.items():
-        p = OUTPUT_DIR / f"{istat}.json"
+        p = outdir / f"{istat}.json"
         p.write_text(json.dumps(shard, ensure_ascii=False, indent=2),
                      encoding="utf-8")
-    log.info("shards_local_written", n=len(shards), dir=str(OUTPUT_DIR))
+    log.info("shards_local_written", n=len(shards), dir=str(outdir))
     return len(shards)
 
 
@@ -722,6 +723,8 @@ def push_shards_r2(shards: dict[str, dict], force: bool = False) -> tuple[int, i
 def main() -> int:
     parser = argparse.ArgumentParser(description="ETL Veicoli e incidenti")
     parser.add_argument("--target", choices=["local", "r2"], default="local")
+    parser.add_argument("--outdir", type=Path, default=DEFAULT_OUTDIR,
+                        help=f"Output dir per shard locali (default: {DEFAULT_OUTDIR})")
     parser.add_argument("--no-cache", action="store_true")
     args = parser.parse_args()
 
@@ -860,9 +863,9 @@ def main() -> int:
 
     # === Persistenza ===
     if args.target == "local":
-        write_shards_local(shards)
+        write_shards_local(shards, args.outdir)
     elif args.target == "r2":
-        write_shards_local(shards)
+        write_shards_local(shards, args.outdir)
         push_shards_r2(shards, force=False)
 
     log.info("etl_veicoli_done",

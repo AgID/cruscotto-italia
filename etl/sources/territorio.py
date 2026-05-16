@@ -713,7 +713,7 @@ def main() -> int:
     parser.add_argument("--target", choices=["local", "r2"], default="local")
     parser.add_argument("--cache-dir", type=Path,
                         default=Path("/tmp/cruscotto-territorio-cache"))
-    parser.add_argument("--output-dir", type=Path, default=None)
+    parser.add_argument("--outdir", type=Path, default=Path("/var/www/cruscotto-italia/data"))
     parser.add_argument("--no-cache", action="store_true",
                         help="Forza re-download di XLSX e CSV rifiuti")
     parser.add_argument("--skip-idrogeo", action="store_true",
@@ -731,11 +731,7 @@ def main() -> int:
     cache_dir = args.cache_dir
     cache_dir.mkdir(parents=True, exist_ok=True)
 
-    if args.output_dir:
-        output_dir = args.output_dir
-    else:
-        output_dir = Path(tempfile.mkdtemp(
-            prefix="cruscotto-territorio-")) / "output"
+    output_dir = args.outdir
     output_dir.mkdir(parents=True, exist_ok=True)
 
     log.info("etl_start", target=args.target,

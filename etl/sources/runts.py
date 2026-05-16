@@ -841,8 +841,8 @@ def main() -> int:
     )
     ap.add_argument("--target", choices=["local", "r2"], default="local",
                     help="local: scrive solo in --outdir; r2: scrive shard + push R2")
-    ap.add_argument("--outdir", default="dist/runts",
-                    help="Directory shard locali (default: dist/runts)")
+    ap.add_argument("--outdir", default="/var/www/cruscotto-italia/data/runts",
+                    help="Directory shard locali (default: /var/www/cruscotto-italia/data/runts)")
     ap.add_argument("--skip-download", action="store_true",
                     help="Riusa cache locale /tmp/cruscotto_runts/ (non scarica)")
     ap.add_argument("--force-download", action="store_true",

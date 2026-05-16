@@ -507,8 +507,9 @@ def main() -> int:
         help="Dove pubblicare gli shard"
     )
     parser.add_argument(
-        "--output-dir", type=Path, default=None,
-        help="Directory output locale (default: tempdir)"
+        "--outdir", type=Path,
+        default=Path("/var/www/cruscotto-italia/data/dashboard"),
+        help="Directory output locale (default: /var/www/cruscotto-italia/data/dashboard)"
     )
     parser.add_argument(
         "--limit", type=int, default=None,
@@ -516,7 +517,7 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    output_dir = args.output_dir or Path(tempfile.mkdtemp(prefix="cruscotto-dashboard-"))
+    output_dir = args.outdir
     log.info("etl_start", target=args.target, output_dir=str(output_dir),
              limit=args.limit)
 

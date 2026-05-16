@@ -319,7 +319,7 @@ def main() -> int:
                         help="Forza un anno specifico per il download POSAS.")
     parser.add_argument("--workdir", type=Path, default=None,
                         help="Directory di lavoro per ZIP+CSV (default: tempdir).")
-    parser.add_argument("--output-dir", type=Path, default=None)
+    parser.add_argument("--outdir", type=Path, default=Path("/var/www/cruscotto-italia/data"))
     args = parser.parse_args()
 
     structlog.configure(processors=[
@@ -328,10 +328,7 @@ def main() -> int:
         structlog.dev.ConsoleRenderer(colors=sys.stderr.isatty()),
     ])
 
-    if args.output_dir:
-        output_dir = args.output_dir
-    else:
-        output_dir = Path(tempfile.mkdtemp(prefix="cruscotto-demografia-")) / "output"
+    output_dir = args.outdir
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # Risoluzione CSV: priorità --csv esplicito, altrimenti auto-download.

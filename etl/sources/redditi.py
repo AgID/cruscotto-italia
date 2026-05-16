@@ -686,7 +686,7 @@ def run(
     limit: int | None = None,
     dry_run: bool = False,
     target: str = "local",
-    outdir: Path = Path("dist/redditi"),
+    outdir: Path = Path("/var/www/cruscotto-italia/data/redditi"),
 ) -> None:
     log.info("=" * 60)
     log.info("ETL MEF Redditi IRPEF")
@@ -762,8 +762,8 @@ def parse_args():
     )
     p.add_argument(
         "--outdir",
-        default="dist/redditi",
-        help="Output dir per --target=local (default: dist/redditi)",
+        default="/var/www/cruscotto-italia/data/redditi",
+        help="Output dir per --target=local (default: /var/www/cruscotto-italia/data/redditi)",
     )
     return p.parse_args()
 
