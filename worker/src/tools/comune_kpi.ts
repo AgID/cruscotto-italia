@@ -27,7 +27,7 @@
  *      vantaggio prestazionale di questo tool
  *   2) Il calcolo live duplicherebbe logica già in dashboard.py
  *
- * Schema output: 22 gruppi tematici (anagrafica, demografia, redditi,
+ * Schema output: gruppi tematici (anagrafica, demografia, redditi,
  * scuole, ANAC, BDAP, PNRR, SIOPE, immobili PA, ambiente, aria,
  * turismo, veicoli, banda larga, ricarica EV, carburanti, civici
  * ANNCSU, RUNTS, sanità). Solo scalari (numeri + stringhe brevi),
@@ -61,7 +61,7 @@ interface ComuniBundle {
 
 export const comuneKpi: ToolDefinition = {
   description:
-    "KPI sintetici di un comune italiano (~55 indicatori chiave, risposta ~2.5KB / ~620 token). Usa per: ricerche puntuali ('popolazione di Bari', 'reddito medio Lecce'), confronti tra comuni ('Verona vs Bari su PNRR'), ranking ('top comuni per banda larga'). Include 22 gruppi tematici: anagrafica, demografia, istruzione, lavoro, redditi MEF, scuole MIUR, contratti ANAC, opere BDAP, PNRR, spese SIOPE, patrimonio immobiliare PA, ambiente (ISPRA suolo/rifiuti), qualità aria, turismo, veicoli ACI, banda larga AGCOM, ricarica EV, carburanti, civici ANNCSU, terzo settore RUNTS, sanità (farmacie/ospedali). Importi finanziari sono anche in euro per abitante per facilitare confronti. NON include: dettaglio mappe, top liste (es. categorie ANAC, settori BDAP), time series. Per quelli usa comune_dashboard. Richiede istat_code 6 cifre (es. '075035' Lecce). Se hai solo nome, chiama prima search_comune.",
+    "KPI sintetici di un comune italiano (~55 indicatori chiave, risposta ~2.5KB / ~620 token). Usa per: ricerche puntuali ('popolazione di Bari', 'reddito medio Lecce'), confronti tra comuni ('Verona vs Bari su PNRR'), ranking ('top comuni per banda larga'). Include gruppi tematici: anagrafica, demografia, istruzione, lavoro, redditi MEF, scuole MIUR, contratti ANAC, opere BDAP, PNRR, spese SIOPE, patrimonio immobiliare PA, ambiente (ISPRA suolo/rifiuti), qualità aria, turismo, veicoli ACI, banda larga AGCOM, ricarica EV, carburanti, civici ANNCSU, terzo settore RUNTS, sanità (farmacie/ospedali), imprese e addetti (ASIA UL), pendolarismo. Importi finanziari sono anche in euro per abitante per facilitare confronti. NON include: dettaglio mappe, top liste (es. categorie ANAC, settori BDAP), time series. Per quelli usa comune_dashboard. Richiede istat_code 6 cifre (es. '075035' Lecce). Se hai solo nome, chiama prima search_comune.",
   inputSchema: {
     type: "object",
     properties: {
