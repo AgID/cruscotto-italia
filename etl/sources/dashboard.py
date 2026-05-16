@@ -91,6 +91,12 @@ SHARDS = [
     ("asia",       "asia/{istat}.json"),
 ]
 
+# Shard locali (solo filesystem Aruba, non R2)
+# Aggiunti per fonti dati di volume basso che non giustificano push R2
+SHARDS_LOCAL = [
+    ("pendolarismo", "/var/www/cruscotto-italia/data/pendolarismo/{istat}.json"),
+]
+
 ETL_VERSION = "0.1.0"
 
 
@@ -107,6 +113,15 @@ def fetch_json(client, bucket: str, key: str) -> dict | None:
         if "nosuchkey" in msg or "404" in msg or "not found" in msg:
             return None
         raise
+
+
+def fetch_json_local(path: str) -> dict | None:
+    """Legge un JSON da filesystem locale; ritorna None se non esiste."""
+    try:
+        with open(path, "rb") as f:
+            return json.loads(f.read())
+    except FileNotFoundError:
+        return None
 
 
 def _safe(d: dict | None, *path, default=None):
@@ -361,6 +376,15 @@ def build_dashboard_for_comune(client, bucket: str, istat: str,
     # Shard fisici su R2
     for label, pat in SHARDS:
         data = fetch_json(client, bucket, pat.format(istat=istat))
+        if data is None:
+            missing.append(label)
+            out[label] = None
+        else:
+            out[label] = data
+
+    # Shard locali (filesystem Aruba, non R2)
+    for label, pat in SHARDS_LOCAL:
+        data = fetch_json_local(pat.format(istat=istat))
         if data is None:
             missing.append(label)
             out[label] = None
