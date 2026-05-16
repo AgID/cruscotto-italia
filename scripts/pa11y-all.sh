@@ -2,16 +2,17 @@
 # Pa11y master runner: esegue tutti i test mirati WCAG 2.1 AA sulle tab
 # integrate in sequenza, con report aggregato finale.
 #
-# Tab testate (6):
+# Tab testate (7):
 #   1. ANNCSU              - civici e strade (Agenzia Entrate + ISTAT)
 #   2. Banda larga         - copertura FTTH/FTTC (AGCOM Broadband Map)
 #   3. PUN                 - punti di ricarica veicoli elettrici (GSE/MASE)
 #   4. Sanita'             - farmacie + parafarmacie + ospedali (Min. Salute)
 #   5. Carburanti          - distributori e prezzi (MIMIT)
 #   6. Terzo Settore       - enti RUNTS ODV/APS/EF/IS/SMS/ETS (Min. Lavoro)
+#   7. Imprese ASIA        - unita locali e addetti ATECO (ISTAT ASIA UL)
 #
 # Ogni script testa 4 comuni rappresentativi (Roma/Milano/Matera/Morterone +
-# eventuali edge case specifici), totale 24+ pagine.
+# eventuali edge case specifici), totale 28+ pagine.
 #
 # Prerequisiti:
 #   - Node.js >= 18
@@ -34,6 +35,7 @@ TESTS=(
   "Sanita:pa11y-sanita.sh"
   "Carburanti:pa11y-carburanti.sh"
   "Terzo Settore:pa11y-runts.sh"
+  "Imprese ASIA:pa11y-asia.sh"
 )
 
 echo "######################################################################"
