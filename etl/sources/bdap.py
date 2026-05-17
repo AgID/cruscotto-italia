@@ -9,7 +9,7 @@ Pipeline:
   1. Pull CSV (entrambi sono in latin-1, vengono convertiti UTF-8 streaming)
   2. DuckDB query su Progetti Totale: aggregato per buyer_cf con stato/finanziamenti
   3. Output 'lookup/bdap-aggregato.json' (mappa CF → KPI opere)
-  4. Push su R2
+  4. Output shard 'bdap/dettaglio/<istat>.json' (dettaglio progetti per comune)
 
 Schema KPI per comune:
   {
@@ -20,14 +20,13 @@ Schema KPI per comune:
   }
 
 Usage:
-  python -m etl.sources.bdap --target=local
-  python -m etl.sources.bdap --target=r2
+  python -m etl.sources.bdap
+  python -m etl.sources.bdap --skip-shard       # solo aggregato, no per-comune
 """
 from __future__ import annotations
 
 import argparse
 import json
-import os
 import sys
 import tempfile
 from pathlib import Path
@@ -36,7 +35,7 @@ import duckdb
 import requests
 import structlog
 
-from etl.lib import manifest, r2
+from etl.lib import local_lookup, manifest
 
 log = structlog.get_logger()
 
@@ -358,14 +357,11 @@ def build_dettagli_shard(
     return shard_dir
 
 
-def push_to_r2(local_path: Path, key: str) -> dict:
-    r2.upload_file(local_path, key, content_type="application/json")
-    return {"key": key, "size": local_path.stat().st_size}
-
-
 def main() -> int:
     parser = argparse.ArgumentParser(description="ETL BDAP MOP — opere pubbliche per comune")
-    parser.add_argument("--target", choices=["local", "r2"], default="local")
+    # --target tenuto per retrocompat workflow esistenti, ma solo 'local' e' supportato
+    parser.add_argument("--target", choices=["local"], default="local",
+                        help="Solo 'local' supportato (R2 rimosso dall'infrastruttura AgID)")
     parser.add_argument("--outdir", type=Path, default=Path("/var/www/cruscotto-italia/data"))
     parser.add_argument("--workdir", type=Path, default=Path("/tmp/cruscotto-bdap-cache"))
     parser.add_argument("--skip-shard", action="store_true",
@@ -373,9 +369,10 @@ def main() -> int:
     parser.add_argument("--shard-all-years", action="store_true",
                         help="Include all historical projects (default: only 2025)")
     parser.add_argument("--force-shard-upload", action="store_true",
-                        help="Re-upload all shards even if already present on R2 (use after schema/filter changes)")
+                        help="DEPRECATO: era flag per R2 force-upload. Ora i shard si scrivono comunque "
+                             "su filesystem (overwrite), il flag e' no-op preservato per retrocompat CLI.")
     parser.add_argument("--comuni-bundle", type=Path, default=None,
-                        help="Path to comuni-bundle.json (auto-detected if omitted)")
+                        help="Path to comuni-bundle.json (default: $DATA_DIR/lookup/comuni-bundle.json)")
     args = parser.parse_args()
 
     structlog.configure(
@@ -388,31 +385,30 @@ def main() -> int:
 
     output_dir = args.outdir
     output_dir.mkdir(parents=True, exist_ok=True)
+    lookup_dir = output_dir / "lookup"
+    lookup_dir.mkdir(parents=True, exist_ok=True)
     args.workdir.mkdir(parents=True, exist_ok=True)
 
-    log.info("etl_start", target=args.target, output_dir=str(output_dir), workdir=str(args.workdir))
+    log.info("etl_start", output_dir=str(output_dir), workdir=str(args.workdir))
 
     try:
         # 1. Pull (Progetti only per il MVP, Localizzazione la usiamo dopo per coverage geografica)
         progetti_csv = pull_csv(args.workdir, DATASET_PROGETTI_TOTALE, "progetti-totale")
 
-        # 2. Aggregate
-        aggr_path = aggregate_progetti(progetti_csv, output_dir)
+        # 2. Aggregate -> scrive direttamente in lookup_dir
+        aggr_path = aggregate_progetti(progetti_csv, lookup_dir)
 
         # 2b. Shard di dettaglio per comune (tab Opere filtrabile)
         shard_dir = None
         if not args.skip_shard:
+            # Bundle path: CLI override, oppure default local_lookup
             bundle_path = args.comuni_bundle
-            if not bundle_path:
-                import glob as _glob
-                candidates = sorted(_glob.glob("/tmp/cruscotto-anag-*/output/comuni-bundle.json"))
-                if candidates:
-                    bundle_path = Path(candidates[-1])
-                    log.info("bdap_bundle_autodetected", path=str(bundle_path))
-                else:
-                    log.warning("bdap_no_bundle_skip_shard")
-                    bundle_path = None
-            if bundle_path and bundle_path.exists():
+            if bundle_path is None:
+                bundle_path = local_lookup.get_lookup_dir() / "comuni-bundle.json"
+            if not bundle_path.exists():
+                log.warning("bdap_no_bundle_skip_shard", path=str(bundle_path),
+                            hint="esegui prima 'python -m etl.sources.anagrafica'")
+            else:
                 shard_dir = build_dettagli_shard(
                     progetti_csv,
                     bundle_path,
@@ -420,117 +416,27 @@ def main() -> int:
                     only_2025=not args.shard_all_years,
                 )
 
-        # 3. Push (optional)
-        files = []
-        if args.target == "r2":
-            files.append(push_to_r2(aggr_path, "lookup/bdap-aggregato.json"))
-            if shard_dir and shard_dir.exists():
-                import hashlib
-                from concurrent.futures import ThreadPoolExecutor, as_completed
-                shard_files = sorted(shard_dir.glob("*.json"))
-
-                # Strategia upload: confronta md5 locale vs ETag remoto.
-                # R2 espone ETag = md5 hex per oggetti single-part (i nostri shard
-                # sono ~16KB, sempre single-part). Skip upload solo se md5 identico.
-                # --force-shard-upload bypassa il confronto (utile in caso di dubbi
-                # o cambi di schema massivi).
-                #
-                # NB: questo sostituisce il vecchio skip-by-existence che era buggy:
-                # un cambio di filtro o schema produceva file con stesso nome ma
-                # contenuto diverso, e venivano skippati erroneamente.
-                import boto3 as _b3
-                _client = _b3.client(
-                    "s3",
-                    endpoint_url=f"https://{os.environ['R2_ACCOUNT_ID']}.r2.cloudflarestorage.com",
-                    aws_access_key_id=os.environ["R2_ACCESS_KEY_ID"],
-                    aws_secret_access_key=os.environ["R2_SECRET_ACCESS_KEY"],
-                )
-
-                # Scarica metadata remota in parallelo: { name -> etag } (None = assente).
-                # Usiamo list_objects_v2 perché 1 LIST è enormemente più veloce
-                # di 7826 HEAD_OBJECT, e per single-part ETag = md5 affidabile.
-                remote_etag: dict[str, str] = {}
-                try:
-                    _pag = _client.get_paginator("list_objects_v2")
-                    for _page in _pag.paginate(Bucket="cruscotto-italia-data", Prefix="bdap/dettaglio/"):
-                        for _o in _page.get("Contents", []):
-                            name = _o["Key"].split("/")[-1]
-                            # ETag arriva tra doppi apici, va strippato
-                            etag = (_o.get("ETag") or "").strip('"').lower()
-                            remote_etag[name] = etag
-                    log.info("bdap_shard_remote_listed", count=len(remote_etag))
-                except Exception as e:
-                    log.warning("bdap_shard_list_failed", error=str(e))
-
-                # Calcola md5 locali e confronta
-                def _local_md5(p: Path) -> str:
-                    h = hashlib.md5()
-                    with p.open("rb") as fh:
-                        for chunk in iter(lambda: fh.read(65536), b""):
-                            h.update(chunk)
-                    return h.hexdigest()
-
-                to_upload: list[Path] = []
-                if args.force_shard_upload:
-                    to_upload = list(shard_files)
-                    log.info("bdap_force_shard_upload",
-                             note="md5 check disabled, uploading all",
-                             count=len(to_upload))
-                else:
-                    n_same = 0
-                    for sf in shard_files:
-                        rmd5 = remote_etag.get(sf.name)
-                        if rmd5 is None:
-                            to_upload.append(sf)  # non esiste su R2
-                            continue
-                        if _local_md5(sf) != rmd5:
-                            to_upload.append(sf)  # contenuto diverso
-                        else:
-                            n_same += 1
-                    log.info("bdap_shard_md5_compared",
-                             total=len(shard_files),
-                             unchanged=n_same,
-                             to_upload=len(to_upload))
-
-                log.info("bdap_pushing_shards",
-                         total=len(shard_files),
-                         to_upload=len(to_upload),
-                         already_on_r2_unchanged=len(shard_files) - len(to_upload))
-
-                def _upload_one(sf):
-                    r2.upload_file(sf, f"bdap/dettaglio/{sf.name}",
-                                   content_type="application/json")
-                    return sf.name
-
-                uploaded = 0
-                with ThreadPoolExecutor(max_workers=24) as ex:
-                    futures = {ex.submit(_upload_one, sf): sf for sf in to_upload}
-                    for f in as_completed(futures):
-                        try:
-                            f.result()
-                            uploaded += 1
-                            if uploaded % 500 == 0:
-                                log.info("bdap_shard_push_progress",
-                                         uploaded=uploaded,
-                                         total=len(to_upload))
-                        except Exception as e:
-                            log.error("bdap_shard_upload_failed",
-                                      file=str(futures[f]),
-                                      error=str(e))
-                log.info("bdap_shard_push_done", uploaded=uploaded)
-                files.append({"key": "bdap/dettaglio/*", "count": len(shard_files)})
+        # 3. Aggiorna manifest (best-effort)
+        files = [{"key": "lookup/bdap-aggregato.json",
+                  "size": aggr_path.stat().st_size}]
+        if shard_dir and shard_dir.exists():
+            shard_count = len(list(shard_dir.glob("*.json")))
+            files.append({"key": "bdap/dettaglio/*", "count": shard_count})
+            log.info("bdap_shard_local_done", count=shard_count, dir=str(shard_dir))
+        try:
             manifest.update_source("bdap", files, status="ok")
             log.info("manifest_updated")
+        except Exception as e:
+            log.warning("manifest_update_skipped", error=str(e))
 
         log.info("etl_done", aggregato_bytes=aggr_path.stat().st_size)
         return 0
     except Exception as e:
         log.exception("etl_failed", error=str(e))
-        if args.target == "r2":
-            try:
-                manifest.update_source("bdap", [], status=f"failed: {e}")
-            except Exception:
-                pass
+        try:
+            manifest.update_source("bdap", [], status=f"failed: {e}")
+        except Exception:
+            pass
         return 1
 
 
