@@ -251,3 +251,46 @@ Niente modifica a `pull_artifact.py` necessaria.
 - `etl/lib/r2.py` — kill-switch storico (NO chiamanti residui post-refactor 16/16)
 - `docs/INFRASTRUCTURE.md` — architettura VM AgID FastWeb
 - `docs/SECRETS.md` — gestione token e credenziali
+
+## 9. Open items / TODO post-deploy
+
+Annotazioni di debito tecnico/documentazione emerse durante la
+preparazione audit ma da affrontare **dopo il go-live del 19/05/2026**,
+per non destabilizzare il deploy.
+
+### 9.1 Fonte IPA (IndicePA AgID) non dichiarata nei conteggi
+
+Scoperto il 2026-05-17 durante la review del primo workflow Actions
+`etl-istat_profilo-refresh.yml`: il pre-step `anagrafica.py` scarica
+dati dal portale **IPA — Indice della Pubblica Amministrazione** (AgID),
+in particolare il dataset `enti` via CKAN API:
+
+- Endpoint: `https://indicepa.gov.it/ipa-dati/api/3/action`
+- Modalità: `package_show` → `datastore/dump/{resource_id}?bom=True`
+- Licenza: **CC-BY 4.0** (cfr. `docs/data-licenses.md` riga 11)
+- Uso: arricchimento di `data/lookup/comuni-bundle.json` con
+  `codice_fiscale` ente comunale e altri metadati IPA (`Codice_IPA`
+  come chiave di match)
+- Implementazione: `etl/sources/anagrafica.py` linee 52-130 + sezione
+  build (linea 311)
+
+**Cosa manca per dichiarare correttamente questa fonte**:
+
+| File | Modifica richiesta |
+|---|---|
+| `worker/src/tools/mcp_info.ts` | Aggiungere `sources.ipa: { canonical, license, datasets }` + incrementare counter `datasets: 23→24` e `institutions: 15→16` + aggiungere "IPA AgID" nella description |
+| `worker/src/http.ts` (landing) | Aggiungere "IPA (Indice PA AgID)" alla long string di fonti elencate al paragrafo `<p class="lead">` |
+| `frontend/index.html` | Aggiungere card / aggiornare badge conteggio fonti+istituzioni |
+| `frontend/about.html` | Idem (conteggio fonti+istituzioni) |
+| `docs/PATTERN_ETL_ISTAT.md` (questo file) | Aggiungere riga IPA nella tabella sezione 6 quando esisterà workflow dedicato (in realtà IPA NON ha workflow dedicato: viene fetchato come parte di `anagrafica` ogni volta, e `anagrafica` gira come pre-step nei workflow ETL — è una dipendenza trasversale, non un ETL autonomo) |
+
+**Stato di rischio audit**: BASSO. La fonte è documentata in
+`docs/data-licenses.md` e nel codice è citata correttamente come "IPA"
+("Indice della Pubblica Amministrazione"). L'omissione riguarda solo
+i contatori metadati esposti dal Worker MCP e dal frontend. Non c'è
+trattamento opaco di dati: tutto open data con licenza CC-BY 4.0.
+
+**Priorità di fix**: dopo il go-live, in una sessione dedicata. Comporta:
+- 1 commit nel Worker (rebuild + redeploy)
+- 1 commit nel frontend (rebuild deploy nginx)
+- aggiornamento di questa doc per chiudere il TODO
