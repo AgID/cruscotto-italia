@@ -97,10 +97,13 @@
   margin-right: var(--sp-2);
 }
 .mini-agid-logo {
-  height: 28px;
-  width: auto;
+  height: 32px !important;
+  width: auto !important;
+  max-height: 32px !important;
+  max-width: 130px !important;
   display: block;
   flex-shrink: 0;
+  object-fit: contain;
 }
 .mini-agid-claim {
   display: flex;
