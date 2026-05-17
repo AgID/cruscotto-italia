@@ -21,6 +21,12 @@
 import type { Env } from "../index.js";
 import type { ToolDefinition } from "./index.js";
 import { fetchR2Json } from "../lib/r2cache.js";
+import {
+  validateIstatCode,
+  validateOdonimo,
+  validateCivico,
+  validateLimit,
+} from "../lib/validate.js";
 
 interface Civico {
   lat: number;
@@ -103,13 +109,11 @@ export const anncsuCivicoSearch: ToolDefinition = {
     additionalProperties: false,
   },
   handler: async (args, env: Env) => {
-    const istatCode = args.istat_code as string;
-    const odonimoRaw = (args.odonimo as string | undefined) || "";
-    const civicoRaw = (args.civico as string | undefined) || "";
-    const limit = Math.min(
-      Math.max(1, (args.limit as number | undefined) || DEFAULT_LIMIT),
-      MAX_LIMIT
-    );
+    // Validazione vincolante CERT-AgID (paper 2026-04, raccomandazione 1).
+    const istatCode = validateIstatCode(args.istat_code);
+    const odonimoRaw = validateOdonimo(args.odonimo ?? "");
+    const civicoRaw = validateCivico(args.civico ?? "");
+    const limit = validateLimit(args.limit, 1, MAX_LIMIT, DEFAULT_LIMIT);
 
     // Risolvi anagrafica (anche se per ANNCSU non serve per il filtro,
     // serve per arricchire output e validare l'esistenza del comune)

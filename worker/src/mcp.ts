@@ -104,8 +104,24 @@ export async function handleMcp(
         }
         return rpcOk(body.id, responsePayload);
       } catch (err) {
-        _ctx.waitUntil(trackToolCall(req, env, params.name, args, "error"));
-        return rpcError(body.id ?? null, -32000, `Tool error: ${String(err)}`);
+        // Distinguo validation error (CERT-AgID rec.1+4) da tool error
+        // generico per consentire monitoraggio mirato dei tentativi di
+        // input non validi (possibili attacchi SSRF/injection).
+        const errMsg = String(err);
+        const isValidationError =
+          errMsg.includes("must match pattern") ||
+          errMsg.includes("must be a string") ||
+          errMsg.includes("must be an integer") ||
+          errMsg.includes("must be in range") ||
+          errMsg.includes("must be a 6-digit") ||
+          errMsg.includes("contains forbidden sequence");
+        const trackStatus = isValidationError ? "validation_error" : "error";
+        _ctx.waitUntil(trackToolCall(req, env, params.name, args, trackStatus));
+        if (isValidationError) {
+          // Codice -32602 = Invalid params (JSON-RPC standard)
+          return rpcError(body.id ?? null, -32602, `Invalid params: ${errMsg}`);
+        }
+        return rpcError(body.id ?? null, -32000, `Tool error: ${errMsg}`);
       }
     }
 
@@ -132,7 +148,7 @@ async function trackToolCall(
   env: Env,
   toolName: string,
   args: Record<string, unknown>,
-  status: "ok" | "error"
+  status: "ok" | "error" | "validation_error"
 ): Promise<void> {
   try {
     const ua = (req.headers.get("user-agent") || "").toLowerCase();
@@ -158,9 +174,19 @@ async function trackToolCall(
       await env.CACHE.put(key, String(next), { expirationTtl: ttl });
     }
 
-    // 2) Counter errori (solo errori)
+    // 2) Counter errori (solo errori applicativi)
     if (status === "error") {
       const errKey = `analytics-err:${day}:${toolName}:${client}`;
+      const current = await env.CACHE.get(errKey);
+      const next = (current ? parseInt(current, 10) : 0) + 1;
+      await env.CACHE.put(errKey, String(next), { expirationTtl: ttl });
+    }
+
+    // 2b) Counter validazione fallita (CERT-AgID raccomandazione 4: monitoraggio).
+    // Separato da errori applicativi per consentire alert su anomalie input
+    // (possibili tentativi SSRF, path traversal, injection).
+    if (status === "validation_error") {
+      const errKey = `analytics-validation-err:${day}:${toolName}:${client}`;
       const current = await env.CACHE.get(errKey);
       const next = (current ? parseInt(current, 10) : 0) + 1;
       await env.CACHE.put(errKey, String(next), { expirationTtl: ttl });

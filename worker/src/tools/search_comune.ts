@@ -14,6 +14,7 @@
 import type { Env } from "../index.js";
 import type { ToolDefinition } from "./index.js";
 import { fetchR2Json } from "../lib/r2cache.js";
+import { validateQuery, validateLimit } from "../lib/validate.js";
 
 interface ComuneIndexEntry {
   i: string;   // istat_code
@@ -37,8 +38,9 @@ export const searchComune: ToolDefinition = {
     additionalProperties: false,
   },
   handler: async (args: Record<string, unknown>, env: Env) => {
-    const q = String(args.query ?? "").toLowerCase().trim();
-    const limit = Math.min(50, Math.max(1, Number(args.limit ?? 10)));
+    // Validazione vincolante CERT-AgID (paper 2026-04, raccomandazione 1).
+    const q = validateQuery(args.query ?? "").toLowerCase();
+    const limit = validateLimit(args.limit, 1, 50, 10);
 
     if (q.length < 3) {
       return { count: 0, results: [], warning: "query too short (min 3 chars)" };

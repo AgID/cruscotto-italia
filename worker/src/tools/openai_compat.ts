@@ -13,6 +13,7 @@ import type { Env } from "../index.js";
 import type { ToolDefinition } from "./index.js";
 import { searchComune } from "./search_comune.js";
 import { comuneDashboard } from "./comune_dashboard.js";
+import { validateQuery, validateFetchId } from "../lib/validate.js";
 
 const PUBLIC_BASE_URL = "https://cruscotto-italia.piersoftckan.biz";
 
@@ -62,8 +63,14 @@ export const openaiSearch: ToolDefinition = {
     required: ["results"],
   },
   handler: async (args: Record<string, unknown>, env: Env) => {
-    const query = args.query as string | undefined;
-    if (!query || typeof query !== "string") {
+    // Validazione vincolante CERT-AgID (paper 2026-04, raccomandazione 1).
+    // Su search di OpenAI tolleriamo input < 3 char (ritorniamo results: [])
+    // invece di lanciare, perche' ChatGPT puo' fare query progressive
+    // mentre l'utente digita.
+    let query: string;
+    try {
+      query = validateQuery(args.query ?? "");
+    } catch {
       return { results: [] };
     }
 
@@ -116,12 +123,10 @@ export const openaiFetch: ToolDefinition = {
     required: ["id", "title", "text", "url"],
   },
   handler: async (args: Record<string, unknown>, env: Env) => {
-    const id = args.id as string | undefined;
-    if (!id || typeof id !== "string") {
-      throw new Error("id richiesto");
-    }
-
-    const istatCode = id.padStart(6, "0").slice(0, 6);
+    // Validazione vincolante CERT-AgID (paper 2026-04, raccomandazione 1).
+    // padStart precedente era un fallback non sicuro: scartato in favore
+    // di validazione vincolante esplicita (6 cifre esatte).
+    const istatCode = validateFetchId(args.id);
 
     const dashboard = (await comuneDashboard.handler(
       { istat_code: istatCode },

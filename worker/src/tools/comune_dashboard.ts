@@ -323,6 +323,7 @@
 import type { Env } from "../index.js";
 import type { ToolDefinition } from "./index.js";
 import { fetchR2Json } from "../lib/r2cache.js";
+import { validateIstatCode, validateDenominazione } from "../lib/validate.js";
 
 interface ComuneAnagrafica {
   istat_code: string;
@@ -382,8 +383,12 @@ export const comuneDashboard: ToolDefinition = {
     additionalProperties: false,
   },
   handler: async (args: Record<string, unknown>, env: Env) => {
-    const istatCode = args.istat_code as string | undefined;
-    const denominazione = args.denominazione as string | undefined;
+    const istatCode = args.istat_code !== undefined
+      ? validateIstatCode(args.istat_code)
+      : undefined;
+    const denominazione = args.denominazione !== undefined
+      ? validateDenominazione(args.denominazione)
+      : undefined;
 
     if (!istatCode && !denominazione) {
       throw new Error("Either 'istat_code' or 'denominazione' is required");
@@ -409,6 +414,9 @@ export const comuneDashboard: ToolDefinition = {
         };
       }
       resolvedIstat = match.istat_code;
+      // Validazione finale: anche l'ISTAT risolto dal bundle deve passare
+      // il pattern (difensivo: protegge anche da bundle corrotto).
+      validateIstatCode(resolvedIstat, "resolved_istat_code");
     }
 
     // 2. Fetch del dashboard shard (no KV cache: file grandi)

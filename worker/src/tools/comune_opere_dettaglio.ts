@@ -12,6 +12,7 @@
 import type { Env } from "../index.js";
 import type { ToolDefinition } from "./index.js";
 import { fetchR2Json } from "../lib/r2cache.js";
+import { validateIstatCode } from "../lib/validate.js";
 
 interface Progetto {
   cup: string;
@@ -65,7 +66,7 @@ export const comuneOpereDettaglio: ToolDefinition = {
     additionalProperties: false,
   },
   handler: async (args, env: Env) => {
-    const istatCode = args.istat_code as string;
+    const istatCode = validateIstatCode(args.istat_code);
 
     // Cache KV
     const cacheKey = `bdap_dettaglio:${istatCode}`;
