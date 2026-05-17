@@ -47,44 +47,81 @@ permissions:
 
 jobs:
   # ---------------------------------------------------------------------------
+  # ---------------------------------------------------------------------------
+  # ANAC OCDS — NOT smoke-tested on ubuntu-latest
+  # =============================================
+  # L'ETL anac.py NON puo' essere eseguito da GitHub Actions runner ubuntu-latest
+  # perche' il bucket bulk OCDS di ANAC (https://dati.anticorruzione.it/) e'
+  # protetto da WAF F5 Volterra (header `server: volt-adc`) che restituisce
+  # HTTP 403 secco per richieste provenienti da IP cloud Microsoft Azure
+  # (subnet di GitHub Actions hosted runners).
+  #
+  # Diagnostica (eseguita 2026-05-17):
+  #  - Da IP italiano Aruba/AgID con UA Chrome: HTTP 200, JSON OCDS reale
+  #  - Da IP Azure GitHub Actions con UA Chrome: HTTP 403 Forbidden
+  #  - UA non e' il discriminante; Volterra discrimina per ASN dell'IP sorgente
+  #
+  # L'ETL anac.py gira normalmente dal cron /etc/cron.d/cruscotto-etl sulla
+  # VM AgID (ogni lunedi' 04:00 UTC). I dati pubblicati in produzione sono
+  # sempre quelli prodotti dal cron VM, non da questo workflow.
+  #
+  # Per audit, lo smoke test ANAC su Actions e' sostituito da un FRESHNESS
+  # CHECK del file aggregato gia' pubblicato in produzione: si verifica che
+  # https://cruscotto-italia.dati.gov.it/data/lookup/anac-aggregato.json sia
+  # accessibile e con Last-Modified entro 14 giorni (= cron weekly ha girato
+  # almeno una volta nelle ultime 2 settimane).
+  #
+  # Idem si applica a ogni futura fonte istituzionale dietro WAF cloud-restrict.
   anac:
-    name: ETL · ANAC OCDS (smoke test)
+    name: ETL · ANAC OCDS (freshness check)
     runs-on: ubuntu-latest
     if: ${{ contains(github.event.inputs.sources, 'anac') || github.event.inputs.sources == 'all' || github.event.inputs.sources == '' }}
-    timeout-minutes: 30
+    timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-          cache: 'pip'
-          cache-dependency-path: etl/requirements.txt
-      - run: pip install -r etl/requirements.txt
-      - name: Compute target years
-        id: years
+      - name: Freshness check anac-aggregato.json (produzione)
         run: |
-          if [ -n "${{ github.event.inputs.anac_years }}" ]; then
-            echo "value=${{ github.event.inputs.anac_years }}" >> $GITHUB_OUTPUT
-          else
-            echo "value=$(date -u +%Y)" >> $GITHUB_OUTPUT
-          fi
-      - name: Show runner public IP
-        run: |
-          echo "Runner IP: $(curl -sS -m 5 https://api.ipify.org || echo unknown)"
-      - name: Run ANAC ETL (output in /tmp/etl-smoke/)
-        env:
-          DATA_DIR: /tmp/etl-smoke
-        run: |
-          set -o pipefail
-          # ANAC pattern: --outdir e' il PARENT (scrive in <outdir>/monthly/
-          # e <outdir>/lookup/anac-aggregato.json, vs convenzione altri ETL
-          # che usano --outdir = cartella source).
-          mkdir -p /tmp/etl-smoke
-          python -m etl.sources.anac --outdir=/tmp/etl-smoke --years=${{ steps.years.outputs.value }} 2>&1 | tee /tmp/anac-etl.log | tail -30
+          set -e
+          URL="https://cruscotto-italia.piersoftckan.biz/data/lookup/anac-aggregato.json"
+          echo "Checking freshness of $URL"
+          echo "(URL puntera' a cruscotto-italia.dati.gov.it dopo cutover 19/05)"
           echo ""
-          echo "=== ANAC output prodotti ==="
-          ls /tmp/etl-smoke/monthly/ 2>/dev/null || echo "(monthly/ dir non presente)"
-          ls /tmp/etl-smoke/lookup/anac-aggregato.json 2>/dev/null && echo "(lookup/anac-aggregato.json presente)"
+          # Header check (HEAD request)
+          HEADERS=$(curl -sI -L -m 30 "$URL" || true)
+          if [ -z "$HEADERS" ]; then
+            echo "ERROR: nessuna risposta dal server. Pipeline cron VM potenzialmente ferma."
+            exit 1
+          fi
+          echo "$HEADERS"
+          # Estrai HTTP status
+          STATUS=$(echo "$HEADERS" | grep -E "^HTTP/" | tail -1 | awk '{print $2}')
+          if [ "$STATUS" != "200" ]; then
+            echo "ERROR: HTTP $STATUS (atteso 200). File non disponibile."
+            exit 1
+          fi
+          # Estrai Last-Modified e calcola eta'
+          LM=$(echo "$HEADERS" | grep -i "^last-modified:" | sed 's/^[Ll]ast-[Mm]odified: //' | tr -d '\r\n')
+          if [ -z "$LM" ]; then
+            echo "WARN: Last-Modified header assente, skipping age check."
+            echo "Freshness check superficiale: HTTP 200 OK ricevuto."
+            exit 0
+          fi
+          echo ""
+          echo "Last-Modified: $LM"
+          # Calcola differenza in giorni
+          NOW_TS=$(date -u +%s)
+          LM_TS=$(date -d "$LM" +%s 2>/dev/null || echo 0)
+          if [ "$LM_TS" -eq 0 ]; then
+            echo "WARN: impossibile parsare Last-Modified. Skip age check."
+            exit 0
+          fi
+          AGE_DAYS=$(( (NOW_TS - LM_TS) / 86400 ))
+          echo "Eta' file: $AGE_DAYS giorni"
+          if [ "$AGE_DAYS" -gt 14 ]; then
+            echo "ERROR: file ANAC piu' vecchio di 14 giorni. Cron VM weekly probabilmente fermo."
+            exit 1
+          fi
+          echo "OK: dati ANAC freschi (eta' $AGE_DAYS gg <= 14gg threshold)."
+
 
   # ---------------------------------------------------------------------------
   pnrr:
