@@ -1,0 +1,118 @@
+name: ETL · pendolarismo refresh (artifact-based)
+
+# Workflow Pull-Artifact per ETL ISTAT Matrice pendolarismo per lavoro 2021
+# (Censimento permanente, pubblicato ottobre 2025).
+#
+# Architettura: vedi etl-istat_profilo-refresh.yml per la documentazione
+# generale del pattern. Differenze specifiche per pendolarismo:
+#
+# - NESSUN pre-step anagrafica: pendolarismo.py legge il dataset ISTAT in
+#   forma di matrice OD origine->destinazione, NON dipende da
+#   data/lookup/comuni-bundle.json (mappa interna ISTAT alle Province/Comuni
+#   gia' embedded nel ZIP ufficiale).
+#
+# - Dataset stabile (Censimento permanente decennale + aggiornamenti annuali):
+#   refresh annuale sufficiente. Cron commentato per default.
+#
+# - Cadenza upstream: annuale (pubblicazione tipicamente ottobre).
+#
+# Privacy / governance:
+#   - Dati ISTAT open CC BY 3.0 IT (matrice OD aggregata, no PII).
+#   - Repo PRIVATO, retention 1gg, delete attivo via pull_artifact.py.
+
+on:
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: 'Smoke test: ISTAT comma-separated (vuoto = full)'
+        required: false
+        default: ''
+        type: string
+      force_download:
+        description: 'Force re-download ZIP ISTAT (ignora cache runner)'
+        required: false
+        default: false
+        type: boolean
+  # schedule:
+  #   # 15 ottobre, 03:00 UTC (decommentare se serve automazione annuale)
+  #   - cron: '0 3 15 10 *'
+
+permissions:
+  contents: read
+
+jobs:
+  refresh:
+    name: ETL pendolarismo + artifact upload
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: etl/requirements.txt
+
+      - name: Install Python dependencies
+        run: pip install -r etl/requirements.txt
+
+      - name: Show runner public IP (debug ISTAT ban)
+        run: |
+          echo "Runner IP: $(curl -sS -m 5 https://api.ipify.org || echo unknown)"
+
+      # NB: niente pre-step anagrafica per pendolarismo (vedi commento header).
+      # L'ETL legge solo dal ZIP ISTAT che scarica da solo.
+
+      - name: Run pendolarismo ETL
+        env:
+          DATA_DIR: ${{ github.workspace }}/data
+        run: |
+          mkdir -p "$DATA_DIR/pendolarismo"
+          ARGS="--outdir=$DATA_DIR/pendolarismo"
+          if [ "${{ inputs.force_download }}" = "true" ]; then
+            ARGS="$ARGS --force-download"
+          fi
+          if [ -n "${{ inputs.limit }}" ]; then
+            ARGS="$ARGS --limit=${{ inputs.limit }}"
+          fi
+          python -m etl.sources.pendolarismo $ARGS 2>&1 | tee /tmp/pendolarismo.log
+
+      - name: Statistiche shard prodotti
+        run: |
+          DATA_DIR="${{ github.workspace }}/data"
+          echo "=== Shard prodotti in $DATA_DIR/pendolarismo/ ==="
+          ls "$DATA_DIR/pendolarismo/"*.json 2>/dev/null | wc -l
+          echo ""
+          echo "=== Size totale ==="
+          du -sh "$DATA_DIR/pendolarismo/" 2>/dev/null
+          echo ""
+          echo "=== Sample primo shard (head 800 char) ==="
+          first=$(ls "$DATA_DIR/pendolarismo/"*.json 2>/dev/null | head -1)
+          if [ -n "$first" ]; then
+            echo "File: $first"
+            head -c 800 "$first"
+            echo ""
+          fi
+
+      - name: Pack shard in tar.gz per artifact
+        run: |
+          DATA_DIR="${{ github.workspace }}/data"
+          cd "$DATA_DIR"
+          tar czf /tmp/pendolarismo-shards.tar.gz pendolarismo/
+          echo "Archive size: $(du -h /tmp/pendolarismo-shards.tar.gz | cut -f1)"
+          echo "Files inside:"
+          tar tzf /tmp/pendolarismo-shards.tar.gz | head -5
+          echo "..."
+          echo "Total files: $(tar tzf /tmp/pendolarismo-shards.tar.gz | wc -l)"
+
+      - name: Upload artifact (retention 1 giorno per privacy)
+        uses: actions/upload-artifact@v4
+        with:
+          name: pendolarismo-shards
+          path: /tmp/pendolarismo-shards.tar.gz
+          retention-days: 1
+          if-no-files-found: error
