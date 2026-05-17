@@ -1,35 +1,39 @@
-name: ETL · Daily
+name: ETL · Daily (smoke test)
 
-# Cadenza giornaliera per fonti che aggiornano quotidianamente:
-#  - PUN (Piattaforma Unica Nazionale punti di ricarica, GSE/MASE)
-#    Il file `gse-pun-prod-documents/PA/infrastrutture.csv` viene rigenerato
-#    lato GSE ogni mattina ~03:00 UTC. L'ETL include skip automatico via
-#    HEAD LastModified persistito in `pun/_meta.json`: se la fonte non e'
-#    cambiata, il job termina in ~1s senza scaricare nulla.
-#  - Carburanti (MIMIT Osservatorio Prezzi Carburanti, art. 51 L. 99/2009)
-#    I file `anagrafica_impianti_attivi.csv` e `prezzo_alle_8.csv` su
-#    `www.mimit.gov.it` vengono rigenerati ogni mattina dal Ministero
-#    (snapshot "Prezzo alle 8 di mattina" del giorno precedente). L'ETL
-#    include skip automatico via hash SHA-256 combinato dei due CSV,
-#    persistito in `carburanti/_meta.json`: se entrambi i file sono
-#    invariati, il job termina senza ricalcolo shard.
+# IMPORTANTE
+# ==========
+# Questo workflow NON e' il produttore reale dei dati daily in produzione.
+# Il produttore reale e' il cron `/etc/cron.d/cruscotto-etl` sulla VM AgID
+# che esegue gli stessi comandi Python a 08:00 UTC ogni giorno, scrivendo
+# direttamente in /var/www/cruscotto-italia/data/.
 #
-# Al termine, se almeno un ETL upstream ha effettivamente prodotto
-# aggiornamenti, ricostruisce dashboard/<istat>.json e notifica la worker.
+# Questo workflow esiste come "smoke test" eseguibile su GitHub Actions:
+#  - Permette di validare che gli ETL siano sintatticamente eseguibili
+#    e che riescano a contattare le fonti dati upstream da un IP esterno
+#  - Permette a un revisore (es. AgID) di verificare con un click che la
+#    pipeline daily sia funzionante senza dover accedere alla VM
+#  - Funge da fallback di emergenza: in caso il cron VM sia fermo, un
+#    operatore puo' triggerare manualmente questo workflow per produrre
+#    un test report
 #
-# Cron: ogni giorno alle 08:00 UTC = 09:00/10:00 ora di Roma (DST).
-# 08:00 UTC scelto come compromesso solido per le 2 sorgenti upstream:
-#   - GSE PUN: rigenera ~03:00 UTC (Last-Modified osservato 2026-05-09)
-#   - MIMIT carburanti: pubblica prezzo_alle_8.csv e anagrafica
-#     ~06:45-06:51 UTC (= 08:45/08:51 IT DST), nonostante il nome
-#     'prezzo_alle_8' si riferisca al momento di RILEVAZIONE delle 8 IT
-#     non a quello di pubblicazione del CSV.
-# Margine: ~70 min post-MIMIT. Il job termina entro le 09:00 UTC
-# pubblicando dati freschi per quando l'utente apre il sito al mattino.
+# Differenze rispetto al cron VM produttivo:
+#  - Output scritto in /tmp/etl-smoke/ del runner (NON in /var/www/...)
+#  - Niente notify del Worker MCP (non e' produzione)
+#  - Schedule NON impostato (solo workflow_dispatch manuale)
+#
+# Cadenza upstream delle 2 sorgenti (riferimento operativo):
+#  - PUN (GSE/MASE): file infrastrutture.csv rigenerato ~03:00 UTC.
+#    L'ETL include skip automatico via HEAD LastModified persistito in
+#    pun/_meta.json (se la fonte non e' cambiata termina in ~1s senza
+#    scaricare).
+#  - Carburanti (MIMIT Osservatorio Prezzi): anagrafica + prezzi
+#    rigenerati ~06:45-06:51 UTC. L'ETL include skip via hash SHA-256
+#    combinato persistito in carburanti/_meta.json.
+#
+# Cadenza cron VM produttiva: 0 8 * * * (ogni giorno alle 08:00 UTC,
+# = 09:00/10:00 ora Roma DST), ~70 min dopo pubblicazione MIMIT.
 
 on:
-  # Schedule rimosso: ETL daily girano via cron VM AgID (vedi deploy/cron/cruscotto-etl).
-  # GitHub Actions resta come fallback emergenza, attivabile manualmente dalla UI.
   workflow_dispatch:
     inputs:
       sources:
@@ -37,22 +41,19 @@ on:
         required: false
         default: 'all'
       force:
-        description: "PUN/Carburanti: forza esecuzione anche se sorgente non e' cambiata. Default false."
+        description: "Forza esecuzione anche se la sorgente non e' cambiata"
         required: false
         default: 'false'
 
-# NOTE 2026-05-17: env R2_* rimosse dopo refactor ETL local-first.
-# Cruscotto Italia AgID non usa piu' Cloudflare R2 (account AgID non puo'
-# crearne). Tutti gli ETL girano --target=local scrivendo direttamente su
-# /var/www/cruscotto-italia/data/ del runner self-hosted Aruba/VM AgID.
-# I secrets GitHub R2_* possono essere rimossi nell'Ondata 2 (post-cutover).
+permissions:
+  contents: read
 
 jobs:
   # ---------------------------------------------------------------------------
   pun:
-    name: ETL · PUN (punti di ricarica veicoli elettrici)
-    runs-on: [self-hosted, linux, aruba]
-    if: ${{ github.event_name == 'schedule' || contains(github.event.inputs.sources, 'pun') || github.event.inputs.sources == 'all' || github.event.inputs.sources == '' }}
+    name: ETL · PUN (smoke test)
+    runs-on: ubuntu-latest
+    if: ${{ contains(github.event.inputs.sources, 'pun') || github.event.inputs.sources == 'all' || github.event.inputs.sources == '' }}
     timeout-minutes: 30
     outputs:
       ran: ${{ steps.pun_run.outputs.ran }}
@@ -72,28 +73,35 @@ jobs:
           else
             echo "flag=" >> $GITHUB_OUTPUT
           fi
-      - name: Run PUN ETL
+      - name: Show runner public IP
+        run: |
+          echo "Runner IP: $(curl -sS -m 5 https://api.ipify.org || echo unknown)"
+      - name: Run PUN ETL (output in /tmp/etl-smoke/)
         id: pun_run
-        # Lo skip-by-LastModified e' interno all'ETL: se la fonte e' invariata
-        # l'ETL termina con "pun_skip" e i job downstream non vengono triggerati.
-        # Catturiamo il log per discriminare "skip" da "esecuzione effettiva".
+        env:
+          # local_lookup.load_meta/save_meta usano DATA_DIR per leggere/scrivere
+          # pun/_meta.json (skip detection). Sul runner /var/www/... non esiste.
+          DATA_DIR: /tmp/etl-smoke
         run: |
           set -o pipefail
-          python -m etl.sources.pun --target=local ${{ steps.force.outputs.flag }} \
+          mkdir -p /tmp/etl-smoke/pun
+          python -m etl.sources.pun --outdir=/tmp/etl-smoke/pun ${{ steps.force.outputs.flag }} \
             2>&1 | tee /tmp/pun-etl.log
           if grep -q "pun_skip" /tmp/pun-etl.log; then
             echo "ran=false" >> $GITHUB_OUTPUT
             echo "PUN skipped: LastModified invariato."
           else
             echo "ran=true" >> $GITHUB_OUTPUT
-            echo "PUN executed: shard aggiornati."
+            echo "PUN executed. Shard prodotti in /tmp/etl-smoke/pun/:"
+            ls /tmp/etl-smoke/pun/ | head -5
+            echo "Totale shard: $(ls /tmp/etl-smoke/pun/*.json 2>/dev/null | wc -l)"
           fi
 
   # ---------------------------------------------------------------------------
   carburanti:
-    name: ETL · Carburanti (MIMIT — distributori e prezzi)
-    runs-on: [self-hosted, linux, aruba]
-    if: ${{ github.event_name == 'schedule' || contains(github.event.inputs.sources, 'carburanti') || github.event.inputs.sources == 'all' || github.event.inputs.sources == '' }}
+    name: ETL · Carburanti (smoke test)
+    runs-on: ubuntu-latest
+    if: ${{ contains(github.event.inputs.sources, 'carburanti') || github.event.inputs.sources == 'all' || github.event.inputs.sources == '' }}
     timeout-minutes: 30
     outputs:
       ran: ${{ steps.carburanti_run.outputs.ran }}
@@ -113,33 +121,41 @@ jobs:
           else
             echo "flag=" >> $GITHUB_OUTPUT
           fi
-      - name: Run Carburanti ETL
+      - name: Show runner public IP
+        run: |
+          echo "Runner IP: $(curl -sS -m 5 https://api.ipify.org || echo unknown)"
+      - name: Run Carburanti ETL (output in /tmp/etl-smoke/)
         id: carburanti_run
-        # Lo skip-by-hash e' interno all'ETL: se entrambi i CSV MIMIT sono
-        # invariati l'ETL termina con "carburanti_skip" e i job downstream
-        # non vengono triggerati.
+        env:
+          # local_lookup.load_meta/save_meta usano DATA_DIR per leggere/scrivere
+          # carburanti/_meta.json (skip detection). Sul runner /var/www/... non esiste.
+          DATA_DIR: /tmp/etl-smoke
         run: |
           set -o pipefail
-          python -m etl.sources.carburanti --target=local ${{ steps.force.outputs.flag }} \
+          mkdir -p /tmp/etl-smoke/carburanti
+          python -m etl.sources.carburanti --outdir=/tmp/etl-smoke/carburanti ${{ steps.force.outputs.flag }} \
             2>&1 | tee /tmp/carburanti-etl.log
           if grep -q "carburanti_skip" /tmp/carburanti-etl.log; then
             echo "ran=false" >> $GITHUB_OUTPUT
             echo "Carburanti skipped: hash CSV invariato."
           else
             echo "ran=true" >> $GITHUB_OUTPUT
-            echo "Carburanti executed: shard aggiornati."
+            echo "Carburanti executed. Shard prodotti in /tmp/etl-smoke/carburanti/:"
+            ls /tmp/etl-smoke/carburanti/ | head -5
+            echo "Totale shard: $(ls /tmp/etl-smoke/carburanti/*.json 2>/dev/null | wc -l)"
           fi
 
   # ---------------------------------------------------------------------------
-  # Dashboard rebuild parte SOLO se almeno un ETL upstream (PUN o Carburanti)
-  # ha effettivamente prodotto aggiornamenti. Senza modifiche sul filesystem,
-  # ricostruire il dashboard sarebbe lavoro inutile (i ~7896 unified shard
-  # sarebbero identici a quelli gia' presenti).
+  # NOTA dashboard: nel cron VM produttivo il dashboard.py aggrega 16 source.
+  # Qui in smoke test l'aggregazione e' parziale (solo i 2 source che girano
+  # in questo workflow: pun + carburanti). Resto degli shard del runner sono
+  # assenti (l'ETL singoli sono in altri workflow). Quindi il dashboard
+  # potrebbe loggare warning su sezioni mancanti: e' atteso, NON e' un bug.
   dashboard:
-    name: ETL · Dashboard rebuild (single-fetch shard)
-    runs-on: [self-hosted, linux, aruba]
+    name: ETL · Dashboard rebuild (smoke test parziale)
+    runs-on: ubuntu-latest
     needs: [pun, carburanti]
-    if: ${{ always() && (needs.pun.outputs.ran == 'true' || needs.carburanti.outputs.ran == 'true') && (github.event_name == 'schedule' || contains(github.event.inputs.sources, 'dashboard') || github.event.inputs.sources == 'all' || github.event.inputs.sources == '') }}
+    if: ${{ always() && (needs.pun.outputs.ran == 'true' || needs.carburanti.outputs.ran == 'true') && (contains(github.event.inputs.sources, 'dashboard') || github.event.inputs.sources == 'all' || github.event.inputs.sources == '') }}
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
@@ -149,21 +165,21 @@ jobs:
           cache: 'pip'
           cache-dependency-path: etl/requirements.txt
       - run: pip install -r etl/requirements.txt
-      - name: Run Dashboard ETL
-        run: python -m etl.sources.dashboard --target=local
-
-  # ---------------------------------------------------------------------------
-  notify:
-    name: Notify worker (cache purge)
-    needs: [dashboard]
-    if: ${{ always() && needs.dashboard.result == 'success' }}
-    runs-on: [self-hosted, linux, aruba]
-    steps:
-      - name: Purge worker cache
-        # TODO post-cutover 19/05: URL definitivo cruscotto-italia-mcp.dati.gov.it.
-        # Per ora puntiamo all'URL workers.dev AgID (env-independent, no DNS).
+      - name: Run Dashboard ETL (smoke test parziale)
+        env:
+          # local_lookup.get_data_dir() legge questa env per risolvere i
+          # source <DATA_DIR>/<source>/<istat>.json (es. pun, carburanti).
+          # Path /var/www/... su runner GitHub-hosted non esiste.
+          DATA_DIR: /tmp/etl-smoke
         run: |
-          curl -sS -X POST "https://cruscotto-italia-mcp.agid.workers.dev/admin/cache/purge" \
-            -H "Authorization: Bearer ${{ secrets.WORKER_ADMIN_TOKEN }}" \
-            -H "Content-Type: application/json" \
-          || echo "Cache purge endpoint non disponibile (non-critical)"
+          mkdir -p /tmp/etl-smoke/dashboard /tmp/etl-smoke/lookup
+          # Pre-step: serve anagrafica per produrre lookup/comuni-bundle.json
+          # (dashboard.py lo richiede via local_lookup).
+          python -m etl.sources.anagrafica --outdir=/tmp/etl-smoke 2>&1 \
+            | tail -10
+          # Run dashboard (limit 50 comuni: smoke test puro, non production)
+          python -m etl.sources.dashboard --outdir=/tmp/etl-smoke/dashboard --limit=50 \
+            2>&1 | tee /tmp/dashboard.log | tail -30
+          echo ""
+          echo "=== Dashboard shard prodotti (smoke, limit 50) ==="
+          ls /tmp/etl-smoke/dashboard/*.json 2>/dev/null | wc -l
