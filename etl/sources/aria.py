@@ -19,10 +19,8 @@ Output:
   - lookup/aria-aggregato.json (overview nazionale: top peggiori, distribuzione)
 
 Uso:
-  python -m etl.sources.aria --target=local
-  python -m etl.sources.aria --target=r2
-  python -m etl.sources.aria --target=local --no-cache              # forza re-download CSV
-  python -m etl.sources.aria --target=r2   --force-shard-upload     # bypass md5
+  python -m etl.sources.aria
+  python -m etl.sources.aria --no-cache              # forza re-download CSV
 
 Cadenza: annuale - ISPRA aggiorna a gennaio dell'anno N+2 (es. dati 2024
 pubblicati gennaio 2026). Pianificare cron in etl-annual.yml.
@@ -96,18 +94,16 @@ from __future__ import annotations
 
 import argparse
 import csv
-import hashlib
 import json
 import sys
 from collections import defaultdict
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
 
 import requests
 import structlog
 
-from etl.lib import manifest, r2
+from etl.lib import local_lookup, manifest
 
 log = structlog.get_logger()
 
@@ -616,113 +612,20 @@ def build_aggregato(
 # Push R2 (skip-by-md5)
 # ============================================================================
 
-def push_to_r2(
-    aggr_path: Path,
-    shard_dir: Path,
-    force_shard_upload: bool = False,
-) -> list[dict]:
-    """Push aggregato + tutti gli shard su R2.
+def save_aggregato_local(aggr_path: Path) -> None:
+    """Copia aria-aggregato.json in DATA_DIR/lookup/ (per Worker A1).
 
-    Strategia per gli shard: list_objects_v2 sul prefix aria/, confronta
-    md5 locale con ETag remoto (= md5 per single-part, e i nostri shard
-    sono tutti < 1MB). Skip se identico.
-
-    Returns:
-        Lista di dict descrittivi per il manifest.
+    Il file e' gia' stato scritto in output_dir/aria-aggregato.json da
+    build_aggregato(). Qui lo copio anche in lookup_dir cosi' il Worker
+    lo trova al path canonico data/lookup/aria-aggregato.json.
     """
-    files: list[dict] = []
-
-    # 1. Aggregato
-    r2.upload_file(aggr_path, "lookup/aria-aggregato.json",
-                   content_type="application/json")
-    files.append({"key": "lookup/aria-aggregato.json",
-                  "size": aggr_path.stat().st_size})
-
-    # 2. Shard
-    if not shard_dir.exists():
-        log.warning("aria_no_shard_dir_to_push", path=str(shard_dir))
-        return files
-
-    import os
-
-    import boto3 as _b3
-    _client = _b3.client(
-        "s3",
-        endpoint_url=f"https://{os.environ['R2_ACCOUNT_ID']}.r2.cloudflarestorage.com",
-        aws_access_key_id=os.environ["R2_ACCESS_KEY_ID"],
-        aws_secret_access_key=os.environ["R2_SECRET_ACCESS_KEY"],
-    )
-
-    shard_files = sorted(shard_dir.glob("*.json"))
-
-    # Lista oggetti remoti correnti
-    remote_etag: dict[str, str] = {}
-    try:
-        _pag = _client.get_paginator("list_objects_v2")
-        for _page in _pag.paginate(Bucket=r2.get_bucket(), Prefix="aria/"):
-            for _o in _page.get("Contents", []):
-                name = _o["Key"].split("/")[-1]
-                etag = (_o.get("ETag") or "").strip('"').lower()
-                remote_etag[name] = etag
-        log.info("aria_shard_remote_listed", count=len(remote_etag))
-    except Exception as e:
-        log.warning("aria_shard_list_failed", error=str(e))
-
-    # Calcola md5 locali
-    def _local_md5(p: Path) -> str:
-        h = hashlib.md5()
-        with p.open("rb") as fh:
-            for chunk in iter(lambda: fh.read(65536), b""):
-                h.update(chunk)
-        return h.hexdigest()
-
-    to_upload: list[Path] = []
-    if force_shard_upload:
-        to_upload = list(shard_files)
-        log.info("aria_force_shard_upload",
-                 note="md5 check disabled, uploading all",
-                 count=len(to_upload))
-    else:
-        n_same = 0
-        for sf in shard_files:
-            rmd5 = remote_etag.get(sf.name)
-            if rmd5 is None:
-                to_upload.append(sf)
-                continue
-            if _local_md5(sf) != rmd5:
-                to_upload.append(sf)
-            else:
-                n_same += 1
-        log.info("aria_shard_md5_compared",
-                 total=len(shard_files), unchanged=n_same,
-                 to_upload=len(to_upload))
-
-    log.info("aria_pushing_shards",
-             total=len(shard_files),
-             to_upload=len(to_upload),
-             unchanged=len(shard_files) - len(to_upload))
-
-    def _upload_one(sf: Path) -> str:
-        r2.upload_file(sf, f"aria/{sf.name}", content_type="application/json")
-        return sf.name
-
-    uploaded = 0
-    with ThreadPoolExecutor(max_workers=24) as ex:
-        futures = {ex.submit(_upload_one, sf): sf for sf in to_upload}
-        for f in as_completed(futures):
-            try:
-                f.result()
-                uploaded += 1
-                if uploaded % 100 == 0:
-                    log.info("aria_shard_push_progress",
-                             uploaded=uploaded, total=len(to_upload))
-            except Exception as e:
-                log.error("aria_shard_upload_failed",
-                          file=str(futures[f]), error=str(e))
-
-    log.info("aria_shard_push_done", uploaded=uploaded)
-    files.append({"key": "aria/*", "count": len(shard_files)})
-    return files
+    if not aggr_path.exists():
+        log.warning("aria_aggregato_missing", path=str(aggr_path))
+        return
+    payload = json.loads(aggr_path.read_text(encoding="utf-8"))
+    local_lookup.save_lookup("aria-aggregato.json", payload)
+    log.info("aria_aggregato_saved_to_lookup",
+             path=str(local_lookup.get_lookup_dir() / "aria-aggregato.json"))
 
 
 # ============================================================================
@@ -733,14 +636,13 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         description="ETL ISPRA SNPA - Qualita' dell'aria per comune"
     )
-    parser.add_argument("--target", choices=["local", "r2"], default="local",
-                        help="Output target: local files or R2 push")
+    # --target tenuto per retrocompat workflow esistenti, ma solo 'local' e' supportato
+    parser.add_argument("--target", choices=["local"], default="local",
+                        help="Solo 'local' supportato (R2 rimosso dall'infrastruttura AgID)")
     parser.add_argument("--outdir", default="/var/www/cruscotto-italia/data/aria",
                         help="Local output directory for shards (default: /var/www/cruscotto-italia/data/aria)")
     parser.add_argument("--no-cache", action="store_true",
                         help="Re-download CSV ISPRA ignorando la cache locale")
-    parser.add_argument("--force-shard-upload", action="store_true",
-                        help="Bypass md5 check, upload tutti gli shard (target=r2)")
     parser.add_argument("--limit", type=int, default=None,
                         help="(debug) processa solo N comuni")
     args = parser.parse_args()
@@ -752,8 +654,7 @@ def main() -> int:
 
     try:
         # 1. Download dei 4 CSV
-        log.info("aria_etl_start", target=args.target,
-                 inquinanti=list(INQUINANTI_URLS.keys()))
+        log.info("aria_etl_start", inquinanti=list(INQUINANTI_URLS.keys()))
         csv_paths: dict[str, Path] = {}
         for ink, url in INQUINANTI_URLS.items():
             csv_paths[ink] = fetch_csv(ink, url, no_cache=args.no_cache)
@@ -771,12 +672,23 @@ def main() -> int:
         # 4. Build aggregato
         build_aggregato(inquinanti_summary, n_comuni, aggr_path, shard_dir)
 
-        # 5. Push R2 (se richiesto)
-        if args.target == "r2":
-            files = push_to_r2(aggr_path, shard_dir,
-                               force_shard_upload=args.force_shard_upload)
-            manifest.update_source("aria", files, status="ok")
+        # 5. Copy aggregato a data/lookup/ per Worker A1
+        save_aggregato_local(aggr_path)
+
+        # Manifest update best-effort
+        try:
+            manifest.update_source(
+                "aria",
+                [
+                    {"key": "lookup/aria-aggregato.json",
+                     "size": aggr_path.stat().st_size},
+                    {"key": "aria/*", "count": n_comuni},
+                ],
+                status="ok",
+            )
             log.info("aria_manifest_updated")
+        except Exception as e:
+            log.warning("aria_manifest_update_skipped", error=str(e))
 
         log.info("aria_etl_done",
                  n_comuni=n_comuni,
@@ -790,11 +702,6 @@ def main() -> int:
 
     except Exception as e:
         log.error("aria_etl_failed", error=str(e), error_type=type(e).__name__)
-        if args.target == "r2":
-            try:
-                manifest.update_source("aria", [], status="failed")
-            except Exception:
-                pass
         raise
 
 
