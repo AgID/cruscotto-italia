@@ -90,11 +90,7 @@
 .mini-agid {
   display: inline-flex;
   align-items: center;
-  gap: var(--sp-3);
   flex-shrink: 0;
-  padding-right: var(--sp-4);
-  border-right: 1px solid var(--border);
-  margin-right: var(--sp-2);
 }
 .mini-agid-logo {
   height: 24px !important;
