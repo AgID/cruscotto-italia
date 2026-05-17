@@ -91,7 +91,7 @@ Amministrazione, AgID).
 ```
 
 Dettagli architetturali completi: [`DESIGN.md`](DESIGN.md) ·
-[`docs/INFRASTRUCTURE.md`](docs/INFRASTRUCTURE.md) ·
+[`docs/INFRASTRUCTURE.md`](docs/INFRASTRUCTURE.md) · [`docs/SECURITY.md`](docs/SECURITY.md) ·
 [`deploy/HANDOFF.md`](deploy/HANDOFF.md).
 
 ### Cadenze ETL
