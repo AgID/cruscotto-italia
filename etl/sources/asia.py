@@ -77,10 +77,9 @@ Schema shard asia/<istat>.json:
 }
 
 Usage:
-  python -m etl.sources.asia --target=local --limit=5     # smoke 5 comuni
-  python -m etl.sources.asia --target=local               # full local
-  python -m etl.sources.asia --target=r2                  # full + R2 push
-  python -m etl.sources.asia --target=r2 --skip-download  # riusa cache CSV
+  python -m etl.sources.asia --limit=075035,058091    # smoke su comuni specifici
+  python -m etl.sources.asia                          # full
+  python -m etl.sources.asia --skip-download          # riusa cache CSV
 """
 from __future__ import annotations
 
@@ -100,7 +99,7 @@ from pathlib import Path
 import duckdb
 import structlog
 
-from etl.lib import manifest, r2
+from etl.lib import local_lookup, manifest
 
 log = structlog.get_logger()
 
@@ -318,16 +317,18 @@ def download_chunk(istat_codes: list[str],
 
 
 def get_all_istat_codes() -> list[str]:
-    """Ritorna lista ufficiale dei ~7896 ISTAT comuni dal bundle R2.
+    """Ritorna lista ufficiale dei ~7896 ISTAT comuni dal bundle locale.
 
-    Stesso pattern di anncsu.py / load_canonical_istat():
-    legge lookup/comuni-bundle.json dal bucket R2 cruscotto-italia-data.
+    Legge data/lookup/comuni-bundle.json. Se assente, SystemExit con hint.
     """
     log.info("asia_loading_canonical_istat")
-    client = r2.get_r2_client()
-    obj = client.get_object(Bucket=r2.get_bucket(),
-                            Key="lookup/comuni-bundle.json")
-    bundle = json.loads(obj["Body"].read())["comuni"]
+    bundle = local_lookup.load_comuni_bundle()
+    if bundle is None:
+        raise SystemExit(
+            "Local lookup 'comuni-bundle.json' assente in "
+            f"{local_lookup.get_lookup_dir()}. "
+            "Esegui prima 'python -m etl.sources.anagrafica'."
+        )
     codes = sorted(bundle.keys())
     log.info("asia_canonical_loaded", n_comuni=len(codes))
     return codes
@@ -655,78 +656,6 @@ def build_all_shards(con: duckdb.DuckDBPyConnection, output_dir: Path) -> Path:
 # FASE 4 — R2 push parallelo
 # ═════════════════════════════════════════════════════════════════════════
 
-def push_to_r2_parallel(shard_dir: Path, force_upload: bool = False,
-                        max_workers: int = 24) -> int:
-    """Push parallelo dei shard su R2 con dedup MD5 vs ETag remoti.
-
-    Pattern di riferimento: aria.py / veicoli.py.
-    1) Lista oggetti remoti con prefisso 'asia/' → dict ETag.
-    2) Calcola MD5 locale, salta se ETag corrisponde.
-    3) Upload paralleli con ThreadPoolExecutor.
-    """
-    import hashlib
-
-    shard_files = sorted(shard_dir.glob("*.json"))
-    log.info("asia_r2_push_start", n_local=len(shard_files))
-
-    # 1) Lista remota ETags
-    remote_etags: dict[str, str] = {}
-    if not force_upload:
-        try:
-            client = r2.get_r2_client()
-            bucket = r2.get_bucket()
-            paginator = client.get_paginator("list_objects_v2")
-            for page in paginator.paginate(Bucket=bucket, Prefix="asia/"):
-                for o in page.get("Contents", []):
-                    remote_etags[o["Key"]] = o["ETag"].strip('"')
-            log.info("asia_r2_remote_etag_listed", n_remote=len(remote_etags))
-        except Exception as e:
-            log.warning("asia_r2_list_failed", err=str(e))
-
-    to_upload: list[Path] = []
-    skipped = 0
-    for sf in shard_files:
-        key = f"asia/{sf.name}"
-        if not force_upload and key in remote_etags:
-            local_md5 = hashlib.md5(sf.read_bytes()).hexdigest()
-            if local_md5 == remote_etags[key]:
-                skipped += 1
-                continue
-        to_upload.append(sf)
-    log.info("asia_r2_diff_done", to_upload=len(to_upload), skipped=skipped)
-
-    if not to_upload:
-        return 0
-
-    uploaded = 0
-    t0 = time.time()
-
-    def _upload_one(sf: Path) -> bool:
-        try:
-            key = f"asia/{sf.name}"
-            r2.upload_file(sf, key, content_type="application/json")
-            return True
-        except Exception as e:
-            log.error("asia_r2_upload_failed", file=sf.name, err=str(e))
-            return False
-
-    with ThreadPoolExecutor(max_workers=max_workers) as ex:
-        futures = {ex.submit(_upload_one, sf): sf for sf in to_upload}
-        for i, fut in enumerate(as_completed(futures), 1):
-            ok = fut.result()
-            if ok:
-                uploaded += 1
-            if i % 200 == 0:
-                elapsed = time.time() - t0
-                eta = elapsed / i * (len(to_upload) - i)
-                log.info("asia_r2_push_progress",
-                         done=i, total=len(to_upload),
-                         elapsed_s=round(elapsed, 1), eta_s=round(eta, 1))
-    log.info("asia_r2_push_done", uploaded=uploaded,
-             skipped=skipped, elapsed_s=round(time.time() - t0, 1))
-    return uploaded
-
-
 # ═════════════════════════════════════════════════════════════════════════
 # CLI
 # ═════════════════════════════════════════════════════════════════════════
@@ -735,21 +664,20 @@ def main() -> int:
     ap = argparse.ArgumentParser(
         description="ETL ISTAT ASIA UL (Unità Locali + Addetti per comune)",
     )
-    ap.add_argument("--target", choices=["local", "r2"], default="local",
-                    help="local: scrive solo in --outdir; r2: scrive shard + push R2")
+    # --target tenuto per retrocompat workflow esistenti, ma solo 'local' e' supportato
+    ap.add_argument("--target", choices=["local"], default="local",
+                    help="Solo 'local' supportato (R2 rimosso dall'infrastruttura AgID)")
     ap.add_argument("--outdir", default="/var/www/cruscotto-italia/data/asia",
                     help="Directory shard locali (default: /var/www/cruscotto-italia/data/asia)")
     ap.add_argument("--skip-download", action="store_true",
                     help="Riusa cache CSV in /tmp/cruscotto_asia/")
     ap.add_argument("--force-download", action="store_true",
                     help="Re-download anche con cache presente")
-    ap.add_argument("--force-upload", action="store_true",
-                    help="R2 upload senza ETag check")
     ap.add_argument("--limit", default="",
                     help="Smoke test: lista comma-separated ISTAT (es. 075035,058091)")
     args = ap.parse_args()
 
-    log.info("asia_etl_start", target=args.target)
+    log.info("asia_etl_start")
     t_start = time.time()
 
     # FASE 1: download chunked
@@ -782,26 +710,20 @@ def main() -> int:
     output_dir = Path(args.outdir)
     shard_dir = build_all_shards(con, output_dir.parent if output_dir.name == "asia" else output_dir)
 
-    # FASE 4: R2 push (solo se target=r2)
-    uploaded = 0
-    if args.target == "r2":
-        uploaded = push_to_r2_parallel(shard_dir, force_upload=args.force_upload)
-        # Manifest update
-        try:
-            files = [{"name": f.name,
-                      "size": f.stat().st_size,
-                      "key": f"asia/{f.name}"}
-                     for f in sorted(shard_dir.glob("*.json"))]
-            manifest.update_source("asia", files, status="ok")
-            log.info("asia_manifest_updated", n_files=len(files))
-        except Exception as e:
-            log.warning("asia_manifest_update_failed", err=str(e))
+    # Manifest update best-effort
+    try:
+        files = [{"name": f.name,
+                  "size": f.stat().st_size,
+                  "key": f"asia/{f.name}"}
+                 for f in sorted(shard_dir.glob("*.json"))]
+        manifest.update_source("asia", files, status="ok")
+        log.info("asia_manifest_updated", n_files=len(files))
+    except Exception as e:
+        log.warning("asia_manifest_update_skipped", err=str(e))
 
     elapsed_total = time.time() - t_start
     log.info("asia_etl_done",
-             target=args.target,
              shards_dir=str(shard_dir),
-             uploaded=uploaded,
              elapsed_s=round(elapsed_total, 1))
     return 0
 
