@@ -14,8 +14,8 @@ Pipeline:
   3. Push su R2 + arricchimento bundle comuni con KPI contratti
 
 Usage:
-  python -m etl.sources.anac --target=local --years=2026 --months=1,2,3
-  python -m etl.sources.anac --target=r2 --years=2025,2026
+  python -m etl.sources.anac --years=2026 --months=1,2,3
+  python -m etl.sources.anac --years=2025,2026
 """
 from __future__ import annotations
 
@@ -29,7 +29,7 @@ import duckdb
 import requests
 import structlog
 
-from etl.lib import manifest, r2
+from etl.lib import manifest
 
 log = structlog.get_logger()
 
@@ -216,14 +216,6 @@ def aggregate_anac(parquet_paths: list[Path], output_dir: Path) -> Path:
 
 
 # ----------------------------------------------------------------------------
-# Push to R2
-# ----------------------------------------------------------------------------
-def push_to_r2(local_path: Path, key: str, content_type: str = "application/json") -> dict:
-    r2.upload_file(local_path, key, content_type=content_type)
-    return {"key": key, "size": local_path.stat().st_size}
-
-
-# ----------------------------------------------------------------------------
 # Main
 # ----------------------------------------------------------------------------
 def parse_months(s: str) -> list[int]:
@@ -236,7 +228,9 @@ def parse_years(s: str) -> list[int]:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="ETL ANAC OCDS — contratti aggregati per comune")
-    parser.add_argument("--target", choices=["local", "r2"], default="local")
+    # --target tenuto per retrocompat workflow esistenti, ma solo 'local' e' supportato
+    parser.add_argument("--target", choices=["local"], default="local",
+                        help="Solo 'local' supportato (R2 rimosso dall'infrastruttura AgID)")
     parser.add_argument("--years", type=str, default="2026", help="Comma-separated, e.g. 2025,2026")
     parser.add_argument("--months", type=str, default="1,2,3,4,5,6,7,8,9,10,11,12",
                         help="Comma-separated month list, default all 12")
@@ -258,9 +252,11 @@ def main() -> int:
 
     output_dir = args.outdir
     output_dir.mkdir(parents=True, exist_ok=True)
+    lookup_dir = output_dir / "lookup"
+    lookup_dir.mkdir(parents=True, exist_ok=True)
     args.workdir.mkdir(parents=True, exist_ok=True)
 
-    log.info("etl_start", target=args.target, output_dir=str(output_dir),
+    log.info("etl_start", output_dir=str(output_dir),
              workdir=str(args.workdir), years=years, months=months)
 
     try:
@@ -293,31 +289,30 @@ def main() -> int:
             log.error("no_parquets_built")
             return 1
 
-        # 2. Aggregate
-        aggr_path = aggregate_anac(parquet_paths, output_dir)
+        # 2. Aggregate -> scrive direttamente in lookup_dir
+        aggr_path = aggregate_anac(parquet_paths, lookup_dir)
 
-        # 3. Push (optional)
-        files = []
-        if args.target == "r2":
-            f = push_to_r2(aggr_path, "lookup/anac-aggregato.json")
-            files.append(f)
-            # Push anche i parquet mensili (utile per audit)
-            for pq in parquet_paths:
-                key = f"anac/monthly/{pq.name}"
-                files.append(push_to_r2(pq, key, content_type="application/vnd.apache.parquet"))
+        # 3. Aggiorna manifest (best-effort)
+        files = [{"key": "lookup/anac-aggregato.json",
+                  "size": aggr_path.stat().st_size}]
+        for pq in parquet_paths:
+            files.append({"key": f"anac/monthly/{pq.name}",
+                          "size": pq.stat().st_size})
+        try:
             manifest.update_source("anac", files, status="ok")
             log.info("manifest_updated")
+        except Exception as e:
+            log.warning("manifest_update_skipped", error=str(e))
 
         log.info("etl_done", parquets_built=len(parquet_paths), aggregato_bytes=aggr_path.stat().st_size)
         return 0
 
     except Exception as e:
         log.exception("etl_failed", error=str(e))
-        if args.target == "r2":
-            try:
-                manifest.update_source("anac", [], status=f"failed: {e}")
-            except Exception:
-                pass
+        try:
+            manifest.update_source("anac", [], status=f"failed: {e}")
+        except Exception:
+            pass
         return 1
 
 
