@@ -67,30 +67,26 @@ Schema output shard:
 }
 
 Usage:
-  python -m etl.sources.anncsu --target=r2
-  python -m etl.sources.anncsu --target=local --outdir=dist/anncsu
+  python -m etl.sources.anncsu --outdir=dist/anncsu
   python -m etl.sources.anncsu --regioni=BASI,PUGL  (subset test)
   python -m etl.sources.anncsu --skip-download (riusa cache /tmp esistente)
 """
 
 import argparse
 import csv
-import hashlib
 import json
-import os
 import random
 import sys
 import time
 import zipfile
 from collections import defaultdict
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
 
 import requests
 import structlog
 
-from etl.lib import r2
+from etl.lib import local_lookup
 
 log = structlog.get_logger()
 
@@ -139,47 +135,25 @@ METODO_LABEL = {
 # FASE 1 - DOWNLOAD
 # ----------------------------------------------------------------------
 
-def _r2_latest_key(kind: str, region: str) -> str:
-    return f"raw/anncsu/{kind}_{region}_latest.zip"
+def download_one(kind: str, region: str, push_r2: bool = False) -> Path:
+    """Scarica un singolo file ZIP nella cache locale.
 
+    Strategia (semplificata vs versione R2):
+      1. Se cache locale esiste e push_r2 NON e' richiesto (default), riusa.
+         La cache si rinfresca con --force-download (gestita da download_all).
+      2. Altrimenti GET endpoint, salva in cache locale.
 
-def _md5_file(p: Path) -> str:
-    h = hashlib.md5()
-    with p.open("rb") as fh:
-        for chunk in iter(lambda: fh.read(65536), b""):
-            h.update(chunk)
-    return h.hexdigest()
-
-
-def _r2_md5(key: str) -> str | None:
-    """ETag R2 == md5 per upload single-part (i nostri ZIP <50MB lo sono)."""
-    meta = r2.head(key)
-    if meta is None:
-        return None
-    return (meta.get("ETag") or "").strip('"').lower()
-
-
-def download_one(kind: str, region: str, push_r2: bool = True) -> Path:
-    """Scarica un singolo file ZIP.
-
-    Strategia:
-      1. Se cache locale esiste e md5 matcha R2 _latest → skip
-      2. Altrimenti GET endpoint, salva in cache locale
-      3. Se push_r2: upload _latest.zip su R2 (overwrite)
+    Il parametro push_r2 e' tenuto come no-op per retrocompat firma chiamanti.
     """
     local_path = CACHE_DIR / f"{kind}_{region}.zip"
-    r2_key = _r2_latest_key(kind, region)
 
-    # Step 1: cache locale + R2 match?
-    if local_path.exists() and push_r2:
-        local_md5 = _md5_file(local_path)
-        remote_md5 = _r2_md5(r2_key)
-        if remote_md5 and local_md5 == remote_md5:
-            log.info("anncsu_skip_cached", kind=kind, region=region,
-                     size=local_path.stat().st_size)
-            return local_path
+    # Cache hit?
+    if local_path.exists():
+        log.info("anncsu_skip_cached", kind=kind, region=region,
+                 size=local_path.stat().st_size)
+        return local_path
 
-    # Step 2: download
+    # Download
     url = f"{BASE_URL}?{kind}_{region}"
     log.info("anncsu_downloading", kind=kind, region=region, url=url)
     t0 = time.time()
@@ -201,11 +175,6 @@ def download_one(kind: str, region: str, push_r2: bool = True) -> Path:
             f"Downloaded file is not a valid ZIP: {kind}_{region} "
             f"({size} bytes)"
         )
-
-    # Step 3: push R2 _latest
-    if push_r2:
-        r2.upload_file(local_path, r2_key, content_type="application/zip")
-        log.info("anncsu_pushed_r2", key=r2_key, size=size)
 
     return local_path
 
@@ -280,10 +249,13 @@ def load_canonical_istat() -> set[str]:
     (es. 047023 Vergemoli fuso nel 2014 in Fabbriche di Vergemoli).
     """
     log.info("anncsu_loading_canonical_istat")
-    client = r2.get_r2_client()
-    obj = client.get_object(Bucket=r2.get_bucket(),
-                            Key="lookup/comuni-bundle.json")
-    bundle = json.loads(obj["Body"].read())["comuni"]
+    bundle = local_lookup.load_comuni_bundle()
+    if bundle is None:
+        raise SystemExit(
+            "Local lookup 'comuni-bundle.json' assente in "
+            f"{local_lookup.get_lookup_dir()}. "
+            "Esegui prima 'python -m etl.sources.anagrafica'."
+        )
     canonical = set(bundle.keys())
     log.info("anncsu_canonical_loaded", n_comuni=len(canonical))
     return canonical
@@ -806,177 +778,20 @@ def build_all_full_shards(strad_data: dict, indir_data: dict,
 
 
 # ----------------------------------------------------------------------
-# FASE 5 - PUSH R2 (pattern aria.py)
-# ----------------------------------------------------------------------
-
-def push_shards_to_r2(shard_dir: Path,
-                      force_upload: bool = False) -> dict:
-    """Push paralleli con skip via md5/ETag su prefix anncsu/."""
-    if not shard_dir.exists():
-        log.warning("anncsu_no_shard_dir_to_push", path=str(shard_dir))
-        return {"uploaded": 0, "unchanged": 0, "errors": 0}
-
-    import boto3 as _b3
-    _client = _b3.client(
-        "s3",
-        endpoint_url=f"https://{os.environ['R2_ACCOUNT_ID']}.r2.cloudflarestorage.com",
-        aws_access_key_id=os.environ["R2_ACCESS_KEY_ID"],
-        aws_secret_access_key=os.environ["R2_SECRET_ACCESS_KEY"],
-    )
-
-    shard_files = sorted(shard_dir.glob("*.json"))
-
-    remote_etag: dict[str, str] = {}
-    try:
-        _pag = _client.get_paginator("list_objects_v2")
-        for _page in _pag.paginate(Bucket=r2.get_bucket(), Prefix="anncsu/"):
-            for _o in _page.get("Contents", []):
-                name = _o["Key"].split("/")[-1]
-                etag = (_o.get("ETag") or "").strip('"').lower()
-                remote_etag[name] = etag
-        log.info("anncsu_shard_remote_listed", count=len(remote_etag))
-    except Exception as e:
-        log.warning("anncsu_shard_list_failed", error=str(e))
-
-    to_upload: list[Path] = []
-    if force_upload:
-        to_upload = list(shard_files)
-        log.info("anncsu_force_upload", count=len(to_upload))
-    else:
-        n_same = 0
-        for sf in shard_files:
-            rmd5 = remote_etag.get(sf.name)
-            if rmd5 is None or _md5_file(sf) != rmd5:
-                to_upload.append(sf)
-            else:
-                n_same += 1
-        log.info("anncsu_md5_compared",
-                 total=len(shard_files), unchanged=n_same,
-                 to_upload=len(to_upload))
-
-    def _upload_one(sf: Path) -> str:
-        r2.upload_file(sf, f"anncsu/{sf.name}",
-                       content_type="application/json")
-        return sf.name
-
-    uploaded = 0
-    errors = 0
-    with ThreadPoolExecutor(max_workers=24) as ex:
-        futures = {ex.submit(_upload_one, sf): sf for sf in to_upload}
-        for f in as_completed(futures):
-            try:
-                f.result()
-                uploaded += 1
-                if uploaded % 200 == 0:
-                    log.info("anncsu_push_progress",
-                             uploaded=uploaded, total=len(to_upload))
-            except Exception as e:
-                errors += 1
-                log.error("anncsu_upload_failed", error=str(e))
-
-    log.info("anncsu_push_done",
-             uploaded=uploaded, unchanged=len(shard_files) - len(to_upload),
-             errors=errors)
-    return {
-        "uploaded": uploaded,
-        "unchanged": len(shard_files) - len(to_upload),
-        "errors": errors,
-    }
-
-
-def push_full_shards_to_r2(shard_dir: Path,
-                           force_upload: bool = False) -> dict:
-    """Push paralleli su prefix anncsu_full/. Stesso pattern di push_shards_to_r2."""
-    if not shard_dir.exists():
-        log.warning("anncsu_full_no_shard_dir_to_push", path=str(shard_dir))
-        return {"uploaded": 0, "unchanged": 0, "errors": 0}
-
-    import boto3 as _b3
-    _client = _b3.client(
-        "s3",
-        endpoint_url=f"https://{os.environ['R2_ACCOUNT_ID']}.r2.cloudflarestorage.com",
-        aws_access_key_id=os.environ["R2_ACCESS_KEY_ID"],
-        aws_secret_access_key=os.environ["R2_SECRET_ACCESS_KEY"],
-    )
-
-    shard_files = sorted(shard_dir.glob("*.json"))
-
-    remote_etag: dict[str, str] = {}
-    try:
-        _pag = _client.get_paginator("list_objects_v2")
-        for _page in _pag.paginate(Bucket=r2.get_bucket(), Prefix="anncsu_full/"):
-            for _o in _page.get("Contents", []):
-                name = _o["Key"].split("/")[-1]
-                etag = (_o.get("ETag") or "").strip('"').lower()
-                remote_etag[name] = etag
-        log.info("anncsu_full_shard_remote_listed", count=len(remote_etag))
-    except Exception as e:
-        log.warning("anncsu_full_shard_list_failed", error=str(e))
-
-    to_upload: list[Path] = []
-    if force_upload:
-        to_upload = list(shard_files)
-        log.info("anncsu_full_force_upload", count=len(to_upload))
-    else:
-        n_same = 0
-        for sf in shard_files:
-            rmd5 = remote_etag.get(sf.name)
-            if rmd5 is None or _md5_file(sf) != rmd5:
-                to_upload.append(sf)
-            else:
-                n_same += 1
-        log.info("anncsu_full_md5_compared",
-                 total=len(shard_files), unchanged=n_same,
-                 to_upload=len(to_upload))
-
-    def _upload_one(sf: Path) -> str:
-        r2.upload_file(sf, f"anncsu_full/{sf.name}",
-                       content_type="application/json")
-        return sf.name
-
-    uploaded = 0
-    errors = 0
-    with ThreadPoolExecutor(max_workers=24) as ex:
-        futures = {ex.submit(_upload_one, sf): sf for sf in to_upload}
-        for f in as_completed(futures):
-            try:
-                f.result()
-                uploaded += 1
-                if uploaded % 200 == 0:
-                    log.info("anncsu_full_push_progress",
-                             uploaded=uploaded, total=len(to_upload))
-            except Exception as e:
-                errors += 1
-                log.error("anncsu_full_upload_failed", error=str(e))
-
-    log.info("anncsu_full_push_done",
-             uploaded=uploaded, unchanged=len(shard_files) - len(to_upload),
-             errors=errors)
-    return {
-        "uploaded": uploaded,
-        "unchanged": len(shard_files) - len(to_upload),
-        "errors": errors,
-    }
-
-
-# ----------------------------------------------------------------------
 # CLI
 # ----------------------------------------------------------------------
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="ETL ANNCSU (toponomastica nazionale)")
-    ap.add_argument("--target", choices=["local", "r2"], default="local",
-                    help="local: scrive solo in --outdir; r2: scrive shard + push R2")
+    # --target tenuto per retrocompat workflow esistenti, ma solo 'local' e' supportato
+    ap.add_argument("--target", choices=["local"], default="local",
+                    help="Solo 'local' supportato (R2 rimosso dall'infrastruttura AgID)")
     ap.add_argument("--outdir", default="/var/www/cruscotto-italia/data/anncsu",
                     help="Directory shard locali (default: /var/www/cruscotto-italia/data/anncsu)")
     ap.add_argument("--regioni", default="",
                     help="Sottoinsieme regioni (CSV, es. BASI,PUGL). Default: tutte 20.")
     ap.add_argument("--skip-download", action="store_true",
                     help="Riusa cache locale /tmp esistente (non scarica)")
-    ap.add_argument("--no-r2-cache", action="store_true",
-                    help="Non pusha gli ZIP raw su R2 durante il download")
-    ap.add_argument("--force-upload", action="store_true",
-                    help="Push R2 di tutti gli shard senza md5 check")
     ap.add_argument("--no-canonical-filter", action="store_true",
                     help="Disabilita il filtro contro lookup/comuni-bundle.json "
                          "(rischia di scrivere shard per ISTAT soppressi)")
@@ -985,10 +800,10 @@ def main() -> int:
                          "con tutti i civici geo-ref, non solo sample 1000. "
                          "Output peso: ~0.23GB gzippato totale nazionale.")
     ap.add_argument("--skip-sample", action="store_true",
-                    help="Non genera/pusha gli shard sample (anncsu/). Utile "
-                         "se --full-shards e gli sample sono già su R2.")
+                    help="Non genera shard sample (anncsu/). Utile "
+                         "se --full-shards e gli sample sono già scritti.")
     ap.add_argument("--full-outdir", default="/var/www/cruscotto-italia/data/anncsu_full",
-                    help="Directory shard FULL locali (default: dist/anncsu_full)")
+                    help="Directory shard FULL locali (default: /var/www/cruscotto-italia/data/anncsu_full)")
     args = ap.parse_args()
 
     if args.regioni:
@@ -1002,11 +817,11 @@ def main() -> int:
         regions = REGIONS
 
     log.info("anncsu_etl_start",
-             regions=regions, target=args.target,
+             regions=regions,
              skip_download=args.skip_download)
     t_start = time.time()
 
-    # FASE 1: download
+    # FASE 1: download (o cache locale)
     if args.skip_download:
         paths = {}
         for region in regions:
@@ -1019,7 +834,8 @@ def main() -> int:
                 paths[(kind, region)] = p
         log.info("anncsu_cache_reused", files=len(paths))
     else:
-        paths = download_all(regions, push_r2=(not args.no_r2_cache))
+        # push_r2=False sempre: R2 rimosso
+        paths = download_all(regions, push_r2=False)
 
     strad_paths = {reg: p for (k, reg), p in paths.items() if k == "STRAD"}
     indir_paths = {reg: p for (k, reg), p in paths.items() if k == "INDIR"}
@@ -1065,17 +881,6 @@ def main() -> int:
         n_written_full = build_all_full_shards(strad_data, indir_data, snapshot,
                                                full_out_dir,
                                                canonical_istat=canonical)
-
-    # FASE 5: push R2
-    if args.target == "r2":
-        if not args.skip_sample:
-            result = push_shards_to_r2(Path(args.outdir),
-                                       force_upload=args.force_upload)
-            log.info("anncsu_r2_push_sample_result", **result)
-        if args.full_shards:
-            result_full = push_full_shards_to_r2(Path(args.full_outdir),
-                                                  force_upload=args.force_upload)
-            log.info("anncsu_r2_push_full_result", **result_full)
 
     elapsed = time.time() - t_start
     log.info("anncsu_etl_done", elapsed_s=round(elapsed, 1),
