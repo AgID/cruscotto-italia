@@ -67,32 +67,28 @@ Pattern di esecuzione:
      SPECIAL_NAMES per fusioni/bilingui)
   4) group_by_istat() -> dict[istat] = list[ente]
   5) build_shards() -> 7918 file runts/<istat>.json (cap 5000 enti)
-  6) push_to_r2() -> list_objects_v2 + md5 diff + ThreadPool max_workers=24
+  6) write_local() -> persist su DATA_DIR/runts/
 
 Usage:
-  python -m etl.sources.runts --target=r2
-  python -m etl.sources.runts --target=local --outdir=dist/runts
+  python -m etl.sources.runts --outdir=dist/runts
   python -m etl.sources.runts --skip-download (riusa cache /tmp esistente)
 """
 
 import argparse
-import hashlib
 import json
-import os
 import re
 import sys
 import time
 import unicodedata
 import urllib.parse
 from collections import defaultdict
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
 
 import requests
 import structlog
 
-from etl.lib import r2
+from etl.lib import local_lookup
 
 log = structlog.get_logger(__name__)
 
@@ -264,14 +260,6 @@ SPECIAL_NAMES: dict[str, str] = {
 # =========================================================================
 # Helpers
 # =========================================================================
-
-def _md5_file(p: Path) -> str:
-    h = hashlib.md5()
-    with p.open("rb") as f:
-        for chunk in iter(lambda: f.read(65536), b""):
-            h.update(chunk)
-    return h.hexdigest()
-
 
 def normalize(s: str) -> str:
     """Normalizza un nome comune per il match nome->ISTAT.
@@ -530,7 +518,7 @@ def parse_xlsx(xlsx_path: Path) -> list[dict]:
 # =========================================================================
 
 def load_lookups() -> tuple[dict[str, str], set[str]]:
-    """Carica nome_to_istat + canonical_istat dal bundle anagrafica.
+    """Carica nome_to_istat + canonical_istat dal bundle anagrafica locale.
 
     Ritorna:
       - nome_to_istat: denominazione normalizzata -> istat_code
@@ -538,11 +526,13 @@ def load_lookups() -> tuple[dict[str, str], set[str]]:
         anche per comuni con n_totale=0)
     """
     log.info("runts_lookups_loading")
-    client = r2.get_r2_client()
-    bucket = r2.get_bucket()
-    obj = client.get_object(Bucket=bucket, Key="lookup/comuni-bundle.json")
-    bundle = json.loads(obj["Body"].read())
-    comuni = bundle.get("comuni", {})
+    comuni = local_lookup.load_comuni_bundle()
+    if comuni is None:
+        raise SystemExit(
+            "Local lookup 'comuni-bundle.json' assente in "
+            f"{local_lookup.get_lookup_dir()}. "
+            "Esegui prima 'python -m etl.sources.anagrafica'."
+        )
 
     nome_to_istat: dict[str, str] = {}
     canonical_istat: set[str] = set()
@@ -755,82 +745,6 @@ def build_all_shards(grouped: dict[str, list[dict]],
 # FASE 6 — Push R2 (pattern md5+ETag+ThreadPool)
 # =========================================================================
 
-def push_shards_to_r2(shard_dir: Path,
-                      force_upload: bool = False) -> dict:
-    """Push paralleli con skip via md5/ETag su prefix runts/."""
-    if not shard_dir.exists():
-        log.warning("runts_no_shard_dir_to_push", path=str(shard_dir))
-        return {"uploaded": 0, "unchanged": 0, "errors": 0}
-
-    import boto3 as _b3
-    _client = _b3.client(
-        "s3",
-        endpoint_url=f"https://{os.environ['R2_ACCOUNT_ID']}.r2.cloudflarestorage.com",
-        aws_access_key_id=os.environ["R2_ACCESS_KEY_ID"],
-        aws_secret_access_key=os.environ["R2_SECRET_ACCESS_KEY"],
-    )
-
-    shard_files = sorted(shard_dir.glob("*.json"))
-
-    remote_etag: dict[str, str] = {}
-    try:
-        _pag = _client.get_paginator("list_objects_v2")
-        for _page in _pag.paginate(Bucket=r2.get_bucket(), Prefix="runts/"):
-            for _o in _page.get("Contents", []):
-                name = _o["Key"].split("/")[-1]
-                etag = (_o.get("ETag") or "").strip('"').lower()
-                remote_etag[name] = etag
-        log.info("runts_shard_remote_listed", count=len(remote_etag))
-    except Exception as e:
-        log.warning("runts_shard_list_failed", error=str(e))
-
-    to_upload: list[Path] = []
-    if force_upload:
-        to_upload = list(shard_files)
-        log.info("runts_force_upload", count=len(to_upload))
-    else:
-        n_same = 0
-        for sf in shard_files:
-            rmd5 = remote_etag.get(sf.name)
-            if rmd5 is None or _md5_file(sf) != rmd5:
-                to_upload.append(sf)
-            else:
-                n_same += 1
-        log.info("runts_md5_compared",
-                 total=len(shard_files), unchanged=n_same,
-                 to_upload=len(to_upload))
-
-    def _upload_one(sf: Path) -> str:
-        r2.upload_file(sf, f"runts/{sf.name}",
-                       content_type="application/json")
-        return sf.name
-
-    uploaded = 0
-    errors = 0
-    with ThreadPoolExecutor(max_workers=24) as ex:
-        futures = {ex.submit(_upload_one, sf): sf for sf in to_upload}
-        for f in as_completed(futures):
-            try:
-                f.result()
-                uploaded += 1
-                if uploaded % 200 == 0:
-                    log.info("runts_push_progress",
-                             uploaded=uploaded, total=len(to_upload))
-            except Exception as e:
-                errors += 1
-                log.error("runts_upload_failed", error=str(e))
-
-    log.info("runts_push_done",
-             uploaded=uploaded,
-             unchanged=len(shard_files) - len(to_upload),
-             errors=errors)
-    return {
-        "uploaded": uploaded,
-        "unchanged": len(shard_files) - len(to_upload),
-        "errors": errors,
-    }
-
-
 # =========================================================================
 # Main CLI
 # =========================================================================
@@ -839,21 +753,20 @@ def main() -> int:
     ap = argparse.ArgumentParser(
         description="ETL RUNTS (Registro Unico Nazionale Terzo Settore)",
     )
-    ap.add_argument("--target", choices=["local", "r2"], default="local",
-                    help="local: scrive solo in --outdir; r2: scrive shard + push R2")
+    # --target tenuto per retrocompat workflow esistenti, ma solo 'local' e' supportato
+    ap.add_argument("--target", choices=["local"], default="local",
+                    help="Solo 'local' supportato (R2 rimosso dall'infrastruttura AgID)")
     ap.add_argument("--outdir", default="/var/www/cruscotto-italia/data/runts",
                     help="Directory shard locali (default: /var/www/cruscotto-italia/data/runts)")
     ap.add_argument("--skip-download", action="store_true",
                     help="Riusa cache locale /tmp/cruscotto_runts/ (non scarica)")
     ap.add_argument("--force-download", action="store_true",
                     help="Re-download anche se cache odierna presente")
-    ap.add_argument("--force-upload", action="store_true",
-                    help="Push R2 di tutti gli shard senza md5 check")
     ap.add_argument("--xlsx-path", default="",
                     help="Path esplicito a un XLSX gia' scaricato (override cache)")
     args = ap.parse_args()
 
-    log.info("runts_etl_start", target=args.target)
+    log.info("runts_etl_start")
     t_start = time.time()
 
     # FASE 1: download (o riuso cache)
@@ -906,15 +819,10 @@ def main() -> int:
                     pct=pct_unmatched,
                     note="estendi SPECIAL_NAMES con i comuni in top_unmatched")
 
-    # FASE 5: build shards
+    # FASE 5: build shards (write_local incluso)
     out_dir = Path(args.outdir)
     n_written = build_all_shards(grouped, canonical_istat,
                                   snapshot_date, out_dir)
-
-    # FASE 6: push R2 (solo se target=r2)
-    if args.target == "r2":
-        result = push_shards_to_r2(out_dir, force_upload=args.force_upload)
-        log.info("runts_r2_push_result", **result)
 
     elapsed = time.time() - t_start
     log.info("runts_etl_done",
