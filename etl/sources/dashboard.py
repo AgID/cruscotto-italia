@@ -8,7 +8,7 @@ Benefici:
 - 1 chiamata MCP per visita invece di 6+ (riduce alert Anthropic)
 - Niente piu' dipendenza da BDAP OData live per SIOPE (TODO: pre-calcolato in
   un secondo step dopo questa baseline)
-- Cache R2 unica, semplifica il worker
+- Cache locale unica, semplifica il worker
 
 Sorgenti accorpate:
 - demografia/<istat>.json        (POSAS ISTAT)
@@ -48,9 +48,8 @@ Schema output:
   }
 
 Usage:
-  python -m etl.sources.dashboard --target=local
-  python -m etl.sources.dashboard --target=r2
-  python -m etl.sources.dashboard --target=r2 --limit=50    # smoke test
+  python -m etl.sources.dashboard
+  python -m etl.sources.dashboard --limit=50    # smoke test
 """
 from __future__ import annotations
 
@@ -64,11 +63,11 @@ from pathlib import Path
 
 import structlog
 
-from etl.lib import local_lookup, manifest, r2
+from etl.lib import local_lookup, manifest
 
 log = structlog.get_logger()
 
-# Shard da accorpare: (label nello schema output, key R2)
+# Shard da accorpare: (label nello schema output, key relativo a DATA_DIR)
 SHARDS = [
     ("demografia", "demografia/{istat}.json"),
     ("profilo",    "profilo/{istat}.json"),
@@ -91,28 +90,13 @@ SHARDS = [
     ("asia",       "asia/{istat}.json"),
 ]
 
-# Shard locali (solo filesystem Aruba, non R2)
-# Aggiunti per fonti dati di volume basso che non giustificano push R2
+# Shard con path assoluto (legacy, indipendenti da DATA_DIR)
+# Per fonti dati di volume basso integrate prima del refactor local-first.
 SHARDS_LOCAL = [
     ("pendolarismo", "/var/www/cruscotto-italia/data/pendolarismo/{istat}.json"),
 ]
 
 ETL_VERSION = "0.1.0"
-
-
-def fetch_json(client, bucket: str, key: str) -> dict | None:
-    """Scarica un JSON da R2; ritorna None se non esiste."""
-    try:
-        obj = client.get_object(Bucket=bucket, Key=key)
-        return json.loads(obj["Body"].read())
-    except client.exceptions.NoSuchKey:
-        return None
-    except Exception as e:
-        # 404 puo' arrivare anche come ClientError generico
-        msg = str(e).lower()
-        if "nosuchkey" in msg or "404" in msg or "not found" in msg:
-            return None
-        raise
 
 
 def fetch_json_local(path: str) -> dict | None:
@@ -366,18 +350,15 @@ def compute_kpi_summary(out: dict) -> dict:
     return summary
 
 
-def build_dashboard_for_comune(client, bucket: str, istat: str,
+def build_dashboard_for_comune(istat: str,
                                 anagrafica: dict,
                                 anac_data: dict,
-                                bdap_data: dict,
-                                target: str = "r2") -> dict:
-    """Costruisce il dashboard shard per un singolo comune.
+                                bdap_data: dict) -> dict:
+    """Costruisce il dashboard shard per un singolo comune (local-only).
 
     Ritorna dict con _etl_version, _generated_at, _missing, anagrafica, e
-    una chiave per ogni shard (None se mancante).
-
-    target=local: legge ogni shard da $DATA_DIR/<source>/<istat>.json (no R2)
-    target=r2:    legge ogni shard da R2 bucket via client (legacy)
+    una chiave per ogni shard (None se mancante). Tutti gli shard sono
+    letti da filesystem locale ($DATA_DIR/<source>/<istat>.json).
     """
     missing: list[str] = []
     out: dict = {
@@ -387,21 +368,18 @@ def build_dashboard_for_comune(client, bucket: str, istat: str,
         "anagrafica": anagrafica,
     }
 
-    # Shard fisici: leggi da R2 oppure da filesystem locale
-    data_dir = local_lookup.get_data_dir() if target == "local" else None
+    # Shard fisici letti da filesystem locale
+    data_dir = local_lookup.get_data_dir()
     for label, pat in SHARDS:
-        if target == "local":
-            # pat e' "demografia/{istat}.json" -> path locale "DATA_DIR/demografia/{istat}.json"
-            data = fetch_json_local(str(data_dir / pat.format(istat=istat)))
-        else:
-            data = fetch_json(client, bucket, pat.format(istat=istat))
+        # pat e' "demografia/{istat}.json" -> path locale "DATA_DIR/demografia/{istat}.json"
+        data = fetch_json_local(str(data_dir / pat.format(istat=istat)))
         if data is None:
             missing.append(label)
             out[label] = None
         else:
             out[label] = data
 
-    # Shard locali (filesystem, indipendenti dal target)
+    # Shard locali con path assoluto (legacy: pendolarismo)
     for label, pat in SHARDS_LOCAL:
         data = fetch_json_local(pat.format(istat=istat))
         if data is None:
@@ -434,49 +412,25 @@ def build_dashboard_for_comune(client, bucket: str, istat: str,
     return out
 
 
-def build_all_shards(output_dir: Path, limit: int | None = None,
-                     target: str = "r2") -> dict:
-    """Costruisce tutti i dashboard shard nella output_dir locale.
+def build_all_shards(output_dir: Path, limit: int | None = None) -> dict:
+    """Costruisce tutti i dashboard shard nella output_dir (local-only).
 
-    target=local: lookup e shard letti da filesystem (DATA_DIR / lookup/, DATA_DIR/<source>/)
-    target=r2:    lookup e shard letti da R2 bucket (legacy, richiede credenziali)
+    Lookup (comuni-bundle, anac-aggregato, bdap-aggregato) e shard tematici
+    sono letti da filesystem ($DATA_DIR). Niente piu' R2.
 
     Ritorna stats: {processed, missing_per_shard, fully_complete}
     """
-    if target == "local":
-        log.info("loading_lookups_local", data_dir=str(local_lookup.get_data_dir()))
-        bundle = local_lookup.load_comuni_bundle()
-        if bundle is None:
-            raise SystemExit(
-                "Local lookup 'comuni-bundle.json' assente in "
-                f"{local_lookup.get_lookup_dir()}. "
-                "Esegui prima 'python -m etl.sources.anagrafica --target=local' "
-                "oppure popola data/lookup/ da una sorgente affidabile."
-            )
-        anac_data = local_lookup.load_anac_aggregato()
-        bdap_data = local_lookup.load_bdap_aggregato()
-        client = None
-        bucket = None
-    else:
-        client = r2.get_r2_client()
-        if client is None:
-            raise SystemExit(
-                "R2 credentials missing (R2_ACCOUNT_ID / R2_ACCESS_KEY_ID / "
-                "R2_SECRET_ACCESS_KEY). Usa --target=local per girare senza R2."
-            )
-        bucket = r2.get_bucket()
-        log.info("loading_lookups_r2", bucket=bucket)
-        bundle = json.loads(client.get_object(
-            Bucket=bucket, Key="lookup/comuni-bundle.json"
-        )["Body"].read())["comuni"]
-        anac_full = json.loads(client.get_object(
-            Bucket=bucket, Key="lookup/anac-aggregato.json"
-        )["Body"].read())
-        anac_data = anac_full.get("data", {})
-        bdap_full = json.loads(client.get_object(
-            Bucket=bucket, Key="lookup/bdap-aggregato.json"
-        )["Body"].read())
-        bdap_data = bdap_full.get("data", {})
+    log.info("loading_lookups_local", data_dir=str(local_lookup.get_data_dir()))
+    bundle = local_lookup.load_comuni_bundle()
+    if bundle is None:
+        raise SystemExit(
+            "Local lookup 'comuni-bundle.json' assente in "
+            f"{local_lookup.get_lookup_dir()}. "
+            "Esegui prima 'python -m etl.sources.anagrafica' oppure popola "
+            "data/lookup/ da una sorgente affidabile."
+        )
+    anac_data = local_lookup.load_anac_aggregato()
+    bdap_data = local_lookup.load_bdap_aggregato()
 
     log.info("lookups_loaded",
              comuni=len(bundle),
@@ -501,8 +455,7 @@ def build_all_shards(output_dir: Path, limit: int | None = None,
     def _build_one(istat: str) -> tuple[str, list[str]]:
         anagrafica = bundle[istat]
         out = build_dashboard_for_comune(
-            client, bucket, istat, anagrafica, anac_data, bdap_data,
-            target=target,
+            istat, anagrafica, anac_data, bdap_data,
         )
         # Scrivi su disco
         out_path = output_dir / f"{istat}.json"
@@ -512,7 +465,7 @@ def build_all_shards(output_dir: Path, limit: int | None = None,
         )
         return istat, out["_missing"]
 
-    # I/O bound (R2 GET): alta concorrenza
+    # I/O bound (filesystem read): alta concorrenza
     with ThreadPoolExecutor(max_workers=32) as ex:
         futures = {ex.submit(_build_one, istat): istat for istat in istat_codes}
         for i, fut in enumerate(as_completed(futures), 1):
@@ -540,39 +493,14 @@ def build_all_shards(output_dir: Path, limit: int | None = None,
     return stats
 
 
-def push_to_r2_parallel(shard_dir: Path) -> int:
-    """Upload parallelo degli shard sotto prefix 'dashboard/'."""
-    shard_files = sorted(shard_dir.glob("*.json"))
-    log.info("dashboard_pushing", total=len(shard_files))
-
-    def _upload_one(sf: Path) -> str:
-        r2.upload_file(sf, f"dashboard/{sf.name}", content_type="application/json")
-        return sf.name
-
-    uploaded = 0
-    with ThreadPoolExecutor(max_workers=24) as ex:
-        futures = {ex.submit(_upload_one, sf): sf for sf in shard_files}
-        for fut in as_completed(futures):
-            try:
-                fut.result()
-                uploaded += 1
-                if uploaded % 500 == 0:
-                    log.info("dashboard_push_progress",
-                             uploaded=uploaded, total=len(shard_files))
-            except Exception as e:
-                log.error("dashboard_upload_failed", error=str(e))
-
-    log.info("dashboard_push_done", uploaded=uploaded)
-    return uploaded
-
-
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="ETL Dashboard A1 - accorpa shard comune in dashboard/<istat>.json"
     )
+    # --target tenuto per retrocompat workflow esistenti, ma solo 'local' e' supportato
     parser.add_argument(
-        "--target", choices=["local", "r2"], default="local",
-        help="Dove pubblicare gli shard"
+        "--target", choices=["local"], default="local",
+        help="Solo 'local' supportato (R2 rimosso dall'infrastruttura AgID)"
     )
     parser.add_argument(
         "--outdir", type=Path,
@@ -586,21 +514,22 @@ def main() -> int:
     args = parser.parse_args()
 
     output_dir = args.outdir
-    log.info("etl_start", target=args.target, output_dir=str(output_dir),
-             limit=args.limit)
+    log.info("etl_start", output_dir=str(output_dir), limit=args.limit)
 
     try:
-        stats = build_all_shards(output_dir, limit=args.limit, target=args.target)
-
-        if args.target == "r2":
-            uploaded = push_to_r2_parallel(output_dir)
+        stats = build_all_shards(output_dir, limit=args.limit)
+        # Manifest: la sezione 'dashboard' la aggiorniamo in locale; il push R2 non esiste piu'.
+        try:
             manifest.update_source(
                 "dashboard",
-                [{"key": "dashboard/*", "count": uploaded}],
+                [{"key": f"dashboard/{p.name}", "size": p.stat().st_size}
+                 for p in sorted(output_dir.glob("*.json"))[:5]],
                 status="ok",
             )
             log.info("manifest_updated")
-
+        except Exception as e:
+            # Non bloccare l'ETL se il manifest fallisce (manifest e' best-effort)
+            log.warning("manifest_update_skipped", error=str(e))
         log.info("etl_done", **stats)
         return 0
     except Exception as e:
