@@ -5,10 +5,12 @@ Compone la spina dorsale del cruscotto:
                                    ├─→  anagrafica_unificata.parquet
     IPA enti                     ←─┘
 
-Output:
+Output (sotto DATA_DIR/lookup/):
     lookup/anagrafica_unificata.parquet
-    lookup/istat_comuni.parquet (cache intermedia)
-    lookup/ipa_enti.parquet (cache intermedia)
+    lookup/istat_comuni.parquet     (cache intermedia)
+    lookup/ipa_enti.parquet         (cache intermedia)
+    lookup/comuni-bundle.json       (bundle 7896 comuni: anagrafica + popolazione)
+    lookup/comuni-index.json        (light index per search_comune del Worker)
 
 Schema anagrafica_unificata:
     codice_istat   STRING (6 char, 0-padded)
@@ -20,11 +22,9 @@ Schema anagrafica_unificata:
     popolazione    INT (NULL se non disponibile dal CSV ISTAT)
     nome_categoria STRING (es. "Comuni e loro Consorzi e Associazioni")
 
-Usage (locale):
-    python -m etl.sources.anagrafica --target=local --outdir=/tmp/cruscotto
-
-Usage (R2):
-    python -m etl.sources.anagrafica --target=r2
+Usage:
+    python -m etl.sources.anagrafica
+    python -m etl.sources.anagrafica --outdir=/var/www/cruscotto-italia/data
 """
 
 from __future__ import annotations
@@ -40,7 +40,7 @@ import duckdb
 import requests
 import structlog
 
-from etl.lib import duck, manifest, r2
+from etl.lib import duck, manifest
 
 log = structlog.get_logger()
 
@@ -225,6 +225,8 @@ def build_anagrafica(istat_csv: Path, ipa_csv: Path, output_dir: Path, pop_map: 
     Returns: dict con statistiche e paths dei file generati.
     """
     output_dir.mkdir(parents=True, exist_ok=True)
+    lookup_dir = output_dir / "lookup"
+    lookup_dir.mkdir(parents=True, exist_ok=True)
     files = []
 
     with duck.duck_session() as con:
@@ -302,7 +304,7 @@ def build_anagrafica(istat_csv: Path, ipa_csv: Path, output_dir: Path, pop_map: 
         log.info("istat_normalized", row_count=istat_count)
 
         # Cache ISTAT in Parquet
-        istat_pq = output_dir / "istat_comuni.parquet"
+        istat_pq = lookup_dir / "istat_comuni.parquet"
         con.execute(f"COPY istat_comuni TO '{istat_pq}' (FORMAT PARQUET, COMPRESSION ZSTD)")
         files.append({"key": "lookup/istat_comuni.parquet", "size": istat_pq.stat().st_size, "row_count": istat_count})
 
@@ -387,7 +389,7 @@ def build_anagrafica(istat_csv: Path, ipa_csv: Path, output_dir: Path, pop_map: 
         ipa_count = con.execute("SELECT COUNT(*) FROM ipa_enti").fetchone()[0]
         log.info("ipa_enti_filtered", row_count=ipa_count)
 
-        ipa_pq = output_dir / "ipa_enti.parquet"
+        ipa_pq = lookup_dir / "ipa_enti.parquet"
         con.execute(f"COPY ipa_enti TO '{ipa_pq}' (FORMAT PARQUET, COMPRESSION ZSTD)")
         files.append({"key": "lookup/ipa_enti.parquet", "size": ipa_pq.stat().st_size, "row_count": ipa_count})
 
@@ -417,7 +419,7 @@ def build_anagrafica(istat_csv: Path, ipa_csv: Path, output_dir: Path, pop_map: 
                  total=unif_count, with_ipa_match=joined_count,
                  join_coverage_pct=round(joined_count / unif_count * 100, 1) if unif_count else 0)
 
-        unif_pq = output_dir / "anagrafica_unificata.parquet"
+        unif_pq = lookup_dir / "anagrafica_unificata.parquet"
         con.execute(f"COPY anagrafica_unificata TO '{unif_pq}' (FORMAT PARQUET, COMPRESSION ZSTD)")
         files.append({
             "key": "lookup/anagrafica_unificata.parquet",
@@ -466,7 +468,7 @@ def build_anagrafica(istat_csv: Path, ipa_csv: Path, output_dir: Path, pop_map: 
             WHERE codice_istat IS NOT NULL
             ORDER BY denominazione
         """).fetchall()
-        index_path = output_dir / "comuni-index.json"
+        index_path = lookup_dir / "comuni-index.json"
         index_path.write_text(json.dumps([
             {
                 "i": r[0],          # istat (compact key)
@@ -513,7 +515,7 @@ def build_anagrafica(istat_csv: Path, ipa_csv: Path, output_dir: Path, pop_map: 
                     "popolazione": pop_map.get(istat),
                 },
             }
-        bundle_path = output_dir / "comuni-bundle.json"
+        bundle_path = lookup_dir / "comuni-bundle.json"
         bundle_path.write_text(
             json.dumps({"_etl_version": "0.1.0", "comuni": bundle},
                        ensure_ascii=False, separators=(",", ":")),
@@ -538,39 +540,13 @@ def build_anagrafica(istat_csv: Path, ipa_csv: Path, output_dir: Path, pop_map: 
 
 
 # ----------------------------------------------------------------------------
-# Push to R2
-# ----------------------------------------------------------------------------
-def push_to_r2(local_dir: Path, files: list[dict]) -> None:
-    """Upload all generated files to R2 (Parquet, JSON index, JSON details)."""
-    for f in files:
-        key = f["key"]
-        # Special: glob-style key 'lookup/comuni/*.json' means upload an entire dir
-        if key.endswith("/*.json"):
-            prefix = key.rsplit("/*.json", 1)[0]
-            local_subdir = local_dir / Path(prefix).name
-            json_files = sorted(local_subdir.glob("*.json"))
-            log.info("uploading_directory", count=len(json_files), prefix=prefix)
-            for jf in json_files:
-                r2.upload_file(jf, f"{prefix}/{jf.name}", content_type="application/json")
-            continue
-        # Standard single-file upload
-        local = local_dir / Path(key).name
-        if key.endswith(".parquet"):
-            ct = "application/vnd.apache.parquet"
-        elif key.endswith(".json"):
-            ct = "application/json"
-        else:
-            ct = "application/octet-stream"
-        r2.upload_file(local, key, content_type=ct)
-
-
-# ----------------------------------------------------------------------------
 # CLI
 # ----------------------------------------------------------------------------
 def main() -> int:
     parser = argparse.ArgumentParser(description="ETL anagrafica unificata (ISTAT + IPA)")
-    parser.add_argument("--target", choices=["local", "r2"], default="local",
-                        help="Where to write output (local=disk only, r2=upload to Cloudflare R2)")
+    # --target tenuto per retrocompat workflow esistenti, ma solo 'local' e' supportato
+    parser.add_argument("--target", choices=["local"], default="local",
+                        help="Solo 'local' supportato (R2 rimosso dall'infrastruttura AgID)")
     parser.add_argument("--outdir", type=Path,
                         default=Path("/var/www/cruscotto-italia/data"),
                         help="Local output root (default: /var/www/cruscotto-italia/data)")
@@ -589,7 +565,7 @@ def main() -> int:
     output_dir = args.outdir
     workdir = output_dir / "_work"
 
-    log.info("etl_start", target=args.target, output_dir=str(output_dir))
+    log.info("etl_start", output_dir=str(output_dir))
 
     try:
         # 1. Pull
@@ -598,25 +574,25 @@ def main() -> int:
         posas_csv = pull_popolazione_istat(workdir)
         pop_map = load_popolazione_map(posas_csv)
 
-        # 2. Build
+        # 2. Build (scrive in output_dir/lookup/)
         result = build_anagrafica(istat_csv, ipa_csv, output_dir, pop_map=pop_map)
 
-        # 3. Push (optional)
-        if args.target == "r2":
-            push_to_r2(output_dir, result["files"])
+        # 3. Aggiorna manifest (best-effort)
+        try:
             manifest.update_source("anagrafica", result["files"], status="ok")
             log.info("manifest_updated")
+        except Exception as e:
+            log.warning("manifest_update_skipped", error=str(e))
 
         log.info("etl_done", **result["stats"])
         return 0
 
     except Exception as e:
         log.exception("etl_failed", error=str(e))
-        if args.target == "r2":
-            try:
-                manifest.update_source("anagrafica", [], status=f"failed: {e}")
-            except Exception:
-                log.exception("manifest_update_also_failed")
+        try:
+            manifest.update_source("anagrafica", [], status=f"failed: {e}")
+        except Exception:
+            log.exception("manifest_update_also_failed")
         return 1
 
 
