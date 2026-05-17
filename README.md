@@ -1,17 +1,22 @@
 # Cruscotto Italia
 
-> La carta d'identità data-driven dei comuni italiani. I dataset pubblici dei principali enti istituzionali, federati e ricomposti per comune.
+> Piattaforma istituzionale di trasparenza data-driven per i comuni italiani.
+> Federa i principali dataset pubblicati dagli enti istituzionali nazionali e
+> li ricompone per comune, esponendo un'interfaccia web pubblica e un endpoint
+> Model Context Protocol per agenti AI.
 
-[![Deploy Worker](https://github.com/piersoft/cruscotto-italia/actions/workflows/deploy-worker.yml/badge.svg)](https://github.com/piersoft/cruscotto-italia/actions/workflows/deploy-worker.yml)
-[![ETL Daily](https://github.com/piersoft/cruscotto-italia/actions/workflows/etl-daily.yml/badge.svg)](https://github.com/piersoft/cruscotto-italia/actions/workflows/etl-daily.yml)
-[![ETL Monthly](https://github.com/piersoft/cruscotto-italia/actions/workflows/etl-monthly.yml/badge.svg)](https://github.com/piersoft/cruscotto-italia/actions/workflows/etl-monthly.yml)
-[![CI lint & test](https://github.com/piersoft/cruscotto-italia/actions/workflows/ci.yml/badge.svg)](https://github.com/piersoft/cruscotto-italia/actions/workflows/ci.yml)
+[![Deploy Worker](https://github.com/AgID/cruscotto-italia/actions/workflows/deploy-worker.yml/badge.svg)](https://github.com/AgID/cruscotto-italia/actions/workflows/deploy-worker.yml)
+[![CI lint & test](https://github.com/AgID/cruscotto-italia/actions/workflows/ci.yml/badge.svg)](https://github.com/AgID/cruscotto-italia/actions/workflows/ci.yml)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](LICENSE)
 
-Cerchi un comune ("Lecce") e ottieni una vista a 360° su:
+---
+
+## Dati federati
+
+Cercando un comune ("Lecce") si ottiene una vista a 360° su:
 
 - 🏗️ **Contratti pubblici** (ANAC OCDS-IT)
-- 🚧 **Opere pubbliche** (BDAP-MOP)
+- 🚧 **Opere pubbliche** (BDAP-MOP — MEF/RGS)
 - 💰 **Flussi di cassa** (SIOPE — MEF/RGS)
 - 🇪🇺 **Progetti PNRR** (Italia Domani — Sistema ReGiS)
 - 👥 **Demografia comunale** (ISTAT POSAS)
@@ -23,80 +28,140 @@ Cerchi un comune ("Lecce") e ottieni una vista a 360° su:
 - 💶 **Redditi e fisco** (MEF — Dichiarazioni IRPEF)
 - 🏛️ **Patrimonio immobiliare PA** (MEF DE — Beni Immobili Pubblici)
 - 🏠 **Civici e strade** (ANNCSU — Agenzia delle Entrate, Open Data HVD)
-- 💊 **Sanità territoriale** (Ministero Salute — farmacie, parafarmacie, posti letto ospedalieri)
+- 💊 **Sanità territoriale** (Ministero della Salute — farmacie, parafarmacie, posti letto ospedalieri)
 - ⚡ **Punti di ricarica veicoli elettrici** (GSE/MASE — Piattaforma Unica Nazionale)
 - ⛽ **Distributori carburante e prezzi** (MIMIT — Osservatorio Prezzi Carburanti)
 - 🤝 **Enti del Terzo Settore** (Ministero del Lavoro — RUNTS, D.Lgs 117/2017: ODV, APS, EF, IS, SMS, ETS)
-- 🏭 **Imprese e addetti** (ISTAT — ASIA UL: unità locali, addetti, ATECO 2 cifre, classi dimensionali, serie 2018-2023)
+- 🏭 **Imprese e addetti** (ISTAT — ASIA UL, serie 2018-2023)
+- 🚌 **Pendolarismo** (ISTAT Censimento permanente 2021 — matrice OD origine/destinazione lavoro)
 
-L'elenco completo, con licenze, frequenze di aggiornamento e link diretti alle fonti, è in [`about.html`](https://cruscotto-italia.piersoftckan.biz/about.html).
+L'elenco completo, con licenze, frequenze di aggiornamento e link diretti
+alle fonti istituzionali, è disponibile nella pagina pubblica `about.html`
+del sito.
 
-Tutto ricomposto sulla **spina dorsale anagrafica ISTAT comuni** (~7.896 comuni).
+Tutto ricomposto sulla **spina dorsale anagrafica ISTAT comuni** (~7.896
+comuni) integrata con `IPA` (Indice dei domicili digitali della Pubblica
+Amministrazione, AgID).
+
+---
 
 ## Architettura
 
 ```
-Frontend (HTML statico) → Worker (Cloudflare) → R2 (JSON shard per comune)
-                              ↑
-              ETL Python (GitHub Actions, cadenze multiple)
-                              ↑
-  20 fonti istituzionali · 15 enti emittenti:
-   ANAC · BDAP-MOP · SIOPE · Italia Domani (PNRR)
-   ISTAT (POSAS, Censimento, Turismo, Veicoli, Incidenti)
-   MIUR · ISPRA (Suolo/IdroGEO/Rifiuti, SNPA aria) · ACI LOD
-   MEF (Federalismo Fiscale IRPEF, Patrimonio Immobiliare PA)
-   Agenzia delle Entrate (ANNCSU) · Ministero della Salute
-   GSE/MASE (Piattaforma Unica Nazionale punti di ricarica)
-   AGCOM (Broadband Map: copertura banda larga FTTH/FTTC)
-   MIMIT (Osservatorio Prezzi Carburanti — distributori + prezzi)
-   Ministero del Lavoro (RUNTS — Registro Unico Nazionale Terzo Settore)
+                  ┌────────────────────────────────────────┐
+                  │  cruscotto-italia.dati.gov.it          │
+                  │  (frontend statico HTML/CSS/JS)        │
+                  └────────────────┬───────────────────────┘
+                                   │
+                                   ▼
+                  ┌────────────────────────────────────────┐
+                  │  Cloudflare Worker (MCP server)        │
+                  │  cruscotto-italia-mcp.dati.gov.it      │
+                  │  - 5 tool MCP (search_comune,          │
+                  │    comune_dashboard, ecc.)             │
+                  │  - JSON-RPC 2.0 stateless              │
+                  └────────────────┬───────────────────────┘
+                                   │ HTTPS pull
+                                   ▼
+                  ┌────────────────────────────────────────┐
+                  │  VM AgID (FastWeb)                     │
+                  │  - nginx serve /var/www/.../data/*     │
+                  │  - cron /etc/cron.d/cruscotto-etl      │
+                  │  - 17 ETL Python (daily/weekly/monthly │
+                  │    /annual)                            │
+                  │  - pull_artifact.py (daily 07:30 UTC)  │
+                  │    scarica i 3 ETL ISTAT da Actions    │
+                  └────────────┬───────────────────────────┘
+                               │
+                ┌──────────────┴──────────────────┐
+                │                                 │
+                ▼                                 ▼
+   ┌─────────────────────────┐         ┌──────────────────────────┐
+   │ Fonti istituzionali IT  │         │ GitHub Actions           │
+   │ (cron VM, IP italiano)  │         │ ubuntu-latest            │
+   │                         │         │ (per 3 ETL ISTAT bloc-   │
+   │  ANAC · BDAP · SIOPE    │         │  cati da IP italiani:    │
+   │  PNRR · MEF · ISPRA     │         │  istat_profilo · ASIA    │
+   │  MIUR · ACI · ANNCSU    │         │  · pendolarismo)         │
+   │  Salute · MIMIT · GSE   │         │                          │
+   │  AGCOM · Lavoro         │         │  Output: artifact ZIP    │
+   │                         │         │  scaricato dalla VM via  │
+   │                         │         │  GitHub API + pull_artifact.py │
+   └─────────────────────────┘         └──────────────────────────┘
 ```
 
-Tutti i dettagli architetturali sono in [`DESIGN.md`](DESIGN.md).
+Dettagli architetturali completi: [`DESIGN.md`](DESIGN.md) ·
+[`docs/INFRASTRUCTURE.md`](docs/INFRASTRUCTURE.md) ·
+[`deploy/HANDOFF.md`](deploy/HANDOFF.md).
 
-## Status
+### Cadenze ETL
 
-🚧 In sviluppo. Vedi [DESIGN.md § 7 Roadmap](DESIGN.md#7-roadmap--milestones).
+| Cadenza | Fonti | Esecuzione | Trigger |
+|---|---|---|---|
+| **Daily** (08:00 UTC) | PUN punti ricarica, MIMIT carburanti, dashboard rebuild | cron VM AgID | automatico |
+| **Daily Pull-Artifact** (07:30 UTC) | scarica artifact dei 3 ETL ISTAT da GitHub Actions | cron VM AgID | automatico |
+| **Weekly** (lunedì 04:00 UTC) | ANAC OCDS, PNRR, sanità MdS, RUNTS, dashboard | cron VM AgID | automatico |
+| **Monthly** (5° del mese 04:00 UTC) | anagrafica, BDAP-MOP, SIOPE, ANNCSU, AGCOM banda larga | cron VM AgID | automatico |
+| **Annual** (1 feb / 1 apr / 1 lug, 04:00 UTC) | demografia POSAS, profilo Censimento, turismo, territorio, scuole, veicoli, redditi IRPEF, immobili PA | cron VM AgID | automatico |
+| **ISTAT refresh** (manuale) | istat_profilo, asia, pendolarismo | GitHub Actions `ubuntu-latest` | `workflow_dispatch` |
 
-## Uso come MCP per chatbot AI
+### Perché 2 esecutori distinti
 
-Cruscotto Italia espone un server [Model Context Protocol](https://modelcontextprotocol.io) che consente di interrogare i dati civici tramite chatbot AI compatibili (Claude, ChatGPT con wrapper, OpenWebUI, agenti custom).
+Le **fonti istituzionali italiane** sono protette da WAF (F5 Volterra,
+Akamai, ecc.) che bloccano con HTTP 403 le richieste da IP cloud (Azure
+GitHub Actions, AWS, GCP). Vengono quindi interrogate solo dalla VM AgID
+(IP italiano).
 
-**Endpoint pubblico**: `https://cruscotto-italia-mcp.piersoftckan.biz/mcp`
+**ISTAT esploradati**, viceversa, ha imposto un host-based ban su alcuni IP
+italiani per precedente uso intensivo. I 3 ETL ISTAT pesanti
+(profilo Censimento, ASIA UL, matrice pendolarismo) vengono quindi
+eseguiti da GitHub Actions (IP Azure non bannato) e i risultati vengono
+trasferiti alla VM via artifact GitHub + script
+[`scripts/etl/pull_artifact.py`](scripts/etl/pull_artifact.py) (retention
+1 giorno, cleanup attivo per privacy).
 
-**Tool esposti** (5): `mcp_info`, `search_comune`, `comune_dashboard`, `comune_opere_dettaglio`, `anncsu_civico_search`.
+I workflow weekly/monthly/annual presenti in `.github/workflows/` sono
+quindi **smoke test documentali**: il revisore può aprirli dalla UI
+Actions per leggere i comandi Python eseguiti dal cron VM, ma su
+ubuntu-latest essi falliscono con 403 (WAF). Il produttore reale dei
+dati è il cron `/etc/cron.d/cruscotto-etl` sulla VM AgID, mai i workflow.
 
-`comune_dashboard` è il tool principale: una sola chiamata restituisce 23 sezioni con tutti i dati del comune. `comune_opere_dettaglio` fornisce la lista dei singoli progetti BDAP filtrati al 2025. `anncsu_civico_search` consente query puntuali sui numeri civici ANNCSU con filtri server-side (odonimo, civico).
+---
+
+## API MCP per agenti AI
+
+Cruscotto Italia espone un server [Model Context Protocol](https://modelcontextprotocol.io)
+per consentire l'interrogazione dei dati civici da chatbot AI compatibili
+(Claude, ChatGPT con wrapper, OpenWebUI, agenti custom).
+
+**Endpoint pubblico** (post 19/05/2026): `https://cruscotto-italia-mcp.dati.gov.it/mcp`
+**Endpoint transitorio** (Worker AgID): `https://cruscotto-italia-mcp.agid.workers.dev/mcp`
+
+**Tool esposti** (5):
+
+- `mcp_info` — metadata del servizio, elenco fonti integrate, licenze
+- `search_comune` — ricerca per nome → codice ISTAT (gestione omonimi)
+- `comune_dashboard` — vista unificata: una sola chiamata restituisce le
+  23 sezioni del comune (anagrafica, demografia, contratti, opere,
+  ANNCSU, sanità, banda larga, ecc.)
+- `comune_opere_dettaglio` — lista dei singoli progetti BDAP filtrabili
+- `anncsu_civico_search` — query puntuali sui numeri civici certificati
+  con filtri server-side (odonimo, civico)
 
 **Rate limit**: 60 richieste/minuto per IP.
 
-### Configurazione su Claude.ai (Free/Pro/Max/Team/Enterprise)
+### Configurazione su Claude.ai
 
 1. Settings → Connettori → Aggiungi connettore personalizzato
-2. URL: `https://cruscotto-italia-mcp.piersoftckan.biz/mcp`
+2. URL: `https://cruscotto-italia-mcp.dati.gov.it/mcp`
 3. Autenticazione: nessuna
 
-### Skill Claude opzionale
+### Skill Claude (opzionale)
 
-Per ottenere risposte più mirate è disponibile una skill Claude che documenta l'uso del connettore (inventario dei 5 tool, schema di `comune_dashboard` con tutte le sezioni — inclusa la nuova `asia` per imprese e addetti ISTAT ASIA UL, endpoint REST `/data/anncsu_full/<istat>.json`, pattern operativi e caveat per sezione). Scaricabile da [`/skills/cruscotto-italia-workflow-v1.7.0.zip`](https://cruscotto-italia-mcp.piersoftckan.biz/skills/cruscotto-italia-workflow-v1.7.0.zip).
-
-### System prompt suggerito
-
-Per ottenere risposte ottimali, suggerisci a Claude (o all'agente) un system prompt come questo:
-
-~~~
-Hai accesso al connector "Cruscotto Italia" che fornisce dati civici sui ~7.900 comuni italiani.
-
-Linee guida:
-- Quando l'utente menziona un comune per nome, chiama PRIMA search_comune per ottenere il codice ISTAT esatto, poi usa quel codice negli altri tool.
-- Per domande generali su un comune ("dimmi di Bergamo", "dati di Milano") usa comune_dashboard: contiene tutto in una chiamata (23 sezioni: anagrafica, demografia, profilo, turismo, PNRR, territorio, aria, opere, contratti ANAC, spese SIOPE, scuole, veicoli, redditi, immobili PA, ANNCSU, sanità, punti di ricarica EV, banda larga FTTH/FTTC, distributori carburanti, enti del Terzo Settore RUNTS, imprese e addetti ISTAT ASIA UL).
-- Per il dettaglio dei progetti BDAP (lista CUP filtrabile al 2025) usa comune_opere_dettaglio; per query puntuali su civici (es. "quote di Via X", "esiste il civico Y in Z") usa anncsu_civico_search.
-- In caso di omonimi (es. "San Teodoro" esiste in Sardegna e Sicilia) mostra all'utente i match e chiedi quale.
-- Se l'utente non specifica il comune, chiedi chiarimento prima di chiamare i tool.
-- Cita sempre la fonte dati primaria nei tuoi output (ANAC, ISTAT, BDAP-MOP, ISPRA, MEF, MIUR, ACI, Agenzia Entrate, Ministero Salute, GSE/MASE, AGCOM, MIMIT, Ministero del Lavoro).
-~~~
-
-> Nota: sostituisci `~~~` con triple backtick quando copi nel system prompt.
+È disponibile una skill Claude che documenta l'uso del connettore
+(inventario dei 5 tool, schema di `comune_dashboard`, pattern operativi
+e caveat per sezione). Scaricabile da
+`https://cruscotto-italia-mcp.dati.gov.it/skills/cruscotto-italia-workflow-vX.Y.Z.zip`.
 
 ### Esempi di domande supportate
 
@@ -104,170 +169,234 @@ Linee guida:
 - "Quanti progetti PNRR ha Bergamo?" — focus PNRR
 - "Confronto demografico tra Milano e Roma" — orchestrazione cross-comune
 - "Quante farmacie attive ci sono a Matera?" — sanità territoriale
-- "Quanti punti di ricarica EV attivi ci sono a Torino e quale percentuale è HPC/Ultra fast?" — mobilità elettrica
-- "Quanti civici certificati ANNCSU ci sono in via Roma a Lecce?" — civici georeferenziati
-- "Qual è la copertura FTTH a Bergamo? Confronto con Brescia." — banda larga AGCOM
-- "Quanto costa il gasolio self a Lecce rispetto alla media nazionale?" — distributori MIMIT
-- "Quanti enti del Terzo Settore (ODV/APS) ha Matera? Quanti iscritti al 5x1000?" — RUNTS Min. Lavoro
+- "Quanti punti di ricarica EV attivi ci sono a Torino e quale percentuale è HPC/Ultra fast?"
+- "Quanti civici certificati ANNCSU ci sono in via Roma a Lecce?"
+- "Qual è la copertura FTTH a Bergamo? Confronto con Brescia."
+- "Quanto costa il gasolio self a Lecce rispetto alla media nazionale?"
+- "Quanti enti del Terzo Settore (ODV/APS) ha Matera? Quanti iscritti al 5x1000?"
+- "Quanti pendolari escono ogni giorno da Bergamo verso Milano?"
 
 ### Limiti noti
 
-- Tool ottimizzati per query **per-comune**, non per aggregati cross-comune (es. "top 10 PNRR per regione" richiede N chiamate)
-- Il MCP è in solo lettura: nessun side-effect, nessuna scrittura
+- Tool ottimizzati per query **per-comune**, non per aggregati cross-comune
+  (es. "top 10 PNRR per regione" richiede N chiamate).
+- Il MCP è in sola lettura: nessun side-effect, nessuna scrittura.
 
-## Quick start
+---
+
+## Sviluppo locale
 
 ### Prerequisiti
 
 - Node.js ≥ 20
 - Python ≥ 3.12
-- Account Cloudflare (Worker + R2) — i livelli free coprono il MVP
-- `wrangler` CLI (`npm i -g wrangler`)
+- `wrangler` CLI (`npm i -g wrangler`) per il Worker
 
-### Credenziali
-
-Cruscotto Italia gira su Cloudflare (Worker + R2) e GitHub Actions (CI/CD).
-Servono credenziali in 3 posti diversi a seconda dello scenario:
-
-| Scenario | Cosa serve | Dove |
-|---|---|---|
-| Smoke test ETL (`scripts/smoke-test-etl.py`) | nessuna credenziale | locale |
-| ETL Python `--target=local` (default) | nessuna credenziale | locale |
-| ETL Python `--target=r2` (push su bucket) | 4 export `R2_*` nel profilo shell | `~/.bashrc` |
-| Worker `npm run dev` | nessuna credenziale (binding R2 in sola lettura) | locale |
-| Worker `wrangler deploy` | `wrangler login` interattivo o `CLOUDFLARE_API_TOKEN` | `~/.bashrc` |
-| Workflow CI/CD GitHub Actions | 6 GitHub Secrets | Settings repo |
-
-In locale, le credenziali vivono come `export VAR=...` in `~/.bashrc` (o equivalente) dell'utente che esegue ETL e Wrangler. Vedi `docs/SECRETS.md` § 6 per il dettaglio delle export richieste.
-
-**Documentazione completa**:
-
-- [`docs/SECRETS.md`](docs/SECRETS.md) — inventario dei 6 GitHub Secrets + procedure per crearli su Cloudflare + rotazione e revoca + setup locale via `~/.bashrc`
-- [`docs/INFRASTRUCTURE.md`](docs/INFRASTRUCTURE.md) — architettura completa, pre-flight checklist setup, note operative deploy/maintenance
-- [`docs/SERVER-INFRA.md`](docs/SERVER-INFRA.md) — setup operativo lato server (nginx, htpasswd, cron, env files, secret locali): guida riproducibile per migrazione o disaster recovery
-
-### Setup locale
+### Setup
 
 ```bash
-git clone https://github.com/piersoft/cruscotto-italia.git
+git clone https://github.com/AgID/cruscotto-italia.git
 cd cruscotto-italia
 
-# Worker
+# Worker (Cloudflare)
 cd worker
 npm install
 npm run dev   # http://localhost:8787
 
-# Frontend
+# Frontend (statico)
 cd ../frontend
 python3 -m http.server 8000   # http://localhost:8000
 
-# ETL — esempio: scarica i punti di ricarica PUN in data/pun/
+# ETL Python — esempio: scarica i punti di ricarica PUN in /tmp/test/
 cd ..
 pip install -r etl/requirements.txt
-python -m etl.sources.pun --target=local
+DATA_DIR=/tmp/test python -m etl.sources.pun --outdir=/tmp/test/pun
 ```
+
+Tutti gli ETL scrivono su filesystem locale (`--target=local`, ora unico
+target supportato). L'output va in `DATA_DIR/<source>/<istat>.json`
+con `DATA_DIR` env override (default `/var/www/cruscotto-italia/data/`).
 
 ### Deploy
 
+Frontend e dati ETL girano sulla VM AgID via cron — non c'è "deploy
+frontend" in senso CI/CD: il sito è un git pull sulla VM (vedi
+[`deploy/HANDOFF.md`](deploy/HANDOFF.md)).
+
+Il Worker MCP si deploya su Cloudflare AgID con:
+
 ```bash
-# Worker
 cd worker
 npm run typecheck && npm run deploy
-
-# Frontend → server Aruba self-hosted (cruscotto-italia.piersoftckan.biz)
-# Su push a main, GitHub Actions self-hosted runner sincronizza il frontend
 ```
+
+Richiede `CLOUDFLARE_API_TOKEN` per l'account AgID nel profilo shell.
+
+---
 
 ## Struttura del repo
 
 ```
 cruscotto-italia/
-├── DESIGN.md                 ← documento architetturale completo (single source of truth)
-├── DECISIONS.md              ← decisioni prese sui punti aperti del DESIGN.md
-├── README.md
+├── DESIGN.md                 ← documento architetturale completo
+├── DECISIONS.md              ← decisioni prese sui punti aperti
+├── README.md                 ← questo file
 ├── LICENSE                   ← AGPL-3.0
-├── .gitignore
 │
 ├── worker/                   ← Cloudflare Worker (TypeScript)
 │   ├── src/
-│   │   ├── index.ts          ← entrypoint
+│   │   ├── index.ts
 │   │   ├── mcp.ts            ← JSON-RPC MCP transport
-│   │   ├── http.ts           ← landing page pubblica + endpoint /data/
-│   │   ├── tools/            ← un file per tool/endpoint MCP
-│   │   └── lib/              ← duckdb, r2cache, ratelimit helpers
+│   │   ├── http.ts           ← landing page + endpoint /data/anncsu_full/
+│   │   ├── tools/            ← un file per tool MCP
+│   │   └── lib/              ← duckdb, ratelimit, data_fetch helpers
 │   ├── wrangler.toml
-│   ├── package.json
-│   └── tsconfig.json
+│   └── package.json
 │
 ├── frontend/                 ← single-file HTML (vanilla JS)
-│   ├── index.html            ← homepage
-│   ├── comune.html           ← vista comune-centric
+│   ├── index.html
+│   ├── comune.html           ← vista comune-centric, 23 tab
 │   ├── about.html            ← elenco fonti + metodologia
-│   └── vendor/               ← Chart.js, Leaflet, JSZip (SHA-384 integrity)
+│   └── vendor/               ← Chart.js, Leaflet, JSZip (SHA-384)
 │
 ├── etl/                      ← Python ETL pipeline
 │   ├── requirements.txt
 │   ├── pyproject.toml        ← ruff + mypy + pytest config
-│   ├── sources/              ← un modulo per fonte
-│   │   ├── anagrafica.py       ← spina dorsale ISTAT comuni + IPA
-│   │   ├── anac.py             ← contratti pubblici (OCDS)
-│   │   ├── bdap.py             ← BDAP-MOP opere pubbliche (CUP, progetti) + aggregato per ANAC lookup
-│   │   ├── siope.py            ← SIOPE Spese multi-anno (CKAN)
-│   │   ├── pnrr_progetti.py    ← progetti PNRR (Italia Domani/ReGiS)
-│   │   ├── demografia.py       ← popolazione (POSAS)
-│   │   ├── istat_profilo.py    ← Censimento permanente
-│   │   ├── istat_turismo.py    ← capacità + flussi turistici
-│   │   ├── territorio.py       ← ISPRA Suolo, IdroGEO, Rifiuti
-│   │   ├── aria.py             ← ISPRA SNPA qualità aria (PM10/PM2.5/NO2)
-│   │   ├── scuole.py           ← MIUR anagrafe scuole statali
-│   │   ├── veicoli.py          ← ISTAT 41_993/41_983 + ACI LOD
-│   │   ├── redditi.py          ← MEF Federalismo Fiscale (IRPEF)
-│   │   ├── immobili_pa.py      ← MEF DE Beni Immobili Pubblici 2022
-│   │   ├── anncsu.py           ← ANNCSU civici e strade (Agenzia Entrate + ISTAT)
-│   │   ├── sanita_mds.py       ← Ministero Salute (farmacie, ospedali, posti letto)
-│   │   ├── pun.py              ← GSE/MASE punti di ricarica veicoli elettrici
-│   │   ├── agcom_bbmap.py      ← AGCOM Broadband Map (copertura banda larga FTTH/FTTC)
-│   │   ├── carburanti.py       ← MIMIT Osservatorio Prezzi Carburanti (distributori + prezzi)
-│   │   ├── runts.py            ← Min. Lavoro RUNTS (enti del Terzo Settore: ODV/APS/EF/IS/SMS/ETS)
-│   │   ├── asia.py             ← ISTAT ASIA UL (imprese e addetti per comune × ATECO × classi dimensionali, serie 2018-2023)
-│   │   └── dashboard.py        ← unified shard A1 (single-fetch per comune)
+│   ├── sources/              ← un modulo per fonte (17 ETL VM + 3 ETL ISTAT su Actions)
+│   │   ├── anagrafica.py        ← spina dorsale ISTAT comuni + IPA
+│   │   ├── anac.py              ← contratti pubblici (OCDS)
+│   │   ├── bdap.py              ← BDAP-MOP opere pubbliche
+│   │   ├── siope.py             ← SIOPE Spese multi-anno
+│   │   ├── pnrr_progetti.py     ← progetti PNRR (Italia Domani/ReGiS)
+│   │   ├── demografia.py        ← popolazione (POSAS)
+│   │   ├── istat_profilo.py     ← Censimento permanente *via Actions*
+│   │   ├── istat_turismo.py     ← capacità + flussi turistici
+│   │   ├── territorio.py        ← ISPRA Suolo, IdroGEO, Rifiuti
+│   │   ├── aria.py              ← ISPRA SNPA qualità aria
+│   │   ├── scuole.py            ← MIUR anagrafe scuole statali
+│   │   ├── veicoli.py           ← ISTAT + ACI LOD
+│   │   ├── redditi.py           ← MEF Federalismo Fiscale (IRPEF)
+│   │   ├── immobili_pa.py       ← MEF DE Beni Immobili Pubblici 2022
+│   │   ├── anncsu.py            ← ANNCSU civici (Agenzia Entrate + ISTAT)
+│   │   ├── sanita_mds.py        ← Min. Salute (farmacie, ospedali)
+│   │   ├── pun.py               ← GSE/MASE punti ricarica EV
+│   │   ├── agcom_bbmap.py       ← AGCOM Broadband Map
+│   │   ├── carburanti.py        ← MIMIT Osservatorio Prezzi
+│   │   ├── runts.py             ← Min. Lavoro RUNTS Terzo Settore
+│   │   ├── asia.py              ← ISTAT ASIA UL imprese *via Actions*
+│   │   ├── pendolarismo.py      ← ISTAT matrice OD *via Actions*
+│   │   └── dashboard.py         ← aggregator unified shard (A1)
 │   └── lib/
-│       ├── r2.py
+│       ├── local_lookup.py   ← utility lookup local-first
+│       ├── r2.py             ← kill-switch (R2 dismesso, sempre RuntimeError)
 │       ├── duck.py
 │       └── manifest.py
 │
-├── .github/workflows/
-│   ├── etl-daily.yml         ← cron 04:30 UTC (PUN punti ricarica + MIMIT carburanti + dashboard rebuild)
-│   ├── etl-weekly.yml        ← cron lunedì 04:00 UTC (ANAC + PNRR + sanità MdS + RUNTS Min. Lavoro + dashboard)
-│   ├── etl-monthly.yml       ← cron 5° del mese (anagrafica + BDAP + SIOPE + ANNCSU + sanità + AGCOM banda larga + dashboard)
-│   ├── etl-annual.yml        ← cron 1 feb / 1 apr / 1 lug (demografia, profilo, turismo, territorio, scuole, veicoli, redditi, immobili PA)
-│   ├── deploy-worker.yml     ← su push main → Cloudflare Workers
-│   ├── deploy-frontend.yml   ← su push main → Cloudflare Pages
-│   └── ci.yml                ← CI lint & test (ruff, mypy, pytest, tsc)
+├── scripts/
+│   └── etl/
+│       └── pull_artifact.py  ← scarica artifact GitHub dei 3 ETL ISTAT
 │
-├── docs/                     ← documentazione utente e API
-├── scripts/                  ← utility scripts (smoke-test-etl, pa11y-*, ecc.)
+├── .github/workflows/
+│   ├── etl-daily.yml             ← smoke test daily (PUN + Carburanti)
+│   ├── etl-weekly.yml            ← smoke test weekly (atteso fail su Azure WAF)
+│   ├── etl-monthly.yml           ← smoke test monthly (atteso fail su Azure WAF)
+│   ├── etl-annual.yml            ← smoke test annual (atteso fail su Azure WAF)
+│   ├── etl-istat_profilo-refresh.yml ← producer ISTAT profilo, output artifact
+│   ├── etl-asia-refresh.yml          ← producer ISTAT ASIA, output artifact
+│   ├── etl-pendolarismo-refresh.yml  ← producer ISTAT pendolarismo
+│   ├── deploy-worker.yml         ← deploy Cloudflare Worker su push main
+│   ├── deploy-frontend.yml       ← sync frontend (legacy, in dismissione)
+│   └── ci.yml                    ← CI lint & test (ruff, mypy, pytest, tsc)
+│
+├── deploy/
+│   ├── HANDOFF.md            ← documento operativo cutover VM
+│   ├── SETUP_CRON_NOTES.md   ← istruzioni cron per VM AgID
+│   ├── cron/
+│   │   └── cruscotto-etl     ← template /etc/cron.d/cruscotto-etl
+│   └── nginx/                ← vhost templates
+│
+├── docs/                     ← documentazione tecnica
+├── scripts/                  ← utility (smoke-test-etl, pa11y-*, analytics)
 └── tests/                    ← unit tests Python (etl) e Vitest (worker)
 ```
 
+---
+
+## Verifica freschezza dati
+
+Il `comune_dashboard` di ogni comune contiene un campo top-level
+`_generated_at` (timestamp ISO-8601 UTC) che indica quando la VM AgID
+ha eseguito l'ultimo rebuild dell'aggregato A1. Esempio di verifica:
+
+```bash
+curl -s -X POST "https://cruscotto-italia-mcp.dati.gov.it/mcp" \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","method":"tools/call","id":1,
+       "params":{"name":"comune_dashboard","arguments":{"istat_code":"075035"}}}' \
+  | jq '.result.content[0].text | fromjson | {_generated_at, _missing}'
+```
+
+In condizioni operative normali `_generated_at` è recente (≤ 24h) e
+`_missing` è vuoto o contiene solo source dove il comune non ha dati
+upstream (es. comuni piccolissimi senza colonnine di ricarica o
+distributori carburanti).
+
+---
+
 ## Licenza
 
-AGPL-3.0 — vedi [LICENSE](LICENSE). Codice copyleft, le derivate devono restare aperte.
+Il **codice** è rilasciato sotto **AGPL-3.0** — vedi [LICENSE](LICENSE).
+Le derivate devono restare aperte.
 
-I dati delle fonti sono sotto le rispettive licenze:
+I **dati** delle fonti sono pubblicati sotto le rispettive licenze:
 
-- **CC BY 4.0** — la maggior parte delle fonti (ANAC, ISTAT, MIUR, ACI, ISPRA, MEF DE Patrimonio, Italia Domani PNRR)
+- **CC BY 4.0** — la maggior parte delle fonti (ANAC, ISTAT moderni,
+  MIUR, ACI, ISPRA, MEF DE Patrimonio, Italia Domani PNRR)
 - **CC BY 3.0 IT** — MEF Federalismo Fiscale, alcuni dataset ISTAT storici
-- **IODL 2.0** — BDAP-MOP, BDAP-SIOPE, Ministero della Salute, MIMIT (Osservatorio Prezzi Carburanti)
-- **CC BY 4.0 ex art. 52 c.2 D.Lgs 82/2005 (CAD)** — "open by default" per i dati delle PA pubblicati senza licenza esplicita. Si applica per esempio a GSE/MASE (PUN punti di ricarica EV), AGCOM (Broadband Map FTTH/FTTC ex art. 22 Codice Comunicazioni Elettroniche) e Ministero del Lavoro (RUNTS anagrafica enti del Terzo Settore ex D.Lgs 117/2017 art. 53 pubblicità legale), in coerenza con le Linee Guida Open Data AgID (Determinazione 183/2023)
-- **Open Data ai sensi del Regolamento UE 2023/138 (HVD)** — ANNCSU (Agenzia delle Entrate + ISTAT)
+- **IODL 2.0** — BDAP-MOP, BDAP-SIOPE, Ministero della Salute, MIMIT
+- **CC BY 4.0 ex art. 52 c.2 D.Lgs 82/2005 (CAD)** — dati delle PA
+  pubblicati senza licenza esplicita ("open by default"). Si applica per
+  esempio a GSE/MASE (PUN punti di ricarica EV), AGCOM (Broadband Map
+  FTTH/FTTC ex art. 22 Codice Comunicazioni Elettroniche) e Ministero
+  del Lavoro (RUNTS anagrafica enti del Terzo Settore ex D.Lgs 117/2017
+  art. 53 pubblicità legale), in coerenza con le Linee Guida Open Data
+  AgID (Determinazione 183/2023).
+- **Open Data ai sensi del Regolamento UE 2023/138 (HVD)** — ANNCSU
+  (Agenzia delle Entrate + ISTAT)
 
-Vedi [`docs/data-licenses.md`](docs/data-licenses.md) per il dettaglio per dataset, e [`about.html`](https://cruscotto-italia.piersoftckan.biz/about.html) per i link diretti alle fonti.
+Dettaglio per dataset in [`docs/data-licenses.md`](docs/data-licenses.md)
+e nella pagina pubblica `about.html` con link diretti alle fonti.
+
+---
+
+## Conformità
+
+- **Accessibilità WCAG 2.1 AA**: 17 criteri verificati con Pa11y +
+  Axe-Core su tutte le pagine pubbliche. Dichiarazione di accessibilità
+  pubblicata in `accessibilita.html`.
+- **Sicurezza**: HTTPS forzato, HSTS preload-ready, CSP restrictive,
+  security headers completi (X-Frame-Options, X-Content-Type-Options,
+  Referrer-Policy, Permissions-Policy), `server_tokens off` su nginx,
+  rate limiting sul Worker MCP.
+- **Privacy**: nessun analytics di terzi, nessun cookie di profilazione,
+  solo cookie tecnici nginx. Artifact GitHub Actions con retention 1
+  giorno e cleanup attivo dopo il pull lato VM (vedi
+  `scripts/etl/pull_artifact.py`).
+
+---
 
 ## Contribuire
 
-Issue e PR benvenuti. Per discussioni di design aprire una Discussion. Pattern di commit: [Conventional Commits](https://www.conventionalcommits.org/).
+Issue e PR benvenuti. Per discussioni di design aprire una Discussion.
+Pattern di commit: [Conventional Commits](https://www.conventionalcommits.org/).
+
+---
 
 ## Crediti
 
-Progetto di [Francesco Piero Paolicelli (@piersoft)](https://piersoft.it). Una dimostrazione di cosa, già oggi, si può fare con gli open data italiani. Vedi [DESIGN.md](DESIGN.md).
+Progettato e sviluppato da **Francesco Piero Paolicelli (Piersoft)**,
+[@piersoft](https://github.com/piersoft) · [piersoft.it](https://piersoft.it).
+
+Il repository di sviluppo personale è `github.com/piersoft/cruscotto-italia`;
+questo repository (`github.com/AgID/cruscotto-italia`) è il mirror
+istituzionale di produzione per il deploy su `dati.gov.it`.
