@@ -205,16 +205,86 @@ def find_latest_artifact(repo: str, workflow: str, artifact_name: str,
 
 def download_artifact_zip(repo: str, artifact_id: int, token: str,
                           dest_zip: Path) -> int:
-    """Scarica l'artifact ZIP. GitHub redirige a un URL pre-signed S3.
+    """Scarica l'artifact ZIP. GitHub redirige a un URL pre-signed S3/Azure.
+
+    Implementazione in 2 step esplicita per gestire correttamente il redirect
+    cross-domain:
+      1. GET /repos/.../artifacts/<id>/zip con Bearer PAT, NO follow redirect
+         -> GitHub risponde 302 con Location: URL pre-signed (azure/s3)
+      2. GET <URL pre-signed> SENZA header Authorization
+         -> Azure/S3 servono il blob con la firma URL stessa
+
+    Senza lo step esplicito, urllib seguirebbe il redirect mantenendo il
+    header Authorization, che Azure rigetterebbe con 401 InvalidAuthenticationInfo
+    (Azure non capisce il Bearer GitHub).
 
     Ritorna il numero di bytes scaricati.
     """
-    # GitHub API redirect to S3 pre-signed URL automatically followed
-    resp = gh_api(
-        f"/repos/{repo}/actions/artifacts/{artifact_id}/zip",
-        token,
-        return_response=True,
-    )
+    import urllib.request
+
+    # === Step 1: chiama API GitHub, blocca redirect, prendi Location ===
+    api_url = f"{GITHUB_API_BASE}/repos/{repo}/actions/artifacts/{artifact_id}/zip"
+    headers = {
+        "Accept": "application/vnd.github+json",
+        "Authorization": f"Bearer {token}",
+        "X-GitHub-Api-Version": "2022-11-28",
+        "User-Agent": USER_AGENT,
+    }
+
+    # Opener che NON segue redirect: cattura il 302 come HTTPError per leggere Location
+    class _NoRedirect(urllib.request.HTTPRedirectHandler):
+        def redirect_request(self, req, fp, code, msg, hdrs, newurl):
+            return None  # disabilita follow
+
+    opener = urllib.request.build_opener(_NoRedirect)
+    req = Request(api_url, method="GET", headers=headers)
+    try:
+        # Senza follow redirect, GitHub 302 viene sollevato come HTTPError 302
+        # In alcuni Python versions il return None del handler propaga l'errore.
+        # Se invece il response arriva senza errore (caso impossibile per artifact/zip)
+        # gestiamo entrambi i path.
+        resp = opener.open(req, timeout=60)
+        # Se siamo qui senza HTTPError, presumiamo che la response stessa abbia il body
+        # (caso anomalo, GitHub dovrebbe sempre 302 su questo endpoint)
+        location = resp.headers.get("Location")
+        if not location:
+            # Tutto inline, niente redirect: scarica direttamente
+            return _stream_to_file(resp, dest_zip)
+    except HTTPError as e:
+        if e.code in (301, 302, 303, 307, 308):
+            location = e.headers.get("Location")
+            if not location:
+                raise RuntimeError(
+                    f"GitHub artifact API ha risposto {e.code} senza header Location"
+                )
+        else:
+            # Errore vero: 401, 404, ecc. Re-raise per gestione standard
+            body = e.read().decode("utf-8", errors="replace")[:500]
+            _log("error", "github_api_error",
+                 path=f"/repos/{repo}/actions/artifacts/{artifact_id}/zip",
+                 method="GET", status=e.code, body=body)
+            if e.code == 401:
+                _log("error", "github_token_invalid",
+                     hint="Verifica scope: Contents:Read + Actions:Read minimo")
+                sys.exit(2)
+            raise
+
+    # === Step 2: scarica dal pre-signed URL SENZA Bearer GitHub ===
+    # Azure/S3 verifica la firma nell'URL stesso, gli header Authorization GitHub
+    # provocherebbero 401 InvalidAuthenticationInfo.
+    _log("info", "artifact_following_redirect",
+         host=location.split("/")[2] if "//" in location else "?")
+    download_headers = {
+        "User-Agent": USER_AGENT,
+        # NIENTE Authorization, NIENTE Accept GitHub-specific
+    }
+    download_req = Request(location, method="GET", headers=download_headers)
+    download_resp = urlopen(download_req, timeout=300)  # 5 min per artifact grossi
+    return _stream_to_file(download_resp, dest_zip)
+
+
+def _stream_to_file(resp, dest_zip: Path) -> int:
+    """Helper: streaming response -> file con cap MAX_ARTIFACT_BYTES."""
     total = 0
     with open(dest_zip, "wb") as fh:
         while True:
