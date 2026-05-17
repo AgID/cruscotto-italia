@@ -71,28 +71,25 @@ Schema output per shard sanita_mds/<istat>.json:
 }
 
 Usage:
-  python -m etl.sources.sanita_mds --target=local
-  python -m etl.sources.sanita_mds --target=r2 --force-shard-upload
+  python -m etl.sources.sanita_mds
+  python -m etl.sources.sanita_mds --no-geocode    # skip ANNCSU geocoding
 """
 
 import argparse
 import csv
 import gzip
-import hashlib
 import json
-import os
 import re
 import sys
 import time
 from collections import Counter, defaultdict
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
 
 import requests
 import structlog
 
-from etl.lib import manifest, r2
+from etl.lib import local_lookup, manifest
 
 log = structlog.get_logger()
 
@@ -517,40 +514,54 @@ class _AnncsuGeocoder:
     Pre-fetch parallelo via ThreadPoolExecutor(24) all'inizio del build,
     prima di entrare nel loop sequenziale che fa il geocoding.
 
-    Coverage R2 prefix `anncsu_full/`: 5387 comuni / 7896 totali (68%).
+    Coverage data/anncsu_full/: 5387 comuni / 7896 totali (68%).
     Per i comuni non coperti, geocode() ritorna None (fallback drop).
     """
 
-    def __init__(self, r2_bucket: str, r2_client):
-        self._bucket = r2_bucket
-        self._r2 = r2_client
+    def __init__(self, anncsu_full_dir: Path):
+        """anncsu_full_dir: directory contenente <istat>.json per ogni comune
+        con civici geo-ref. Tipicamente /var/www/cruscotto-italia/data/anncsu_full/.
+        """
+        self._dir = anncsu_full_dir
         self._cache: dict[str, dict] = {}     # istat -> indice odonimi
-        self._missing_shards: set[str] = set()  # negative cache (404)
+        self._missing_shards: set[str] = set()  # negative cache (file mancante)
         self.stats = {"shards_loaded": 0, "shards_missing": 0,
                       "geocoded_exact": 0, "geocoded_no_esp": 0,
                       "geocoded_odo_only": 0, "not_matched": 0}
 
     def _fetch_and_index(self, istat: str) -> dict | None:
-        """Scarica anncsu_full/<istat>.json da R2 e costruisce indice.
+        """Legge data/anncsu_full/<istat>.json (raw o gzippato) e costruisce indice.
 
         Ritorna {odonimo_norm: [(civ, esp, lat, lon)]} oppure None se shard
         non esiste. Side-effect: popola self._cache o self._missing_shards.
         """
-        try:
-            obj = self._r2.get_object(Bucket=self._bucket,
-                                     Key=f"anncsu_full/{istat}.json")
-            raw = obj["Body"].read()
-            if obj.get("ContentEncoding") == "gzip":
-                raw = gzip.decompress(raw)
-            data = json.loads(raw)
-        except self._r2.exceptions.NoSuchKey:
-            self._missing_shards.add(istat)
-            self.stats["shards_missing"] += 1
-            return None
-        except Exception as e:
-            log.warning("anncsu_shard_load_error", istat=istat, error=str(e))
-            self._missing_shards.add(istat)
-            return None
+        shard_path = self._dir / f"{istat}.json"
+        if not shard_path.exists():
+            # Prova versione gzip
+            gz_path = self._dir / f"{istat}.json.gz"
+            if not gz_path.exists():
+                self._missing_shards.add(istat)
+                self.stats["shards_missing"] += 1
+                return None
+            try:
+                with gzip.open(gz_path, "rb") as fh:
+                    data = json.loads(fh.read())
+            except Exception as e:
+                log.warning("anncsu_shard_load_error", istat=istat, error=str(e))
+                self._missing_shards.add(istat)
+                return None
+        else:
+            try:
+                raw = shard_path.read_bytes()
+                # Auto-detect gzip da magic bytes (in caso di file salvato gzip
+                # ma con estensione .json)
+                if raw[:2] == b"\x1f\x8b":
+                    raw = gzip.decompress(raw)
+                data = json.loads(raw)
+            except Exception as e:
+                log.warning("anncsu_shard_load_error", istat=istat, error=str(e))
+                self._missing_shards.add(istat)
+                return None
 
         idx: dict[str, list[tuple]] = {}
         for p in data.get("punti", []):
@@ -568,46 +579,40 @@ class _AnncsuGeocoder:
         return idx
 
     def prefetch(self, istats: list[str], max_workers: int = 24) -> None:
-        """Pre-scarica e indicizza in parallelo gli shard ANNCSU dei comuni dati.
+        """Pre-carica shard ANNCSU locali per la lista di ISTAT data.
 
-        Pattern allineato ad aria.py/veicoli.py push_shards_r2.
-        Logga progresso ogni 200 download.
+        Su filesystem locale non serve parallelizzare con thread (I/O e' veloce),
+        ma manteniamo il parametro max_workers per retrocompat firma chiamanti.
+        Logga progresso ogni 200 letture.
         """
         if not istats:
             return
-        log.info("anncsu_prefetch_start",
-                 n_comuni=len(istats), max_workers=max_workers)
+        log.info("anncsu_prefetch_start", n_comuni=len(istats),
+                 source_dir=str(self._dir))
         t0 = time.time()
 
         loaded = 0
         missing = 0
-        completed = 0
-        with ThreadPoolExecutor(max_workers=max_workers) as ex:
-            futures = {ex.submit(self._fetch_and_index, ist): ist
-                       for ist in istats}
-            for fut in as_completed(futures):
-                completed += 1
-                istat = futures[fut]
-                try:
-                    result = fut.result()
-                    if result is not None:
-                        loaded += 1
-                    else:
-                        missing += 1
-                except Exception as e:
+        for completed, istat in enumerate(istats, 1):
+            try:
+                result = self._fetch_and_index(istat)
+                if result is not None:
+                    loaded += 1
+                else:
                     missing += 1
-                    log.warning("anncsu_prefetch_error",
-                                istat=istat, error=str(e))
-                if completed % 200 == 0 or completed == len(istats):
-                    elapsed = time.time() - t0
-                    rate = completed / max(elapsed, 0.1)
-                    eta = (len(istats) - completed) / max(rate, 0.1)
-                    log.info("anncsu_prefetch_progress",
-                             done=completed, total=len(istats),
-                             loaded=loaded, missing=missing,
-                             elapsed_s=round(elapsed, 1),
-                             eta_s=round(eta, 1),
-                             rate=round(rate, 1))
+            except Exception as e:
+                missing += 1
+                log.warning("anncsu_prefetch_error", istat=istat, error=str(e))
+            if completed % 200 == 0 or completed == len(istats):
+                elapsed = time.time() - t0
+                rate = completed / max(elapsed, 0.1)
+                eta = (len(istats) - completed) / max(rate, 0.1)
+                log.info("anncsu_prefetch_progress",
+                         done=completed, total=len(istats),
+                         loaded=loaded, missing=missing,
+                         elapsed_s=round(elapsed, 1),
+                         eta_s=round(eta, 1),
+                         rate=round(rate, 1))
 
         log.info("anncsu_prefetch_done",
                  loaded=loaded, missing=missing,
@@ -1135,103 +1140,6 @@ def write_local(shards: dict[str, dict], outdir: Path) -> int:
     return n
 
 
-def _md5_file(p: Path) -> str:
-    h = hashlib.md5()
-    with open(p, "rb") as f:
-        for chunk in iter(lambda: f.read(64 * 1024), b""):
-            h.update(chunk)
-    return h.hexdigest()
-
-
-def push_shards_to_r2(shard_dir: Path, force_upload: bool = False) -> dict:
-    """Push paralleli su prefix sanita_mds/ con skip via md5/ETag.
-
-    Pattern allineato a anncsu.py / aria.py: una list_objects_v2 paginata,
-    diff md5 locale vs ETag remoto, upload paralleli con ThreadPoolExecutor.
-    """
-    if not shard_dir.exists():
-        log.warning("sanita_mds_no_shard_dir", path=str(shard_dir))
-        return {"uploaded": 0, "unchanged": 0, "errors": 0}
-
-    import boto3 as _b3
-    _client = _b3.client(
-        "s3",
-        endpoint_url=f"https://{os.environ['R2_ACCOUNT_ID']}.r2.cloudflarestorage.com",
-        aws_access_key_id=os.environ["R2_ACCESS_KEY_ID"],
-        aws_secret_access_key=os.environ["R2_SECRET_ACCESS_KEY"],
-    )
-
-    shard_files = sorted(shard_dir.glob("*.json"))
-
-    remote_etag: dict[str, str] = {}
-    try:
-        pag = _client.get_paginator("list_objects_v2")
-        for page in pag.paginate(Bucket=r2.get_bucket(), Prefix="sanita_mds/"):
-            for o in page.get("Contents", []):
-                name = o["Key"].split("/")[-1]
-                etag = (o.get("ETag") or "").strip('"').lower()
-                remote_etag[name] = etag
-        log.info("sanita_mds_remote_listed", count=len(remote_etag))
-    except Exception as e:
-        log.warning("sanita_mds_list_failed", error=str(e))
-
-    if force_upload:
-        to_upload = list(shard_files)
-        log.info("sanita_mds_force_upload", count=len(to_upload))
-    else:
-        to_upload = []
-        n_same = 0
-        for sf in shard_files:
-            rmd5 = remote_etag.get(sf.name)
-            if rmd5 is None or _md5_file(sf) != rmd5:
-                to_upload.append(sf)
-            else:
-                n_same += 1
-        log.info("sanita_mds_md5_compared",
-                 total=len(shard_files), unchanged=n_same,
-                 to_upload=len(to_upload))
-
-    def _upload_one(sf: Path) -> str:
-        r2.upload_file(sf, f"sanita_mds/{sf.name}",
-                       content_type="application/json")
-        return sf.name
-
-    uploaded = 0
-    errors = 0
-    with ThreadPoolExecutor(max_workers=24) as ex:
-        futures = {ex.submit(_upload_one, sf): sf for sf in to_upload}
-        for f in as_completed(futures):
-            try:
-                f.result()
-                uploaded += 1
-                if uploaded % 200 == 0:
-                    log.info("sanita_mds_push_progress",
-                             uploaded=uploaded, total=len(to_upload))
-            except Exception as e:
-                errors += 1
-                log.error("sanita_mds_upload_failed", error=str(e))
-
-    log.info("sanita_mds_push_done",
-             uploaded=uploaded,
-             unchanged=len(shard_files) - len(to_upload),
-             errors=errors)
-    return {
-        "uploaded": uploaded,
-        "unchanged": len(shard_files) - len(to_upload),
-        "errors": errors,
-    }
-
-
-def push_aggregato_to_r2(aggr_path: Path) -> None:
-    """Push lookup aggregato su sanita_mds-lookup.json (radice bucket)."""
-    if not aggr_path.exists():
-        log.warning("sanita_mds_no_aggregato", path=str(aggr_path))
-        return
-    r2.upload_file(aggr_path, "sanita_mds-lookup.json",
-                   content_type="application/json")
-    log.info("sanita_mds_aggregato_pushed", path=str(aggr_path))
-
-
 # ============================================================================
 # AGGREGATO (sanita_mds-lookup.json - per home/about, statistiche nazionali)
 # ============================================================================
@@ -1287,19 +1195,21 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         description="ETL Sanita' territoriale - Ministero della Salute"
     )
-    parser.add_argument("--target", choices=["local", "r2"], default="local",
-                        help="Output target: local files or R2 push")
+    # --target tenuto per retrocompat workflow esistenti, ma solo 'local' e' supportato
+    parser.add_argument("--target", choices=["local"], default="local",
+                        help="Solo 'local' supportato (R2 rimosso dall'infrastruttura AgID)")
     parser.add_argument("--outdir", default="/var/www/cruscotto-italia/data/sanita_mds",
                         help="Local output directory (default: /var/www/cruscotto-italia/data/sanita_mds)")
     parser.add_argument("--cache-dir", default="cache/sanita_mds",
                         help="Cache directory for downloaded CSVs")
     parser.add_argument("--no-cache", action="store_true",
                         help="Re-download CSV ignorando la cache locale")
-    parser.add_argument("--force-shard-upload", action="store_true",
-                        help="Bypass md5 check, upload tutti gli shard (target=r2)")
     parser.add_argument("--no-geocode", action="store_true",
                         help="Disabilita geocoding ANNCSU per coord MdS errate "
-                             "(default: abilitato se ENV R2_* presenti)")
+                             "(default: abilitato se data/anncsu_full/ esiste)")
+    parser.add_argument("--anncsu-dir", default=None,
+                        help="Directory con shard anncsu_full/<istat>.json per geocoding. "
+                             "Default: DATA_DIR/anncsu_full/")
     args = parser.parse_args()
 
     output_dir = Path(args.outdir)
@@ -1311,7 +1221,7 @@ def main() -> int:
     cache_dir.mkdir(parents=True, exist_ok=True)
 
     try:
-        log.info("sanita_mds_etl_start", target=args.target)
+        log.info("sanita_mds_etl_start")
 
         # 1. Discovery URL freschi
         discovery = fetch_discovery()
@@ -1331,23 +1241,19 @@ def main() -> int:
         parafarm = parse_parafarmacie(csv_paths["parafarmacie"], ref_date)
         ospedali = parse_ospedali(csv_paths["ospedali"])
 
-        # 4. Build shards (con geocoding ANNCSU opzionale per coord MdS errate)
+        # 4. Build shards (con geocoding ANNCSU locale opzionale per coord MdS errate)
         geocoder = None
         if not args.no_geocode:
-            try:
-                import boto3 as _b3
-                _r2_client = _b3.client(
-                    "s3",
-                    endpoint_url=f"https://{os.environ['R2_ACCOUNT_ID']}.r2.cloudflarestorage.com",
-                    aws_access_key_id=os.environ["R2_ACCESS_KEY_ID"],
-                    aws_secret_access_key=os.environ["R2_SECRET_ACCESS_KEY"],
-                )
-                geocoder = _AnncsuGeocoder(r2.get_bucket(), _r2_client)
-                log.info("sanita_mds_geocoder_enabled", bucket=r2.get_bucket())
-            except KeyError as e:
-                log.warning("sanita_mds_geocoder_no_creds",
-                            missing=str(e),
-                            note="ANNCSU geocoding skipped, only centroid filter active")
+            anncsu_dir = (Path(args.anncsu_dir) if args.anncsu_dir
+                          else local_lookup.get_data_dir() / "anncsu_full")
+            if anncsu_dir.exists():
+                geocoder = _AnncsuGeocoder(anncsu_dir)
+                log.info("sanita_mds_geocoder_enabled", source=str(anncsu_dir))
+            else:
+                log.warning("sanita_mds_geocoder_no_anncsu_dir",
+                            path=str(anncsu_dir),
+                            note="ANNCSU geocoding skipped, only centroid filter active. "
+                                 "Esegui 'python -m etl.sources.anncsu --full-shards' prima.")
 
         shards = build_shards(farmacie, parafarm, ospedali, discovery, geocoder)
 
@@ -1362,21 +1268,15 @@ def main() -> int:
                  path=str(aggr_path),
                  totals=aggr["totali"])
 
-        # 7. Push R2 se richiesto
-        if args.target == "r2":
-            result = push_shards_to_r2(shard_dir,
-                                       force_upload=args.force_shard_upload)
-            push_aggregato_to_r2(aggr_path)
+        # 7. Manifest update best-effort
+        try:
             uploaded_keys = (
                 [f"sanita_mds/{k}.json" for k in shards.keys()]
                 + ["sanita_mds-lookup.json"]
             )
-            try:
-                manifest.update_source("sanita_mds", uploaded_keys, status="ok")
-            except Exception as e:
-                log.warning("sanita_mds_manifest_update_failed", error=str(e))
-
-            log.info("sanita_mds_r2_done", **result)
+            manifest.update_source("sanita_mds", uploaded_keys, status="ok")
+        except Exception as e:
+            log.warning("sanita_mds_manifest_update_skipped", error=str(e))
 
         log.info("sanita_mds_etl_done",
                  n_shards=n_written,
@@ -1387,11 +1287,6 @@ def main() -> int:
     except Exception as e:
         log.error("sanita_mds_etl_failed",
                   error=str(e), error_type=type(e).__name__)
-        if args.target == "r2":
-            try:
-                manifest.update_source("sanita_mds", [], status="failed")
-            except Exception:
-                pass
         raise
 
 
