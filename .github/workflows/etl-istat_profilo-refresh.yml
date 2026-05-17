@@ -1,0 +1,129 @@
+name: ETL · istat_profilo refresh (artifact-based)
+
+# Workflow Pull-Artifact per ETL ISTAT Profilo del comune (Censimento permanente).
+#
+# Architettura:
+#   1. Gira su runner ubuntu-latest (IP Azure fresh, no ban accumulato vs ISTAT)
+#   2. Esegue anagrafica.py per produrre data/lookup/comuni-bundle.json
+#      (necessario per ETL successivo che lo legge da local_lookup)
+#   3. Esegue istat_profilo.py che produce data/profilo/<istat>.json (~7896 file)
+#   4. Pacchetta gli shard in un tar.gz come GitHub Actions artifact
+#   5. Retention artifact: 1 giorno (minimizzazione esposizione)
+#   6. Lo script pull_artifact.py su VM Aruba/AgID scarica via GitHub API,
+#      estrae in /var/www/cruscotto-italia/data/profilo/, ed elimina l'artifact
+#
+# Privacy / governance:
+#   - Repo AgID/cruscotto-italia e' PRIVATO: artifact accessibili solo a
+#     collaboratori autorizzati
+#   - Dati ISTAT sono open data CC BY 3.0 IT (no PII)
+#   - Retention 1 giorno + delete attivo via pull_artifact.py
+#
+# Cadenza upstream: annuale (Censimento permanente ISTAT, pubblicazione
+# tipicamente in dicembre). Schedule cron non attivato per default: invocare
+# manualmente o aggiungere `schedule:` se serve refresh automatico.
+
+on:
+  workflow_dispatch:
+    inputs:
+      force_download:
+        description: 'Force re-download CSV ISTAT (ignora cache runner)'
+        required: false
+        default: false
+        type: boolean
+  # schedule:
+  #   # 1 dicembre, 03:00 UTC (decommentare se serve automazione)
+  #   - cron: '0 3 1 12 *'
+
+permissions:
+  contents: read
+
+jobs:
+  refresh:
+    name: ETL istat_profilo + artifact upload
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: etl/requirements.txt
+
+      - name: Install Python dependencies
+        run: pip install -r etl/requirements.txt
+
+      - name: Show runner public IP (debug ISTAT ban)
+        run: |
+          echo "Runner IP: $(curl -sS -m 5 https://api.ipify.org || echo unknown)"
+
+      - name: Pre-step — produce lookup/comuni-bundle.json via anagrafica
+        # ETL istat_profilo legge data/lookup/comuni-bundle.json (e altri lookup)
+        # da filesystem locale. Sul runner effimero quei file non esistono
+        # finche' non li produciamo con anagrafica.
+        env:
+          DATA_DIR: ${{ github.workspace }}/data
+        run: |
+          mkdir -p "$DATA_DIR/lookup"
+          python -m etl.sources.anagrafica --outdir="$DATA_DIR" 2>&1 | tee /tmp/anagrafica.log
+          echo ""
+          echo "=== Lookup files prodotti ==="
+          ls -la "$DATA_DIR/lookup/"
+
+      - name: Run istat_profilo ETL
+        env:
+          DATA_DIR: ${{ github.workspace }}/data
+        run: |
+          mkdir -p "$DATA_DIR/profilo"
+          # outdir e' la parent dir: istat_profilo crea profilo/<istat>.json sotto
+          if [ "${{ inputs.force_download }}" = "true" ]; then
+            python -m etl.sources.istat_profilo --outdir="$DATA_DIR" --no-cache 2>&1 | tee /tmp/istat_profilo.log
+          else
+            python -m etl.sources.istat_profilo --outdir="$DATA_DIR" 2>&1 | tee /tmp/istat_profilo.log
+          fi
+
+      - name: Statistiche shard prodotti
+        run: |
+          DATA_DIR="${{ github.workspace }}/data"
+          echo "=== Shard prodotti in $DATA_DIR/profilo/ ==="
+          ls "$DATA_DIR/profilo/"*.json 2>/dev/null | wc -l
+          echo ""
+          echo "=== Size totale ==="
+          du -sh "$DATA_DIR/profilo/" 2>/dev/null
+          echo ""
+          echo "=== Sample primo shard (head 800 char) ==="
+          first=$(ls "$DATA_DIR/profilo/"*.json 2>/dev/null | head -1)
+          if [ -n "$first" ]; then
+            echo "File: $first"
+            head -c 800 "$first"
+            echo ""
+          fi
+
+      - name: Pack shard in tar.gz per artifact
+        # Artifact GitHub wrappa SEMPRE in uno zip esterno. Mettiamo tar.gz
+        # interno: pull_artifact.py rileva il tar.gz dentro lo zip e lo
+        # estrae direttamente con tarfile (no doppia decompressione).
+        run: |
+          DATA_DIR="${{ github.workspace }}/data"
+          cd "$DATA_DIR"
+          tar czf /tmp/istat_profilo-shards.tar.gz profilo/
+          echo "Archive size: $(du -h /tmp/istat_profilo-shards.tar.gz | cut -f1)"
+          echo "Files inside:"
+          tar tzf /tmp/istat_profilo-shards.tar.gz | head -5
+          echo "..."
+          echo "Total files: $(tar tzf /tmp/istat_profilo-shards.tar.gz | wc -l)"
+
+      - name: Upload artifact (retention 1 giorno per privacy)
+        uses: actions/upload-artifact@v4
+        with:
+          name: istat_profilo-shards
+          path: /tmp/istat_profilo-shards.tar.gz
+          # 1 giorno = TTL minimo accettabile. pull_artifact.py su VM scarica
+          # ed elimina attivamente (riducendo TTL effettivo a minuti). Retention
+          # 1gg copre il caso in cui il pull venga ritardato.
+          retention-days: 1
+          if-no-files-found: error
