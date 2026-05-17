@@ -67,13 +67,12 @@ solo per Roma) rende impraticabile l'ingestion massiva.
 
 Uso
 ---
-  python -m etl.sources.agcom_bbmap --target=local
-  python -m etl.sources.agcom_bbmap --target=r2
-  python -m etl.sources.agcom_bbmap --target=r2 --force
+  python -m etl.sources.agcom_bbmap
+  python -m etl.sources.agcom_bbmap --force
 
 Cadenza: trimestrale (allinearsi al rilascio AGCOM, tipicamente fine
 quartile + 30-45 giorni). Skip automatico se hash del CSV è invariato
-rispetto all'ultima run (persistito in agcom_bbmap/_meta.json su R2).
+rispetto all'ultima run (persistito in data/agcom_bbmap/_meta.json).
 """
 from __future__ import annotations
 
@@ -84,14 +83,13 @@ import io
 import json
 import sys
 import time
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
 
 import requests
 import structlog
 
-from etl.lib import manifest, r2
+from etl.lib import local_lookup, manifest
 
 log = structlog.get_logger()
 
@@ -116,25 +114,18 @@ AGCOM_MAP_BASE = (
     "https://geo.agcom.it/agcomapps/BB4/BB4_BBwired_na_app16_4/"
 )
 
-# R2 destinazione
-R2_PREFIX = "agcom_bbmap"   # → R2: agcom_bbmap/<istat>.json
-R2_META_KEY = "agcom_bbmap/_meta.json"
-
 # Output locale (default produzione VM AgID; override via --outdir)
 DEFAULT_OUTDIR = Path("/var/www/cruscotto-italia/data/agcom_bbmap")
 CACHE_DIR = Path(".cache/agcom_bbmap")
 
 USER_AGENT = (
     "cruscotto-italia-etl/0.1 "
-    "(+https://github.com/piersoft/cruscotto-italia)"
+    "(+https://github.com/AgID/cruscotto-italia)"
 )
 
 # Anagrafica ISTAT per ricavare centroide lat/lon (per deep-link mappa).
-# Riutilizziamo gli shard 'anagrafica/<istat>.json' già presenti su R2
-# quando target=r2; in target=local proviamo prima il file in
-# data/anagrafica/, altrimenti fallback a None (deep-link senza zoom).
-ANAGRAFICA_DIR_LOCAL = Path("data/anagrafica")
-R2_ANAGRAFICA_PREFIX = "anagrafica"
+# Legge file in data/anagrafica/<istat>.json se esistono.
+ANAGRAFICA_DIR_LOCAL = Path("/var/www/cruscotto-italia/data/anagrafica")
 
 
 # ──────────────────────── FETCH CSV AGCOM ──────────────────────────
@@ -241,26 +232,13 @@ def parse_csv(body: bytes) -> list[dict]:
 
 # ──────────────────────── CENTROIDE COMUNE ─────────────────────────
 
-def load_anagrafica_centroids(target: str) -> dict[str, tuple[float, float]]:
-    """Carica un mapping istat6 -> (lat, lon) dal dataset anagrafica.
+def load_anagrafica_centroids() -> dict[str, tuple[float, float]]:
+    """Carica un mapping istat6 -> (lat, lon) dai file anagrafica locali.
 
-    Strategia:
-      - target=r2:    legge da R2 (pattern: list_objects su anagrafica/,
-                      get_object per ciascuno è troppo costoso → 7896 GET).
-                      Sfrutta il fatto che 'dashboard/<istat>.json' contiene
-                      già anagrafica.coordinate. In alternativa, accetta
-                      mancanza centroide (deep-link senza zoom).
-      - target=local: legge file in data/anagrafica/*.json se esistono.
-
-    Per evitare 7896 GET su R2, in modalità r2 NON popoliamo i centroidi
-    da remoto: il frontend stesso ha le coordinate dalla dashboard A1 e
-    può costruire l'URL deep-link client-side senza salvarlo nello shard.
+    Legge data/anagrafica/<istat>.json. Se la directory non esiste o e' vuota,
+    ritorna dict vuoto e il deep-link mappa AGCOM sara' senza zoom (URL base).
     """
     centroids: dict[str, tuple[float, float]] = {}
-    if target != "local":
-        log.info("agcom_centroids_skip_r2",
-                 reason="frontend will build deep-link client-side")
-        return centroids
     if not ANAGRAFICA_DIR_LOCAL.exists():
         log.warning("agcom_centroids_no_dir",
                     path=str(ANAGRAFICA_DIR_LOCAL))
@@ -368,120 +346,26 @@ def build_shards(rows: list[dict],
 # ──────────────────────── META / SKIP CHECK ─────────────────────────
 
 def read_last_known_sha() -> str | None:
-    try:
-        client = r2.get_r2_client()
-        obj = client.get_object(Bucket=r2.get_bucket(), Key=R2_META_KEY)
-        meta = json.loads(obj["Body"].read().decode("utf-8"))
-        return meta.get("sha256")
-    except Exception:
-        return None
+    """Legge l'ultimo SHA dal _meta.json locale."""
+    meta = local_lookup.load_meta("agcom_bbmap")
+    return meta.get("sha256")
 
 
 def write_meta(sha: str, n_shards: int) -> None:
-    body = json.dumps({
+    """Scrive _meta.json locale con SHA + metadati."""
+    local_lookup.save_meta("agcom_bbmap", {
         "sha256": sha,
         "n_shards": n_shards,
         "data_period": DATA_PERIOD,
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "etl_version": ETL_VERSION,
-    }, indent=2).encode("utf-8")
-    r2.upload_bytes(body, R2_META_KEY, content_type="application/json")
+    })
 
 
-# ──────────────────────── PUSH R2 / LOCAL ──────────────────────────
+# ──────────────────────── PUSH LOCAL ────────────────────────────────
 
 def _md5_of_bytes(b: bytes) -> str:
     return hashlib.md5(b).hexdigest()
-
-
-def push_shards_r2(shards: dict[str, dict],
-                   force: bool = False) -> tuple[int, int]:
-    """Push shard su R2 con skip-by-md5 (pattern pun.py/aria.py)."""
-    total = len(shards)
-    log.info("shards_r2_start", total=total, force=force, prefix=R2_PREFIX)
-    t0 = time.time()
-
-    # 1) Lista oggetti remoti
-    remote_etag: dict[str, str] = {}
-    if not force:
-        try:
-            client = r2.get_r2_client()
-            pag = client.get_paginator("list_objects_v2")
-            for page in pag.paginate(Bucket=r2.get_bucket(),
-                                     Prefix=f"{R2_PREFIX}/"):
-                for o in page.get("Contents", []):
-                    name = o["Key"].split("/")[-1]
-                    if name.startswith("_"):
-                        continue
-                    etag = (o.get("ETag") or "").strip('"').lower()
-                    remote_etag[name] = etag
-            log.info("shards_r2_remote_listed", count=len(remote_etag))
-        except Exception as e:
-            log.warning("shards_r2_list_fail", err=str(e))
-
-    # 2) Diff
-    bodies: dict[str, bytes] = {}
-    md5s: dict[str, str] = {}
-    for istat, shard in shards.items():
-        body = json.dumps(shard, ensure_ascii=False).encode("utf-8")
-        bodies[istat] = body
-        md5s[istat] = _md5_of_bytes(body)
-
-    to_upload: list[str] = []
-    n_same = 0
-    if force:
-        to_upload = list(shards.keys())
-        log.info("shards_r2_force_all", n=len(to_upload))
-    else:
-        for istat, md5 in md5s.items():
-            rmd5 = remote_etag.get(f"{istat}.json")
-            if rmd5 is None or rmd5 != md5:
-                to_upload.append(istat)
-            else:
-                n_same += 1
-        log.info("shards_r2_md5_compared", total=total,
-                 unchanged=n_same, to_upload=len(to_upload))
-
-    # 3) Upload paralleli
-    files_for_manifest: list[dict] = []
-
-    def _upload_one(istat: str) -> tuple[str, int, str]:
-        key = f"{R2_PREFIX}/{istat}.json"
-        body = bodies[istat]
-        r2.upload_bytes(body, key, content_type="application/json")
-        return (key, len(body), md5s[istat])
-
-    uploaded = 0
-    if to_upload:
-        with ThreadPoolExecutor(max_workers=24) as ex:
-            futs = {ex.submit(_upload_one, istat): istat
-                    for istat in to_upload}
-            for f in as_completed(futs):
-                try:
-                    key, size, md5 = f.result()
-                    files_for_manifest.append(
-                        {"key": key, "size": size, "md5": md5})
-                    uploaded += 1
-                    if uploaded % 200 == 0:
-                        elapsed = time.time() - t0
-                        rate = uploaded / elapsed if elapsed > 0 else 0
-                        eta = (len(to_upload) - uploaded) / rate if rate > 0 else 0
-                        log.info("shards_r2_progress",
-                                 uploaded=uploaded,
-                                 to_upload=len(to_upload),
-                                 elapsed_s=round(elapsed, 1),
-                                 eta_s=round(eta, 1),
-                                 rate=round(rate, 1))
-                except Exception as e:
-                    log.error("shards_r2_upload_fail", err=str(e))
-
-    elapsed = round(time.time() - t0, 1)
-    log.info("shards_r2_done", uploaded=uploaded, skipped=n_same,
-             total=total, elapsed_s=elapsed)
-    if files_for_manifest:
-        manifest.update_source("agcom_bbmap", files_for_manifest,
-                               status="ok")
-    return uploaded, n_same
 
 
 def write_shards_local(shards: dict[str, dict], outdir: Path) -> int:
@@ -501,21 +385,22 @@ def write_shards_local(shards: dict[str, dict], outdir: Path) -> int:
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="ETL AGCOM Broadband Map — copertura banda larga comunale")
-    parser.add_argument("--target", choices=["local", "r2"], default="local")
+    # --target tenuto per retrocompat workflow esistenti, ma solo 'local' e' supportato
+    parser.add_argument("--target", choices=["local"], default="local",
+                        help="Solo 'local' supportato (R2 rimosso dall'infrastruttura AgID)")
     parser.add_argument("--outdir", type=Path, default=DEFAULT_OUTDIR,
-                        help=f"Output dir per --target=local (default: {DEFAULT_OUTDIR})")
+                        help=f"Output dir (default: {DEFAULT_OUTDIR})")
     parser.add_argument("--force", action="store_true",
-                        help="Forza upload anche se SHA del CSV invariato")
+                        help="Forza rebuild anche se SHA del CSV invariato")
     args = parser.parse_args()
 
-    log.info("etl_agcom_bbmap_start",
-             target=args.target, version=ETL_VERSION)
+    log.info("etl_agcom_bbmap_start", version=ETL_VERSION)
 
     # Fetch + sha
     body, sha = fetch_agcom_csv()
 
-    # Skip check (solo target=r2)
-    if args.target == "r2" and not args.force:
+    # Skip check
+    if not args.force:
         last = read_last_known_sha()
         if last == sha:
             log.info("agcom_skip", reason="sha_unchanged", sha=sha[:16])
@@ -529,8 +414,8 @@ def main() -> int:
                   expected_min=7000)
         return 2
 
-    # Centroidi (solo per target=local, vedi load_anagrafica_centroids)
-    centroids = load_anagrafica_centroids(args.target)
+    # Centroidi locali (fallback se anagrafica non disponibile)
+    centroids = load_anagrafica_centroids()
 
     # Build shards
     now_iso = datetime.now(timezone.utc).isoformat()
@@ -550,15 +435,21 @@ def main() -> int:
         else:
             log.info("sample_no_data", istat=sample)
 
-    # Write
-    if args.target == "local":
-        write_shards_local(shards, args.outdir)
-    else:
-        push_shards_r2(shards, force=args.force)
-        write_meta(sha, len(shards))
+    # Write local
+    n_written = write_shards_local(shards, args.outdir)
+    write_meta(sha, n_written)
 
-    log.info("etl_agcom_bbmap_done", target=args.target,
-             comuni=len(shards))
+    # Manifest update best-effort
+    try:
+        manifest.update_source(
+            "agcom_bbmap",
+            [{"key": "agcom_bbmap/*", "count": n_written}],
+            status="ok",
+        )
+    except Exception as e:
+        log.warning("manifest_update_skipped", error=str(e))
+
+    log.info("etl_agcom_bbmap_done", comuni=n_written)
     return 0
 
 
