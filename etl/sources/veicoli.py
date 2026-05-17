@@ -28,9 +28,8 @@ Schema veicoli/<istat>.json (v0.1.0):
   iscrizioni: ultimo_anno + serie_storica
 
 Uso:
-  python -m etl.sources.veicoli --target=local
-  python -m etl.sources.veicoli --target=r2
-  python -m etl.sources.veicoli --target=local --no-cache
+  python -m etl.sources.veicoli
+  python -m etl.sources.veicoli --no-cache
 
 Cadenza: annuale.
 """
@@ -38,7 +37,6 @@ from __future__ import annotations
 
 import argparse
 import csv
-import hashlib
 import json
 import re
 import sys
@@ -52,12 +50,12 @@ from pathlib import Path
 import requests
 import structlog
 
-from etl.lib import manifest, r2
+from etl.lib import local_lookup, manifest
 
 log = structlog.get_logger()
 
 ETL_VERSION = "0.1.0"
-UA = "Cruscotto-Italia-ETL/0.1 (+https://github.com/piersoft/cruscotto-italia)"
+UA = "Cruscotto-Italia-ETL/0.1 (+https://github.com/AgID/cruscotto-italia)"
 
 ISTAT_BASE = "https://esploradati.istat.it/SDMXWS/rest/data"
 ISTAT_HEADERS = {
@@ -461,9 +459,10 @@ def parse_aci_iscrizioni(csv_path: Path, anno: int,
 # Build shard + persistenza
 # ----------------------------------------------------------------------------
 def load_popolazione_from_dashboard() -> dict[str, int]:
-    """Legge la popolazione da dashboard/<istat>.json su R2.
-    Cache locale: /tmp/cruscotto-veicoli-cache/popolazione_from_dashboard.json
-    Per evitare di scaricare 7896 file ad ogni run.
+    """Legge popolazione dai shard dashboard locali (data/dashboard/<istat>.json).
+
+    Cache: /tmp/cruscotto-veicoli-cache/popolazione_from_dashboard.json
+    Per evitare di rileggere 7896 file ad ogni run.
     """
     cache_f = CACHE_DIR / "popolazione_from_dashboard.json"
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
@@ -476,62 +475,60 @@ def load_popolazione_from_dashboard() -> dict[str, int]:
             pass
 
     log.info("popolazione_dashboard_loading_start",
-             info="reading all dashboard shards (slow first time)")
+             info="reading all dashboard shards from local filesystem")
     out: dict[str, int] = {}
-    keys = r2.list_keys("dashboard/")
-    log.info("popolazione_dashboard_keys", n=len(keys))
-    from concurrent.futures import ThreadPoolExecutor, as_completed
-    def fetch_pop(key: str) -> tuple[str, int | None]:
-        # extract istat from "dashboard/<istat>.json"
-        istat = key.split("/")[-1].replace(".json", "")
+    dashboard_dir = local_lookup.get_data_dir() / "dashboard"
+    if not dashboard_dir.exists():
+        log.warning("dashboard_dir_missing", path=str(dashboard_dir),
+                    hint="Esegui prima 'python -m etl.sources.dashboard'")
+        return out
+
+    shard_files = sorted(dashboard_dir.glob("*.json"))
+    log.info("popolazione_dashboard_files", n=len(shard_files))
+    n_done = 0
+    for sf in shard_files:
+        istat = sf.stem
         try:
-            tmp = CACHE_DIR / f"_d_{istat}.json"
-            r2.download_file(key, tmp)
-            d = json.loads(tmp.read_text())
-            tmp.unlink(missing_ok=True)
+            d = json.loads(sf.read_text(encoding="utf-8"))
             pop = (d.get("demografia", {}).get("popolazione_totale")
                    or d.get("anagrafica", {}).get("kpi", {}).get("popolazione"))
-            return (istat, int(pop) if pop else None)
+            if pop:
+                out[istat] = int(pop)
         except Exception:
-            return (istat, None)
-
-    with ThreadPoolExecutor(max_workers=32) as ex:
-        futs = [ex.submit(fetch_pop, k) for k in keys]
-        n_done = 0
-        for fut in as_completed(futs):
-            istat, pop = fut.result()
-            if pop is not None:
-                out[istat] = pop
-            n_done += 1
-            if n_done % 1000 == 0:
-                log.info("popolazione_dashboard_progress", done=n_done, total=len(keys))
+            pass
+        n_done += 1
+        if n_done % 1000 == 0:
+            log.info("popolazione_dashboard_progress", done=n_done, total=len(shard_files))
     log.info("popolazione_dashboard_done", n=len(out))
     cache_f.write_text(json.dumps(out))
     return out
 
 
 def load_anagrafica_nomi_e_popolazione() -> tuple[dict[str, str], dict[str, int]]:
-    """Carica nome + popolazione dall'anagrafica unificata.
-    Cerca prima il parquet locale, poi scarica da R2 (lookup/anagrafica_unificata.parquet).
+    """Carica nome + popolazione dall'anagrafica unificata locale.
+
+    Legge data/lookup/anagrafica_unificata.parquet via local_lookup.
+    Fallback al path output/anagrafica/anagrafica_unificata.parquet
+    se non presente in lookup_dir.
+
     Ritorna (nome_by_istat, pop_by_istat). Tollera mancanze.
     """
     nome_by_istat: dict[str, str] = {}
     pop_by_istat: dict[str, int] = {}
     try:
         import pandas as pd
-        local = Path("output/anagrafica/anagrafica_unificata.parquet")
+        # Priorità 1: data/lookup/ (path canonico AgID)
+        local = local_lookup.get_lookup_dir() / "anagrafica_unificata.parquet"
         if not local.exists():
-            # Fallback: scarica da R2 in cache
-            cached = CACHE_DIR / "anagrafica_unificata.parquet"
-            CACHE_DIR.mkdir(parents=True, exist_ok=True)
-            if not cached.exists():
-                log.info("anagrafica_r2_download", key="lookup/anagrafica_unificata.parquet")
-                try:
-                    r2.download_file("lookup/anagrafica_unificata.parquet", cached)
-                except Exception as e:
-                    log.warning("anagrafica_r2_fail", err=str(e))
-                    return nome_by_istat, pop_by_istat
-            local = cached
+            # Fallback: output/anagrafica/ (path legacy, può esistere su dev)
+            fallback = Path("output/anagrafica/anagrafica_unificata.parquet")
+            if fallback.exists():
+                local = fallback
+            else:
+                log.warning("anagrafica_parquet_missing",
+                            primary=str(local), fallback=str(fallback),
+                            hint="Esegui prima 'python -m etl.sources.anagrafica'")
+                return nome_by_istat, pop_by_istat
         df = pd.read_parquet(local)
         cols = {c.lower(): c for c in df.columns}
         istat_col = (cols.get("codice_istat") or cols.get("istat_code")
@@ -553,7 +550,7 @@ def load_anagrafica_nomi_e_popolazione() -> tuple[dict[str, str], dict[str, int]
                 except (TypeError, ValueError):
                     pass
         log.info("anagrafica_caricata", n_nomi=len(nome_by_istat),
-                 n_pop=len(pop_by_istat))
+                 n_pop=len(pop_by_istat), source=str(local))
     except Exception as e:
         log.warning("anagrafica_load_fail", err=str(e))
     return nome_by_istat, pop_by_istat
@@ -620,10 +617,6 @@ def build_shard(istat: str, anag_nome: str | None,
     return out
 
 
-def _md5_of_bytes(b: bytes) -> str:
-    return hashlib.md5(b).hexdigest()
-
-
 def write_shards_local(shards: dict[str, dict], outdir: Path) -> int:
     outdir.mkdir(parents=True, exist_ok=True)
     for istat, shard in shards.items():
@@ -634,101 +627,17 @@ def write_shards_local(shards: dict[str, dict], outdir: Path) -> int:
     return len(shards)
 
 
-def push_shards_r2(shards: dict[str, dict], force: bool = False) -> tuple[int, int]:
-    """Push shard su R2 con skip-by-md5. Pattern aria.py:
-    - 1 list_objects_v2 paginato per leggere TUTTI gli ETag remoti in una volta
-    - Upload paralleli con ThreadPoolExecutor
-    """
-    from concurrent.futures import ThreadPoolExecutor, as_completed
-
-    total = len(shards)
-    log.info("shards_r2_start", total=total, force=force)
-    t0 = time.time()
-
-    # 1) Lista oggetti remoti correnti (1 chiamata paginata invece di 7913 HEAD)
-    remote_etag: dict[str, str] = {}
-    if not force:
-        try:
-            client = r2.get_r2_client()
-            pag = client.get_paginator("list_objects_v2")
-            for page in pag.paginate(Bucket=r2.get_bucket(), Prefix="veicoli/"):
-                for o in page.get("Contents", []):
-                    name = o["Key"].split("/")[-1]
-                    etag = (o.get("ETag") or "").strip('"').lower()
-                    remote_etag[name] = etag
-            log.info("shards_r2_remote_listed", count=len(remote_etag))
-        except Exception as e:
-            log.warning("shards_r2_list_fail", err=str(e))
-
-    # 2) Calcola md5 locali, decide cosa caricare
-    bodies: dict[str, bytes] = {}
-    md5s: dict[str, str] = {}
-    for istat, shard in shards.items():
-        body = json.dumps(shard, ensure_ascii=False).encode("utf-8")
-        bodies[istat] = body
-        md5s[istat] = _md5_of_bytes(body)
-
-    to_upload: list[str] = []
-    n_same = 0
-    if force:
-        to_upload = list(shards.keys())
-        log.info("shards_r2_force_all", n=len(to_upload))
-    else:
-        for istat, md5 in md5s.items():
-            rmd5 = remote_etag.get(f"{istat}.json")
-            if rmd5 is None or rmd5 != md5:
-                to_upload.append(istat)
-            else:
-                n_same += 1
-        log.info("shards_r2_md5_compared", total=total,
-                 unchanged=n_same, to_upload=len(to_upload))
-
-    # 3) Upload paralleli
-    files_for_manifest: list[dict] = []
-    def _upload_one(istat: str) -> tuple[str, int, str]:
-        key = f"veicoli/{istat}.json"
-        body = bodies[istat]
-        r2.upload_bytes(body, key, content_type="application/json")
-        return (key, len(body), md5s[istat])
-
-    uploaded = 0
-    if to_upload:
-        with ThreadPoolExecutor(max_workers=24) as ex:
-            futs = {ex.submit(_upload_one, istat): istat for istat in to_upload}
-            for f in as_completed(futs):
-                try:
-                    key, size, md5 = f.result()
-                    files_for_manifest.append({"key": key, "size": size, "md5": md5})
-                    uploaded += 1
-                    if uploaded % 200 == 0:
-                        elapsed = time.time() - t0
-                        rate = uploaded / elapsed if elapsed > 0 else 0
-                        eta = (len(to_upload) - uploaded) / rate if rate > 0 else 0
-                        log.info("shards_r2_progress",
-                                 uploaded=uploaded, to_upload=len(to_upload),
-                                 elapsed_s=round(elapsed, 1),
-                                 eta_s=round(eta, 1),
-                                 rate=round(rate, 1))
-                except Exception as e:
-                    log.error("shards_r2_upload_fail", err=str(e))
-
-    elapsed = round(time.time() - t0, 1)
-    log.info("shards_r2_done", uploaded=uploaded, skipped=n_same,
-             total=total, elapsed_s=elapsed)
-    if files_for_manifest:
-        manifest.update_source("veicoli", files_for_manifest, status="ok")
-    return uploaded, n_same
-
-
 def main() -> int:
     parser = argparse.ArgumentParser(description="ETL Veicoli e incidenti")
-    parser.add_argument("--target", choices=["local", "r2"], default="local")
+    # --target tenuto per retrocompat workflow esistenti, ma solo 'local' e' supportato
+    parser.add_argument("--target", choices=["local"], default="local",
+                        help="Solo 'local' supportato (R2 rimosso dall'infrastruttura AgID)")
     parser.add_argument("--outdir", type=Path, default=DEFAULT_OUTDIR,
                         help=f"Output dir per shard locali (default: {DEFAULT_OUTDIR})")
     parser.add_argument("--no-cache", action="store_true")
     args = parser.parse_args()
 
-    log.info("etl_veicoli_start", target=args.target, version=ETL_VERSION)
+    log.info("etl_veicoli_start", version=ETL_VERSION)
     use_cache = not args.no_cache
 
     csv_parco = fetch_istat_parco(anno=ANNO_PARCO, use_cache=use_cache)
@@ -862,18 +771,23 @@ def main() -> int:
                  pct_eh=isc.get("pct_elettriche_ibride"))
 
     # === Persistenza ===
-    if args.target == "local":
-        write_shards_local(shards, args.outdir)
-    elif args.target == "r2":
-        write_shards_local(shards, args.outdir)
-        push_shards_r2(shards, force=False)
+    n_written = write_shards_local(shards, args.outdir)
+
+    # Manifest update best-effort
+    try:
+        files = [{"name": f.name, "size": f.stat().st_size,
+                  "key": f"veicoli/{f.name}"}
+                 for f in sorted(args.outdir.glob("*.json"))]
+        manifest.update_source("veicoli", files, status="ok")
+        log.info("veicoli_manifest_updated", n_files=len(files))
+    except Exception as e:
+        log.warning("veicoli_manifest_update_skipped", err=str(e))
 
     log.info("etl_veicoli_done",
-             n_shards=len(shards),
+             n_shards=n_written,
              n_parco=len(parco_by_istat),
              n_incidenti=len(incidenti_by_istat),
-             n_iscrizioni=len(iscrizioni_by_istat),
-             target=args.target)
+             n_iscrizioni=len(iscrizioni_by_istat))
     return 0
 
 
