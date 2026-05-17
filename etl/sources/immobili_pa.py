@@ -60,16 +60,13 @@ import json
 import re
 import sys
 import time
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
 
 import requests
 import structlog
 
-from etl.lib import r2
-
-# Riuso lookup canonica e client R2 canonico
+# Riuso lookup canonica (load_cat_to_istat e' adesso local-first)
 from etl.sources.scuole import load_cat_to_istat
 
 log = structlog.get_logger()
@@ -339,51 +336,22 @@ def write_local(shards: dict[str, dict], outdir: Path) -> int:
     return n
 
 
-def push_to_r2_parallel(shards: dict[str, dict]) -> int:
-    """Upload shard immobili_pa/<istat>.json su R2 in parallelo."""
-    log.info("immobili_pushing", n=len(shards))
-    client = r2.get_r2_client()
-    bucket = r2.get_bucket()
-
-    def upload(istat: str, data: dict) -> bool:
-        try:
-            client.put_object(
-                Bucket=bucket,
-                Key=f"immobili_pa/{istat}.json",
-                Body=json.dumps(data, ensure_ascii=False).encode("utf-8"),
-                ContentType="application/json; charset=utf-8",
-            )
-            return True
-        except Exception as e:
-            log.error("upload_failed", istat=istat, error=str(e))
-            return False
-
-    uploaded = 0
-    with ThreadPoolExecutor(max_workers=20) as pool:
-        futures = [pool.submit(upload, istat, data) for istat, data in shards.items()]
-        for f in as_completed(futures):
-            if f.result():
-                uploaded += 1
-    log.info("immobili_push_done", uploaded=uploaded)
-    return uploaded
-
-
 def main() -> int:
     p = argparse.ArgumentParser(description="ETL Immobili PA (MEF) - Fase B")
     p.add_argument("--regione", default="VALLE-D_AOSTA",
                    choices=[*REGIONI_VALIDE, "ALL"],
                    help="Regione singola, oppure ALL per tutte le 20 regioni")
-    p.add_argument("--target", choices=["local", "r2"], default="local",
-                   help="Destinazione output: local (file system) o r2 (Cloudflare)")
+    # --target tenuto per retrocompat workflow esistenti, ma solo 'local' e' supportato
+    p.add_argument("--target", choices=["local"], default="local",
+                   help="Solo 'local' supportato (R2 rimosso dall'infrastruttura AgID)")
     p.add_argument("--no-cache", action="store_true",
                    help="Forza re-download dello ZIP")
     p.add_argument("--outdir", default="/var/www/cruscotto-italia/data/immobili_pa",
-                   help="Directory output shard locali (solo --target=local)")
+                   help="Directory output shard locali")
     args = p.parse_args()
 
     regioni = REGIONI_VALIDE if args.regione == "ALL" else [args.regione]
-    log.info("etl_start", regioni=regioni, target=args.target,
-             n_regioni=len(regioni))
+    log.info("etl_start", regioni=regioni, n_regioni=len(regioni))
 
     # Carica lookup una sola volta (non per regione)
     cat_to_istat = load_cat_to_istat()
@@ -416,12 +384,9 @@ def main() -> int:
 
     log.info("etl_aggregated", comuni_totali=len(all_shards))
 
-    if args.target == "r2":
-        push_to_r2_parallel(all_shards)
-    else:
-        write_local(all_shards, Path(args.outdir))
+    write_local(all_shards, Path(args.outdir))
 
-    log.info("etl_done", comuni_with_data=len(all_shards), target=args.target)
+    log.info("etl_done", comuni_with_data=len(all_shards))
     return 0
 
 
