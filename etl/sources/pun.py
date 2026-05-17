@@ -56,13 +56,12 @@ Schema pun/<istat>.json
 
 Uso
 ---
-  python -m etl.sources.pun --target=local
-  python -m etl.sources.pun --target=r2
-  python -m etl.sources.pun --target=r2 --force
+  python -m etl.sources.pun
+  python -m etl.sources.pun --force
 
 Cadenza: giornaliera (file rigenerato lato GSE ~03:00 UTC).
 Skip automatico se LastModified S3 è invariato rispetto all'ultima run
-(persistito in pun/_meta.json su R2).
+(persistito in DATA_DIR/pun/_meta.json local).
 """
 from __future__ import annotations
 
@@ -86,7 +85,7 @@ import structlog
 from botocore import UNSIGNED
 from botocore.config import Config
 
-from etl.lib import manifest, r2
+from etl.lib import local_lookup, manifest
 
 log = structlog.get_logger()
 
@@ -104,9 +103,8 @@ COGNITO_IDP_ID = "eu-south-1:e3b2ab05-2046-43dd-8ed0-c0f14c69d507"
 SOURCE_BUCKET = "gse-pun-prod-documents"
 SOURCE_KEY = "PA/infrastrutture.csv"
 
-# R2 destinazione
-R2_PREFIX = "pun"          # → R2: pun/<istat>.json
-R2_META_KEY = "pun/_meta.json"
+# Output prefix (locale, sotto DATA_DIR/pun/)
+SHARD_PREFIX = "pun"
 
 # Output locale (default produzione VM AgID; override via --outdir)
 DEFAULT_OUTDIR = Path("/var/www/cruscotto-italia/data/pun")
@@ -382,150 +380,103 @@ def build_shards(rows: list[dict], by_np: dict, by_name: dict,
     return shards
 
 
-# ──────────────────────── SKIP LOGIC (R2 meta) ─────────────────────
+# ──────────────────────── SKIP LOGIC (meta locale) ─────────────────
 
 def read_last_known_lm() -> str | None:
-    try:
-        client = r2.get_r2_client()
-        obj = client.get_object(Bucket=r2.get_bucket(), Key=R2_META_KEY)
-        return json.loads(obj["Body"].read())["last_modified"]
-    except Exception:
-        return None
+    """Legge il last_modified S3 dell'ultima run da DATA_DIR/pun/_meta.json."""
+    meta = local_lookup.load_meta(SHARD_PREFIX)
+    return meta.get("last_modified") if meta else None
 
 
 def write_last_known_lm(last_modified: datetime) -> None:
-    body = json.dumps(
-        {"last_modified": last_modified.isoformat(),
-         "checked_at": datetime.now(timezone.utc).isoformat()},
-        indent=2,
-    ).encode("utf-8")
-    r2.upload_bytes(body, R2_META_KEY, content_type="application/json")
+    """Salva last_modified S3 in DATA_DIR/pun/_meta.json."""
+    local_lookup.save_meta(SHARD_PREFIX, {
+        "last_modified": last_modified.isoformat(),
+        "checked_at": datetime.now(timezone.utc).isoformat(),
+    })
 
 
-# ──────────────────────── PUSH R2 / WRITE LOCAL ────────────────────
+# ──────────────────────── WRITE LOCAL ──────────────────────────────
 
 def _md5_of_bytes(b: bytes) -> str:
     return hashlib.md5(b).hexdigest()
 
 
-def push_shards_r2(shards: dict[str, dict], force: bool = False) -> tuple[int, int]:
-    """Push shard su R2 con skip-by-md5 (pattern aria.py/veicoli.py).
+def write_shards_local(shards: dict[str, dict],
+                       outdir: Path,
+                       force: bool = False) -> tuple[int, int]:
+    """Scrive shard local con skip-by-md5 per file invariati.
 
-    1) UNA list_objects_v2 paginata per leggere TUTTI gli ETag remoti
-    2) calcolo md5 locale e diff
-    3) upload paralleli con ThreadPoolExecutor(24)
-    4) progress log ogni 200 upload
+    Ritorna (written, skipped). Se il file esiste con lo stesso md5 del
+    payload, non lo riscrive (riduce I/O e preserva mtime).
     """
+    outdir.mkdir(parents=True, exist_ok=True)
     total = len(shards)
-    log.info("shards_r2_start", total=total, force=force, prefix=R2_PREFIX)
+    written = 0
+    skipped = 0
+    files_for_manifest: list[dict] = []
     t0 = time.time()
 
-    # 1) Lista oggetti remoti
-    remote_etag: dict[str, str] = {}
-    if not force:
-        try:
-            client = r2.get_r2_client()
-            pag = client.get_paginator("list_objects_v2")
-            for page in pag.paginate(Bucket=r2.get_bucket(), Prefix=f"{R2_PREFIX}/"):
-                for o in page.get("Contents", []):
-                    name = o["Key"].split("/")[-1]
-                    if name.startswith("_"):  # skip _meta.json
-                        continue
-                    etag = (o.get("ETag") or "").strip('"').lower()
-                    remote_etag[name] = etag
-            log.info("shards_r2_remote_listed", count=len(remote_etag))
-        except Exception as e:
-            log.warning("shards_r2_list_fail", err=str(e))
-
-    # 2) Diff
-    bodies: dict[str, bytes] = {}
-    md5s: dict[str, str] = {}
     for istat, shard in shards.items():
         body = json.dumps(shard, ensure_ascii=False).encode("utf-8")
-        bodies[istat] = body
-        md5s[istat] = _md5_of_bytes(body)
+        new_md5 = _md5_of_bytes(body)
+        target = outdir / f"{istat}.json"
 
-    to_upload: list[str] = []
-    n_same = 0
-    if force:
-        to_upload = list(shards.keys())
-        log.info("shards_r2_force_all", n=len(to_upload))
-    else:
-        for istat, md5 in md5s.items():
-            rmd5 = remote_etag.get(f"{istat}.json")
-            if rmd5 is None or rmd5 != md5:
-                to_upload.append(istat)
-            else:
-                n_same += 1
-        log.info("shards_r2_md5_compared", total=total,
-                 unchanged=n_same, to_upload=len(to_upload))
+        if not force and target.exists():
+            try:
+                cur_md5 = _md5_of_bytes(target.read_bytes())
+                if cur_md5 == new_md5:
+                    skipped += 1
+                    files_for_manifest.append(
+                        {"key": f"{SHARD_PREFIX}/{istat}.json",
+                         "size": len(body), "md5": new_md5}
+                    )
+                    continue
+            except OSError:
+                pass
 
-    # 3) Upload paralleli
-    files_for_manifest: list[dict] = []
-
-    def _upload_one(istat: str) -> tuple[str, int, str]:
-        key = f"{R2_PREFIX}/{istat}.json"
-        body = bodies[istat]
-        r2.upload_bytes(body, key, content_type="application/json")
-        return (key, len(body), md5s[istat])
-
-    uploaded = 0
-    if to_upload:
-        with ThreadPoolExecutor(max_workers=24) as ex:
-            futs = {ex.submit(_upload_one, istat): istat for istat in to_upload}
-            for f in as_completed(futs):
-                try:
-                    key, size, md5 = f.result()
-                    files_for_manifest.append({"key": key, "size": size, "md5": md5})
-                    uploaded += 1
-                    if uploaded % 200 == 0:
-                        elapsed = time.time() - t0
-                        rate = uploaded / elapsed if elapsed > 0 else 0
-                        eta = (len(to_upload) - uploaded) / rate if rate > 0 else 0
-                        log.info("shards_r2_progress",
-                                 uploaded=uploaded, to_upload=len(to_upload),
-                                 elapsed_s=round(elapsed, 1),
-                                 eta_s=round(eta, 1),
-                                 rate=round(rate, 1))
-                except Exception as e:
-                    log.error("shards_r2_upload_fail", err=str(e))
+        tmp = target.with_suffix(target.suffix + ".tmp")
+        tmp.write_bytes(body)
+        tmp.replace(target)
+        written += 1
+        files_for_manifest.append(
+            {"key": f"{SHARD_PREFIX}/{istat}.json",
+             "size": len(body), "md5": new_md5}
+        )
+        if (written + skipped) % 500 == 0:
+            log.info("shards_local_progress",
+                     written=written, skipped=skipped, total=total)
 
     elapsed = round(time.time() - t0, 1)
-    log.info("shards_r2_done", uploaded=uploaded, skipped=n_same,
-             total=total, elapsed_s=elapsed)
+    log.info("shards_local_done", written=written, skipped=skipped,
+             total=total, elapsed_s=elapsed, dir=str(outdir))
+
     if files_for_manifest:
-        manifest.update_source("pun", files_for_manifest, status="ok")
-    return uploaded, n_same
+        manifest.update_source(SHARD_PREFIX, files_for_manifest, status="ok")
 
-
-def write_shards_local(shards: dict[str, dict], outdir: Path) -> int:
-    outdir.mkdir(parents=True, exist_ok=True)
-    n = 0
-    for istat, payload in shards.items():
-        (outdir / f"{istat}.json").write_text(
-            json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
-        n += 1
-    log.info("pun_local_done", written=n, dir=str(outdir))
-    return n
+    return written, skipped
 
 
 # ──────────────────────── MAIN ──────────────────────────────────────
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="ETL PUN — punti di ricarica veicoli elettrici")
-    parser.add_argument("--target", choices=["local", "r2"], default="local")
+    # --target tenuto per retrocompat workflow esistenti, ma solo 'local' e' supportato
+    parser.add_argument("--target", choices=["local"], default="local",
+                        help="Solo 'local' supportato (R2 rimosso dall'infrastruttura AgID)")
     parser.add_argument("--outdir", type=Path, default=DEFAULT_OUTDIR,
-                        help=f"Output dir per --target=local (default: {DEFAULT_OUTDIR})")
+                        help=f"Output dir (default: {DEFAULT_OUTDIR})")
     parser.add_argument("--force", action="store_true",
-                        help="Forza esecuzione anche se LastModified non è cambiato")
+                        help="Forza esecuzione anche se LastModified non è cambiato + riscrittura totale")
     parser.add_argument("--no-cache", action="store_true",
                         help="Forza ridownload del CSV ISTAT comuni")
     args = parser.parse_args()
 
-    log.info("etl_pun_start", target=args.target, version=ETL_VERSION)
+    log.info("etl_pun_start", version=ETL_VERSION, outdir=str(args.outdir))
 
-    # Skip check (solo target=r2)
-    if args.target == "r2" and not args.force:
+    # Skip check su LastModified S3 vs meta locale (efficiente: evita di scaricare
+    # un CSV grosso quando GSE non ha aggiornato il file)
+    if not args.force:
         last_known = read_last_known_lm()
         current = head_pun_last_modified().isoformat()
         if last_known == current:
@@ -557,14 +508,11 @@ def main() -> int:
         else:
             log.info("sample_no_data", istat=sample)
 
-    # Write
-    if args.target == "local":
-        write_shards_local(shards, args.outdir)
-    else:
-        push_shards_r2(shards, force=args.force)
-        write_last_known_lm(last_modified)
+    # Write local + aggiorna meta per skip-check al prossimo run
+    write_shards_local(shards, args.outdir, force=args.force)
+    write_last_known_lm(last_modified)
 
-    log.info("etl_pun_done", target=args.target, comuni=len(shards))
+    log.info("etl_pun_done", comuni=len(shards))
     return 0
 
 
