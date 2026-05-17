@@ -22,28 +22,25 @@ KPI calcolati:
 - eta_media (ponderata)
 
 Usage:
-  python -m etl.sources.demografia --target=local
-  python -m etl.sources.demografia --target=r2
-  python -m etl.sources.demografia --target=r2 --year=2027  # forza anno
-  python -m etl.sources.demografia --target=r2 --csv=/path/to.csv  # bypass download
+  python -m etl.sources.demografia
+  python -m etl.sources.demografia --year=2027  # forza anno
+  python -m etl.sources.demografia --csv=/path/to.csv  # bypass download
 """
 from __future__ import annotations
 
 import argparse
 import datetime
 import json
-import os
 import sys
 import tempfile
 import zipfile
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 import duckdb
 import requests
 import structlog
 
-from etl.lib import manifest, r2
+from etl.lib import manifest
 
 log = structlog.get_logger()
 
@@ -264,55 +261,11 @@ def build_demografia_shards(csv_path: Path, output_dir: Path) -> Path:
     return shard_dir
 
 
-def push_to_r2_parallel(shard_dir: Path) -> int:
-    """Upload parallelo in R2 con skip esistenti."""
-    import boto3
-    client = boto3.client(
-        "s3",
-        endpoint_url=f"https://{os.environ['R2_ACCOUNT_ID']}.r2.cloudflarestorage.com",
-        aws_access_key_id=os.environ["R2_ACCESS_KEY_ID"],
-        aws_secret_access_key=os.environ["R2_SECRET_ACCESS_KEY"],
-    )
-
-    existing = set()
-    for page in client.get_paginator("list_objects_v2").paginate(
-        Bucket="cruscotto-italia-data", Prefix="demografia/"
-    ):
-        for o in page.get("Contents", []):
-            existing.add(o["Key"].split("/")[-1])
-
-    shard_files = sorted(shard_dir.glob("*.json"))
-    to_upload = [sf for sf in shard_files if sf.name not in existing]
-    log.info("demografia_pushing",
-             total=len(shard_files),
-             to_upload=len(to_upload),
-             already_on_r2=len(existing))
-
-    def _upload_one(sf):
-        r2.upload_file(sf, f"demografia/{sf.name}", content_type="application/json")
-        return sf.name
-
-    uploaded = 0
-    with ThreadPoolExecutor(max_workers=24) as ex:
-        futures = {ex.submit(_upload_one, sf): sf for sf in to_upload}
-        for fut in as_completed(futures):
-            try:
-                fut.result()
-                uploaded += 1
-                if uploaded % 1000 == 0:
-                    log.info("demografia_push_progress",
-                             uploaded=uploaded,
-                             total=len(to_upload))
-            except Exception as e:
-                log.error("demografia_upload_failed", error=str(e))
-
-    log.info("demografia_push_done", uploaded=uploaded)
-    return uploaded
-
-
 def main() -> int:
     parser = argparse.ArgumentParser(description="ETL Demografia ISTAT POSAS")
-    parser.add_argument("--target", choices=["local", "r2"], default="local")
+    # --target tenuto per retrocompat workflow esistenti, ma solo 'local' e' supportato
+    parser.add_argument("--target", choices=["local"], default="local",
+                        help="Solo 'local' supportato (R2 rimosso dall'infrastruttura AgID)")
     parser.add_argument("--csv", type=Path, default=None,
                         help="Bypassa il download e usa questo CSV locale.")
     parser.add_argument("--year", type=int, default=None,
@@ -351,22 +304,25 @@ def main() -> int:
             log.exception("posas_download_failed", error=str(e))
             return 1
 
-    log.info("etl_start", target=args.target, output_dir=str(output_dir),
+    log.info("etl_start", output_dir=str(output_dir),
              csv=str(csv_path), year=year_used)
 
     try:
         shard_dir = build_demografia_shards(csv_path, output_dir)
 
-        if args.target == "r2":
-            uploaded = push_to_r2_parallel(shard_dir)
+        # Manifest update (best-effort)
+        shard_count = len(list(shard_dir.glob("*.json")))
+        try:
             manifest.update_source(
                 "demografia",
-                [{"key": "demografia/*", "count": uploaded}],
+                [{"key": "demografia/*", "count": shard_count}],
                 status="ok",
             )
-            log.info("manifest_updated")
+            log.info("manifest_updated", count=shard_count)
+        except Exception as e:
+            log.warning("manifest_update_skipped", error=str(e))
 
-        log.info("etl_done", year=year_used)
+        log.info("etl_done", year=year_used, comuni=shard_count)
         return 0
     except Exception as e:
         log.exception("etl_failed", error=str(e))
