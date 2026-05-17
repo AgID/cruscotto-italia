@@ -26,9 +26,8 @@ Calcolato da letti TUR_1 e popolazione dal manifest demografia (gia su R2).
 Cache: i CSV bulk ISTAT salvati in cache_dir per ripartibilita.
 
 Usage:
-  python -m etl.sources.istat_turismo --target=local
-  python -m etl.sources.istat_turismo --target=r2
-  python -m etl.sources.istat_turismo --target=local --no-cache  # forza re-download
+  python -m etl.sources.istat_turismo
+  python -m etl.sources.istat_turismo --no-cache  # forza re-download
 """
 from __future__ import annotations
 
@@ -39,13 +38,12 @@ import sys
 import tempfile
 import urllib.error
 import urllib.request
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 import duckdb
 import structlog
 
-from etl.lib import manifest, r2
+from etl.lib import local_lookup, manifest
 
 log = structlog.get_logger()
 
@@ -303,8 +301,7 @@ def build_turismo_shards(cache_dir: Path, output_dir: Path) -> Path:
     log.info("istat_flussi_province", province=len(flussi_by_prov))
 
     # 5) === Carica popolazione comunale per indice turisticita ===
-    # Riuso shard demografia/<istat>.json se generati in target=r2 prima.
-    # Altrimenti scarico da R2.
+    # Legge dal bundle anagrafica locale (lookup/comuni-bundle.json).
     pop_by_istat = load_popolazioni()
     log.info("istat_pop_loaded", comuni=len(pop_by_istat))
 
@@ -342,29 +339,23 @@ def build_turismo_shards(cache_dir: Path, output_dir: Path) -> Path:
 
 
 def load_popolazioni() -> dict[str, int]:
-    """Carica popolazione totale per ogni comune da R2 (shard demografia).
+    """Carica popolazione totale per ogni comune dal bundle anagrafica locale.
 
-    Strategia: leggo da manifest -> demografia/. Se non disponibile (es. target=local
-    senza R2), tento di leggerli da disco se gia generati in /tmp,
-    altrimenti torno dict vuoto e l'indice di turisticita sara None.
+    Se il bundle e' assente, ritorna dict vuoto: l'indice di turisticita
+    sara' None per i comuni senza popolazione disponibile.
     """
     pop = {}
-    # Bundle structure: { "_etl_version": ..., "comuni": { "<istat>": {..., "kpi": {"popolazione": N}} } }
-    try:
-        client = r2.get_r2_client()
-        bucket = r2.get_bucket()
-        obj = client.get_object(Bucket=bucket, Key="lookup/comuni-bundle.json")
-        bundle = json.loads(obj["Body"].read())
-        comuni = bundle.get("comuni", {}) if isinstance(bundle, dict) else {}
-        for istat, c in comuni.items():
-            kpi = c.get("kpi") if isinstance(c, dict) else None
-            popval = kpi.get("popolazione") if isinstance(kpi, dict) else None
-            if istat and popval:
-                pop[istat] = int(popval)
-        log.info("popolazioni_from_bundle", n=len(pop))
+    comuni = local_lookup.load_comuni_bundle()
+    if comuni is None:
+        log.warning("popolazioni_bundle_unavailable",
+                    path=str(local_lookup.get_lookup_dir() / "comuni-bundle.json"))
         return pop
-    except Exception as e:
-        log.warning("popolazioni_bundle_unavailable", error=str(e))
+    for istat, c in comuni.items():
+        kpi = c.get("kpi") if isinstance(c, dict) else None
+        popval = kpi.get("popolazione") if isinstance(kpi, dict) else None
+        if istat and popval:
+            pop[istat] = int(popval)
+    log.info("popolazioni_from_bundle", n=len(pop))
     return pop
 
 
@@ -476,49 +467,13 @@ def build_shard(istat, prov_nuts3, prov_nome, cap_data, fl_data, pop):
     }
 
 
-def push_to_r2_parallel(shard_dir: Path) -> int:
-    """Upload parallelo degli shard su R2 sotto prefix 'turismo/'."""
-    client = r2.get_r2_client()
-    bucket = r2.get_bucket()
-
-    existing = set()
-    paginator = client.get_paginator("list_objects_v2")
-    for page in paginator.paginate(Bucket=bucket, Prefix="turismo/"):
-        for o in page.get("Contents", []):
-            existing.add(o["Key"].split("/")[-1])
-
-    shard_files = sorted(shard_dir.glob("*.json"))
-    to_upload = [sf for sf in shard_files if sf.name not in existing]
-    log.info("istat_pushing", total=len(shard_files), to_upload=len(to_upload),
-             already_on_r2=len(existing))
-
-    def _upload_one(sf):
-        r2.upload_file(sf, f"turismo/{sf.name}",
-                       content_type="application/json")
-        return sf.name
-
-    uploaded = 0
-    with ThreadPoolExecutor(max_workers=24) as ex:
-        futures = {ex.submit(_upload_one, sf): sf for sf in to_upload}
-        for fut in as_completed(futures):
-            try:
-                fut.result()
-                uploaded += 1
-                if uploaded % 1000 == 0:
-                    log.info("istat_push_progress", uploaded=uploaded,
-                             total=len(to_upload))
-            except Exception as e:
-                log.error("istat_upload_failed", error=str(e))
-
-    log.info("istat_push_done", uploaded=uploaded)
-    return uploaded
-
-
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="ETL Turismo del comune (capacita ricettiva + flussi provinciali ISTAT)"
     )
-    parser.add_argument("--target", choices=["local", "r2"], default="local")
+    # --target tenuto per retrocompat workflow esistenti, ma solo 'local' e' supportato
+    parser.add_argument("--target", choices=["local"], default="local",
+                        help="Solo 'local' supportato (R2 rimosso dall'infrastruttura AgID)")
     parser.add_argument("--cache-dir", type=Path,
                         default=Path("/tmp/cruscotto-istat-turismo-cache"))
     parser.add_argument("--outdir", type=Path, default=Path("/var/www/cruscotto-italia/data"))
@@ -538,7 +493,7 @@ def main() -> int:
     output_dir = args.outdir
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    log.info("etl_start", target=args.target,
+    log.info("etl_start",
              cache_dir=str(cache_dir),
              output_dir=str(output_dir))
 
@@ -551,15 +506,17 @@ def main() -> int:
         # 2) Aggrega in shard per comune
         shard_dir = build_turismo_shards(cache_dir, output_dir)
 
-        # 3) Upload su R2 (solo se target=r2)
-        if args.target == "r2":
-            uploaded = push_to_r2_parallel(shard_dir)
+        # Manifest update best-effort
+        try:
+            shard_count = len(list(shard_dir.glob("*.json")))
             manifest.update_source(
                 "istat_turismo",
-                [{"key": "turismo/*", "count": uploaded}],
+                [{"key": "turismo/*", "count": shard_count}],
                 status="ok",
             )
-            log.info("manifest_updated")
+            log.info("manifest_updated", count=shard_count)
+        except Exception as e:
+            log.warning("manifest_update_skipped", error=str(e))
 
         log.info("etl_done")
         return 0
