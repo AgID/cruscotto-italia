@@ -54,9 +54,8 @@ Output schema:
 }
 
 Usage:
-  python -m etl.sources.scuole --target=local
-  python -m etl.sources.scuole --target=r2
-  python -m etl.sources.scuole --target=r2 --anno=202425   # forza anno specifico
+  python -m etl.sources.scuole
+  python -m etl.sources.scuole --anno=202425   # forza anno specifico
 """
 from __future__ import annotations
 
@@ -71,7 +70,7 @@ from pathlib import Path
 import requests
 import structlog
 
-from etl.lib import r2
+from etl.lib import local_lookup
 
 log = structlog.get_logger(__name__)
 
@@ -157,11 +156,15 @@ def download_csvs(anno_codice: str, data_estrazione: str, force: bool = False) -
 
 
 def load_cat_to_istat() -> dict[str, str]:
-    """Mappa codice catastale -> codice ISTAT dal bundle anagrafica."""
+    """Mappa codice catastale -> codice ISTAT dal bundle anagrafica locale."""
     log.info("anagrafica_loading")
-    client = r2.get_r2_client()
-    obj = client.get_object(Bucket=r2.get_bucket(), Key="lookup/comuni-bundle.json")
-    bundle = json.loads(obj["Body"].read())["comuni"]
+    bundle = local_lookup.load_comuni_bundle()
+    if bundle is None:
+        raise SystemExit(
+            "Local lookup 'comuni-bundle.json' assente in "
+            f"{local_lookup.get_lookup_dir()}. "
+            "Esegui prima 'python -m etl.sources.anagrafica'."
+        )
     cat_to_istat = {}
     for istat, c in bundle.items():
         cc = (c.get("codice_catastale") or "").strip()
@@ -272,36 +275,6 @@ def build_shards(csv_paths: list[Path], cat_to_istat: dict[str, str],
     return shards
 
 
-def push_to_r2_parallel(shards: dict[str, dict]) -> int:
-    """Upload shard scuole/<istat>.json su R2 in parallelo."""
-    from concurrent.futures import ThreadPoolExecutor, as_completed
-    log.info("scuole_pushing", n=len(shards))
-    client = r2.get_r2_client()
-    bucket = r2.get_bucket()
-
-    def upload(istat: str, data: dict) -> bool:
-        try:
-            client.put_object(
-                Bucket=bucket,
-                Key=f"scuole/{istat}.json",
-                Body=json.dumps(data, ensure_ascii=False).encode("utf-8"),
-                ContentType="application/json; charset=utf-8",
-            )
-            return True
-        except Exception as e:
-            log.error("upload_failed", istat=istat, error=str(e))
-            return False
-
-    uploaded = 0
-    with ThreadPoolExecutor(max_workers=20) as pool:
-        futures = [pool.submit(upload, istat, data) for istat, data in shards.items()]
-        for f in as_completed(futures):
-            if f.result():
-                uploaded += 1
-    log.info("scuole_push_done", uploaded=uploaded)
-    return uploaded
-
-
 def write_local(shards: dict[str, dict], outdir: Path) -> int:
     outdir.mkdir(parents=True, exist_ok=True)
     n = 0
@@ -315,13 +288,15 @@ def write_local(shards: dict[str, dict], outdir: Path) -> int:
 
 def main() -> int:
     p = argparse.ArgumentParser(description="ETL Scuole MIUR")
-    p.add_argument("--target", choices=["local", "r2"], default="local")
+    # --target tenuto per retrocompat workflow esistenti, ma solo 'local' e' supportato
+    p.add_argument("--target", choices=["local"], default="local",
+                   help="Solo 'local' supportato (R2 rimosso dall'infrastruttura AgID)")
     p.add_argument("--anno", default=None,
                    help="A.S. codice (es '202526'). Default: A.S. corrente.")
     p.add_argument("--no-cache", action="store_true",
                    help="Forza re-download CSV upstream.")
     p.add_argument("--outdir", default="/var/www/cruscotto-italia/data/scuole",
-                   help="Output dir per --target=local")
+                   help="Output dir")
     args = p.parse_args()
 
     if args.anno:
@@ -333,16 +308,13 @@ def main() -> int:
     else:
         anno_codice, data_estrazione, anno_label = default_anno_scolastico()
 
-    log.info("etl_start", anno_scolastico=anno_label, target=args.target)
+    log.info("etl_start", anno_scolastico=anno_label)
 
     csv_paths = download_csvs(anno_codice, data_estrazione, force=args.no_cache)
     cat_to_istat = load_cat_to_istat()
     shards = build_shards(csv_paths, cat_to_istat, anno_label, data_estrazione)
 
-    if args.target == "r2":
-        push_to_r2_parallel(shards)
-    else:
-        write_local(shards, Path(args.outdir))
+    write_local(shards, Path(args.outdir))
 
     log.info("etl_done", comuni_with_data=len(shards),
              anno_scolastico=anno_label, data_estrazione=data_estrazione)
