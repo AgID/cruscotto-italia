@@ -93,8 +93,13 @@ jobs:
           else
             echo "ran=true" >> $GITHUB_OUTPUT
             echo "PUN executed. Shard prodotti in /tmp/etl-smoke/pun/:"
-            ls /tmp/etl-smoke/pun/ | head -5
-            echo "Totale shard: $(ls /tmp/etl-smoke/pun/*.json 2>/dev/null | wc -l)"
+            # Lista primi 5 senza usare 'ls | head' (con pipefail provoca
+            # SIGPIPE -> exit 2 spurio). Pattern compatibile pipefail:
+            shopt -s nullglob
+            files=(/tmp/etl-smoke/pun/*.json)
+            shopt -u nullglob
+            printf '%s\n' "${files[@]:0:5}"
+            echo "Totale shard: ${#files[@]}"
           fi
 
   # ---------------------------------------------------------------------------
@@ -141,8 +146,13 @@ jobs:
           else
             echo "ran=true" >> $GITHUB_OUTPUT
             echo "Carburanti executed. Shard prodotti in /tmp/etl-smoke/carburanti/:"
-            ls /tmp/etl-smoke/carburanti/ | head -5
-            echo "Totale shard: $(ls /tmp/etl-smoke/carburanti/*.json 2>/dev/null | wc -l)"
+            # Lista primi 5 senza usare 'ls | head' (con pipefail provoca
+            # SIGPIPE -> exit 2 spurio). Pattern compatibile pipefail:
+            shopt -s nullglob
+            files=(/tmp/etl-smoke/carburanti/*.json)
+            shopt -u nullglob
+            printf '%s\n' "${files[@]:0:5}"
+            echo "Totale shard: ${#files[@]}"
           fi
 
   # ---------------------------------------------------------------------------
