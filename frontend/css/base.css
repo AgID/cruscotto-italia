@@ -97,10 +97,10 @@
   margin-right: var(--sp-2);
 }
 .mini-agid-logo {
-  height: 32px !important;
+  height: 24px !important;
   width: auto !important;
-  max-height: 32px !important;
-  max-width: 130px !important;
+  max-height: 24px !important;
+  max-width: 100px !important;
   display: block;
   flex-shrink: 0;
   object-fit: contain;
