@@ -1,49 +1,102 @@
-name: ETL · Annual
+name: ETL · Annual (smoke test)
 
-# Cadenza annuale per fonti che aggiornano una volta l'anno.
-# Tre window distinte sull'anno per allinearsi alle pubblicazioni upstream:
-#   - 1° febbraio:  demografia (ISTAT POSAS popolazione 1° gennaio),
-#                   profilo (Censimento), aria (ISPRA SNPA),
-#                   asia (ISTAT Archivio Statistico Imprese Attive UL,
-#                         pubblicato Q4 anno precedente)
-#   - 1° aprile:    turismo (ISTAT TUR_1 + TUR_7), redditi (MEF IRPEF),
-#                   immobili_pa (MEF DE)
-#   - 1° luglio:    territorio (ISPRA Suolo + IdroGEO + Rifiuti), veicoli (ACI)
+# IMPORTANTE — LEGGERE PRIMA DI TRIGGERARE
+# =========================================
+# Questo workflow NON e' il produttore reale dei dati annual in produzione.
+# Il produttore reale e' il cron `/etc/cron.d/cruscotto-etl` sulla VM AgID
+# che esegue gli stessi comandi Python in 3 finestre annuali:
+#   - 1 febbraio 04:00 UTC
+#   - 1 aprile   04:00 UTC
+#   - 1 luglio   04:00 UTC
+# scrivendo direttamente in /var/www/cruscotto-italia/data/.
 #
-# Ognuno termina con dashboard rebuild + cache purge worker.
-# Cron tutti alle 04:00 UTC = 05:00/06:00 ora di Roma (DST).
+# I dati che il sito www.cruscotto-italia.dati.gov.it e il Worker MCP
+# servono in produzione sono SEMPRE quelli prodotti dal cron VM, non da
+# questo workflow GitHub Actions.
+#
+# Perche' allora esiste questo workflow?
+# --------------------------------------
+# E' un "fallback documentale": un revisore (es. AgID) puo' aprirlo dalla
+# UI Actions e leggere i comandi Python che il cron VM esegue. Inoltre,
+# in caso futuro di sblocco WAF (vedi sotto), puo' essere riattivato
+# come producer secondario.
+#
+# Perche' i job qui sotto attualmente FALLISCONO su ubuntu-latest
+# ---------------------------------------------------------------
+# Tutte le fonti istituzionali italiane oggetto degli ETL annual sono
+# protette da WAF (F5 Volterra, Akamai, ecc.) che restituiscono HTTP 403
+# Forbidden per richieste provenienti da IP cloud-hosted (Microsoft Azure
+# subnet, dove GitHub Actions ubuntu-latest gira).
+#
+# Diagnostica analoga ai workflow weekly e monthly:
+#  - demografia (ISTAT POSAS): probabile 403 da Azure
+#  - aria (ISPRA SNPA): probabile 403 da Azure
+#  - turismo (ISTAT SDMX): probabile 403 da Azure
+#  - territorio (ISPRA + IdroGEO + Catasto rifiuti): probabile 403 da Azure
+#  - veicoli (ACI LOD + ISTAT): probabile 403 da Azure
+#  - redditi (MEF Finanze): probabile 403 da Azure
+#  - immobili_pa (MEF DE): probabile 403 da Azure
+#  - scuole (MIUR): probabile 403 da Azure
+#
+# Le stesse URL ritornano HTTP 200 + dati validi quando interrogate da IP
+# italiano (Aruba/VM AgID). Per questo motivo gli ETL girano dalla VM, mai
+# da Actions cloud-hosted.
+#
+# Casi particolari (ISTAT, soggetti a host-ban anziche' cloud-restrict)
+# ---------------------------------------------------------------------
+# I 3 ETL ISTAT pesanti (istat_profilo, pendolarismo, asia) hanno un
+# pattern DIVERSO: ISTAT esploradati ha bannato l'IP della VM Aruba per
+# precedente abuso. Quindi:
+#   - Dal cron VM: 403 da ISTAT (IP bannato)
+#   - Da Actions ubuntu-latest: 200 OK (IP Azure non bannato)
+# Per questo motivo NON sono inclusi qui ma in 3 workflow separati:
+#   etl-istat_profilo-refresh.yml
+#   etl-pendolarismo-refresh.yml
+#   etl-asia-refresh.yml
+# che girano su ubuntu-latest, salvano output come artifact GitHub, e
+# il cron VM li scarica via scripts/etl/pull_artifact.py (vedi cron
+# entry alle 07:30 UTC daily).
+#
+# Validazione freshness dati in produzione
+# ----------------------------------------
+# Per verificare che il cron VM stia effettivamente aggiornando i dati,
+# non usare questo workflow. Usare invece:
+#
+#   curl -s -X POST "https://cruscotto-italia-mcp.agid.workers.dev/mcp" \
+#     -H "Content-Type: application/json" \
+#     -d '{"jsonrpc":"2.0","method":"tools/call","id":1,
+#          "params":{"name":"comune_dashboard",
+#                    "arguments":{"istat_code":"075035"}}}' \
+#     | jq '.result.content[0].text | fromjson | {_generated_at, _missing}'
+#
+# Il campo `_generated_at` deve essere recente. Per dati annuali la soglia
+# di freschezza dipende dalla pubblicazione upstream: tipicamente entro
+# 12 mesi dall'ultima finestra cron (1 feb / 1 apr / 1 lug).
+#
+# Log produttivi
+# --------------
+# I log del cron VM annual sono in /var/log/cruscotto-etl/<source>-YYYYMMDD.log
+# sull'host di produzione (file prodotto solo nelle 3 finestre annuali).
 
 on:
-  # Schedule rimosso: ETL annual girano via cron VM AgID (vedi deploy/cron/cruscotto-etl).
-  # GitHub Actions resta come fallback emergenza, attivabile manualmente dalla UI.
   workflow_dispatch:
     inputs:
-      window:
-        description: 'Quale finestra eseguire'
-        required: true
-        type: choice
+      sources:
+        description: 'Comma-separated list (demografia,aria,turismo,territorio,veicoli,redditi,immobili_pa,scuole) or "all"'
+        required: false
         default: 'all'
-        options:
-          - all
-          - february
-          - april
-          - july
 
-# NOTE 2026-05-17: env R2_* rimosse dopo refactor ETL local-first.
-# Cruscotto Italia AgID non usa piu' Cloudflare R2 (account AgID non puo'
-# crearne). Tutti gli ETL girano --target=local scrivendo direttamente su
-# /var/www/cruscotto-italia/data/ del runner self-hosted Aruba/VM AgID.
-# I secrets GitHub R2_* possono essere rimossi nell'Ondata 2 (post-cutover).
+permissions:
+  contents: read
 
 jobs:
   # ---------------------------------------------------------------------------
-  # WINDOW 1: FEBBRAIO — demografia + profilo
-  # ---------------------------------------------------------------------------
+  # Demografia (ISTAT POSAS) — popolazione residente per eta'/sesso
   demografia:
-    name: ETL · Demografia (ISTAT POSAS)
-    runs-on: [self-hosted, linux, aruba]
-    if: ${{ github.event.schedule == '0 4 1 2 *' || github.event.inputs.window == 'february' || github.event.inputs.window == 'all' }}
-    timeout-minutes: 30
+    name: ETL · Demografia (atteso fail su Azure)
+    runs-on: ubuntu-latest
+    if: ${{ contains(github.event.inputs.sources, 'demografia') || github.event.inputs.sources == 'all' || github.event.inputs.sources == '' }}
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -52,179 +105,195 @@ jobs:
           cache: 'pip'
           cache-dependency-path: etl/requirements.txt
       - run: pip install -r etl/requirements.txt
-      - name: Run Demografia ETL
-        run: python -m etl.sources.demografia --target=local
-
-  profilo:
-    name: ETL · Profilo (Censimento permanente ISTAT)
-    runs-on: [self-hosted, linux, aruba]
-    if: ${{ github.event.schedule == '0 4 1 2 *' || github.event.inputs.window == 'february' || github.event.inputs.window == 'all' }}
-    timeout-minutes: 60
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-          cache: 'pip'
-          cache-dependency-path: etl/requirements.txt
-      - run: pip install -r etl/requirements.txt
-      - name: Run Profilo ETL
-        run: python -m etl.sources.istat_profilo --target=local
-
-  aria:
-    name: ETL · Aria (ISPRA SNPA qualità aria - PM10/PM2.5/NO2)
-    runs-on: [self-hosted, linux, aruba]
-    if: ${{ github.event.schedule == '0 4 1 2 *' || github.event.inputs.window == 'february' || github.event.inputs.window == 'all' }}
-    timeout-minutes: 60
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-          cache: 'pip'
-          cache-dependency-path: etl/requirements.txt
-      - run: pip install -r etl/requirements.txt
-      - name: Run Aria ETL
-        run: python -m etl.sources.aria --target=local
-
-  asia:
-    name: ETL · ISTAT ASIA UL (imprese e addetti per comune)
-    runs-on: [self-hosted, linux, aruba]
-    if: ${{ github.event.schedule == '0 4 1 2 *' || github.event.inputs.window == 'february' || github.event.inputs.window == 'all' }}
-    timeout-minutes: 180
-    # NB timeout 180 min: ASIA scarica via SDMX chunked 226 chunks (35 comuni
-    # x 6 anni) in polite mode sequenziale con sleep 3s + retry 60s su 503/timeout.
-    # Stima realistica: ~100-120 min/full pull. Su questo runner self-hosted
-    # Aruba la cache /tmp/cruscotto_asia/ viene riusata se i file esistono,
-    # quindi pull successivi nella stessa esecuzione (rerun) sono istantanei.
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-          cache: 'pip'
-          cache-dependency-path: etl/requirements.txt
-      - run: pip install -r etl/requirements.txt
-      - name: Run ASIA ETL (chunked SDMX, polite mode)
-        run: python -m etl.sources.asia --target=local
-
-  # ---------------------------------------------------------------------------
-  # WINDOW 2: APRILE — turismo
-  # ---------------------------------------------------------------------------
-  turismo:
-    name: ETL · Turismo (ISTAT TUR_1 + TUR_7)
-    runs-on: [self-hosted, linux, aruba]
-    if: ${{ github.event.schedule == '0 4 1 4 *' || github.event.inputs.window == 'april' || github.event.inputs.window == 'all' }}
-    timeout-minutes: 60
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-          cache: 'pip'
-          cache-dependency-path: etl/requirements.txt
-      - run: pip install -r etl/requirements.txt
-      - name: Run Turismo ETL
-        run: python -m etl.sources.istat_turismo --target=local
-
-  # ---------------------------------------------------------------------------
-  # WINDOW 3: LUGLIO — territorio
-  # ---------------------------------------------------------------------------
-  territorio:
-    name: ETL · Territorio (ISPRA Suolo + IdroGEO + Rifiuti)
-    runs-on: [self-hosted, linux, aruba]
-    if: ${{ github.event.schedule == '0 4 1 7 *' || github.event.inputs.window == 'july' || github.event.inputs.window == 'all' }}
-    timeout-minutes: 60
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-          cache: 'pip'
-          cache-dependency-path: etl/requirements.txt
-      - run: pip install -r etl/requirements.txt
-      - name: Run Territorio ETL
-        run: python -m etl.sources.territorio --target=local
-
-  veicoli:
-    name: ETL · Veicoli e incidenti (ISTAT 41_993 + 41_983 + ACI LOD)
-    runs-on: [self-hosted, linux, aruba]
-    if: ${{ github.event.schedule == '0 4 1 7 *' || github.event.inputs.window == 'july' || github.event.inputs.window == 'all' }}
-    timeout-minutes: 60
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-          cache: 'pip'
-          cache-dependency-path: etl/requirements.txt
-      - run: pip install -r etl/requirements.txt
-      - name: Run Veicoli ETL
-        run: python -m etl.sources.veicoli --target=local
-
-  # ---------------------------------------------------------------------------
-  # Dashboard rebuild parte dopo TUTTI i job ETL della finestra (qualsiasi
-  # essa sia). always() + check almeno un success: lo stesso pattern di
-  # weekly/monthly. Job che non sono partiti hanno result == 'skipped'.
-  redditi:
-    name: ETL · MEF Redditi IRPEF (dichiarazioni comunali a.i. 2020-2024)
-    runs-on: [self-hosted, linux, aruba]
-    if: ${{ github.event.schedule == '0 4 1 4 *' || github.event.inputs.window == 'april' || github.event.inputs.window == 'all' }}
-    timeout-minutes: 60
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-          cache: 'pip'
-          cache-dependency-path: etl/requirements.txt
-      - run: pip install -r etl/requirements.txt
-      - name: Run Redditi ETL
-        run: python -m etl.sources.redditi --target=local
-
-  immobili_pa:
-    name: ETL · MEF Patrimonio Immobiliare PA (Beni immobili pubblici 2022)
-    runs-on: [self-hosted, linux, aruba]
-    if: ${{ github.event.schedule == '0 4 1 4 *' || github.event.inputs.window == 'april' || github.event.inputs.window == 'all' }}
-    timeout-minutes: 60
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-          cache: 'pip'
-          cache-dependency-path: etl/requirements.txt
-      - run: pip install -r etl/requirements.txt
-      - name: Run Immobili PA ETL (loop su tutte le 20 regioni)
-        run: python -m etl.sources.immobili_pa --regione=ALL --target=local
-
-  dashboard:
-    name: ETL · Dashboard rebuild (single-fetch shard)
-    runs-on: [self-hosted, linux, aruba]
-    needs: [demografia, profilo, aria, asia, turismo, territorio, veicoli, redditi, immobili_pa]
-    if: ${{ always() && (needs.demografia.result == 'success' || needs.profilo.result == 'success' || needs.aria.result == 'success' || needs.asia.result == 'success' || needs.turismo.result == 'success' || needs.territorio.result == 'success' || needs.veicoli.result == 'success' || needs.redditi.result == 'success') }}
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-          cache: 'pip'
-          cache-dependency-path: etl/requirements.txt
-      - run: pip install -r etl/requirements.txt
-      - name: Run Dashboard ETL
-        run: python -m etl.sources.dashboard --target=local
-
-  # ---------------------------------------------------------------------------
-  notify:
-    name: Notify worker (cache purge)
-    needs: [dashboard]
-    if: ${{ always() && needs.dashboard.result == 'success' }}
-    runs-on: [self-hosted, linux, aruba]
-    steps:
-      - name: Purge worker cache
+      - name: Show runner public IP
         run: |
-          curl -sS -X POST "https://cruscotto-italia-mcp.agid.workers.dev/admin/cache/purge" \
-            -H "Authorization: Bearer ${{ secrets.WORKER_ADMIN_TOKEN }}" \
-            -H "Content-Type: application/json" \
-          || echo "Cache purge endpoint non disponibile (non-critical)"
+          echo "Runner IP: $(curl -sS -m 5 https://api.ipify.org || echo unknown)"
+      - name: Run Demografia ETL (atteso HTTP 403)
+        env:
+          DATA_DIR: /tmp/etl-smoke
+        run: |
+          set -o pipefail
+          mkdir -p /tmp/etl-smoke/demografia
+          python -m etl.sources.demografia --outdir=/tmp/etl-smoke/demografia 2>&1 | tee /tmp/demografia-etl.log | tail -30
+
+  # ---------------------------------------------------------------------------
+  # Aria (ISPRA SNPA) — qualita' aria PM10/PM2.5/NO2 per comune
+  aria:
+    name: ETL · Aria ISPRA SNPA (atteso fail su Azure)
+    runs-on: ubuntu-latest
+    if: ${{ contains(github.event.inputs.sources, 'aria') || github.event.inputs.sources == 'all' || github.event.inputs.sources == '' }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: etl/requirements.txt
+      - run: pip install -r etl/requirements.txt
+      - name: Show runner public IP
+        run: |
+          echo "Runner IP: $(curl -sS -m 5 https://api.ipify.org || echo unknown)"
+      - name: Run Aria ETL (atteso HTTP 403)
+        env:
+          DATA_DIR: /tmp/etl-smoke
+        run: |
+          set -o pipefail
+          mkdir -p /tmp/etl-smoke/aria
+          python -m etl.sources.aria --outdir=/tmp/etl-smoke/aria 2>&1 | tee /tmp/aria-etl.log | tail -30
+
+  # ---------------------------------------------------------------------------
+  # Turismo (ISTAT TUR_1 + TUR_7) — capacita' e movimentazione turistica
+  turismo:
+    name: ETL · Turismo ISTAT (atteso fail su Azure)
+    runs-on: ubuntu-latest
+    if: ${{ contains(github.event.inputs.sources, 'turismo') || github.event.inputs.sources == 'all' || github.event.inputs.sources == '' }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: etl/requirements.txt
+      - run: pip install -r etl/requirements.txt
+      - name: Show runner public IP
+        run: |
+          echo "Runner IP: $(curl -sS -m 5 https://api.ipify.org || echo unknown)"
+      - name: Run Turismo ETL (atteso HTTP 403)
+        env:
+          DATA_DIR: /tmp/etl-smoke
+        run: |
+          set -o pipefail
+          mkdir -p /tmp/etl-smoke/turismo
+          python -m etl.sources.istat_turismo --outdir=/tmp/etl-smoke/turismo 2>&1 | tee /tmp/turismo-etl.log | tail -30
+
+  # ---------------------------------------------------------------------------
+  # Territorio (ISPRA Suolo + IdroGEO + Catasto Rifiuti)
+  territorio:
+    name: ETL · Territorio (atteso fail su Azure)
+    runs-on: ubuntu-latest
+    if: ${{ contains(github.event.inputs.sources, 'territorio') || github.event.inputs.sources == 'all' || github.event.inputs.sources == '' }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: etl/requirements.txt
+      - run: pip install -r etl/requirements.txt
+      - name: Show runner public IP
+        run: |
+          echo "Runner IP: $(curl -sS -m 5 https://api.ipify.org || echo unknown)"
+      - name: Run Territorio ETL (atteso HTTP 403)
+        env:
+          DATA_DIR: /tmp/etl-smoke
+        run: |
+          set -o pipefail
+          mkdir -p /tmp/etl-smoke/territorio
+          python -m etl.sources.territorio --outdir=/tmp/etl-smoke/territorio 2>&1 | tee /tmp/territorio-etl.log | tail -30
+
+  # ---------------------------------------------------------------------------
+  # Veicoli (ACI LOD + ISTAT 41_993 + ISTAT 41_983 incidenti)
+  veicoli:
+    name: ETL · Veicoli ACI+ISTAT (atteso fail su Azure)
+    runs-on: ubuntu-latest
+    if: ${{ contains(github.event.inputs.sources, 'veicoli') || github.event.inputs.sources == 'all' || github.event.inputs.sources == '' }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: etl/requirements.txt
+      - run: pip install -r etl/requirements.txt
+      - name: Show runner public IP
+        run: |
+          echo "Runner IP: $(curl -sS -m 5 https://api.ipify.org || echo unknown)"
+      - name: Run Veicoli ETL (atteso HTTP 403)
+        env:
+          DATA_DIR: /tmp/etl-smoke
+        run: |
+          set -o pipefail
+          mkdir -p /tmp/etl-smoke/veicoli
+          python -m etl.sources.veicoli --outdir=/tmp/etl-smoke/veicoli 2>&1 | tee /tmp/veicoli-etl.log | tail -30
+
+  # ---------------------------------------------------------------------------
+  # Redditi MEF (Finanze) — IRPEF dichiarazioni comunali
+  redditi:
+    name: ETL · MEF Redditi IRPEF (atteso fail su Azure)
+    runs-on: ubuntu-latest
+    if: ${{ contains(github.event.inputs.sources, 'redditi') || github.event.inputs.sources == 'all' || github.event.inputs.sources == '' }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: etl/requirements.txt
+      - run: pip install -r etl/requirements.txt
+      - name: Show runner public IP
+        run: |
+          echo "Runner IP: $(curl -sS -m 5 https://api.ipify.org || echo unknown)"
+      - name: Run Redditi ETL (atteso HTTP 403)
+        env:
+          DATA_DIR: /tmp/etl-smoke
+        run: |
+          set -o pipefail
+          mkdir -p /tmp/etl-smoke
+          python -m etl.sources.redditi --outdir=/tmp/etl-smoke 2>&1 | tee /tmp/redditi-etl.log | tail -30
+
+  # ---------------------------------------------------------------------------
+  # MEF DE — Patrimonio Immobiliare PA (censimento beni immobili 2022)
+  immobili_pa:
+    name: ETL · MEF Immobili PA (atteso fail su Azure)
+    runs-on: ubuntu-latest
+    if: ${{ contains(github.event.inputs.sources, 'immobili_pa') || github.event.inputs.sources == 'all' || github.event.inputs.sources == '' }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: etl/requirements.txt
+      - run: pip install -r etl/requirements.txt
+      - name: Show runner public IP
+        run: |
+          echo "Runner IP: $(curl -sS -m 5 https://api.ipify.org || echo unknown)"
+      - name: Run Immobili PA ETL (atteso HTTP 403)
+        env:
+          DATA_DIR: /tmp/etl-smoke
+        run: |
+          set -o pipefail
+          mkdir -p /tmp/etl-smoke/immobili_pa
+          python -m etl.sources.immobili_pa --outdir=/tmp/etl-smoke/immobili_pa 2>&1 | tee /tmp/immobili-etl.log | tail -30
+
+  # ---------------------------------------------------------------------------
+  # Scuole (MIUR Anagrafe Scuole Statali DS0400SCUANAGRAFESTAT)
+  scuole:
+    name: ETL · MIUR Scuole (atteso fail su Azure)
+    runs-on: ubuntu-latest
+    if: ${{ contains(github.event.inputs.sources, 'scuole') || github.event.inputs.sources == 'all' || github.event.inputs.sources == '' }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: etl/requirements.txt
+      - run: pip install -r etl/requirements.txt
+      - name: Show runner public IP
+        run: |
+          echo "Runner IP: $(curl -sS -m 5 https://api.ipify.org || echo unknown)"
+      - name: Run Scuole ETL (atteso HTTP 403)
+        env:
+          DATA_DIR: /tmp/etl-smoke
+        run: |
+          set -o pipefail
+          mkdir -p /tmp/etl-smoke/scuole
+          python -m etl.sources.scuole --outdir=/tmp/etl-smoke/scuole 2>&1 | tee /tmp/scuole-etl.log | tail -30
