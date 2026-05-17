@@ -294,3 +294,54 @@ trattamento opaco di dati: tutto open data con licenza CC-BY 4.0.
 - 1 commit nel Worker (rebuild + redeploy)
 - 1 commit nel frontend (rebuild deploy nginx)
 - aggiornamento di questa doc per chiudere il TODO
+
+### 9.2 `pull_artifact.py` — `extractall` senza `filter='data'`
+
+Scoperto durante review codice 2026-05-17 in vista audit.
+
+In `scripts/etl/pull_artifact.py` funzione `extract_archive()` (~linea 285):
+
+```python
+for member in tf.getmembers():
+    if member.name.startswith("/") or ".." in member.name:
+        _log("warning", "tar_unsafe_member_skipped", name=member.name)
+        continue
+tf.extractall(dest_dir)
+```
+
+Il loop **logga** membri unsafe (path assoluti, `..`) ma poi
+`tf.extractall(dest_dir)` **estrae tutti i membri** senza filtro,
+inclusi quelli unsafe appena loggati. Il check è performativo,
+non difensivo.
+
+**Fix raccomandato** (Python 3.12+):
+
+```python
+tf.extractall(dest_dir, filter='data')
+```
+
+Il filtro `data` di `tarfile` (PEP 706, default in 3.14) rifiuta
+automaticamente: path assoluti, `..`, symlink che escono dalla
+destination, special files (device/fifo/socket).
+
+**Alternativa retrocompatibile** (member-by-member):
+
+```python
+safe_members = [m for m in tf.getmembers()
+                if not m.name.startswith("/") and ".." not in m.name]
+tf.extractall(dest_dir, members=safe_members)
+n = sum(1 for m in safe_members if m.isfile())
+```
+
+**Stato di rischio**: BASSO.
+- Il tar.gz arriva da un nostro workflow GitHub Actions, in repo
+  PRIVATO `AgID/cruscotto-italia`.
+- Per produrre un tar malicioso servirebbe (a) write access sul
+  workflow YAML, oppure (b) compromissione di un runner GitHub Actions.
+- Entrambi richiedono compromissione preliminare del repo o di
+  GitHub stessa.
+- Defense in depth, non vulnerabilità sfruttabile.
+
+**Priorità di fix**: dopo il go-live. Comporta 1 commit nello script
+con test locale (creare un tar.gz con `../etc/passwd` e verificare
+che venga rifiutato).
