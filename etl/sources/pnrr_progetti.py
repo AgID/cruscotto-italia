@@ -23,9 +23,8 @@ Output:
 Cache: /tmp/cruscotto-pnrr-cache/ (CSV in cache per ripartibilita)
 
 Usage:
-  python -m etl.sources.pnrr_progetti --target=local
-  python -m etl.sources.pnrr_progetti --target=r2
-  python -m etl.sources.pnrr_progetti --target=local --no-cache
+  python -m etl.sources.pnrr_progetti
+  python -m etl.sources.pnrr_progetti --no-cache
 """
 from __future__ import annotations
 
@@ -38,12 +37,11 @@ import unicodedata
 import urllib.error
 import urllib.request
 from collections import Counter, defaultdict
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 import structlog
 
-from etl.lib import manifest, r2
+from etl.lib import local_lookup, manifest
 
 log = structlog.get_logger()
 
@@ -125,21 +123,23 @@ def normalize(s: str) -> str:
 
 
 def load_lookups() -> tuple[dict[str, str], dict[str, str]]:
-    """Carica due mappe dal bundle anagrafica:
+    """Carica due mappe dal bundle anagrafica locale:
       - cf_to_istat:   codice_fiscale -> istat_code (matcher PRIMARIO, univoco)
       - nome_to_istat: denominazione_normalizzata -> istat_code (matcher FALLBACK)
 
-    Il match per CF e\' preferito perche\' risolve i 6 omonimi (Samone,
+    Il match per CF e' preferito perche' risolve i 6 omonimi (Samone,
     Castro, Paterno, Livo, San Teodoro, Peglio) che con solo nome
     collidevano post-normalize. Il match per nome serve per i ~10 comuni
     senza CF nel bundle (Olbia, Telti, Lirio, ecc.) o per CF errati nel CSV.
     """
     log.info("anagrafica_loading")
-    client = r2.get_r2_client()
-    bucket = r2.get_bucket()
-    obj = client.get_object(Bucket=bucket, Key="lookup/comuni-bundle.json")
-    bundle = json.loads(obj["Body"].read())
-    comuni = bundle.get("comuni", {})
+    comuni = local_lookup.load_comuni_bundle()
+    if comuni is None:
+        raise SystemExit(
+            "Local lookup 'comuni-bundle.json' assente in "
+            f"{local_lookup.get_lookup_dir()}. "
+            "Esegui prima 'python -m etl.sources.anagrafica'."
+        )
 
     cf_to_istat: dict[str, str] = {}
     nome_to_istat: dict[str, str] = {}
@@ -419,47 +419,13 @@ def build_pnrr_shards(csv_path: Path,
     return shard_dir, stats
 
 
-def push_to_r2_parallel(shard_dir: Path) -> int:
-    """Upload parallelo degli shard su R2 sotto prefix 'pnrr/'."""
-    client = r2.get_r2_client()
-    bucket = r2.get_bucket()
-
-    existing = set()
-    paginator = client.get_paginator("list_objects_v2")
-    for page in paginator.paginate(Bucket=bucket, Prefix="pnrr/"):
-        for o in page.get("Contents", []):
-            existing.add(o["Key"].split("/")[-1])
-
-    shard_files = sorted(shard_dir.glob("*.json"))
-    log.info("pnrr_pushing", total=len(shard_files), already_on_r2=len(existing))
-
-    def _upload_one(sf):
-        r2.upload_file(sf, f"pnrr/{sf.name}", content_type="application/json")
-        return sf.name
-
-    uploaded = 0
-    with ThreadPoolExecutor(max_workers=24) as ex:
-        # NB: rifacciamo upload anche degli esistenti (i progetti cambiano stato
-        # ogni mese, gli shard vanno aggiornati).
-        futures = {ex.submit(_upload_one, sf): sf for sf in shard_files}
-        for fut in as_completed(futures):
-            try:
-                fut.result()
-                uploaded += 1
-                if uploaded % 1000 == 0:
-                    log.info("pnrr_push_progress", uploaded=uploaded,
-                             total=len(shard_files))
-            except Exception as e:
-                log.error("pnrr_upload_failed", error=str(e))
-    log.info("pnrr_push_done", uploaded=uploaded)
-    return uploaded
-
-
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="ETL Progetti PNRR del comune (Italia Domani / ReGiS)",
     )
-    parser.add_argument("--target", choices=["local", "r2"], default="local")
+    # --target tenuto per retrocompat workflow esistenti, ma solo 'local' e' supportato
+    parser.add_argument("--target", choices=["local"], default="local",
+                        help="Solo 'local' supportato (R2 rimosso dall'infrastruttura AgID)")
     parser.add_argument("--cache-dir", type=Path,
                         default=Path("/tmp/cruscotto-pnrr-cache"))
     parser.add_argument("--outdir", type=Path, default=Path("/var/www/cruscotto-italia/data"))
@@ -479,7 +445,7 @@ def main() -> int:
     output_dir = args.outdir
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    log.info("etl_start", target=args.target,
+    log.info("etl_start",
              cache_dir=str(cache_dir), output_dir=str(output_dir))
 
     try:
@@ -493,15 +459,17 @@ def main() -> int:
         # 3) Aggrego in shard
         shard_dir, stats = build_pnrr_shards(csv_path, cf_to_istat, output_dir)
 
-        # 4) Upload su R2 (solo se target=r2)
-        if args.target == "r2":
-            uploaded = push_to_r2_parallel(shard_dir)
+        # Manifest update best-effort
+        try:
+            shard_count = len(list(shard_dir.glob("*.json")))
             manifest.update_source(
                 "pnrr_progetti",
-                [{"key": "pnrr/*", "count": uploaded}],
+                [{"key": "pnrr/*", "count": shard_count}],
                 status="ok",
             )
-            log.info("manifest_updated")
+            log.info("manifest_updated", count=shard_count)
+        except Exception as e:
+            log.warning("manifest_update_skipped", error=str(e))
 
         log.info("etl_done", **stats)
         return 0
