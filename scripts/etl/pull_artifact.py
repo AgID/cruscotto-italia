@@ -319,20 +319,181 @@ def save_state(state_path: Path, state: dict) -> None:
     tmp.replace(state_path)
 
 
+def discover_etl_workflows(repo: str, token: str) -> list[dict]:
+    """Lista i workflow nel repo che matchano il pattern 'etl-<source>-refresh.yml'.
+
+    Pattern di naming convenzionale: ogni ETL ISTAT / pesante ha un workflow
+    dedicato chiamato 'etl-<source>-refresh.yml' (es. etl-asia-refresh.yml,
+    etl-veicoli-refresh.yml, etc.).
+
+    Ritorna lista di dict con keys: source, workflow_filename, workflow_id, state.
+    Skippa workflow disabilitati.
+    """
+    import re
+    pattern = re.compile(r"^etl-([a-z_]+)-refresh\.yml$")
+    try:
+        data = gh_api(
+            f"/repos/{repo}/actions/workflows",
+            token,
+            params={"per_page": 100},
+        )
+    except HTTPError as e:
+        _log("error", "workflows_list_failed", status=e.code)
+        return []
+    workflows = []
+    for wf in data.get("workflows", []):
+        # path es. ".github/workflows/etl-asia-refresh.yml" -> filename
+        filename = wf.get("path", "").split("/")[-1]
+        m = pattern.match(filename)
+        if not m:
+            continue
+        if wf.get("state") != "active":
+            _log("info", "workflow_disabled_skipped",
+                 filename=filename, state=wf.get("state"))
+            continue
+        workflows.append({
+            "source": m.group(1),
+            "workflow_filename": filename,
+            "workflow_id": wf["id"],
+            "state": wf.get("state"),
+        })
+    return workflows
+
+
+def pull_one_source(source: str, repo: str, token: str,
+                     data_dir: Path, workflow: str | None = None,
+                     artifact_name: str | None = None,
+                     force: bool = False, dry_run: bool = False,
+                     keep_artifact: bool = False) -> tuple[int, dict]:
+    """Pull artifact per un singolo ETL.
+
+    Ritorna (exit_code, summary_dict) con keys:
+       status: "downloaded" | "skipped_idempotent" | "no_artifact" | "error"
+       files_extracted, bytes_downloaded (se downloaded)
+    """
+    workflow = workflow or f"etl-{source}-refresh.yml"
+    artifact_name = artifact_name or f"{source}-shards"
+    source_dir = data_dir / source
+    state_path = source_dir / "_artifact_meta.json"
+
+    _log("info", "pull_source_start",
+         source=source, workflow=workflow, artifact_name=artifact_name)
+
+    artifact = find_latest_artifact(repo, workflow, artifact_name, token)
+    if not artifact:
+        _log("warning", "no_artifact_found",
+             source=source, workflow=workflow)
+        return 3, {"status": "no_artifact", "source": source}
+
+    artifact_id = artifact["id"]
+    size_bytes = artifact.get("size_in_bytes", 0)
+    _log("info", "artifact_found",
+         source=source, artifact_id=artifact_id,
+         run_id=artifact.get("_run_id"),
+         created_at=artifact.get("created_at"),
+         size_mb=round(size_bytes / 1024 / 1024, 2))
+
+    # Idempotency
+    state = load_state(state_path)
+    last_id = state.get("last_artifact_id")
+    if last_id == artifact_id and not force:
+        _log("info", "skip_already_downloaded",
+             source=source, artifact_id=artifact_id,
+             last_downloaded_at=state.get("downloaded_at"))
+        return 0, {"status": "skipped_idempotent", "source": source,
+                   "artifact_id": artifact_id}
+
+    if dry_run:
+        _log("info", "dry_run_would_download",
+             source=source, artifact_id=artifact_id,
+             dest=str(source_dir))
+        return 0, {"status": "would_download_dry_run", "source": source,
+                   "artifact_id": artifact_id}
+
+    # Download
+    t0 = time.time()
+    with tempfile.NamedTemporaryFile(suffix=".zip", delete=False) as tmp:
+        zip_path = Path(tmp.name)
+    try:
+        n_bytes = download_artifact_zip(repo, artifact_id, token, zip_path)
+        elapsed = round(time.time() - t0, 1)
+        _log("info", "download_done", source=source,
+             bytes=n_bytes, elapsed_s=elapsed)
+
+        t1 = time.time()
+        n_files = extract_archive(zip_path, source_dir)
+        elapsed_x = round(time.time() - t1, 1)
+        _log("info", "extract_done", source=source,
+             files_extracted=n_files, dest=str(source_dir),
+             elapsed_s=elapsed_x)
+    except Exception as e:
+        _log("error", "extract_failed", source=source, error=str(e))
+        return 4, {"status": "error", "source": source, "error": str(e)}
+    finally:
+        zip_path.unlink(missing_ok=True)
+
+    save_state(state_path, {
+        "source": source,
+        "last_artifact_id": artifact_id,
+        "last_run_id": artifact.get("_run_id"),
+        "downloaded_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "files_extracted": n_files,
+        "bytes_downloaded": n_bytes,
+    })
+
+    if not keep_artifact:
+        deleted = delete_artifact(repo, artifact_id, token)
+        _log("info", "cleanup_done", source=source,
+             deleted=deleted, artifact_id=artifact_id)
+
+    _log("info", "pull_source_complete", source=source,
+         files_extracted=n_files, bytes_downloaded=n_bytes)
+    return 0, {"status": "downloaded", "source": source,
+               "artifact_id": artifact_id,
+               "files_extracted": n_files,
+               "bytes_downloaded": n_bytes}
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="Pull artifact ETL da GitHub Actions per Cruscotto Italia",
     )
-    parser.add_argument("source", help="Nome ETL (es. asia, veicoli, istat_profilo)")
+    parser.add_argument(
+        "source",
+        nargs="?",
+        default=None,
+        help="Nome ETL (es. asia, veicoli, istat_profilo). Omettere se si usa --all.",
+    )
+    parser.add_argument(
+        "--all",
+        action="store_true",
+        help="Pull di tutti i workflow etl-<source>-refresh.yml nel repo. "
+             "Discovery dinamico via GitHub API. Skip idempotente per artifact "
+             "invariati. Modalita' raccomandata per il cron daily della VM.",
+    )
+    parser.add_argument(
+        "--include",
+        default=None,
+        help="(con --all) Lista comma-separated di source da includere "
+             "(esclusi gli altri). Es: --include=asia,veicoli",
+    )
+    parser.add_argument(
+        "--exclude",
+        default=None,
+        help="(con --all) Lista comma-separated di source da escludere. "
+             "Es: --exclude=asia,demografia",
+    )
     parser.add_argument(
         "--workflow",
         default=None,
-        help="Nome file workflow YAML (default: etl-<source>-refresh.yml)",
+        help="Nome file workflow YAML (default: etl-<source>-refresh.yml). "
+             "Ignorato se --all.",
     )
     parser.add_argument(
         "--artifact-name",
         default=None,
-        help="Nome artifact da scaricare (default: <source>-shards)",
+        help="Nome artifact da scaricare (default: <source>-shards). "
+             "Ignorato se --all.",
     )
     parser.add_argument(
         "--data-dir",
@@ -362,6 +523,15 @@ def main() -> int:
     )
     args = parser.parse_args()
 
+    # Validazione mutua esclusione
+    if args.all and args.source:
+        _log("error", "args_invalid",
+             reason="--all e <source> sono mutuamente esclusivi")
+        return 1
+    if not args.all and not args.source:
+        parser.print_help(sys.stderr)
+        return 1
+
     # Token
     token = os.environ.get("GITHUB_TOKEN", "").strip()
     if not token:
@@ -369,90 +539,91 @@ def main() -> int:
              hint="Esporta env GITHUB_TOKEN con scope Contents:Read + Actions:Read")
         return 2
 
-    # Default workflow / artifact name
-    workflow = args.workflow or f"etl-{args.source}-refresh.yml"
-    artifact_name = args.artifact_name or f"{args.source}-shards"
-    source_dir = args.data_dir / args.source
-    state_path = source_dir / "_artifact_meta.json"
+    # ─── Modalita' --all ─────────────────────────────────────────────
+    if args.all:
+        include_set = set()
+        if args.include:
+            include_set = {s.strip() for s in args.include.split(",") if s.strip()}
+        exclude_set = set()
+        if args.exclude:
+            exclude_set = {s.strip() for s in args.exclude.split(",") if s.strip()}
 
-    _log("info", "pull_start",
-         source=args.source, workflow=workflow, artifact_name=artifact_name,
-         data_dir=str(args.data_dir), dry_run=args.dry_run)
+        _log("info", "pull_all_start", data_dir=str(args.data_dir),
+             include=sorted(include_set) or None,
+             exclude=sorted(exclude_set) or None,
+             dry_run=args.dry_run)
 
-    # Trova l'ultimo artifact disponibile
-    artifact = find_latest_artifact(args.repo, workflow, artifact_name, token)
-    if not artifact:
-        _log("error", "no_artifact_found",
-             source=args.source, workflow=workflow,
-             hint=f"Esegui prima il workflow '{workflow}' su GitHub Actions")
-        return 3
+        workflows = discover_etl_workflows(args.repo, token)
+        if not workflows:
+            _log("warning", "no_workflows_discovered",
+                 hint="Nessun workflow 'etl-*-refresh.yml' attivo nel repo. "
+                      "Controllare che almeno un workflow sia committato.")
+            return 0
 
-    artifact_id = artifact["id"]
-    size_bytes = artifact.get("size_in_bytes", 0)
-    _log("info", "artifact_found",
-         artifact_id=artifact_id,
-         run_id=artifact.get("_run_id"),
-         run_url=artifact.get("_run_url"),
-         created_at=artifact.get("created_at"),
-         size_bytes=size_bytes,
-         size_mb=round(size_bytes / 1024 / 1024, 2))
+        _log("info", "workflows_discovered", count=len(workflows),
+             sources=[w["source"] for w in workflows])
 
-    # Idempotency: verifica state-file
-    state = load_state(state_path)
-    last_id = state.get("last_artifact_id")
-    if last_id == artifact_id and not args.force:
-        _log("info", "skip_already_downloaded",
-             artifact_id=artifact_id,
-             last_downloaded_at=state.get("downloaded_at"))
-        return 0
+        # Filtro include/exclude
+        if include_set:
+            workflows = [w for w in workflows if w["source"] in include_set]
+        if exclude_set:
+            workflows = [w for w in workflows if w["source"] not in exclude_set]
 
-    if args.dry_run:
-        _log("info", "dry_run_exit",
-             would_download_artifact_id=artifact_id,
-             would_extract_to=str(source_dir))
-        return 0
+        summaries = []
+        downloaded = skipped = no_artifact = errors = 0
+        for w in workflows:
+            try:
+                rc, summary = pull_one_source(
+                    source=w["source"],
+                    repo=args.repo,
+                    token=token,
+                    data_dir=args.data_dir,
+                    workflow=w["workflow_filename"],
+                    force=args.force,
+                    dry_run=args.dry_run,
+                    keep_artifact=args.keep_artifact,
+                )
+                summaries.append(summary)
+                status = summary.get("status", "unknown")
+                if status == "downloaded":
+                    downloaded += 1
+                elif status == "skipped_idempotent":
+                    skipped += 1
+                elif status == "no_artifact":
+                    no_artifact += 1
+                else:
+                    errors += rc != 0
+            except Exception as e:
+                _log("error", "pull_source_unexpected_error",
+                     source=w["source"], error=str(e))
+                summaries.append({"status": "error", "source": w["source"],
+                                  "error": str(e)})
+                errors += 1
 
-    # Download in tempdir
-    t0 = time.time()
-    with tempfile.NamedTemporaryFile(suffix=".zip", delete=False) as tmp:
-        zip_path = Path(tmp.name)
-    try:
-        n_bytes = download_artifact_zip(args.repo, artifact_id, token, zip_path)
-        elapsed = round(time.time() - t0, 1)
-        _log("info", "download_done", bytes=n_bytes, elapsed_s=elapsed,
-             mb_per_s=round(n_bytes / 1024 / 1024 / max(elapsed, 0.1), 2))
+        _log("info", "pull_all_complete",
+             total=len(workflows),
+             downloaded=downloaded,
+             skipped_idempotent=skipped,
+             no_artifact=no_artifact,
+             errors=errors,
+             summaries=summaries)
 
-        # Extract
-        t1 = time.time()
-        n_files = extract_archive(zip_path, source_dir)
-        elapsed_x = round(time.time() - t1, 1)
-        _log("info", "extract_done",
-             files_extracted=n_files, dest=str(source_dir),
-             elapsed_s=elapsed_x)
-    except Exception as e:
-        _log("error", "extract_failed", error=str(e))
-        return 4
-    finally:
-        zip_path.unlink(missing_ok=True)
+        # Exit code: 0 se zero errori, 1 se almeno un errore (cron lo nota)
+        return 0 if errors == 0 else 1
 
-    # Update state
-    save_state(state_path, {
-        "source": args.source,
-        "last_artifact_id": artifact_id,
-        "last_run_id": artifact.get("_run_id"),
-        "downloaded_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-        "files_extracted": n_files,
-        "bytes_downloaded": n_bytes,
-    })
-
-    # Cleanup: delete artifact su GitHub
-    if not args.keep_artifact:
-        deleted = delete_artifact(args.repo, artifact_id, token)
-        _log("info", "cleanup_done", deleted=deleted, artifact_id=artifact_id)
-
-    _log("info", "pull_complete", source=args.source,
-         files_extracted=n_files, bytes_downloaded=n_bytes)
-    return 0
+    # ─── Modalita' source singolo (legacy) ──────────────────────────
+    rc, _summary = pull_one_source(
+        source=args.source,
+        repo=args.repo,
+        token=token,
+        data_dir=args.data_dir,
+        workflow=args.workflow,
+        artifact_name=args.artifact_name,
+        force=args.force,
+        dry_run=args.dry_run,
+        keep_artifact=args.keep_artifact,
+    )
+    return rc
 
 
 if __name__ == "__main__":
