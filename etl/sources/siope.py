@@ -70,16 +70,15 @@ Note: ogni shard ha "anno_default" = anno chiuso piu' recente disponibile;
 se nessun anno chiuso e' presente, prende l'anno parziale piu' recente.
 
 Usage:
-  python -m etl.sources.siope --target=local                       # tutti gli anni supportati
-  python -m etl.sources.siope --target=r2
-  python -m etl.sources.siope --target=local --regioni=06          # solo FVG
-  python -m etl.sources.siope --target=r2   --no-cache             # forza re-download
-  python -m etl.sources.siope --target=local --anni=2026           # solo 2026
-  python -m etl.sources.siope --target=local --anni=2025,2026      # entrambi
+  python -m etl.sources.siope                                # tutti gli anni supportati
+  python -m etl.sources.siope --regioni=06                   # solo FVG
+  python -m etl.sources.siope --no-cache                     # forza re-download
+  python -m etl.sources.siope --anni=2026                    # solo 2026
+  python -m etl.sources.siope --anni=2025,2026               # entrambi
 
 Cache:
-  - R2: raw/siope/reg<XX>_<anno>_comuni.csv (CSV pre-filtrato CO, per anno)
-  - Locale: nessuna (streaming CSV → aggregazione → output)
+  - Locale: /tmp/cruscotto-siope-cache/reg<XX>_<anno>_comuni.csv
+    (CSV pre-filtrato CO, per anno). Override via --cache-dir.
 
 Note:
   - BDAP server richiede Accept-Encoding gzip + Referer header per servire i CSV
@@ -97,7 +96,6 @@ import sys
 import tempfile
 import time
 from collections import defaultdict
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -106,11 +104,15 @@ import structlog
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-from etl.lib import manifest, r2
+from etl.lib import manifest
 
 log = structlog.get_logger()
 
 ETL_VERSION = "0.2.0"
+
+# Cache locale (override via --cache-dir o env SIOPE_CACHE_DIR)
+import os
+SIOPE_CACHE_DIR = Path(os.environ.get("SIOPE_CACHE_DIR", "/tmp/cruscotto-siope-cache"))
 
 # Anni supportati. L'anno "default" e' l'ultimo chiuso (=ultimo anno per cui
 # il dataset upstream copre tutti i 12 mesi). Gli anni "parziali" hanno
@@ -240,25 +242,24 @@ TIPO_ENTE_COMUNE = "CO"
 # Cache R2: raw/siope/reg<XX>_<anno>_comuni.csv (gia' filtrato)
 # ---------------------------------------------------------------------------
 
-def cache_key(reg: str, anno: int) -> str:
-    return f"raw/siope/reg{reg}_{anno}_comuni.csv"
+def cache_path(reg: str, anno: int) -> Path:
+    """Path locale del file CSV pre-filtrato."""
+    return SIOPE_CACHE_DIR / f"reg{reg}_{anno}_comuni.csv"
 
 
 def cache_exists(reg: str, anno: int) -> bool:
-    return r2.head(cache_key(reg, anno)) is not None
+    return cache_path(reg, anno).exists()
 
 
 def cache_download(reg: str, anno: int) -> bytes:
-    """Scarica CSV gia' filtrato dalla cache R2."""
-    client = r2.get_r2_client()
-    bucket = r2.get_bucket()
-    obj = client.get_object(Bucket=bucket, Key=cache_key(reg, anno))
-    return obj["Body"].read()
+    """Legge CSV pre-filtrato dalla cache locale."""
+    return cache_path(reg, anno).read_bytes()
 
 
 def cache_upload(reg: str, anno: int, csv_bytes: bytes) -> None:
-    """Salva CSV filtrato sulla cache R2."""
-    r2.upload_bytes(csv_bytes, cache_key(reg, anno), content_type="text/csv")
+    """Salva CSV pre-filtrato nella cache locale."""
+    SIOPE_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    cache_path(reg, anno).write_bytes(csv_bytes)
 
 
 # ---------------------------------------------------------------------------
@@ -375,14 +376,14 @@ def download_and_filter_csv(reg: str, anno: int, log_ctx) -> bytes:
 
 
 def get_filtered_csv(reg: str, anno: int, use_cache: bool, log_ctx) -> bytes:
-    """Ritorna CSV filtrato dalla cache R2 o scarica+filtra+cacha."""
+    """Ritorna CSV filtrato dalla cache locale o scarica+filtra+cacha."""
     if use_cache and cache_exists(reg, anno):
-        log_ctx.info("cache_hit", reg=reg)
+        log_ctx.info("cache_hit", reg=reg, path=str(cache_path(reg, anno)))
         return cache_download(reg, anno)
 
     csv_bytes = download_and_filter_csv(reg, anno, log_ctx)
     cache_upload(reg, anno, csv_bytes)
-    log_ctx.info("cache_uploaded", reg=reg)
+    log_ctx.info("cache_uploaded", reg=reg, path=str(cache_path(reg, anno)))
     return csv_bytes
 
 
@@ -557,32 +558,6 @@ def write_shards_local(shards: dict[str, dict], output_dir: Path) -> int:
     return len(shards)
 
 
-def push_to_r2_parallel(shard_dir: Path) -> int:
-    """Upload parallelo siope/<istat>.json su R2."""
-    shard_files = sorted(shard_dir.glob("*.json"))
-    log.info("siope_pushing", total=len(shard_files))
-
-    def _upload_one(sf: Path) -> str:
-        r2.upload_file(sf, f"siope/{sf.name}", content_type="application/json")
-        return sf.name
-
-    uploaded = 0
-    with ThreadPoolExecutor(max_workers=24) as ex:
-        futures = {ex.submit(_upload_one, sf): sf for sf in shard_files}
-        for fut in as_completed(futures):
-            try:
-                fut.result()
-                uploaded += 1
-                if uploaded % 500 == 0:
-                    log.info("siope_push_progress",
-                             uploaded=uploaded, total=len(shard_files))
-            except Exception as e:
-                log.error("siope_upload_failed", error=str(e))
-
-    log.info("siope_push_done", uploaded=uploaded)
-    return uploaded
-
-
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
@@ -591,9 +566,10 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         description="ETL SIOPE Spese - bulk download CKAN + aggregazione comunale, multi-anno"
     )
+    # --target tenuto per retrocompat workflow esistenti, ma solo 'local' e' supportato
     parser.add_argument(
-        "--target", choices=["local", "r2"], default="local",
-        help="Destinazione output shard"
+        "--target", choices=["local"], default="local",
+        help="Solo 'local' supportato (R2 rimosso dall'infrastruttura AgID)"
     )
     parser.add_argument(
         "--outdir", type=Path,
@@ -601,12 +577,16 @@ def main() -> int:
         help="Directory output locale (default: /var/www/cruscotto-italia/data/siope)"
     )
     parser.add_argument(
+        "--cache-dir", type=Path, default=None,
+        help=f"Directory cache CSV pre-filtrati (default: {SIOPE_CACHE_DIR})"
+    )
+    parser.add_argument(
         "--regioni", type=str, default=None,
         help="Codici regione separati da virgola (es. '06,07'). Default: tutte le 20."
     )
     parser.add_argument(
         "--no-cache", action="store_true",
-        help="Forza re-download del CSV ignorando la cache R2"
+        help="Forza re-download del CSV ignorando la cache locale"
     )
     parser.add_argument(
         "--anni", type=str, default=None,
@@ -621,6 +601,11 @@ def main() -> int:
         help=argparse.SUPPRESS,
     )
     args = parser.parse_args()
+
+    # Override cache dir se specificato
+    if args.cache_dir:
+        global SIOPE_CACHE_DIR
+        SIOPE_CACHE_DIR = args.cache_dir
 
     # Risolvi anni richiesti
     if args.anno is not None and args.anni is not None:
@@ -654,10 +639,10 @@ def main() -> int:
 
     output_dir = args.outdir
     log.info("etl_start",
-             target=args.target,
              regioni=regioni,
              anni=anni,
              use_cache=not args.no_cache,
+             cache_dir=str(SIOPE_CACHE_DIR),
              output_dir=str(output_dir))
 
     # Accumulatore: {anno: {istat: year_block}}
@@ -702,14 +687,16 @@ def main() -> int:
                  jobs_skipped=len(failed_jobs),
                  output_dir=str(output_dir))
 
-        if args.target == "r2":
-            uploaded = push_to_r2_parallel(output_dir)
+        # Manifest update best-effort
+        try:
             manifest.update_source(
                 "siope",
-                [{"key": "siope/*", "count": uploaded}],
+                [{"key": "siope/*", "count": total_shards}],
                 status="ok",
             )
-            log.info("manifest_updated", anni=anni)
+            log.info("manifest_updated", anni=anni, count=total_shards)
+        except Exception as e:
+            log.warning("manifest_update_skipped", error=str(e))
 
         log.info("etl_done", total_shards=total_shards, anni=anni)
         return 0
