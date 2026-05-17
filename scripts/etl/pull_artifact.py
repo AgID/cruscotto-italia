@@ -97,6 +97,21 @@ USER_AGENT = "CruscottoItalia-PullArtifact/1.0"
 # Max bytes to download (sanity check, evita pull-bomb se artifact corrotto)
 MAX_ARTIFACT_BYTES = 2 * 1024 * 1024 * 1024  # 2 GB
 
+# Mapping source (= nome modulo Python sotto etl/sources/) -> nome cartella
+# di output sotto DATA_DIR. La maggior parte degli ETL ha source==output_dir
+# (es. asia, anncsu, pendolarismo, sanita_mds, immobili_pa). Le eccezioni
+# sono i moduli ISTAT che usano il prefix 'istat_' come convenzione di
+# codice ma scrivono in cartelle senza prefix (per coerenza coi path
+# stabilizzati di dashboard.py e frontend).
+#
+# Se un source non e' in questa mappa, output_dir == source name.
+SOURCE_TO_OUTPUT_DIR = {
+    "istat_profilo": "profilo",
+    "istat_turismo": "turismo",
+    # NB: pendolarismo, asia, anncsu, sanita_mds, immobili_pa, runts, ecc.
+    # hanno output_dir == source name, quindi non vanno qui.
+}
+
 
 def _log(level: str, event: str, **kwargs) -> None:
     """Log strutturato JSON-line su stderr (audit-trail)."""
@@ -324,18 +339,29 @@ def delete_artifact(repo: str, artifact_id: int, token: str) -> bool:
         raise
 
 
-def extract_archive(archive_path: Path, dest_dir: Path) -> int:
+def extract_archive(archive_path: Path, dest_dir: Path,
+                    strip_top_dir: str | None = None) -> int:
     """Estrae l'archive (ZIP da GitHub puo' contenere un tar.gz interno).
 
     GitHub wrappa SEMPRE l'upload in uno ZIP esterno, quindi:
       - artifact1.zip contiene shards.tar.gz
-      - shards.tar.gz contiene asia/<istat>.json files
+      - shards.tar.gz contiene <prefix>/<istat>.json files
+        dove <prefix> e' il nome della cartella relative al cwd usato
+        nel workflow YAML (es. 'profilo/' per istat_profilo).
+
+    Parametri:
+      strip_top_dir: se valorizzato, e i membri del tar iniziano TUTTI con
+        '<strip_top_dir>/', allora questo prefix viene strippato durante
+        l'estrazione. Esempio: tar contiene 'profilo/001001.json',
+        strip_top_dir='profilo' -> file finale: dest_dir/001001.json.
+        Se valorizzato ma i membri NON matchano, log warning e nessuno
+        strip (fallback safe).
 
     Ritorna numero di file estratti nel filesystem destinazione.
     """
     dest_dir.mkdir(parents=True, exist_ok=True)
 
-    # Step 1: unzip
+    # Step 1: unzip esterno (GitHub artifact wrapper)
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp = Path(tmpdir)
         with zipfile.ZipFile(archive_path, "r") as zf:
@@ -347,16 +373,52 @@ def extract_archive(archive_path: Path, dest_dir: Path) -> int:
             tar_path = candidates[0]
             _log("info", "found_inner_tar", path=str(tar_path.name),
                  size=tar_path.stat().st_size)
-            n = 0
+
             with tarfile.open(tar_path, "r:*") as tf:
-                # Sicurezza: nessun path absolute, no .. nel path
-                for member in tf.getmembers():
-                    if member.name.startswith("/") or ".." in member.name:
+                all_members = tf.getmembers()
+
+                # Decide se strip top dir e' applicabile in modo sicuro
+                effective_strip = None
+                if strip_top_dir:
+                    prefix = strip_top_dir.rstrip("/") + "/"
+                    # Tutti i membri devono iniziare con il prefix (o essere
+                    # esattamente il prefix come dir entry). Altrimenti
+                    # skip dello strip per sicurezza.
+                    all_match = all(
+                        m.name == strip_top_dir
+                        or m.name.startswith(prefix)
+                        for m in all_members
+                    )
+                    if all_match:
+                        effective_strip = prefix
+                        _log("info", "tar_strip_top_dir_applied",
+                             prefix=strip_top_dir, members=len(all_members))
+                    else:
+                        _log("warning", "tar_strip_top_dir_not_applicable",
+                             requested=strip_top_dir,
+                             reason="not all members share prefix; extracting as-is")
+
+                # Filtra membri unsafe (path assoluti, '..') E applica strip.
+                # Costruisce una nuova lista di TarInfo con name aggiustato.
+                safe_members = []
+                for m in all_members:
+                    if m.name.startswith("/") or ".." in m.name:
                         _log("warning", "tar_unsafe_member_skipped",
-                             name=member.name)
+                             name=m.name)
                         continue
-                tf.extractall(dest_dir)
-                n = sum(1 for m in tf.getmembers() if m.isfile())
+                    if effective_strip:
+                        if m.name == strip_top_dir:
+                            # E' la dir entry del top-level: skip (non un file da estrarre)
+                            continue
+                        new_name = m.name[len(effective_strip):]
+                        if not new_name:
+                            # E' diventato stringa vuota: skip
+                            continue
+                        m.name = new_name
+                    safe_members.append(m)
+
+                tf.extractall(dest_dir, members=safe_members)
+                n = sum(1 for m in safe_members if m.isfile())
             return n
         else:
             # Niente tar interno: i file sono direttamente nel zip
@@ -443,11 +505,15 @@ def pull_one_source(source: str, repo: str, token: str,
     """
     workflow = workflow or f"etl-{source}-refresh.yml"
     artifact_name = artifact_name or f"{source}-shards"
-    source_dir = data_dir / source
+    # Risolvi nome cartella di output via mapping (default: source name).
+    # Es. 'istat_profilo' -> 'profilo' (cartella tradizionale).
+    output_subdir = SOURCE_TO_OUTPUT_DIR.get(source, source)
+    source_dir = data_dir / output_subdir
     state_path = source_dir / "_artifact_meta.json"
 
     _log("info", "pull_source_start",
-         source=source, workflow=workflow, artifact_name=artifact_name)
+         source=source, workflow=workflow, artifact_name=artifact_name,
+         output_dir=str(source_dir))
 
     artifact = find_latest_artifact(repo, workflow, artifact_name, token)
     if not artifact:
@@ -491,7 +557,10 @@ def pull_one_source(source: str, repo: str, token: str,
              bytes=n_bytes, elapsed_s=elapsed)
 
         t1 = time.time()
-        n_files = extract_archive(zip_path, source_dir)
+        # I workflow producono tar con prefix == output_subdir (es. 'profilo/').
+        # Strippa il prefix per evitare nidificazione data/profilo/profilo/...
+        n_files = extract_archive(zip_path, source_dir,
+                                  strip_top_dir=output_subdir)
         elapsed_x = round(time.time() - t1, 1)
         _log("info", "extract_done", source=source,
              files_extracted=n_files, dest=str(source_dir),

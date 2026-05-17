@@ -295,53 +295,63 @@ trattamento opaco di dati: tutto open data con licenza CC-BY 4.0.
 - 1 commit nel frontend (rebuild deploy nginx)
 - aggiornamento di questa doc per chiudere il TODO
 
-### 9.2 `pull_artifact.py` — `extractall` senza `filter='data'`
+### 9.2 `pull_artifact.py` — `extractall` senza `filter='data'` ✅ RISOLTO
 
 Scoperto durante review codice 2026-05-17 in vista audit.
+**Risolto in pari giornata** insieme al fix nidificazione (vedi § 9.3
+sotto) usando l'alternativa retrocompatibile member-by-member.
 
-In `scripts/etl/pull_artifact.py` funzione `extract_archive()` (~linea 285):
+In `scripts/etl/pull_artifact.py` funzione `extract_archive()`, il loop
+sui membri tar ora costruisce esplicitamente la lista `safe_members`
+filtrata da path assoluti e `..`, e `tf.extractall(dest_dir,
+members=safe_members)` riceve solo i membri filtrati. Lo strip del
+top-level dir e' applicato sulla stessa lista. Niente piu' filtro
+performativo.
+
+Lo stesso passaggio applica anche `members=safe_members` come secondo
+argomento posizionale: il filtro `data` di Python 3.12+ non è stato
+adottato perche' lo strip del top-level dir richiede comunque un
+loop esplicito sui membri (modifichiamo `m.name`).
+
+**Stato di rischio**: BASSO (riferito alla situazione precedente al fix).
+
+### 9.3 Mapping `source → output_dir` in `pull_artifact.py`
+
+Aggiunto il 2026-05-17 durante test end-to-end Fase C.
+
+**Problema**: nei moduli ETL della famiglia ISTAT, il **nome del
+modulo Python** (`istat_profilo`, `istat_turismo`) non coincide con
+il **nome della cartella di output** sul filesystem (`profilo/`,
+`turismo/`). Il prefix `istat_` e' una convenzione di codice ma le
+cartelle reali, stabilizzate da mesi, non lo hanno.
+
+Senza mapping esplicito, `pull_artifact.py` interpretava il source
+come nome della cartella di destinazione (`data/istat_profilo/`)
+ed estraeva il tar lì, ma il tar conteneva al suo interno la
+directory `profilo/` (lo stesso path usato dall'ETL e dal frontend).
+Risultato: dati nidificati in `data/istat_profilo/profilo/<istat>.json`
+invece che in `data/profilo/<istat>.json` come previsto dal resto
+del codice (dashboard.py, Worker MCP, frontend).
+
+**Soluzione**: aggiunto dict `SOURCE_TO_OUTPUT_DIR` con mapping
+esplicito per i source che divergono dal nome convenzionale:
 
 ```python
-for member in tf.getmembers():
-    if member.name.startswith("/") or ".." in member.name:
-        _log("warning", "tar_unsafe_member_skipped", name=member.name)
-        continue
-tf.extractall(dest_dir)
+SOURCE_TO_OUTPUT_DIR = {
+    "istat_profilo": "profilo",
+    "istat_turismo": "turismo",
+}
 ```
 
-Il loop **logga** membri unsafe (path assoluti, `..`) ma poi
-`tf.extractall(dest_dir)` **estrae tutti i membri** senza filtro,
-inclusi quelli unsafe appena loggati. Il check è performativo,
-non difensivo.
+Combinato con il parametro `strip_top_dir` di `extract_archive()`,
+il tar viene estratto direttamente in `data/profilo/<istat>.json`
+con strippaggio coerente del prefix interno.
 
-**Fix raccomandato** (Python 3.12+):
+Vincoli di robustezza:
+- Lo strip avviene solo se TUTTI i membri del tar iniziano col prefix;
+  altrimenti log warning e fallback (estrazione as-is)
+- Il filtro `safe_members` (no path assoluti, no `..`) e' sempre
+  applicato, anche con strip attivo
 
-```python
-tf.extractall(dest_dir, filter='data')
-```
-
-Il filtro `data` di `tarfile` (PEP 706, default in 3.14) rifiuta
-automaticamente: path assoluti, `..`, symlink che escono dalla
-destination, special files (device/fifo/socket).
-
-**Alternativa retrocompatibile** (member-by-member):
-
-```python
-safe_members = [m for m in tf.getmembers()
-                if not m.name.startswith("/") and ".." not in m.name]
-tf.extractall(dest_dir, members=safe_members)
-n = sum(1 for m in safe_members if m.isfile())
-```
-
-**Stato di rischio**: BASSO.
-- Il tar.gz arriva da un nostro workflow GitHub Actions, in repo
-  PRIVATO `AgID/cruscotto-italia`.
-- Per produrre un tar malicioso servirebbe (a) write access sul
-  workflow YAML, oppure (b) compromissione di un runner GitHub Actions.
-- Entrambi richiedono compromissione preliminare del repo o di
-  GitHub stessa.
-- Defense in depth, non vulnerabilità sfruttabile.
-
-**Priorità di fix**: dopo il go-live. Comporta 1 commit nello script
-con test locale (creare un tar.gz con `../etc/passwd` e verificare
-che venga rifiutato).
+**Stato**: implementato e validato end-to-end con istat_profilo (7926
+shard estratti correttamente in `data/profilo/`, 2026-05-17 09:24 UTC).
