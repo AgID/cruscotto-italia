@@ -1,22 +1,36 @@
-name: ETL · Weekly
+name: ETL · Weekly (smoke test)
 
-# Cadenza settimanale per le fonti che cambiano spesso:
-#  - ANAC OCDS (file mensile contratti pubblici aggiornato ~settimanalmente)
-#  - PNRR Italia Domani (CSV ReGiS aggiornato regolarmente)
-#  - Sanita' territoriale Min. Salute (farmacie/parafarmacie quotidiani,
-#    posti letto ospedalieri annuale: cadenza settimanale e' il giusto
-#    compromesso, churn < 0.1%/settimana sulle farmacie attive)
-#  - RUNTS Min. Lavoro (Registro Unico Nazionale Terzo Settore: XLSX bulk
-#    aggiornato quotidianamente upstream, settimanale lato Cruscotto e'
-#    sufficiente. Snapshot bulk via PostBack ASP.NET ~12 MB, 145k enti)
+# IMPORTANTE
+# ==========
+# Questo workflow NON e' il produttore reale dei dati weekly in produzione.
+# Il produttore reale e' il cron `/etc/cron.d/cruscotto-etl` sulla VM AgID
+# che esegue gli stessi comandi Python ogni lunedi' a 04:00 UTC, scrivendo
+# direttamente in /var/www/cruscotto-italia/data/.
 #
-# Al termine, ricostruisce dashboard/<istat>.json (single-fetch shard).
+# Questo workflow esiste come "smoke test" eseguibile su GitHub Actions:
+#  - Permette di validare che gli ETL siano sintatticamente eseguibili
+#    e che riescano a contattare le fonti dati upstream da un IP esterno
+#  - Permette a un revisore (es. AgID) di verificare con un click che la
+#    pipeline weekly sia funzionante senza dover accedere alla VM
+#  - Funge da fallback di emergenza: in caso il cron VM sia fermo, un
+#    operatore puo' triggerare manualmente questo workflow per produrre
+#    un test report
 #
-# Cron: ogni lunedi' alle 04:00 UTC = 05:00/06:00 ora di Roma (DST).
+# Differenze rispetto al cron VM produttivo:
+#  - Output scritto in /tmp/etl-smoke/ del runner (NON in /var/www/...)
+#  - Niente notify del Worker MCP (non e' produzione)
+#  - Schedule NON impostato (solo workflow_dispatch manuale)
+#  - ANAC limitato all'anno corrente (parametro anac_years override)
+#  - sanita_mds: senza --no-cache (cache HTTP attiva per smoke test rapido)
+#
+# Fonti coperte:
+#  - ANAC OCDS (contratti pubblici)
+#  - PNRR Italia Domani (ReGiS CSV)
+#  - Sanita' territoriale Min. Salute (farmacie/parafarmacie/ospedali)
+#  - RUNTS Min. Lavoro (Terzo Settore, XLSX bulk via PostBack)
+#  - Dashboard: rebuild parziale (limit 50 comuni) a valle dei 4 source
 
 on:
-  # Schedule rimosso: ETL weekly girano via cron VM AgID (vedi deploy/cron/cruscotto-etl).
-  # GitHub Actions resta come fallback emergenza, attivabile manualmente dalla UI.
   workflow_dispatch:
     inputs:
       sources:
@@ -28,18 +42,15 @@ on:
         required: false
         default: ''
 
-# NOTE 2026-05-17: env R2_* rimosse dopo refactor ETL local-first.
-# Cruscotto Italia AgID non usa piu' Cloudflare R2 (account AgID non puo'
-# crearne). Tutti gli ETL girano --target=local scrivendo direttamente su
-# /var/www/cruscotto-italia/data/ del runner self-hosted Aruba/VM AgID.
-# I secrets GitHub R2_* possono essere rimossi nell'Ondata 2 (post-cutover).
+permissions:
+  contents: read
 
 jobs:
   # ---------------------------------------------------------------------------
   anac:
-    name: ETL · ANAC OCDS (contratti pubblici)
-    runs-on: [self-hosted, linux, aruba]
-    if: ${{ github.event_name == 'schedule' || contains(github.event.inputs.sources, 'anac') || github.event.inputs.sources == 'all' || github.event.inputs.sources == '' }}
+    name: ETL · ANAC OCDS (smoke test)
+    runs-on: ubuntu-latest
+    if: ${{ contains(github.event.inputs.sources, 'anac') || github.event.inputs.sources == 'all' || github.event.inputs.sources == '' }}
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
@@ -57,14 +68,29 @@ jobs:
           else
             echo "value=$(date -u +%Y)" >> $GITHUB_OUTPUT
           fi
-      - name: Run ANAC ETL
-        run: python -m etl.sources.anac --target=local --years=${{ steps.years.outputs.value }}
+      - name: Show runner public IP
+        run: |
+          echo "Runner IP: $(curl -sS -m 5 https://api.ipify.org || echo unknown)"
+      - name: Run ANAC ETL (output in /tmp/etl-smoke/)
+        env:
+          DATA_DIR: /tmp/etl-smoke
+        run: |
+          set -o pipefail
+          # ANAC pattern: --outdir e' il PARENT (scrive in <outdir>/monthly/
+          # e <outdir>/lookup/anac-aggregato.json, vs convenzione altri ETL
+          # che usano --outdir = cartella source).
+          mkdir -p /tmp/etl-smoke
+          python -m etl.sources.anac --outdir=/tmp/etl-smoke --years=${{ steps.years.outputs.value }} 2>&1 | tee /tmp/anac-etl.log | tail -30
+          echo ""
+          echo "=== ANAC output prodotti ==="
+          ls /tmp/etl-smoke/monthly/ 2>/dev/null || echo "(monthly/ dir non presente)"
+          ls /tmp/etl-smoke/lookup/anac-aggregato.json 2>/dev/null && echo "(lookup/anac-aggregato.json presente)"
 
   # ---------------------------------------------------------------------------
   pnrr:
-    name: ETL · PNRR (Italia Domani / ReGiS)
-    runs-on: [self-hosted, linux, aruba]
-    if: ${{ github.event_name == 'schedule' || contains(github.event.inputs.sources, 'pnrr') || github.event.inputs.sources == 'all' || github.event.inputs.sources == '' }}
+    name: ETL · PNRR (smoke test)
+    runs-on: ubuntu-latest
+    if: ${{ contains(github.event.inputs.sources, 'pnrr') || github.event.inputs.sources == 'all' || github.event.inputs.sources == '' }}
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
@@ -74,14 +100,30 @@ jobs:
           cache: 'pip'
           cache-dependency-path: etl/requirements.txt
       - run: pip install -r etl/requirements.txt
-      - name: Run PNRR ETL
-        run: python -m etl.sources.pnrr_progetti --target=local
+      - name: Show runner public IP
+        run: |
+          echo "Runner IP: $(curl -sS -m 5 https://api.ipify.org || echo unknown)"
+      - name: Run PNRR ETL (output in /tmp/etl-smoke/)
+        env:
+          DATA_DIR: /tmp/etl-smoke
+        run: |
+          set -o pipefail
+          # PNRR pattern: --outdir e' il PARENT (scrive in <outdir>/pnrr/).
+          mkdir -p /tmp/etl-smoke
+          python -m etl.sources.pnrr_progetti --outdir=/tmp/etl-smoke 2>&1 | tee /tmp/pnrr-etl.log | tail -30
+          echo ""
+          echo "=== PNRR shard prodotti ==="
+          shopt -s nullglob
+          files=(/tmp/etl-smoke/pnrr/*.json)
+          shopt -u nullglob
+          printf '%s\n' "${files[@]:0:5}"
+          echo "Totale shard: ${#files[@]}"
 
   # ---------------------------------------------------------------------------
   sanita_mds:
-    name: ETL · Sanita' territoriale (Min. Salute - farmacie/parafarm./ospedali)
-    runs-on: [self-hosted, linux, aruba]
-    if: ${{ github.event_name == 'schedule' || contains(github.event.inputs.sources, 'sanita_mds') || github.event.inputs.sources == 'all' || github.event.inputs.sources == '' }}
+    name: ETL · Sanita' MdS (smoke test)
+    runs-on: ubuntu-latest
+    if: ${{ contains(github.event.inputs.sources, 'sanita_mds') || github.event.inputs.sources == 'all' || github.event.inputs.sources == '' }}
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
@@ -91,61 +133,89 @@ jobs:
           cache: 'pip'
           cache-dependency-path: etl/requirements.txt
       - run: pip install -r etl/requirements.txt
-      - name: Run Sanita' MdS ETL
-        run: python -m etl.sources.sanita_mds --target=local --no-cache
-
-  # ---------------------------------------------------------------------------
-  # RUNTS Min. Lavoro - Registro Unico Nazionale del Terzo Settore.
-  # Snapshot XLSX bulk via PostBack ASP.NET (~12 MB, 145k enti) da
-  # servizi.lavoro.gov.it. Cadenza upstream giornaliera, lato Cruscotto
-  # settimanale e' sufficiente per il churn osservato.
-  runts:
-    name: ETL · RUNTS (Min. Lavoro - Terzo Settore)
-    runs-on: [self-hosted, linux, aruba]
-    if: ${{ github.event_name == 'schedule' || contains(github.event.inputs.sources, 'runts') || github.event.inputs.sources == 'all' || github.event.inputs.sources == '' }}
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-          cache: 'pip'
-          cache-dependency-path: etl/requirements.txt
-      - run: pip install -r etl/requirements.txt
-      - name: Run RUNTS ETL
-        run: python -m etl.sources.runts --target=local
-
-  # ---------------------------------------------------------------------------
-  # Dashboard: rebuild dei dashboard/<istat>.json shard a valle di
-  # ANAC + PNRR + sanita_mds + runts.
-  # Sempre eseguito (purche' uno almeno degli upstream sia andato a buon fine).
-  dashboard:
-    name: ETL · Dashboard rebuild (single-fetch shard)
-    runs-on: [self-hosted, linux, aruba]
-    needs: [anac, pnrr, sanita_mds, runts]
-    if: ${{ always() && (needs.anac.result == 'success' || needs.pnrr.result == 'success' || needs.sanita_mds.result == 'success' || needs.runts.result == 'success') }}
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-          cache: 'pip'
-          cache-dependency-path: etl/requirements.txt
-      - run: pip install -r etl/requirements.txt
-      - name: Run Dashboard ETL
-        run: python -m etl.sources.dashboard --target=local
-
-  # ---------------------------------------------------------------------------
-  notify:
-    name: Notify worker (cache purge)
-    needs: [dashboard]
-    if: ${{ always() && needs.dashboard.result == 'success' }}
-    runs-on: [self-hosted, linux, aruba]
-    steps:
-      - name: Purge worker cache
+      - name: Show runner public IP
         run: |
-          curl -sS -X POST "https://cruscotto-italia-mcp.agid.workers.dev/admin/cache/purge" \
-            -H "Authorization: Bearer ${{ secrets.WORKER_ADMIN_TOKEN }}" \
-            -H "Content-Type: application/json" \
-          || echo "Cache purge endpoint non disponibile (non-critical)"
+          echo "Runner IP: $(curl -sS -m 5 https://api.ipify.org || echo unknown)"
+      - name: Run Sanita' MdS ETL (output in /tmp/etl-smoke/)
+        env:
+          DATA_DIR: /tmp/etl-smoke
+        run: |
+          set -o pipefail
+          mkdir -p /tmp/etl-smoke/sanita_mds
+          python -m etl.sources.sanita_mds --outdir=/tmp/etl-smoke/sanita_mds 2>&1 | tee /tmp/sanita-etl.log | tail -30
+          echo ""
+          echo "=== Sanita' MdS shard prodotti ==="
+          shopt -s nullglob
+          files=(/tmp/etl-smoke/sanita_mds/*.json)
+          shopt -u nullglob
+          printf '%s\n' "${files[@]:0:5}"
+          echo "Totale shard: ${#files[@]}"
+
+  # ---------------------------------------------------------------------------
+  runts:
+    name: ETL · RUNTS (smoke test)
+    runs-on: ubuntu-latest
+    if: ${{ contains(github.event.inputs.sources, 'runts') || github.event.inputs.sources == 'all' || github.event.inputs.sources == '' }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: etl/requirements.txt
+      - run: pip install -r etl/requirements.txt
+      - name: Show runner public IP
+        run: |
+          echo "Runner IP: $(curl -sS -m 5 https://api.ipify.org || echo unknown)"
+      - name: Run RUNTS ETL (output in /tmp/etl-smoke/)
+        env:
+          DATA_DIR: /tmp/etl-smoke
+        run: |
+          set -o pipefail
+          mkdir -p /tmp/etl-smoke/runts
+          python -m etl.sources.runts --outdir=/tmp/etl-smoke/runts 2>&1 | tee /tmp/runts-etl.log | tail -30
+          echo ""
+          echo "=== RUNTS shard prodotti ==="
+          shopt -s nullglob
+          files=(/tmp/etl-smoke/runts/*.json)
+          shopt -u nullglob
+          printf '%s\n' "${files[@]:0:5}"
+          echo "Totale shard: ${#files[@]}"
+
+  # ---------------------------------------------------------------------------
+  # NOTA dashboard: nel cron VM produttivo aggrega 16 source. Qui in smoke
+  # test l'aggregazione e' parziale (solo i 4 source weekly: anac, pnrr,
+  # sanita_mds, runts). Resto degli shard del runner sono assenti.
+  # Quindi il dashboard logghera' warning su sezioni mancanti: e' atteso.
+  dashboard:
+    name: ETL · Dashboard rebuild (smoke test parziale)
+    runs-on: ubuntu-latest
+    needs: [anac, pnrr, sanita_mds, runts]
+    if: ${{ always() && (needs.anac.result == 'success' || needs.pnrr.result == 'success' || needs.sanita_mds.result == 'success' || needs.runts.result == 'success') && (contains(github.event.inputs.sources, 'dashboard') || github.event.inputs.sources == 'all' || github.event.inputs.sources == '') }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: etl/requirements.txt
+      - run: pip install -r etl/requirements.txt
+      - name: Run Dashboard ETL (smoke test parziale)
+        env:
+          DATA_DIR: /tmp/etl-smoke
+        run: |
+          mkdir -p /tmp/etl-smoke/dashboard /tmp/etl-smoke/lookup
+          # Pre-step: anagrafica produce lookup/comuni-bundle.json
+          # (dashboard.py lo richiede via local_lookup).
+          python -m etl.sources.anagrafica --outdir=/tmp/etl-smoke 2>&1 | tail -10
+          # Run dashboard (limit 50 comuni: smoke test puro, non production)
+          python -m etl.sources.dashboard --outdir=/tmp/etl-smoke/dashboard --limit=50 \
+            2>&1 | tee /tmp/dashboard.log | tail -30
+          echo ""
+          echo "=== Dashboard shard prodotti (smoke, limit 50) ==="
+          shopt -s nullglob
+          files=(/tmp/etl-smoke/dashboard/*.json)
+          shopt -u nullglob
+          echo "Totale: ${#files[@]}"
