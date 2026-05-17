@@ -1,0 +1,142 @@
+name: ETL · asia refresh (artifact-based)
+
+# Workflow Pull-Artifact per ETL ISTAT ASIA - Unita' Locali imprese
+# (ATECO 2 cifre + classi dimensionali addetti, 2018-2023).
+#
+# Architettura: vedi etl-istat_profilo-refresh.yml per la documentazione
+# generale del pattern. Differenze specifiche per ASIA:
+#
+# - PRE-STEP anagrafica RICHIESTO: asia.py legge
+#   data/lookup/comuni-bundle.json via local_lookup.load_comuni_bundle()
+#   (sollevera' SystemExit se assente).
+#
+# - ETL pesante e lungo (timeout-minutes: 180): ISTAT rate-limita
+#   pesantemente questo dataset, asia.py implementa polite mode con
+#   PARALLEL_DOWNLOADS=1, sleep tra chunks, backoff esponenziale 60-240s
+#   su 503/timeout. Tempi tipici: 90-120 minuti per pull annuale completo.
+#
+# - Motivo storico del workflow Actions: IP Aruba bannato da
+#   esploradati.istat.it dopo test del 2026-05-15. Runner ubuntu-latest
+#   ha IP Azure fresco, non in lista nera ISTAT.
+#
+# - Cadenza upstream: annuale (rilascio ISTAT tipicamente fine anno).
+#
+# Privacy / governance: identico agli altri workflow (repo PRIVATO,
+# retention 1gg, delete attivo, dati ISTAT CC BY 3.0 IT senza PII).
+
+on:
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: 'Smoke test: ISTAT comma-separated (vuoto = full ~7896 comuni)'
+        required: false
+        default: ''
+        type: string
+      force_download:
+        description: 'Force re-download dati ISTAT (ignora cache runner)'
+        required: false
+        default: false
+        type: boolean
+      skip_download:
+        description: 'Riusa cache (skip download). Utile per re-run dopo timeout.'
+        required: false
+        default: false
+        type: boolean
+  # schedule:
+  #   # 15 dicembre, 02:00 UTC (decommentare se serve automazione annuale)
+  #   - cron: '0 2 15 12 *'
+
+permissions:
+  contents: read
+
+jobs:
+  refresh:
+    name: ETL asia + artifact upload
+    runs-on: ubuntu-latest
+    # Polite mode ISTAT: 90-120 min stimato. 180 min copre worst case.
+    timeout-minutes: 180
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: etl/requirements.txt
+
+      - name: Install Python dependencies
+        # NB: include duckdb (asia.py lo usa per parsing SDMX)
+        run: pip install -r etl/requirements.txt
+
+      - name: Show runner public IP (debug ISTAT ban)
+        run: |
+          echo "Runner IP: $(curl -sS -m 5 https://api.ipify.org || echo unknown)"
+
+      - name: Pre-step — produce lookup/comuni-bundle.json via anagrafica
+        # asia.py legge data/lookup/comuni-bundle.json (load_canonical_istat).
+        # Sul runner effimero quel file non esiste finche' non lo produciamo.
+        env:
+          DATA_DIR: ${{ github.workspace }}/data
+        run: |
+          mkdir -p "$DATA_DIR/lookup"
+          python -m etl.sources.anagrafica --outdir="$DATA_DIR" 2>&1 | tee /tmp/anagrafica.log
+          echo ""
+          echo "=== Lookup files prodotti ==="
+          ls -la "$DATA_DIR/lookup/"
+
+      - name: Run asia ETL (polite mode ISTAT)
+        env:
+          DATA_DIR: ${{ github.workspace }}/data
+          # local_lookup legge da $DATA_DIR/lookup/ se DATA_DIR e' impostato
+        run: |
+          mkdir -p "$DATA_DIR/asia"
+          ARGS="--outdir=$DATA_DIR/asia"
+          if [ "${{ inputs.force_download }}" = "true" ]; then
+            ARGS="$ARGS --force-download"
+          fi
+          if [ "${{ inputs.skip_download }}" = "true" ]; then
+            ARGS="$ARGS --skip-download"
+          fi
+          if [ -n "${{ inputs.limit }}" ]; then
+            ARGS="$ARGS --limit=${{ inputs.limit }}"
+          fi
+          python -m etl.sources.asia $ARGS 2>&1 | tee /tmp/asia.log
+
+      - name: Statistiche shard prodotti
+        run: |
+          DATA_DIR="${{ github.workspace }}/data"
+          echo "=== Shard prodotti in $DATA_DIR/asia/ ==="
+          ls "$DATA_DIR/asia/"*.json 2>/dev/null | wc -l
+          echo ""
+          echo "=== Size totale ==="
+          du -sh "$DATA_DIR/asia/" 2>/dev/null
+          echo ""
+          echo "=== Sample primo shard (head 800 char) ==="
+          first=$(ls "$DATA_DIR/asia/"*.json 2>/dev/null | head -1)
+          if [ -n "$first" ]; then
+            echo "File: $first"
+            head -c 800 "$first"
+            echo ""
+          fi
+
+      - name: Pack shard in tar.gz per artifact
+        run: |
+          DATA_DIR="${{ github.workspace }}/data"
+          cd "$DATA_DIR"
+          tar czf /tmp/asia-shards.tar.gz asia/
+          echo "Archive size: $(du -h /tmp/asia-shards.tar.gz | cut -f1)"
+          echo "Files inside:"
+          tar tzf /tmp/asia-shards.tar.gz | head -5
+          echo "..."
+          echo "Total files: $(tar tzf /tmp/asia-shards.tar.gz | wc -l)"
+
+      - name: Upload artifact (retention 1 giorno per privacy)
+        uses: actions/upload-artifact@v4
+        with:
+          name: asia-shards
+          path: /tmp/asia-shards.tar.gz
+          retention-days: 1
+          if-no-files-found: error
