@@ -64,7 +64,7 @@ from pathlib import Path
 
 import structlog
 
-from etl.lib import manifest, r2
+from etl.lib import local_lookup, manifest, r2
 
 log = structlog.get_logger()
 
@@ -369,11 +369,15 @@ def compute_kpi_summary(out: dict) -> dict:
 def build_dashboard_for_comune(client, bucket: str, istat: str,
                                 anagrafica: dict,
                                 anac_data: dict,
-                                bdap_data: dict) -> dict:
+                                bdap_data: dict,
+                                target: str = "r2") -> dict:
     """Costruisce il dashboard shard per un singolo comune.
 
     Ritorna dict con _etl_version, _generated_at, _missing, anagrafica, e
     una chiave per ogni shard (None se mancante).
+
+    target=local: legge ogni shard da $DATA_DIR/<source>/<istat>.json (no R2)
+    target=r2:    legge ogni shard da R2 bucket via client (legacy)
     """
     missing: list[str] = []
     out: dict = {
@@ -383,16 +387,21 @@ def build_dashboard_for_comune(client, bucket: str, istat: str,
         "anagrafica": anagrafica,
     }
 
-    # Shard fisici su R2
+    # Shard fisici: leggi da R2 oppure da filesystem locale
+    data_dir = local_lookup.get_data_dir() if target == "local" else None
     for label, pat in SHARDS:
-        data = fetch_json(client, bucket, pat.format(istat=istat))
+        if target == "local":
+            # pat e' "demografia/{istat}.json" -> path locale "DATA_DIR/demografia/{istat}.json"
+            data = fetch_json_local(str(data_dir / pat.format(istat=istat)))
+        else:
+            data = fetch_json(client, bucket, pat.format(istat=istat))
         if data is None:
             missing.append(label)
             out[label] = None
         else:
             out[label] = data
 
-    # Shard locali (filesystem Aruba, non R2)
+    # Shard locali (filesystem, indipendenti dal target)
     for label, pat in SHARDS_LOCAL:
         data = fetch_json_local(pat.format(istat=istat))
         if data is None:
@@ -425,26 +434,50 @@ def build_dashboard_for_comune(client, bucket: str, istat: str,
     return out
 
 
-def build_all_shards(output_dir: Path, limit: int | None = None) -> dict:
+def build_all_shards(output_dir: Path, limit: int | None = None,
+                     target: str = "r2") -> dict:
     """Costruisce tutti i dashboard shard nella output_dir locale.
+
+    target=local: lookup e shard letti da filesystem (DATA_DIR / lookup/, DATA_DIR/<source>/)
+    target=r2:    lookup e shard letti da R2 bucket (legacy, richiede credenziali)
 
     Ritorna stats: {processed, missing_per_shard, fully_complete}
     """
-    client = r2.get_r2_client()
-    bucket = r2.get_bucket()
+    if target == "local":
+        log.info("loading_lookups_local", data_dir=str(local_lookup.get_data_dir()))
+        bundle = local_lookup.load_comuni_bundle()
+        if bundle is None:
+            raise SystemExit(
+                "Local lookup 'comuni-bundle.json' assente in "
+                f"{local_lookup.get_lookup_dir()}. "
+                "Esegui prima 'python -m etl.sources.anagrafica --target=local' "
+                "oppure popola data/lookup/ da una sorgente affidabile."
+            )
+        anac_data = local_lookup.load_anac_aggregato()
+        bdap_data = local_lookup.load_bdap_aggregato()
+        client = None
+        bucket = None
+    else:
+        client = r2.get_r2_client()
+        if client is None:
+            raise SystemExit(
+                "R2 credentials missing (R2_ACCOUNT_ID / R2_ACCESS_KEY_ID / "
+                "R2_SECRET_ACCESS_KEY). Usa --target=local per girare senza R2."
+            )
+        bucket = r2.get_bucket()
+        log.info("loading_lookups_r2", bucket=bucket)
+        bundle = json.loads(client.get_object(
+            Bucket=bucket, Key="lookup/comuni-bundle.json"
+        )["Body"].read())["comuni"]
+        anac_full = json.loads(client.get_object(
+            Bucket=bucket, Key="lookup/anac-aggregato.json"
+        )["Body"].read())
+        anac_data = anac_full.get("data", {})
+        bdap_full = json.loads(client.get_object(
+            Bucket=bucket, Key="lookup/bdap-aggregato.json"
+        )["Body"].read())
+        bdap_data = bdap_full.get("data", {})
 
-    log.info("loading_lookups")
-    bundle = json.loads(client.get_object(
-        Bucket=bucket, Key="lookup/comuni-bundle.json"
-    )["Body"].read())["comuni"]
-    anac_full = json.loads(client.get_object(
-        Bucket=bucket, Key="lookup/anac-aggregato.json"
-    )["Body"].read())
-    anac_data = anac_full.get("data", {})
-    bdap_full = json.loads(client.get_object(
-        Bucket=bucket, Key="lookup/bdap-aggregato.json"
-    )["Body"].read())
-    bdap_data = bdap_full.get("data", {})
     log.info("lookups_loaded",
              comuni=len(bundle),
              anac_enti=len(anac_data),
@@ -468,7 +501,8 @@ def build_all_shards(output_dir: Path, limit: int | None = None) -> dict:
     def _build_one(istat: str) -> tuple[str, list[str]]:
         anagrafica = bundle[istat]
         out = build_dashboard_for_comune(
-            client, bucket, istat, anagrafica, anac_data, bdap_data
+            client, bucket, istat, anagrafica, anac_data, bdap_data,
+            target=target,
         )
         # Scrivi su disco
         out_path = output_dir / f"{istat}.json"
@@ -556,7 +590,7 @@ def main() -> int:
              limit=args.limit)
 
     try:
-        stats = build_all_shards(output_dir, limit=args.limit)
+        stats = build_all_shards(output_dir, limit=args.limit, target=args.target)
 
         if args.target == "r2":
             uploaded = push_to_r2_parallel(output_dir)
