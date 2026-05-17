@@ -1,103 +1,80 @@
-"""Cloudflare R2 client wrapper (opzionale, solo per target=r2).
+"""Cloudflare R2 client wrapper — DEPRECATO.
 
-Reads credentials from env:
-    R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET
+[2026-05-17] Cruscotto Italia su account AgID non usa piu' Cloudflare R2.
+L'account AgID non puo' creare bucket R2 (richiede carta di credito). Tutta
+l'infrastruttura dati e' local-first:
 
-R2 is S3-compatible, accessed via boto3 with custom endpoint:
-    https://{account_id}.r2.cloudflarestorage.com
+    /var/www/cruscotto-italia/data/
+    ├── lookup/{comuni-bundle,anac-aggregato,bdap-aggregato}.json
+    ├── <source>/<istat>.json    (shard per comune)
+    └── manifest.json            (catalogo dati)
 
-Quando le credenziali R2 non sono presenti nell'ambiente, get_r2_client()
-ritorna None e le funzioni helper sollevano RuntimeError. Gli ETL che
-girano con --target=local NON devono chiamare queste funzioni e usano
-invece etl/lib/local_lookup.py + write diretti su filesystem.
+Il Worker MCP AgID legge questi file via HTTPS tramite DATA_BASE_URL
+(transitoriamente Aruba, post-cutover https://cruscotto-italia.dati.gov.it/data).
+
+Questo modulo e' mantenuto solo come kill-switch: ogni funzione esposta
+solleva RuntimeError immediatamente per garantire che nessun chiamante
+residuo possa accidentalmente fare richieste verso R2 piersoft.
+
+Per le operazioni che prima andavano su R2, usare etl/lib/local_lookup.py:
+    - load_comuni_bundle / load_anac_aggregato / load_bdap_aggregato
+    - save_lookup, save_meta, load_meta
+    - save_shard, save_bytes
+
+Questo file verra' cancellato fisicamente nell'Ondata 2 (post-cutover stabile).
 """
 
-import os
+from __future__ import annotations
+
 from pathlib import Path
 
-import boto3
 import structlog
-from botocore.config import Config
 
 log = structlog.get_logger()
 
 
+_DEPRECATION_MSG = (
+    "etl.lib.r2 e' DEPRECATO. Cruscotto Italia AgID non usa piu' Cloudflare R2. "
+    "Usa etl.lib.local_lookup per lookup/meta/shard locali. "
+    "Vedi HANDOFF_ETL_LOCALFIRST.md per la migrazione."
+)
+
+
+def _killswitch(fn_name: str):
+    log.error("r2_killswitch_triggered", function=fn_name)
+    raise RuntimeError(f"{_DEPRECATION_MSG} (chiamata: {fn_name})")
+
+
 def get_r2_client():
-    """Return a boto3 S3 client for Cloudflare R2, or None if credentials missing.
-
-    Non solleva eccezioni se le env R2_* sono assenti: ritorna None.
-    Il chiamante deve verificare il valore e, in caso, usare --target=local
-    o fallire in modo controllato.
-    """
-    account_id = os.environ.get("R2_ACCOUNT_ID")
-    access_key = os.environ.get("R2_ACCESS_KEY_ID")
-    secret_key = os.environ.get("R2_SECRET_ACCESS_KEY")
-    if not all([account_id, access_key, secret_key]):
-        log.warning("r2_credentials_missing",
-                    needed=["R2_ACCOUNT_ID", "R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY"],
-                    hint="R2 operations disabled; usare --target=local")
-        return None
-
-    return boto3.client(
-        "s3",
-        endpoint_url=f"https://{account_id}.r2.cloudflarestorage.com",
-        aws_access_key_id=access_key,
-        aws_secret_access_key=secret_key,
-        config=Config(signature_version="s3v4", region_name="auto"),
-    )
-
-
-def _require_client():
-    """Helper interno: ritorna client o solleva RuntimeError chiaro."""
-    client = get_r2_client()
-    if client is None:
-        raise RuntimeError(
-            "R2 client non disponibile (credenziali R2_* mancanti). "
-            "Per ETL local-first usare --target=local."
-        )
-    return client
+    """DEPRECATO: solleva RuntimeError. Usa etl.lib.local_lookup."""
+    _killswitch("get_r2_client")
 
 
 def get_bucket() -> str:
-    bucket = os.environ.get("R2_BUCKET", "cruscotto-italia-data")
-    return bucket
+    """DEPRECATO: solleva RuntimeError."""
+    _killswitch("get_bucket")
 
 
 def upload_file(local_path: Path | str, key: str, content_type: str | None = None) -> None:
-    """Upload a single file to R2."""
-    client = _require_client()
-    extra = {}
-    if content_type:
-        extra["ContentType"] = content_type
-    client.upload_file(str(local_path), get_bucket(), key, ExtraArgs=extra)
-    log.info("uploaded", key=key, bucket=get_bucket(), local=str(local_path))
+    """DEPRECATO: solleva RuntimeError. Usa local_lookup.save_shard / save_bytes."""
+    _killswitch("upload_file")
 
 
 def upload_bytes(data: bytes, key: str, content_type: str = "application/octet-stream") -> None:
-    client = _require_client()
-    client.put_object(Bucket=get_bucket(), Key=key, Body=data, ContentType=content_type)
-    log.info("uploaded_bytes", key=key, size=len(data))
+    """DEPRECATO: solleva RuntimeError. Usa local_lookup.save_bytes."""
+    _killswitch("upload_bytes")
 
 
 def download_file(key: str, local_path: Path | str) -> None:
-    client = _require_client()
-    client.download_file(get_bucket(), key, str(local_path))
+    """DEPRECATO: solleva RuntimeError. I dati sono local; leggi direttamente da DATA_DIR."""
+    _killswitch("download_file")
 
 
 def head(key: str) -> dict | None:
-    """Return object metadata or None if not found."""
-    client = _require_client()
-    try:
-        return client.head_object(Bucket=get_bucket(), Key=key)
-    except client.exceptions.ClientError:
-        return None
+    """DEPRECATO: solleva RuntimeError. Usa pathlib.Path(...).exists() su DATA_DIR."""
+    _killswitch("head")
 
 
 def list_keys(prefix: str = "") -> list[str]:
-    client = _require_client()
-    paginator = client.get_paginator("list_objects_v2")
-    keys = []
-    for page in paginator.paginate(Bucket=get_bucket(), Prefix=prefix):
-        for obj in page.get("Contents", []):
-            keys.append(obj["Key"])
-    return keys
+    """DEPRECATO: solleva RuntimeError. Usa pathlib.Path(...).glob() su DATA_DIR."""
+    _killswitch("list_keys")
