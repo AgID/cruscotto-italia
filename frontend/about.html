@@ -642,8 +642,8 @@ footer a:hover { color: #fff !important; }
       <div class="metodo-step">
         <h3>3. Pubblicazione</h3>
         <p>
-          Gli shard JSON vengono caricati su un object storage
-          (Cloudflare R2). Un piccolo backend (Cloudflare Worker) li serve
+          Le porzioni (shard) JSON vengono caricate su un object storage
+          (Cloudflare R2). Un piccolo backend (Cloudflare Worker) le serve
           al frontend con caching edge: la prima richiesta per Lecce passa
           da R2, le successive vengono servite dalla CDN più vicina al
           visitatore in pochi millisecondi.
