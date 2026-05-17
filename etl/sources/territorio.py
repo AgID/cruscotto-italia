@@ -22,9 +22,8 @@ Strategia ETL:
   Fase D — Merge & shard: 1 file JSON per comune del bundle anagrafica
 
 Usage:
-  python -m etl.sources.territorio --target=local
-  python -m etl.sources.territorio --target=r2
-  python -m etl.sources.territorio --target=local --no-cache
+  python -m etl.sources.territorio
+  python -m etl.sources.territorio --no-cache
 """
 from __future__ import annotations
 
@@ -41,7 +40,7 @@ from pathlib import Path
 
 import structlog
 
-from etl.lib import manifest, r2
+from etl.lib import local_lookup, manifest
 
 log = structlog.get_logger()
 
@@ -60,14 +59,11 @@ RIFIUTI_CSV_URL = (
 RIFIUTI_ANNO_MIN = 2010
 RIFIUTI_ANNO_MAX = 2024
 
-# Bundle anagrafica (compatibilita con altri ETL)
-ANAGRAFICA_BUNDLE_KEY = "lookup/comuni-bundle.json"
-
 # Limiti operativi
 IDROGEO_PARALLEL = 20  # thread paralleli per chiamate IdroGEO
 IDROGEO_TIMEOUT = 15
 HTTP_USER_AGENT = (
-    "cruscotto-italia-etl/0.1 (+https://github.com/piersoft/cruscotto-italia)"
+    "cruscotto-italia-etl/0.1 (+https://github.com/AgID/cruscotto-italia)"
 )
 
 
@@ -100,17 +96,19 @@ def round2(x: float | None) -> float | None:
 # Bundle anagrafica
 # ---------------------------------------------------------------------------
 def load_nome_to_istat() -> dict:
-    """Carica anagrafica bundle da R2.
+    """Carica anagrafica bundle dal filesystem locale.
 
     Schema bundle: {"comuni": {istat: {denominazione, provincia, regione, ...}}}
     Ritorna dict {istat_code: row_dict} (passthrough del dict comuni).
     """
     log.info("anagrafica_loading")
-    client = r2.get_r2_client()
-    bucket = r2.get_bucket()
-    obj = client.get_object(Bucket=bucket, Key=ANAGRAFICA_BUNDLE_KEY)
-    bundle = json.loads(obj["Body"].read())
-    comuni = bundle.get("comuni", {})
+    comuni = local_lookup.load_comuni_bundle()
+    if comuni is None:
+        raise SystemExit(
+            "Local lookup 'comuni-bundle.json' assente in "
+            f"{local_lookup.get_lookup_dir()}. "
+            "Esegui prima 'python -m etl.sources.anagrafica'."
+        )
     log.info("anagrafica_loaded", n_comuni=len(comuni))
     return comuni
 
@@ -668,39 +666,6 @@ def build_territorio_shards(
 # ===========================================================================
 # Push su R2
 # ===========================================================================
-def push_to_r2_parallel(shard_dir: Path) -> int:
-    """Carica shard JSON su R2 sotto prefisso 'territorio/'."""
-    client = r2.get_r2_client()
-    bucket = r2.get_bucket()
-    shard_files = sorted(shard_dir.glob("*.json"))
-
-    log.info("territorio_push_start", n_files=len(shard_files), bucket=bucket)
-
-    def _upload_one(sf: Path):
-        key = f"territorio/{sf.name}"
-        client.upload_file(
-            str(sf),
-            bucket,
-            key,
-            ExtraArgs={"ContentType": "application/json"},
-        )
-
-    uploaded = 0
-    with ThreadPoolExecutor(max_workers=24) as ex:
-        futures = {ex.submit(_upload_one, sf): sf for sf in shard_files}
-        for fut in as_completed(futures):
-            try:
-                fut.result()
-                uploaded += 1
-                if uploaded % 1000 == 0:
-                    log.info("territorio_push_progress",
-                             uploaded=uploaded, total=len(shard_files))
-            except Exception as e:
-                log.error("territorio_upload_failed", error=str(e))
-    log.info("territorio_push_done", uploaded=uploaded)
-    return uploaded
-
-
 # ===========================================================================
 # Main
 # ===========================================================================
@@ -710,7 +675,9 @@ def main() -> int:
             "ETL Tab Territorio: ISPRA Suolo + IdroGEO + Catasto Rifiuti"
         ),
     )
-    parser.add_argument("--target", choices=["local", "r2"], default="local")
+    # --target tenuto per retrocompat workflow esistenti, ma solo 'local' e' supportato
+    parser.add_argument("--target", choices=["local"], default="local",
+                        help="Solo 'local' supportato (R2 rimosso dall'infrastruttura AgID)")
     parser.add_argument("--cache-dir", type=Path,
                         default=Path("/tmp/cruscotto-territorio-cache"))
     parser.add_argument("--outdir", type=Path, default=Path("/var/www/cruscotto-italia/data"))
@@ -734,7 +701,7 @@ def main() -> int:
     output_dir = args.outdir
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    log.info("etl_start", target=args.target,
+    log.info("etl_start",
              cache_dir=str(cache_dir), output_dir=str(output_dir))
 
     try:
@@ -770,15 +737,17 @@ def main() -> int:
             anagrafica, output_dir,
         )
 
-        # 5) Upload su R2 (solo se target=r2)
-        if args.target == "r2":
-            uploaded = push_to_r2_parallel(shard_dir)
+        # Manifest update best-effort
+        try:
+            shard_count = len(list(shard_dir.glob("*.json")))
             manifest.update_source(
                 "territorio",
-                [{"key": "territorio/*", "count": uploaded}],
+                [{"key": "territorio/*", "count": shard_count}],
                 status="ok",
             )
-            log.info("manifest_updated")
+            log.info("manifest_updated", count=shard_count)
+        except Exception as e:
+            log.warning("manifest_update_skipped", error=str(e))
 
         log.info("etl_done", **stats)
         return 0
