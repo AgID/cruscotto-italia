@@ -7,7 +7,10 @@ Serie storica: 5 anni (2020-2024) di anno imposta.
 Schema CSV varia: 2020-2022 hanno 50 colonne ('Bonus spettante', no tot),
 2023-2024 hanno 52-53 colonne ('Trattamento spettante', tot esplicito).
 
-Output shards: redditi/<istat>.json su R2 (~7897 file).
+Output shards: redditi/<istat>.json su filesystem locale (~7897 file).
+
+Cache:
+- Locale: /tmp/mef_cache/redditi_<year>.zip (override via env MEF_CACHE_DIR)
 """
 
 import argparse
@@ -19,15 +22,11 @@ import os
 import sys
 import time
 import zipfile
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
-from hashlib import md5
 from pathlib import Path
 from typing import Any
 
-import boto3
 import requests
-from botocore.client import Config
 
 # -----------------------------------------------------------------------------
 # Configurazione
@@ -52,22 +51,9 @@ USER_AGENT = (
     "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 )
 
-# R2
-R2_BUCKET = os.environ.get("R2_BUCKET")
-R2_ACCESS_KEY = os.environ.get("R2_ACCESS_KEY_ID")
-R2_SECRET_KEY = os.environ.get("R2_SECRET_ACCESS_KEY")
-R2_ACCOUNT_ID = os.environ.get("R2_ACCOUNT_ID")
-
-# Prefissi R2
-R2_RAW_PREFIX = "raw/mef/"
-R2_SHARDS_PREFIX = "redditi/"
-
-# Locale (cache temporanea)
-LOCAL_CACHE_DIR = Path("/tmp/mef_cache")
+# Locale (cache CSV zip per ripartibilita)
+LOCAL_CACHE_DIR = Path(os.environ.get("MEF_CACHE_DIR", "/tmp/mef_cache"))
 LOCAL_CACHE_DIR.mkdir(parents=True, exist_ok=True)
-
-# Parallelismo upload (pattern standard Cruscotto)
-MAX_WORKERS_UPLOAD = 24
 
 # Numero comuni atteso (per logging)
 EXPECTED_COMUNI = 7897
@@ -176,47 +162,31 @@ FASCE_LABELS = {
 # -----------------------------------------------------------------------------
 
 
-def get_r2_client():
-    if not all([R2_ACCESS_KEY, R2_SECRET_KEY, R2_ACCOUNT_ID, R2_BUCKET]):
-        raise RuntimeError(
-            "Credenziali R2 mancanti: setta R2_ACCESS_KEY_ID, "
-            "R2_SECRET_ACCESS_KEY, R2_ACCOUNT_ID, R2_BUCKET"
-        )
-    endpoint_url = f"https://{R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
-    return boto3.client(
-        "s3",
-        endpoint_url=endpoint_url,
-        aws_access_key_id=R2_ACCESS_KEY,
-        aws_secret_access_key=R2_SECRET_KEY,
-        config=Config(signature_version="s3v4", region_name="auto"),
-    )
-
-
 # -----------------------------------------------------------------------------
-# Download + cache raw
+# Download + cache locale
 # -----------------------------------------------------------------------------
 
 
 def download_year_zip(year: int, force: bool = False) -> bytes:
-    """Scarica lo ZIP dell'anno indicato. Cache R2 raw/mef/redditi_<year>.zip."""
-    raw_key = f"{R2_RAW_PREFIX}redditi_{year}.zip"
+    """Scarica lo ZIP dell'anno indicato. Cache locale LOCAL_CACHE_DIR.
+
+    Se force=False e il file esiste in cache, lo legge da disco senza
+    rifare HTTP. Se cache miss o force=True, scarica da MEF e salva.
+    """
     local_path = LOCAL_CACHE_DIR / f"redditi_{year}.zip"
-    r2 = get_r2_client()
 
-    # Prova cache R2
-    if not force:
-        try:
-            obj = r2.get_object(Bucket=R2_BUCKET, Key=raw_key)
-            data = obj["Body"].read()
-            log.info("anno %d: usando cache R2 (%s, %d bytes)", year, raw_key, len(data))
-            local_path.write_bytes(data)
-            return data
-        except r2.exceptions.NoSuchKey:
-            log.info("anno %d: cache R2 assente, scarico da MEF", year)
-        except Exception as e:
-            log.warning("anno %d: errore lettura cache R2 (%s), scarico", year, e)
+    # Cache hit?
+    if local_path.exists() and not force:
+        data = local_path.read_bytes()
+        log.info(
+            "anno %d: usando cache locale (%s, %d bytes)",
+            year,
+            local_path,
+            len(data),
+        )
+        return data
 
-    # Download fresco
+    # Download fresco da MEF
     url = MEF_BASE_URL.format(year=year)
     headers = {
         "User-Agent": USER_AGENT,
@@ -230,19 +200,13 @@ def download_year_zip(year: int, force: bool = False) -> bytes:
     data = r.content
     log.info("anno %d: scaricati %d bytes", year, len(data))
 
-    # Salva cache R2 (best-effort)
+    # Salva cache locale (best-effort)
     try:
-        r2.put_object(
-            Bucket=R2_BUCKET,
-            Key=raw_key,
-            Body=data,
-            ContentType="application/zip",
-        )
-        log.info("anno %d: cache R2 aggiornata (%s)", year, raw_key)
+        local_path.write_bytes(data)
+        log.info("anno %d: cache locale aggiornata (%s)", year, local_path)
     except Exception as e:
-        log.warning("anno %d: impossibile salvare cache R2: %s", year, e)
+        log.warning("anno %d: impossibile salvare cache locale: %s", year, e)
 
-    local_path.write_bytes(data)
     return data
 
 
@@ -561,103 +525,6 @@ def build_shards(years_data: dict[int, dict[str, dict]]) -> dict[str, dict]:
 # -----------------------------------------------------------------------------
 
 
-def _list_existing_etags(r2, prefix: str) -> dict[str, str]:
-    """Una sola list paginata, ritorna dict {filename: etag_stripped}."""
-    etags: dict[str, str] = {}
-    paginator = r2.get_paginator("list_objects_v2")
-    page_iter = paginator.paginate(Bucket=R2_BUCKET, Prefix=prefix)
-    for page in page_iter:
-        for obj in page.get("Contents", []) or []:
-            key = obj["Key"]
-            fname = key[len(prefix):]
-            etag = obj["ETag"].strip('"')
-            etags[fname] = etag
-    return etags
-
-
-def push_shards_r2(shards: dict[str, dict], force: bool = False) -> tuple[int, int]:
-    """
-    Pattern standard Cruscotto: list paginata + diff md5 + ThreadPool upload.
-    Ritorna (uploaded, skipped).
-    """
-    r2 = get_r2_client()
-
-    log.info("R2: list existing etags su prefix '%s'...", R2_SHARDS_PREFIX)
-    t0 = time.time()
-    remote_etags = _list_existing_etags(r2, R2_SHARDS_PREFIX)
-    log.info(
-        "R2: %d oggetti remoti elencati in %.1fs",
-        len(remote_etags),
-        time.time() - t0,
-    )
-
-    # Prepara payload + diff
-    to_upload: list[tuple[str, bytes]] = []  # (filename, body)
-    skipped = 0
-    for istat, shard in shards.items():
-        body = json.dumps(shard, ensure_ascii=False, separators=(",", ":")).encode(
-            "utf-8"
-        )
-        local_md5 = md5(body).hexdigest()
-        fname = f"{istat}.json"
-        if not force and remote_etags.get(fname) == local_md5:
-            skipped += 1
-            continue
-        to_upload.append((fname, body))
-
-    log.info(
-        "R2: da uploadare %d, skip %d (cache md5)",
-        len(to_upload),
-        skipped,
-    )
-
-    if not to_upload:
-        return 0, skipped
-
-    uploaded = 0
-    t0 = time.time()
-
-    def _put(item: tuple[str, bytes]) -> str:
-        fname, body = item
-        key = f"{R2_SHARDS_PREFIX}{fname}"
-        r2.put_object(
-            Bucket=R2_BUCKET,
-            Key=key,
-            Body=body,
-            ContentType="application/json",
-        )
-        return fname
-
-    with ThreadPoolExecutor(max_workers=MAX_WORKERS_UPLOAD) as ex:
-        futures = [ex.submit(_put, item) for item in to_upload]
-        for i, fut in enumerate(as_completed(futures), 1):
-            try:
-                fut.result()
-                uploaded += 1
-            except Exception as e:
-                log.error("upload errore: %s", e)
-            if i % 200 == 0:
-                elapsed = time.time() - t0
-                rate = i / elapsed if elapsed > 0 else 0
-                eta = (len(to_upload) - i) / rate if rate > 0 else 0
-                log.info(
-                    "R2 upload: %d/%d (%.0f/s, ETA %.0fs)",
-                    i,
-                    len(to_upload),
-                    rate,
-                    eta,
-                )
-
-    log.info(
-        "R2: %d uploaded in %.1fs (%.1f/s), %d skip",
-        uploaded,
-        time.time() - t0,
-        uploaded / max(time.time() - t0, 0.001),
-        skipped,
-    )
-    return uploaded, skipped
-
-
 def write_local(shards: dict[str, dict], outdir: Path) -> int:
     """Scrive gli shard su filesystem locale invece che su R2.
 
@@ -685,13 +552,12 @@ def run(
     force: bool = False,
     limit: int | None = None,
     dry_run: bool = False,
-    target: str = "local",
     outdir: Path = Path("/var/www/cruscotto-italia/data/redditi"),
 ) -> None:
     log.info("=" * 60)
     log.info("ETL MEF Redditi IRPEF")
     log.info("Anni: %s", years)
-    log.info("Force: %s | Limit: %s | Dry-run: %s | Target: %s", force, limit, dry_run, target)
+    log.info("Force: %s | Limit: %s | Dry-run: %s", force, limit, dry_run)
     log.info("=" * 60)
 
     years_data: dict[int, dict[str, dict]] = {}
@@ -722,12 +588,8 @@ def run(
         print(json.dumps(shards[sample_key], ensure_ascii=False, indent=2))
         return
 
-    if target == "r2":
-        uploaded, skipped = push_shards_r2(shards, force=force)
-        log.info("FINE: uploaded=%d, skipped=%d", uploaded, skipped)
-    else:
-        n = write_local(shards, outdir)
-        log.info("FINE (target=local): %d shard scritti in %s", n, str(outdir))
+    n = write_local(shards, outdir)
+    log.info("FINE: %d shard scritti in %s", n, str(outdir))
 
 
 def parse_args():
@@ -741,7 +603,7 @@ def parse_args():
     p.add_argument(
         "--force",
         action="store_true",
-        help="Ignora cache R2 e md5 diff",
+        help="Ignora cache locale e forza re-download",
     )
     p.add_argument(
         "--limit",
@@ -752,18 +614,19 @@ def parse_args():
     p.add_argument(
         "--dry-run",
         action="store_true",
-        help="Non scrive su R2, stampa solo uno shard di esempio",
+        help="Non scrive su disco, stampa solo uno shard di esempio",
     )
+    # --target tenuto per retrocompat workflow esistenti, ma solo 'local' e' supportato
     p.add_argument(
         "--target",
-        choices=["local", "r2"],
+        choices=["local"],
         default="local",
-        help="Output target: 'local' scrive su disco, 'r2' fa upload Cloudflare R2 (default: local)",
+        help="Solo 'local' supportato (R2 rimosso dall'infrastruttura AgID)",
     )
     p.add_argument(
         "--outdir",
         default="/var/www/cruscotto-italia/data/redditi",
-        help="Output dir per --target=local (default: /var/www/cruscotto-italia/data/redditi)",
+        help="Output dir (default: /var/www/cruscotto-italia/data/redditi)",
     )
     return p.parse_args()
 
@@ -786,7 +649,7 @@ def main():
         sys.exit(2)
 
     run(years=years, force=args.force, limit=args.limit, dry_run=args.dry_run,
-        target=args.target, outdir=Path(args.outdir))
+        outdir=Path(args.outdir))
 
 
 if __name__ == "__main__":
