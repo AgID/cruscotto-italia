@@ -242,24 +242,27 @@ TIPO_ENTE_COMUNE = "CO"
 # Cache R2: raw/siope/reg<XX>_<anno>_comuni.csv (gia' filtrato)
 # ---------------------------------------------------------------------------
 
-def cache_path(reg: str, anno: int) -> Path:
+def cache_path(reg: str, anno: int, cache_dir: Path = None) -> Path:
     """Path locale del file CSV pre-filtrato."""
-    return SIOPE_CACHE_DIR / f"reg{reg}_{anno}_comuni.csv"
+    d = cache_dir if cache_dir is not None else SIOPE_CACHE_DIR
+    return d / f"reg{reg}_{anno}_comuni.csv"
 
 
-def cache_exists(reg: str, anno: int) -> bool:
-    return cache_path(reg, anno).exists()
+def cache_exists(reg: str, anno: int, cache_dir: Path = None) -> bool:
+    return cache_path(reg, anno, cache_dir).exists()
 
 
-def cache_download(reg: str, anno: int) -> bytes:
+def cache_download(reg: str, anno: int, cache_dir: Path = None) -> bytes:
     """Legge CSV pre-filtrato dalla cache locale."""
-    return cache_path(reg, anno).read_bytes()
+    return cache_path(reg, anno, cache_dir).read_bytes()
 
 
-def cache_upload(reg: str, anno: int, csv_bytes: bytes) -> None:
+def cache_upload(reg: str, anno: int, csv_bytes: bytes,
+                 cache_dir: Path = None) -> None:
     """Salva CSV pre-filtrato nella cache locale."""
-    SIOPE_CACHE_DIR.mkdir(parents=True, exist_ok=True)
-    cache_path(reg, anno).write_bytes(csv_bytes)
+    d = cache_dir if cache_dir is not None else SIOPE_CACHE_DIR
+    d.mkdir(parents=True, exist_ok=True)
+    cache_path(reg, anno, cache_dir).write_bytes(csv_bytes)
 
 
 # ---------------------------------------------------------------------------
@@ -375,15 +378,16 @@ def download_and_filter_csv(reg: str, anno: int, log_ctx) -> bytes:
     return filtered_bytes
 
 
-def get_filtered_csv(reg: str, anno: int, use_cache: bool, log_ctx) -> bytes:
+def get_filtered_csv(reg: str, anno: int, use_cache: bool, log_ctx,
+                     cache_dir: Path = None) -> bytes:
     """Ritorna CSV filtrato dalla cache locale o scarica+filtra+cacha."""
-    if use_cache and cache_exists(reg, anno):
-        log_ctx.info("cache_hit", reg=reg, path=str(cache_path(reg, anno)))
-        return cache_download(reg, anno)
+    if use_cache and cache_exists(reg, anno, cache_dir):
+        log_ctx.info("cache_hit", reg=reg, path=str(cache_path(reg, anno, cache_dir)))
+        return cache_download(reg, anno, cache_dir)
 
     csv_bytes = download_and_filter_csv(reg, anno, log_ctx)
-    cache_upload(reg, anno, csv_bytes)
-    log_ctx.info("cache_uploaded", reg=reg, path=str(cache_path(reg, anno)))
+    cache_upload(reg, anno, csv_bytes, cache_dir)
+    log_ctx.info("cache_uploaded", reg=reg, path=str(cache_path(reg, anno, cache_dir)))
     return csv_bytes
 
 
@@ -602,10 +606,8 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    # Override cache dir se specificato
-    if args.cache_dir:
-        global SIOPE_CACHE_DIR
-        SIOPE_CACHE_DIR = args.cache_dir
+    # Cache dir: default SIOPE_CACHE_DIR, override via --cache-dir
+    cache_dir = args.cache_dir if args.cache_dir else SIOPE_CACHE_DIR
 
     # Risolvi anni richiesti
     if args.anno is not None and args.anni is not None:
@@ -642,7 +644,7 @@ def main() -> int:
              regioni=regioni,
              anni=anni,
              use_cache=not args.no_cache,
-             cache_dir=str(SIOPE_CACHE_DIR),
+             cache_dir=str(cache_dir),
              output_dir=str(output_dir))
 
     # Accumulatore: {anno: {istat: year_block}}
@@ -660,6 +662,7 @@ def main() -> int:
                         reg, anno,
                         use_cache=not args.no_cache,
                         log_ctx=log_ctx,
+                        cache_dir=cache_dir,
                     )
                     yb = aggregate_csv_to_shards(csv_bytes, anno, reg, log_ctx)
                     # Merge nel grande accumulatore
