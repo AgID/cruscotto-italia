@@ -41,11 +41,11 @@ on:
         required: false
         default: 'false'
 
-env:
-  R2_ACCOUNT_ID:        ${{ secrets.R2_ACCOUNT_ID }}
-  R2_ACCESS_KEY_ID:     ${{ secrets.R2_ACCESS_KEY_ID }}
-  R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-  R2_BUCKET:            cruscotto-italia-data
+# NOTE 2026-05-17: env R2_* rimosse dopo refactor ETL local-first.
+# Cruscotto Italia AgID non usa piu' Cloudflare R2 (account AgID non puo'
+# crearne). Tutti gli ETL girano --target=local scrivendo direttamente su
+# /var/www/cruscotto-italia/data/ del runner self-hosted Aruba/VM AgID.
+# I secrets GitHub R2_* possono essere rimossi nell'Ondata 2 (post-cutover).
 
 jobs:
   # ---------------------------------------------------------------------------
@@ -79,7 +79,7 @@ jobs:
         # Catturiamo il log per discriminare "skip" da "esecuzione effettiva".
         run: |
           set -o pipefail
-          python -m etl.sources.pun --target=r2 ${{ steps.force.outputs.flag }} \
+          python -m etl.sources.pun --target=local ${{ steps.force.outputs.flag }} \
             2>&1 | tee /tmp/pun-etl.log
           if grep -q "pun_skip" /tmp/pun-etl.log; then
             echo "ran=false" >> $GITHUB_OUTPUT
@@ -120,7 +120,7 @@ jobs:
         # non vengono triggerati.
         run: |
           set -o pipefail
-          python -m etl.sources.carburanti --target=r2 ${{ steps.force.outputs.flag }} \
+          python -m etl.sources.carburanti --target=local ${{ steps.force.outputs.flag }} \
             2>&1 | tee /tmp/carburanti-etl.log
           if grep -q "carburanti_skip" /tmp/carburanti-etl.log; then
             echo "ran=false" >> $GITHUB_OUTPUT
@@ -132,9 +132,9 @@ jobs:
 
   # ---------------------------------------------------------------------------
   # Dashboard rebuild parte SOLO se almeno un ETL upstream (PUN o Carburanti)
-  # ha effettivamente prodotto aggiornamenti. Senza modifiche su R2, ricostruire
-  # il dashboard sarebbe lavoro inutile (i ~7896 unified shard sarebbero
-  # identici a quelli gia' presenti).
+  # ha effettivamente prodotto aggiornamenti. Senza modifiche sul filesystem,
+  # ricostruire il dashboard sarebbe lavoro inutile (i ~7896 unified shard
+  # sarebbero identici a quelli gia' presenti).
   dashboard:
     name: ETL · Dashboard rebuild (single-fetch shard)
     runs-on: [self-hosted, linux, aruba]
@@ -150,7 +150,7 @@ jobs:
           cache-dependency-path: etl/requirements.txt
       - run: pip install -r etl/requirements.txt
       - name: Run Dashboard ETL
-        run: python -m etl.sources.dashboard --target=r2
+        run: python -m etl.sources.dashboard --target=local
 
   # ---------------------------------------------------------------------------
   notify:
@@ -160,8 +160,10 @@ jobs:
     runs-on: [self-hosted, linux, aruba]
     steps:
       - name: Purge worker cache
+        # TODO post-cutover 19/05: URL definitivo cruscotto-italia-mcp.dati.gov.it.
+        # Per ora puntiamo all'URL workers.dev AgID (env-independent, no DNS).
         run: |
-          curl -sS -X POST "https://cruscotto-italia-mcp.datigovit.workers.dev/admin/cache/purge" \
+          curl -sS -X POST "https://cruscotto-italia-mcp.agid.workers.dev/admin/cache/purge" \
             -H "Authorization: Bearer ${{ secrets.WORKER_ADMIN_TOKEN }}" \
             -H "Content-Type: application/json" \
           || echo "Cache purge endpoint non disponibile (non-critical)"

@@ -29,11 +29,11 @@ on:
         required: false
         default: 'false'
 
-env:
-  R2_ACCOUNT_ID:        ${{ secrets.R2_ACCOUNT_ID }}
-  R2_ACCESS_KEY_ID:     ${{ secrets.R2_ACCESS_KEY_ID }}
-  R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-  R2_BUCKET:            cruscotto-italia-data
+# NOTE 2026-05-17: env R2_* rimosse dopo refactor ETL local-first.
+# Cruscotto Italia AgID non usa piu' Cloudflare R2 (account AgID non puo'
+# crearne). Tutti gli ETL girano --target=local scrivendo direttamente su
+# /var/www/cruscotto-italia/data/ del runner self-hosted Aruba/VM AgID.
+# I secrets GitHub R2_* possono essere rimossi nell'Ondata 2 (post-cutover).
 
 jobs:
   # ---------------------------------------------------------------------------
@@ -51,7 +51,7 @@ jobs:
           cache-dependency-path: etl/requirements.txt
       - run: pip install -r etl/requirements.txt
       - name: Run anagrafica ETL
-        run: python -m etl.sources.anagrafica --target=r2
+        run: python -m etl.sources.anagrafica --target=local
 
   # ---------------------------------------------------------------------------
   bdap:
@@ -68,7 +68,7 @@ jobs:
           cache-dependency-path: etl/requirements.txt
       - run: pip install -r etl/requirements.txt
       - name: Run BDAP-MOP ETL
-        run: python -m etl.sources.bdap --target=r2
+        run: python -m etl.sources.bdap --target=local
 
   # ---------------------------------------------------------------------------
   siope:
@@ -93,7 +93,7 @@ jobs:
             echo "flag=" >> $GITHUB_OUTPUT
           fi
       - name: Run SIOPE ETL
-        run: python -m etl.sources.siope --target=r2 --anni=2026 ${{ steps.nocache.outputs.flag }}
+        run: python -m etl.sources.siope --target=local --anni=2026 ${{ steps.nocache.outputs.flag }}
 
   # ---------------------------------------------------------------------------
   anncsu:
@@ -112,12 +112,12 @@ jobs:
       - name: Run ANNCSU ETL (sample shard 1000 punti)
         # Cron: scarica snapshot fresco da agenziaentrate.gov.it (no cache).
         # Genera shard sample anncsu/<istat>.json + push R2.
-        run: python -m etl.sources.anncsu --target=r2
+        run: python -m etl.sources.anncsu --target=local
       - name: Run ANNCSU ETL (full shard, tutti i civici)
         # Riusa cache locale appena scaricata, solo build+push shard pesanti
         # su prefisso R2 anncsu_full/. Esposti via Worker
         # GET /data/anncsu_full/<istat>.json
-        run: python -m etl.sources.anncsu --target=r2 --skip-download --skip-sample --full-shards
+        run: python -m etl.sources.anncsu --target=local --skip-download --skip-sample --full-shards
 
   # ---------------------------------------------------------------------------
   # Sanita' refresh DOPO ANNCSU: il geocoding ANNCSU di farmacie/parafarm.
@@ -143,7 +143,7 @@ jobs:
         # --no-cache no: i CSV MdS sono giornalieri, non serve riscaricarli ogni volta.
         # Il geocoder ANNCSU dentro l'ETL legge automaticamente lo shard fresco
         # da R2 (appena pushato dal job anncsu).
-        run: python -m etl.sources.sanita_mds --target=r2 --force-shard-upload
+        run: python -m etl.sources.sanita_mds --target=local --force-shard-upload
 
   # ---------------------------------------------------------------------------
   # AGCOM Broadband Map (BBmap): copertura banda larga FTTH/FTTC per comune,
@@ -167,7 +167,7 @@ jobs:
           cache-dependency-path: etl/requirements.txt
       - run: pip install -r etl/requirements.txt
       - name: Run AGCOM Broadband Map ETL (skip se sha CSV invariato)
-        run: python -m etl.sources.agcom_bbmap --target=r2
+        run: python -m etl.sources.agcom_bbmap --target=local
 
   # ---------------------------------------------------------------------------
   # Dashboard rebuild parte SOLO quando i 5 ETL upstream sono finiti.
@@ -189,7 +189,7 @@ jobs:
           cache-dependency-path: etl/requirements.txt
       - run: pip install -r etl/requirements.txt
       - name: Run Dashboard ETL
-        run: python -m etl.sources.dashboard --target=r2
+        run: python -m etl.sources.dashboard --target=local
 
   # ---------------------------------------------------------------------------
   notify:
@@ -200,7 +200,7 @@ jobs:
     steps:
       - name: Purge worker cache
         run: |
-          curl -sS -X POST "https://cruscotto-italia-mcp.datigovit.workers.dev/admin/cache/purge" \
+          curl -sS -X POST "https://cruscotto-italia-mcp.agid.workers.dev/admin/cache/purge" \
             -H "Authorization: Bearer ${{ secrets.WORKER_ADMIN_TOKEN }}" \
             -H "Content-Type: application/json" \
           || echo "Cache purge endpoint non disponibile (non-critical)"

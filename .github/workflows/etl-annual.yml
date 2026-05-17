@@ -29,11 +29,11 @@ on:
           - april
           - july
 
-env:
-  R2_ACCOUNT_ID:        ${{ secrets.R2_ACCOUNT_ID }}
-  R2_ACCESS_KEY_ID:     ${{ secrets.R2_ACCESS_KEY_ID }}
-  R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-  R2_BUCKET:            cruscotto-italia-data
+# NOTE 2026-05-17: env R2_* rimosse dopo refactor ETL local-first.
+# Cruscotto Italia AgID non usa piu' Cloudflare R2 (account AgID non puo'
+# crearne). Tutti gli ETL girano --target=local scrivendo direttamente su
+# /var/www/cruscotto-italia/data/ del runner self-hosted Aruba/VM AgID.
+# I secrets GitHub R2_* possono essere rimossi nell'Ondata 2 (post-cutover).
 
 jobs:
   # ---------------------------------------------------------------------------
@@ -53,7 +53,7 @@ jobs:
           cache-dependency-path: etl/requirements.txt
       - run: pip install -r etl/requirements.txt
       - name: Run Demografia ETL
-        run: python -m etl.sources.demografia --target=r2
+        run: python -m etl.sources.demografia --target=local
 
   profilo:
     name: ETL · Profilo (Censimento permanente ISTAT)
@@ -69,7 +69,7 @@ jobs:
           cache-dependency-path: etl/requirements.txt
       - run: pip install -r etl/requirements.txt
       - name: Run Profilo ETL
-        run: python -m etl.sources.istat_profilo --target=r2
+        run: python -m etl.sources.istat_profilo --target=local
 
   aria:
     name: ETL · Aria (ISPRA SNPA qualità aria - PM10/PM2.5/NO2)
@@ -85,7 +85,7 @@ jobs:
           cache-dependency-path: etl/requirements.txt
       - run: pip install -r etl/requirements.txt
       - name: Run Aria ETL
-        run: python -m etl.sources.aria --target=r2
+        run: python -m etl.sources.aria --target=local
 
   asia:
     name: ETL · ISTAT ASIA UL (imprese e addetti per comune)
@@ -106,7 +106,7 @@ jobs:
           cache-dependency-path: etl/requirements.txt
       - run: pip install -r etl/requirements.txt
       - name: Run ASIA ETL (chunked SDMX, polite mode)
-        run: python -m etl.sources.asia --target=r2
+        run: python -m etl.sources.asia --target=local
 
   # ---------------------------------------------------------------------------
   # WINDOW 2: APRILE — turismo
@@ -125,7 +125,7 @@ jobs:
           cache-dependency-path: etl/requirements.txt
       - run: pip install -r etl/requirements.txt
       - name: Run Turismo ETL
-        run: python -m etl.sources.istat_turismo --target=r2
+        run: python -m etl.sources.istat_turismo --target=local
 
   # ---------------------------------------------------------------------------
   # WINDOW 3: LUGLIO — territorio
@@ -144,7 +144,7 @@ jobs:
           cache-dependency-path: etl/requirements.txt
       - run: pip install -r etl/requirements.txt
       - name: Run Territorio ETL
-        run: python -m etl.sources.territorio --target=r2
+        run: python -m etl.sources.territorio --target=local
 
   veicoli:
     name: ETL · Veicoli e incidenti (ISTAT 41_993 + 41_983 + ACI LOD)
@@ -160,7 +160,7 @@ jobs:
           cache-dependency-path: etl/requirements.txt
       - run: pip install -r etl/requirements.txt
       - name: Run Veicoli ETL
-        run: python -m etl.sources.veicoli --target=r2
+        run: python -m etl.sources.veicoli --target=local
 
   # ---------------------------------------------------------------------------
   # Dashboard rebuild parte dopo TUTTI i job ETL della finestra (qualsiasi
@@ -180,7 +180,7 @@ jobs:
           cache-dependency-path: etl/requirements.txt
       - run: pip install -r etl/requirements.txt
       - name: Run Redditi ETL
-        run: python -m etl.sources.redditi --target=r2
+        run: python -m etl.sources.redditi --target=local
 
   immobili_pa:
     name: ETL · MEF Patrimonio Immobiliare PA (Beni immobili pubblici 2022)
@@ -196,7 +196,7 @@ jobs:
           cache-dependency-path: etl/requirements.txt
       - run: pip install -r etl/requirements.txt
       - name: Run Immobili PA ETL (loop su tutte le 20 regioni)
-        run: python -m etl.sources.immobili_pa --regione=ALL --target=r2
+        run: python -m etl.sources.immobili_pa --regione=ALL --target=local
 
   dashboard:
     name: ETL · Dashboard rebuild (single-fetch shard)
@@ -213,7 +213,7 @@ jobs:
           cache-dependency-path: etl/requirements.txt
       - run: pip install -r etl/requirements.txt
       - name: Run Dashboard ETL
-        run: python -m etl.sources.dashboard --target=r2
+        run: python -m etl.sources.dashboard --target=local
 
   # ---------------------------------------------------------------------------
   notify:
@@ -224,7 +224,7 @@ jobs:
     steps:
       - name: Purge worker cache
         run: |
-          curl -sS -X POST "https://cruscotto-italia-mcp.datigovit.workers.dev/admin/cache/purge" \
+          curl -sS -X POST "https://cruscotto-italia-mcp.agid.workers.dev/admin/cache/purge" \
             -H "Authorization: Bearer ${{ secrets.WORKER_ADMIN_TOKEN }}" \
             -H "Content-Type: application/json" \
           || echo "Cache purge endpoint non disponibile (non-critical)"

@@ -28,11 +28,11 @@ on:
         required: false
         default: ''
 
-env:
-  R2_ACCOUNT_ID:        ${{ secrets.R2_ACCOUNT_ID }}
-  R2_ACCESS_KEY_ID:     ${{ secrets.R2_ACCESS_KEY_ID }}
-  R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-  R2_BUCKET:            cruscotto-italia-data
+# NOTE 2026-05-17: env R2_* rimosse dopo refactor ETL local-first.
+# Cruscotto Italia AgID non usa piu' Cloudflare R2 (account AgID non puo'
+# crearne). Tutti gli ETL girano --target=local scrivendo direttamente su
+# /var/www/cruscotto-italia/data/ del runner self-hosted Aruba/VM AgID.
+# I secrets GitHub R2_* possono essere rimossi nell'Ondata 2 (post-cutover).
 
 jobs:
   # ---------------------------------------------------------------------------
@@ -58,7 +58,7 @@ jobs:
             echo "value=$(date -u +%Y)" >> $GITHUB_OUTPUT
           fi
       - name: Run ANAC ETL
-        run: python -m etl.sources.anac --target=r2 --years=${{ steps.years.outputs.value }}
+        run: python -m etl.sources.anac --target=local --years=${{ steps.years.outputs.value }}
 
   # ---------------------------------------------------------------------------
   pnrr:
@@ -75,7 +75,7 @@ jobs:
           cache-dependency-path: etl/requirements.txt
       - run: pip install -r etl/requirements.txt
       - name: Run PNRR ETL
-        run: python -m etl.sources.pnrr_progetti --target=r2
+        run: python -m etl.sources.pnrr_progetti --target=local
 
   # ---------------------------------------------------------------------------
   sanita_mds:
@@ -92,7 +92,7 @@ jobs:
           cache-dependency-path: etl/requirements.txt
       - run: pip install -r etl/requirements.txt
       - name: Run Sanita' MdS ETL
-        run: python -m etl.sources.sanita_mds --target=r2 --no-cache
+        run: python -m etl.sources.sanita_mds --target=local --no-cache
 
   # ---------------------------------------------------------------------------
   # RUNTS Min. Lavoro - Registro Unico Nazionale del Terzo Settore.
@@ -113,7 +113,7 @@ jobs:
           cache-dependency-path: etl/requirements.txt
       - run: pip install -r etl/requirements.txt
       - name: Run RUNTS ETL
-        run: python -m etl.sources.runts --target=r2
+        run: python -m etl.sources.runts --target=local
 
   # ---------------------------------------------------------------------------
   # Dashboard: rebuild dei dashboard/<istat>.json shard a valle di
@@ -134,7 +134,7 @@ jobs:
           cache-dependency-path: etl/requirements.txt
       - run: pip install -r etl/requirements.txt
       - name: Run Dashboard ETL
-        run: python -m etl.sources.dashboard --target=r2
+        run: python -m etl.sources.dashboard --target=local
 
   # ---------------------------------------------------------------------------
   notify:
@@ -145,7 +145,7 @@ jobs:
     steps:
       - name: Purge worker cache
         run: |
-          curl -sS -X POST "https://cruscotto-italia-mcp.datigovit.workers.dev/admin/cache/purge" \
+          curl -sS -X POST "https://cruscotto-italia-mcp.agid.workers.dev/admin/cache/purge" \
             -H "Authorization: Bearer ${{ secrets.WORKER_ADMIN_TOKEN }}" \
             -H "Content-Type: application/json" \
           || echo "Cache purge endpoint non disponibile (non-critical)"
