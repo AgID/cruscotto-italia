@@ -30,13 +30,13 @@ PY=/usr/bin/python3
 LOG=/var/log/cruscotto-etl
 
 # ──────────────────────────────────────────────────────────────────────
-# DAILY (ogni giorno alle 08:00 UTC, dopo che MIMIT publica i carburanti)
+# DAILY (ogni giorno alle 09:00 UTC, margine 2h dopo MIMIT pubblica)
 # Replicava etl-daily.yml su GitHub Actions.
 # Ordine: pun + carburanti in parallelo, poi dashboard (A1 aggregator).
 # ──────────────────────────────────────────────────────────────────────
-0 8 * * * ubuntu cd $REPO && $PY -m etl.sources.pun        2>&1 | tee $LOG/pun-$(date +\%Y\%m\%d).log
-0 8 * * * ubuntu cd $REPO && $PY -m etl.sources.carburanti 2>&1 | tee $LOG/carburanti-$(date +\%Y\%m\%d).log
-30 8 * * * ubuntu cd $REPO && $PY -m etl.sources.dashboard 2>&1 | tee $LOG/dashboard-daily-$(date +\%Y\%m\%d).log
+0 9 * * * ubuntu cd $REPO && $PY -m etl.sources.pun        2>&1 | tee $LOG/pun-$(date +\%Y\%m\%d).log
+0 9 * * * ubuntu cd $REPO && $PY -m etl.sources.carburanti 2>&1 | tee $LOG/carburanti-$(date +\%Y\%m\%d).log
+30 9 * * * ubuntu cd $REPO && $PY -m etl.sources.dashboard 2>&1 | tee $LOG/dashboard-daily-$(date +\%Y\%m\%d).log
 
 # ──────────────────────────────────────────────────────────────────────
 # PULL-ARTIFACT (ogni giorno alle 07:30 UTC, prima del dashboard daily)
