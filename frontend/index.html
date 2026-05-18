@@ -298,6 +298,10 @@ header.masthead::after{
   padding:2px 6px;
   font-size:11px;
   font-weight:600;
+  display:inline-flex;
+  align-items:center;
+  vertical-align:middle;
+  min-height:14px;
 }
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 
@@ -695,7 +699,7 @@ footer .footer-bottom a {
         <div class="suggestions" id="suggestions" role="listbox"></div>
       </div>
       <div class="search-helper">
-<kbd aria-hidden="true">↑</kbd> <kbd aria-hidden="true">↓</kbd><span class="sr-only">freccia su, freccia giù</span> per navigare · <kbd aria-hidden="true">↵</kbd><span class="sr-only">Invio</span> per aprire · <kbd>esc</kbd> per chiudere
+<kbd aria-label="freccia su" role="img"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg></kbd> <kbd aria-label="freccia giù" role="img"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg></kbd> per navigare · <kbd aria-label="Invio" role="img"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true"><polyline points="9 10 4 15 9 20"/><path d="M20 4v7a4 4 0 0 1-4 4H4"/></svg></kbd> per aprire · <kbd>esc</kbd> per chiudere
       </div>
     </div>
   </div>
