@@ -91,8 +91,7 @@ Amministrazione, AgID).
 ```
 
 Dettagli architetturali completi: [`DESIGN.md`](DESIGN.md) ·
-[`docs/INFRASTRUCTURE.md`](docs/INFRASTRUCTURE.md) · [`docs/SECURITY.md`](docs/SECURITY.md) ·
-[`deploy/HANDOFF.md`](deploy/HANDOFF.md).
+[`docs/INFRASTRUCTURE.md`](docs/INFRASTRUCTURE.md) · [`docs/SECURITY.md`](docs/SECURITY.md).
 
 ### Cadenze ETL
 
@@ -220,8 +219,7 @@ con `DATA_DIR` env override (default `/var/www/cruscotto-italia/data/`).
 ### Deploy
 
 Frontend e dati ETL girano sulla VM AgID via cron — non c'è "deploy
-frontend" in senso CI/CD: il sito è un git pull sulla VM (vedi
-[`deploy/HANDOFF.md`](deploy/HANDOFF.md)).
+frontend" in senso CI/CD: il sito è un git pull sulla VM.
 
 Il Worker MCP si deploya su Cloudflare AgID con:
 
@@ -307,13 +305,6 @@ cruscotto-italia/
 │   ├── deploy-worker.yml         ← deploy Cloudflare Worker su push main
 │   ├── deploy-frontend.yml       ← sync frontend (legacy, in dismissione)
 │   └── ci.yml                    ← CI lint & test (ruff, mypy, pytest, tsc)
-│
-├── deploy/
-│   ├── HANDOFF.md            ← documento operativo cutover VM
-│   ├── SETUP_CRON_NOTES.md   ← istruzioni cron per VM AgID
-│   ├── cron/
-│   │   └── cruscotto-etl     ← template /etc/cron.d/cruscotto-etl
-│   └── nginx/                ← vhost templates
 │
 ├── docs/                     ← documentazione tecnica
 ├── scripts/                  ← utility (smoke-test-etl, pa11y-*, analytics)
