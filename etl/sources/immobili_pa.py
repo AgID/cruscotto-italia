@@ -66,6 +66,7 @@ from pathlib import Path
 import requests
 import structlog
 
+from etl.lib import manifest
 # Riuso lookup canonica (load_cat_to_istat e' adesso local-first)
 from etl.sources.scuole import load_cat_to_istat
 
@@ -385,6 +386,18 @@ def main() -> int:
     log.info("etl_aggregated", comuni_totali=len(all_shards))
 
     write_local(all_shards, Path(args.outdir))
+
+    # Manifest update best-effort
+    try:
+        out_dir = Path(args.outdir)
+        files = [{"name": f.name,
+                  "size": f.stat().st_size,
+                  "key": f"immobili_pa/{f.name}"}
+                 for f in sorted(out_dir.glob("*.json"))]
+        manifest.update_source("immobili_pa", files, status="ok")
+        log.info("immobili_pa_manifest_updated", n_files=len(files))
+    except Exception as e:
+        log.warning("immobili_pa_manifest_update_skipped", err=str(e))
 
     log.info("etl_done", comuni_with_data=len(all_shards))
     return 0

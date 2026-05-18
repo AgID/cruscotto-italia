@@ -56,6 +56,8 @@ from pathlib import Path
 
 import structlog
 
+from etl.lib import manifest
+
 log = structlog.get_logger()
 
 # ═════════════════════════════════════════════════════════════════════════
@@ -490,6 +492,17 @@ def main() -> int:
 
     # FASE 4: write shards
     n_written = write_shards(kpi_per_comune, output_dir, limit=limit_set)
+
+    # Manifest update best-effort
+    try:
+        files = [{"name": f.name,
+                  "size": f.stat().st_size,
+                  "key": f"pendolarismo/{f.name}"}
+                 for f in sorted(output_dir.glob("*.json"))]
+        manifest.update_source("pendolarismo", files, status="ok")
+        log.info("pendolarismo_manifest_updated", n_files=len(files))
+    except Exception as e:
+        log.warning("pendolarismo_manifest_update_skipped", err=str(e))
 
     elapsed = time.time() - t_start
     log.info("pendolarismo_etl_done",

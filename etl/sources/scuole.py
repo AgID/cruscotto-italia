@@ -70,7 +70,7 @@ from pathlib import Path
 import requests
 import structlog
 
-from etl.lib import local_lookup
+from etl.lib import local_lookup, manifest
 
 log = structlog.get_logger(__name__)
 
@@ -315,6 +315,18 @@ def main() -> int:
     shards = build_shards(csv_paths, cat_to_istat, anno_label, data_estrazione)
 
     write_local(shards, Path(args.outdir))
+
+    # Manifest update best-effort
+    try:
+        out_dir = Path(args.outdir)
+        files = [{"name": f.name,
+                  "size": f.stat().st_size,
+                  "key": f"scuole/{f.name}"}
+                 for f in sorted(out_dir.glob("*.json"))]
+        manifest.update_source("scuole", files, status="ok")
+        log.info("scuole_manifest_updated", n_files=len(files))
+    except Exception as e:
+        log.warning("scuole_manifest_update_skipped", err=str(e))
 
     log.info("etl_done", comuni_with_data=len(shards),
              anno_scolastico=anno_label, data_estrazione=data_estrazione)

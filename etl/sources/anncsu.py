@@ -86,7 +86,7 @@ from pathlib import Path
 import requests
 import structlog
 
-from etl.lib import local_lookup
+from etl.lib import local_lookup, manifest
 
 log = structlog.get_logger()
 
@@ -881,6 +881,23 @@ def main() -> int:
         n_written_full = build_all_full_shards(strad_data, indir_data, snapshot,
                                                full_out_dir,
                                                canonical_istat=canonical)
+
+    # Manifest update best-effort (sample + full)
+    try:
+        files = []
+        if not args.skip_sample:
+            files.extend([{"name": f.name,
+                           "size": f.stat().st_size,
+                           "key": f"anncsu/{f.name}"}
+                          for f in sorted(Path(args.outdir).glob("*.json"))])
+        if args.full_shards:
+            full_dir = Path(args.full_outdir)
+            files.append({"key": "anncsu_full/*",
+                          "count": sum(1 for _ in full_dir.glob("*.json"))})
+        manifest.update_source("anncsu", files, status="ok")
+        log.info("anncsu_manifest_updated", n_files=len(files))
+    except Exception as e:
+        log.warning("anncsu_manifest_update_skipped", err=str(e))
 
     elapsed = time.time() - t_start
     log.info("anncsu_etl_done", elapsed_s=round(elapsed, 1),

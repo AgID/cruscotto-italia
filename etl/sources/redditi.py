@@ -28,6 +28,8 @@ from typing import Any
 
 import requests
 
+from etl.lib import manifest
+
 # -----------------------------------------------------------------------------
 # Configurazione
 # -----------------------------------------------------------------------------
@@ -590,6 +592,17 @@ def run(
 
     n = write_local(shards, outdir)
     log.info("FINE: %d shard scritti in %s", n, str(outdir))
+
+    # Manifest update best-effort
+    try:
+        files = [{"name": f.name,
+                  "size": f.stat().st_size,
+                  "key": f"redditi/{f.name}"}
+                 for f in sorted(outdir.glob("*.json"))]
+        manifest.update_source("redditi", files, status="ok")
+        log.info("redditi_manifest_updated: n_files=%d", len(files))
+    except Exception as e:
+        log.warning("redditi_manifest_update_skipped: %s", str(e))
 
 
 def parse_args():

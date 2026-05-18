@@ -88,7 +88,7 @@ from pathlib import Path
 import requests
 import structlog
 
-from etl.lib import local_lookup
+from etl.lib import local_lookup, manifest
 
 log = structlog.get_logger(__name__)
 
@@ -823,6 +823,17 @@ def main() -> int:
     out_dir = Path(args.outdir)
     n_written = build_all_shards(grouped, canonical_istat,
                                   snapshot_date, out_dir)
+
+    # Manifest update best-effort
+    try:
+        files = [{"name": f.name,
+                  "size": f.stat().st_size,
+                  "key": f"runts/{f.name}"}
+                 for f in sorted(out_dir.glob("*.json"))]
+        manifest.update_source("runts", files, status="ok")
+        log.info("runts_manifest_updated", n_files=len(files))
+    except Exception as e:
+        log.warning("runts_manifest_update_skipped", err=str(e))
 
     elapsed = time.time() - t_start
     log.info("runts_etl_done",
