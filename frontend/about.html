@@ -910,6 +910,52 @@ footer a:hover { color: #fff !important; }
   </div>
 </section>
 
+<!-- ============ § PROGETTO GEMELLO SIMBA ============ -->
+<section class="about-section" id="simba">
+  <div class="wrap">
+    <div class="section-title">§ progetto gemello</div>
+    <h2 class="section-h"><em>SIMBA</em>, assistente conversazionale per gli open data.</h2>
+    <p>
+      <strong>SIMBA</strong> (Sistema Intelligente per la Mediazione delle Banche dati Aperte)
+      è il chatbot AgID che affianca Cruscotto Italia nel rendere accessibili i dati pubblici
+      italiani. Mentre Cruscotto Italia federa dataset istituzionali su base comunale in una
+      vista strutturata, SIMBA offre un'<strong>interfaccia conversazionale</strong> per
+      esplorare l'intero catalogo nazionale di open data CKAN e gli endpoint SPARQL del
+      Linked Open Data italiano.
+    </p>
+    <p>
+      L'utente formula domande in linguaggio naturale (italiano o inglese): SIMBA comprende
+      l'intento, interroga in tempo reale <a href="https://www.dati.gov.it/" target="_blank" rel="noopener noreferrer">dati.gov.it</a>,
+      <a href="https://lod.dati.gov.it/sparql/" target="_blank" rel="noopener noreferrer">lod.dati.gov.it/sparql</a>
+      e altri portali CKAN regionali, restituisce risultati strutturati con riferimenti diretti
+      alle fonti, e propone strumenti integrati per la validazione di CSV e la trasformazione
+      in RDF/TTL.
+    </p>
+
+    <h3 class="section-h-small">Cosa lo distingue.</h3>
+    <ul>
+      <li><strong>Open Data nativo</strong>: parla CKAN e SPARQL come prima lingua, non come integrazione esterna.</li>
+      <li><strong>Trasparente</strong>: ogni risposta cita la fonte dataset con titolare, licenza, frequenza di aggiornamento.</li>
+      <li><strong>Guardrail multi-livello</strong>: filtri contenutistici a 6 livelli (272 pattern di sicurezza) per evitare prompt injection e usi impropri del LLM.</li>
+      <li><strong>Privacy-first</strong>: nessun cookie di profilazione, log anonimi, ricerche non associate a IP o identificativi personali.</li>
+      <li><strong>Strumenti integrati</strong>: validatore CSV secondo linee guida AgID (RFC 4180, ISO 25012), trasformazione in RDF/TTL, ricerca dataset, esplorazione SPARQL.</li>
+    </ul>
+
+    <h3 class="section-h-small">Tecnologia.</h3>
+    <p>
+      SIMBA è costruito su uno stack a 7 microservizi containerizzati Docker: frontend React + Vite,
+      backend Node.js Express, microservizi Python per validazione, RDF/SPARQL e guardrail di sicurezza,
+      runtime LLM Ollama su GPU. Il codice è pubblicato su
+      <a href="https://github.com/AgID/simba-chatbot" target="_blank" rel="noopener noreferrer">github.com/AgID/simba-chatbot</a>
+      con licenza AGPL-3.0.
+    </p>
+
+    <p style="margin-top:var(--sp-5);">
+      <a href="https://chatbot.dati.gov.it/chatbot/" target="_blank" rel="noopener noreferrer" class="cta-link"><strong>Apri SIMBA</strong> →</a>
+    </p>
+  </div>
+</section>
+
 <!-- ============ § CREDITI ============ -->
 <section class="about-section" id="crediti">
   <div class="wrap">
