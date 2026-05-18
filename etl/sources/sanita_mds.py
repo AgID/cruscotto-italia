@@ -7,14 +7,15 @@ Integrazione 15a fonte di Cruscotto Italia. Bundle 3 dataset:
                      ~11.6k righe disciplina, ~1.260 stabilimenti)
 
 Dipendenza ANNCSU (geocoding):
-  Questo ETL legge `anncsu_full/<istat>.json` da R2 per arricchire le
-  coordinate delle farmacie/parafarmacie con coord MdS errate o mancanti.
-  Migliore l'ANNCSU su R2, migliore la copertura coordinate. Per questo
+  Questo ETL legge `anncsu_full/<istat>.json` dal filesystem locale
+  (tipicamente /var/www/cruscotto-italia/data/anncsu_full/) per arricchire
+  le coordinate delle farmacie/parafarmacie con coord MdS errate o mancanti.
+  Migliore l'ANNCSU locale, migliore la copertura coordinate. Per questo
   motivo:
     - etl-monthly.yml: job `sanita_mds_refresh` parte SOLO dopo `anncsu`,
       garantendo che il geocoding usi l'ANNCSU appena aggiornato
-    - etl-weekly.yml: job `sanita_mds` (cron settimanale) usa l'ANNCSU
-      attualmente su R2 (snapshot dell'ultimo monthly run)
+    - cron daily VM AgID (08:30 UTC) usa l'ANNCSU attualmente sul disco
+      locale (snapshot dell'ultimo monthly run del giorno 5 del mese)
   Se ANNCSU non e' disponibile per un comune (5387/7896 = 68% copertura),
   fallback al solo filtro centroide-based + drop coord errate.
 
@@ -41,7 +42,7 @@ Outlier coordinate e geocoding:
   - ~5-15% farmacie con lat/lon errate alla fonte MdS (osservato Roma 2026-05-13:
     punti del comune 058091 sparsi in tutto il Lazio).
   - Strategia: filtro centroide robust (mediana ± 0.3°/0.15° dal centro)
-    + geocoding via ANNCSU (anncsu_full/<istat>.json su R2):
+    + geocoding via ANNCSU (anncsu_full/<istat>.json locale):
        - outlier centroide -> tenta ANNCSU; se match: 'anncsu'; altrimenti: 'dropped'
        - senza coord MdS -> tenta ANNCSU; se match: 'anncsu'; altrimenti: 'no_coord'
   - lat_raw/lon_raw preservano sempre i valori MdS originali (audit trail).
@@ -508,12 +509,14 @@ def _try_swap_name(odonimo: str) -> str:
 
 
 class _AnncsuGeocoder:
-    """Geocoder che usa shard anncsu_full/<istat>.json da R2.
+    """Geocoder che usa shard anncsu_full/<istat>.json dal filesystem locale.
 
     Pattern: cache dict illimitata (~5387 shard = ~100MB RAM stimati).
     Pre-fetch parallelo via ThreadPoolExecutor(24) all'inizio del build,
     prima di entrare nel loop sequenziale che fa il geocoding.
 
+    Sorgente shard: /var/www/cruscotto-italia/data/anncsu_full/<istat>.json
+    (refactor local-first 2026-05-17, R2 rimosso dall'infrastruttura AgID).
     Coverage data/anncsu_full/: 5387 comuni / 7896 totali (68%).
     Per i comuni non coperti, geocode() ritorna None (fallback drop).
     """
