@@ -46,8 +46,8 @@ body{
 .skip{position:absolute;left:-9999px;top:auto}
 .skip:focus{left:8px;top:8px;background:var(--ink);color:var(--paper);padding:8px 12px;z-index:1000}
 .wrap{max-width:1180px;margin:0 auto;padding:0 28px}
-a{color:var(--accent);text-decoration:none;border-bottom:1px solid transparent;transition:border-color .15s}
-a:hover{border-bottom-color:var(--accent)}
+a{color:var(--accent);text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:2px;transition:text-decoration-thickness .15s}
+a:hover{text-decoration-thickness:2px}
 
 /* ---- Masthead (identico all'index) ---- */
 .masthead{border-bottom:2px solid var(--rule);padding:24px 0 18px;background:var(--paper)}
