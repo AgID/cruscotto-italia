@@ -5716,7 +5716,7 @@ async function initCarburantiChart(d, regione) {
   let nazData = window.__carburantiNazionale;
   if (!nazData) {
     try {
-      const r = await fetch('https://cruscotto-italia-data.r2.dev/carburanti/_nazionale.json',
+      const r = await fetch('/data/carburanti/_nazionale.json',
         { method: 'GET' });
       if (r.ok) {
         nazData = await r.json();
