@@ -266,7 +266,9 @@ def extract_referer_domain(referer: str) -> str | None:
         if not host:
             return None
         # Auto-referer (l'utente naviga internamente)
-        if "cruscotto-italia" in host or "piersoftckan.biz" in host:
+        # cruscotto-italia* match sia .dati.gov.it sia .piersoftckan.biz legacy.
+        # dati.gov.it cattura anche chatbot.dati.gov.it (SIMBA) e altri sotto-domini.
+        if "cruscotto-italia" in host or "dati.gov.it" in host or "piersoftckan.biz" in host:
             return None
         return host
     except Exception:
@@ -751,7 +753,7 @@ def render_html(stats: dict, mcp_stats_path: Path | None = None, title: str = "C
             "<p class=\"meta\">Distribuzione degli scanner per server nginx che "
             "ha ricevuto e gestito la richiesta. Gli scanner che colpiscono "
             "per IP del server vengono routati al default alfabetico "
-            "(chatbot.piersoftckan.biz).</p>\n"
+            "(chatbot.dati.gov.it).</p>\n"
             + render_table(rows_host, ("Server nginx", "Tentativi"))
         )
     elif len(by_host) == 1:

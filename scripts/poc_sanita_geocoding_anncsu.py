@@ -106,7 +106,7 @@ def load_sanita_shard(istat: str) -> dict:
 
 def fetch_anncsu_full(istat: str) -> dict:
     """Scarica anncsu_full/<istat>.json da R2 via Worker."""
-    url = f"https://cruscotto-italia-mcp.piersoftckan.biz/data/anncsu_full/{istat}.json"
+    url = f"https://cruscotto-italia-mcp.dati.gov.it/data/anncsu_full/{istat}.json"
     req = urllib.request.Request(url, headers={
         "User-Agent": "poc-sanita-geocoding/0.1",
         "Accept-Encoding": "gzip",

@@ -41,7 +41,7 @@ TESTS=(
 echo "######################################################################"
 echo "#  Pa11y master runner — Cruscotto Italia"
 echo "#  Standard: ${STANDARD:-WCAG2AA}"
-echo "#  Base URL: ${BASE_URL:-https://cruscotto-italia.piersoftckan.biz}"
+echo "#  Base URL: ${BASE_URL:-https://cruscotto-italia.dati.gov.it}"
 echo "######################################################################"
 echo ""
 

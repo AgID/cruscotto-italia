@@ -3,8 +3,7 @@
 manifest.json e' la source of truth per Worker MCP AgID:
 quali dataset sono disponibili, quando sono stati generati, dimensioni.
 Worker lo legge via HTTPS:  fetch(`${DATA_BASE_URL}/manifest.json`)
-  - transitorio Aruba: https://cruscotto-italia.piersoftckan.biz/data/manifest.json
-  - post-cutover AgID: https://cruscotto-italia.dati.gov.it/data/manifest.json
+  - in produzione AgID: https://cruscotto-italia.dati.gov.it/data/manifest.json
 
 Storage: filesystem locale, default /var/www/cruscotto-italia/data/manifest.json
 (percorso configurabile via env DATA_DIR di local_lookup).

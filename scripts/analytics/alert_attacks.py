@@ -169,7 +169,7 @@ def format_alert(delta: int, threshold: int, current: int,
                 safe_p = safe_p[:60] + "…"
             lines.append(f"  • <code>{safe_p}</code> — {n}")
         lines.append("")
-    lines.append(f"🔗 https://cruscotto-italia.piersoftckan.biz/stats/")
+    lines.append(f"🔗 https://cruscotto-italia.dati.gov.it/stats/")
     return "\n".join(lines)
 
 

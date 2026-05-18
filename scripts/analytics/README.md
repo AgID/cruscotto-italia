@@ -46,7 +46,7 @@ sudo htpasswd -c /etc/nginx/.htpasswd-stats piersoft
 
 ### 4. nginx location
 
-Aggiungi nel server block di `cruscotto-italia.piersoftckan.biz`:
+Aggiungi nel server block di `cruscotto-italia.dati.gov.it`:
 
 ```nginx
 location /stats/ {
@@ -86,7 +86,7 @@ sudo python3 scripts/analytics/stats_aggregator.py \
   --exclude-test-comuni
 ```
 
-Poi apri `https://cruscotto-italia.piersoftckan.biz/stats/` (auth richiesta).
+Poi apri `https://cruscotto-italia.dati.gov.it/stats/` (auth richiesta).
 
 ## Cron giornaliero (opzionale)
 

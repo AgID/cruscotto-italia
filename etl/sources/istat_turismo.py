@@ -51,7 +51,7 @@ log = structlog.get_logger()
 SDMX_BASE = "https://esploradati.istat.it/SDMXWS/rest"
 SDMX_AGENCY = "IT1"
 SDMX_VERSION = "1.0"
-UA = "cruscotto-italia/1.0 (+https://cruscotto-italia.piersoftckan.biz)"
+UA = "cruscotto-italia/1.0 (+https://cruscotto-italia.dati.gov.it)"
 
 # Anno di riferimento
 ANNO = 2024

@@ -158,7 +158,7 @@ def fetch_csv(inquinante: str, url: str, no_cache: bool = False) -> Path:
 
     log.info("aria_downloading", inquinante=inquinante, url=url)
     headers = {
-        "User-Agent": "Mozilla/5.0 Cruscotto-Italia/1.0 (+https://cruscotto-italia.piersoftckan.biz)",
+        "User-Agent": "Mozilla/5.0 Cruscotto-Italia/1.0 (+https://cruscotto-italia.dati.gov.it)",
         "Accept": "text/csv,application/csv,*/*",
     }
     resp = requests.get(url, headers=headers, timeout=120)

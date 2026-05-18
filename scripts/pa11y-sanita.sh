@@ -22,7 +22,7 @@
 
 set -uo pipefail
 
-BASE_URL="${BASE_URL:-https://cruscotto-italia.piersoftckan.biz}"
+BASE_URL="${BASE_URL:-https://cruscotto-italia.dati.gov.it}"
 PA11Y="${PA11Y:-pa11y}"
 STANDARD="${STANDARD:-WCAG2AA}"
 

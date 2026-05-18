@@ -49,7 +49,7 @@ log = structlog.get_logger()
 PNRR_PROGETTI_URL = (
     "https://www.italiadomani.gov.it/content/dam/sogei-ng/opendata/PNRR_Progetti.csv"
 )
-UA = "cruscotto-italia/1.0 (+https://cruscotto-italia.piersoftckan.biz)"
+UA = "cruscotto-italia/1.0 (+https://cruscotto-italia.dati.gov.it)"
 
 # Aumenta il limite csv di Python (alcune righe sono molto lunghe)
 csv.field_size_limit(min(2**31 - 1, sys.maxsize))
