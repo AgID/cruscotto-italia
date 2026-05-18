@@ -3,7 +3,7 @@ main = "src/index.ts"
 compatibility_date = "2026-05-01"
 compatibility_flags = ["nodejs_compat"]
 
-# Account AgID (Dati@agid.gov.it's Account)
+# Account AgID
 account_id = "9e615f727c341cba62841a333b2a42a4"
 
 # Deploy iniziale su <name>.<account>.workers.dev
