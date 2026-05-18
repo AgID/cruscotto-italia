@@ -128,6 +128,22 @@ LOG=/var/log/cruscotto-etl
 0 14 1 7 * ubuntu cd $REPO && $PY -m etl.sources.dashboard     2>&1 | tee $LOG/dashboard-annual-jul-$(date +\%Y\%m\%d).log
 
 # ──────────────────────────────────────────────────────────────────────
+# MIUR SCUOLE (5 settembre alle 04:00 UTC)
+# Anagrafe Scuole Statali pubblicata dal MIUR il 1° settembre con i
+# dati dell'A.S. che inizia (es. A.S. 2026/27 pubblicato il 01/09/2026).
+# Gira il 5 settembre con 4 giorni di margine per garantire che il
+# file sia gia' online e stabile (~50.000 scuole in 6.657 comuni).
+# Seguito dal dashboard refresh per propagare i nuovi dati MIUR
+# nell'aggregato A1 unificato.
+#
+# NOTA: dataset annuale single-window (settembre) — NON segue il pattern
+# 3-finestre delle altre fonti annuali (feb/apr/lug) perche' la fonte
+# upstream e' rilasciata una sola volta all'anno con un calendario fisso.
+# ──────────────────────────────────────────────────────────────────────
+0 4 5 9 * ubuntu cd $REPO && $PY -m etl.sources.scuole         2>&1 | tee $LOG/scuole-$(date +\%Y\%m\%d).log
+30 4 5 9 * ubuntu cd $REPO && $PY -m etl.sources.dashboard     2>&1 | tee $LOG/dashboard-annual-sep-$(date +\%Y\%m\%d).log
+
+# ──────────────────────────────────────────────────────────────────────
 # ANALYTICS aggregation
 # Cron analytics MCP stats + nginx logs (esistente su Aruba, replicato).
 # Richiede /etc/cruscotto-analytics.env con CF_API_TOKEN per leggere KV.
