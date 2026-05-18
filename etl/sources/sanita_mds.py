@@ -1216,7 +1216,9 @@ def main() -> int:
     args = parser.parse_args()
 
     output_dir = Path(args.outdir)
-    shard_dir = output_dir / "shards"
+    # Shard scritti direttamente in output_dir/<istat>.json (flat).
+    # Coerenza con il pattern usato da dashboard.py (riga 85) e con
+    # gli altri ETL (anncsu, runts, asia, carburanti, ecc.).
     cache_dir = Path(args.cache_dir)
     aggr_path = output_dir / "sanita_mds-lookup.json"
 
@@ -1261,7 +1263,7 @@ def main() -> int:
         shards = build_shards(farmacie, parafarm, ospedali, discovery, geocoder)
 
         # 5. Write local
-        n_written = write_local(shards, shard_dir)
+        n_written = write_local(shards, output_dir)
 
         # 6. Build + write aggregato
         aggr = build_aggregato(shards, discovery)
