@@ -30,10 +30,17 @@ PY=/usr/bin/python3
 LOG=/var/log/cruscotto-etl
 
 # ──────────────────────────────────────────────────────────────────────
-# DAILY (ogni giorno alle 09:00 UTC, margine 2h dopo MIMIT pubblica)
+# DAILY (ogni giorno alle 08:30-09:30 UTC, margine 2h dopo MIMIT pubblica)
 # Replicava etl-daily.yml su GitHub Actions.
-# Ordine: pun + carburanti in parallelo, poi dashboard (A1 aggregator).
+# Ordine: sanita_mds (08:30, post pull_artifact) -> pun + carburanti (09:00)
+#         -> dashboard (09:30, A1 aggregator vede tutti i daily aggiornati).
+#
+# NOTA: sanita_mds spostato da WEEKLY a DAILY (2026-05-18) per allinearsi
+# alla cadenza upstream "QUOTIDIANO" delle farmacie/parafarmacie MdS
+# (CSV con suffisso _YYYYMMDD che cambia ogni giorno). Dichiarazione
+# "giornaliera" in about.html ora coerente con il cron reale.
 # ──────────────────────────────────────────────────────────────────────
+30 8 * * * ubuntu cd $REPO && $PY -m etl.sources.sanita_mds --no-cache 2>&1 | tee $LOG/sanita_mds-$(date +\%Y\%m\%d).log
 0 9 * * * ubuntu cd $REPO && $PY -m etl.sources.pun        2>&1 | tee $LOG/pun-$(date +\%Y\%m\%d).log
 0 9 * * * ubuntu cd $REPO && $PY -m etl.sources.carburanti 2>&1 | tee $LOG/carburanti-$(date +\%Y\%m\%d).log
 30 9 * * * ubuntu cd $REPO && $PY -m etl.sources.dashboard 2>&1 | tee $LOG/dashboard-daily-$(date +\%Y\%m\%d).log
@@ -63,11 +70,11 @@ LOG=/var/log/cruscotto-etl
 
 # ──────────────────────────────────────────────────────────────────────
 # WEEKLY (lunedì alle 04:00 UTC)
-# Replicava etl-weekly.yml. ANAC + PNRR + sanita_mds + runts + dashboard.
+# Replicava etl-weekly.yml. ANAC + PNRR + runts + dashboard.
+# NOTA: sanita_mds spostato a DAILY (vedi sezione DAILY sopra).
 # ──────────────────────────────────────────────────────────────────────
 0 4 * * 1 ubuntu cd $REPO && $PY -m etl.sources.anac           --years=$(date +\%Y) 2>&1 | tee $LOG/anac-$(date +\%Y\%m\%d).log
 30 4 * * 1 ubuntu cd $REPO && $PY -m etl.sources.pnrr_progetti 2>&1 | tee $LOG/pnrr-$(date +\%Y\%m\%d).log
-0 5 * * 1 ubuntu cd $REPO && $PY -m etl.sources.sanita_mds --no-cache 2>&1 | tee $LOG/sanita_mds-$(date +\%Y\%m\%d).log
 30 5 * * 1 ubuntu cd $REPO && $PY -m etl.sources.runts          2>&1 | tee $LOG/runts-$(date +\%Y\%m\%d).log
 0 6 * * 1 ubuntu cd $REPO && $PY -m etl.sources.dashboard       2>&1 | tee $LOG/dashboard-weekly-$(date +\%Y\%m\%d).log
 
