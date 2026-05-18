@@ -392,6 +392,13 @@ code {
     <li>Verifica eseguita con il <a href="https://webaim.org/resources/contrastchecker/" target="_blank" rel="noopener noreferrer">WebAIM Contrast Checker</a> e con i Chrome DevTools (Lighthouse).</li>
   </ul>
 
+  <p>La stessa limitazione tecnica si applica al banner privacy dell'applicativo <strong>SIMBA</strong> (chatbot AgID per esplorazione open data, accessibile su <code>chatbot.dati.gov.it</code>), che condivide l'infrastruttura e la metodologia di test con Cruscotto Italia. Sul banner privacy SIMBA, axe-core 4.11 segnala lo stesso falso positivo <em>"needsFurtherReview"</em>. Verifica manuale del contrasto:</p>
+  <ul>
+    <li>Colore del testo: <code>#FFFFFF</code> (bianco)</li>
+    <li>Colore di sfondo: <code>#1E293B</code> (slate scuro)</li>
+    <li>Rapporto di contrasto calcolato: <strong>14.85:1</strong> — supera la soglia AAA (7:1) e ampiamente la soglia AA (4.5:1)</li>
+  </ul>
+
   <p>Si segnala inoltre che il framework axe-core, in modalità automatica, evidenzia anche 30+ avvertimenti (<em>warning</em>, non <em>error</em>) del tipo "background color can not be determined" su elementi con posizionamento assoluto/fisso. Questi avvertimenti sono <strong>limitazioni del rilevamento automatico</strong>, non violazioni di conformità: il contrasto degli elementi indicati è stato verificato manualmente conforme. Riferimento tecnico: <a href="https://github.com/dequelabs/axe-core/issues" target="_blank" rel="noopener noreferrer">issue tracker axe-core su dequelabs/axe-core</a>.</p>
 
     <h2>Redazione della dichiarazione</h2>
