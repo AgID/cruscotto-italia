@@ -8566,7 +8566,7 @@ function initSanitaMap(d) {
   miniInput.addEventListener('input', () => {
     const q = miniInput.value.trim();
     clearTimeout(miniDebounce);
-    if (q.length < 2) { miniClose(); return; }
+    if (q.length < 3) { miniClose(); return; }
     miniDebounce = setTimeout(async () => {
       try {
         const r = await mcpCall('search_comune', { query: q, limit: 8 });

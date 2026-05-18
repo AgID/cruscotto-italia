@@ -1089,7 +1089,7 @@ function navigateToComune(istatCode) {
 input.addEventListener('input', () => {
   const q = input.value.trim();
   clearTimeout(debounceTimer);
-  if (q.length < 2) { closeSuggestions(); return; }
+  if (q.length < 3) { closeSuggestions(); return; }
   debounceTimer = setTimeout(async () => {
     try {
       const r = await mcpCall('search_comune', { query: q, limit: 8 });
