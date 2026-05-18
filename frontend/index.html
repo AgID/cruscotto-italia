@@ -292,6 +292,7 @@ header.masthead::after{
 .search-helper kbd{
   font-family:var(--mono);
   background:var(--paper);
+  color:var(--ink);
   border:1px solid var(--ink-mute);
   border-bottom-width:2px;
   padding:2px 6px;
@@ -682,9 +683,11 @@ footer .footer-bottom a {
         <input
           type="search"
           id="comune-search"
+          role="combobox"
           autocomplete="off"
           placeholder="Es. Lecce, Milano, Napoli…"
-          aria-haspopup="listbox"
+          aria-autocomplete="list"
+          aria-expanded="false"
           aria-controls="suggestions">
         <div class="suggestions" id="suggestions" role="listbox"></div>
       </div>
@@ -1052,6 +1055,7 @@ function renderSuggestions(results) {
   if (!results || results.length === 0) {
     suggBox.innerHTML = '<div class="suggestion" style="cursor:default;color:var(--ink-mute);font-style:italic">Nessun comune trovato.</div>';
     suggBox.classList.add('open');
+    input.setAttribute('aria-expanded', 'true');
     return;
   }
   suggBox.innerHTML = results.map((c, i) => `
@@ -1087,6 +1091,7 @@ input.addEventListener('input', () => {
       console.error('search error:', err);
       suggBox.innerHTML = `<div class="suggestion" style="color:var(--accent);cursor:default">⚠️ Servizio non raggiungibile: ${err.message}</div>`;
       suggBox.classList.add('open');
+      input.setAttribute('aria-expanded', 'true');
     }
   }, 200);
 });
@@ -1150,6 +1155,7 @@ document.addEventListener('click', (e) => {
   .privacy-banner-text {
     flex: 1;
     min-width: 280px;
+    color: #ffffff;
   }
   .privacy-banner a {
     color: #8FCCFF;
