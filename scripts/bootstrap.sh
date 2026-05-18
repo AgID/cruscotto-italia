@@ -9,6 +9,11 @@
 #  5. Crea il bucket R2 se non esiste (richiede wrangler login)
 #
 # Uso: ./scripts/bootstrap.sh
+#
+# NOTA per VM produzione (AgID, Aruba): gli ETL girano da cron come utente
+# ubuntu con /usr/bin/python3 sistema-wide (NO venv attivato). Per quel
+# caso d'uso eseguire ANCHE: sudo bash deploy/provision-python.sh
+# che installa etl/requirements.txt sistema-wide e fa smoke test import.
 
 set -euo pipefail
 
