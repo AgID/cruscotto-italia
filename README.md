@@ -140,10 +140,12 @@ per consentire l'interrogazione dei dati civici da chatbot AI compatibili
 
 - `mcp_info` — metadata del servizio, elenco fonti integrate, licenze
 - `search_comune` — ricerca per nome → codice ISTAT (gestione omonimi)
+- `comune_kpi` — KPI sintetici di un comune (~620 token, primo tool da
+  chiamare per query puntuali e confronti)
 - `comune_dashboard` — vista unificata: una sola chiamata restituisce le
-  23 sezioni del comune (anagrafica, demografia, contratti, opere,
-  ANNCSU, sanità, banda larga, ecc.)
-- `comune_opere_dettaglio` — lista dei singoli progetti BDAP filtrabili
+  23 sezioni del comune (anagrafica, demografia, contratti, opere
+  pubbliche BDAP-MOP con dettaglio progetti CUP, ANNCSU, sanità,
+  banda larga, ecc.)
 - `anncsu_civico_search` — query puntuali sui numeri civici certificati
   con filtri server-side (odonimo, civico)
 

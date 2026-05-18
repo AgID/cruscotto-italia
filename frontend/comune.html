@@ -1930,32 +1930,21 @@ async function loadOpereDettaglio(istat) {
   const container = document.getElementById('opere-dettaglio-content');
   if (!container) return;
 
-  // Cache hit?
+  // I dati delle opere sono pre-popolati nella cache dal caricamento iniziale
+  // di comune_dashboard (sezione 'opere' dello shard A1 unified). Vedi il
+  // blocco "if (d.opere)" piu' in basso: window.__opereDettaglioCache[istat]
+  // = d.opere. Se la cache e' vuota qui, qualcosa e' andato storto a monte.
   const cached = window.__opereDettaglioCache[istat];
   if (cached) {
     renderOpereDettaglioContent(container, cached);
     return;
   }
 
-  try {
-    const data = await mcpCall('comune_opere_dettaglio', { istat_code: istat });
-    if (data.error) {
-      container.innerHTML = `
-        <div class="placeholder">
-          <strong>Dati non disponibili</strong>
-          ${data.error}
-        </div>`;
-      return;
-    }
-    window.__opereDettaglioCache[istat] = data;
-    renderOpereDettaglioContent(container, data);
-  } catch (err) {
-    container.innerHTML = `
-      <div class="placeholder">
-        <strong>Errore di rete</strong>
-        ${err.message}
-      </div>`;
-  }
+  container.innerHTML = `
+    <div class="placeholder">
+      <strong>Dati non ancora caricati</strong>
+      <p>Ricarica la pagina per visualizzare il dettaglio opere pubbliche.</p>
+    </div>`;
 }
 
 function renderOpereDettaglioContent(container, data) {
@@ -8729,7 +8718,10 @@ function populateCachesFromDashboard(istat, d) {
     }
   }
   if (d.opere) {
-    // Il loader del tab Opere si aspetta lo shard "comune_opere_dettaglio".
+    // Pre-popoliamo la cache del tab Opere con la sezione 'opere' dello shard
+    // A1 unified (comune_dashboard). Il loader loadOpereDettaglio() legge
+    // SOLO dalla cache: il tool comune_opere_dettaglio e' stato deprecato
+    // perche' i dati sono gia' tutti dentro comune_dashboard.opere.
     window.__opereDettaglioCache = window.__opereDettaglioCache || {};
     window.__opereDettaglioCache[istat] = d.opere;
     // __opereData viene usato da renderOpereChart che legge .finanz.

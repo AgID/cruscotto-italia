@@ -21,20 +21,23 @@
  *     di 25K token per tool response). Pattern d'uso:
  *       - Query puntuali e confronti N-comuni → comune_kpi (leggero)
  *       - Vista dettagliata singolo-comune → comune_dashboard (pesante)
- *       - Dettaglio specifico → comune_opere_dettaglio, anncsu_civico_search
+ *       - Dettaglio specifico → anncsu_civico_search
  *
- * Tool attivi (6):
+ * Tool attivi (5):
  *   - mcp_info: metadata server + freshness datasets
  *   - search_comune: nome -> codice ISTAT (preliminare ai tool comune_*)
  *   - comune_kpi: KPI sintetici (~620 token, primo tool da chiamare)
  *   - comune_dashboard: workhorse pesante, vista completa 21 sezioni
- *   - comune_opere_dettaglio: dettaglio BDAP filtrato al 2025
  *   - anncsu_civico_search: query puntuali civici ANNCSU
+ *
+ * Storico: comune_opere_dettaglio (tool BDAP dedicato) deprecato il
+ * 18/05/2026: dati gia' inclusi in comune_dashboard.opere, e endpoint
+ * /data/bdap/dettaglio/ non era allowlisted nel template nginx AgID
+ * (faceva fallback silenzioso a 'n_progetti: 0' per ogni comune).
  */
 
 import type { Env } from "../index.js";
 
-import { comuneOpereDettaglio } from "./comune_opere_dettaglio.js";
 import { comuneDashboard } from "./comune_dashboard.js";
 import { comuneKpi } from "./comune_kpi.js";
 import { searchComune } from "./search_comune.js";
@@ -66,9 +69,8 @@ export const tools = {
   // Workhorse pesante: single-fetch per vista comunale completa (21 sezioni)
   comune_dashboard: comuneDashboard,
 
-  // Specializzati: forniscono dati NON ridondanti rispetto a comune_dashboard
-  comune_opere_dettaglio: comuneOpereDettaglio,  // BDAP dettaglio filtrato 2025
-  anncsu_civico_search: anncsuCivicoSearch,      // query puntuali civici ANNCSU
+  // Specializzato: query puntuali civici ANNCSU (non ridondante con dashboard)
+  anncsu_civico_search: anncsuCivicoSearch,
   // OpenAI ChatGPT MCP custom connector compatibility (obbligatori, schema fisso)
   search: openaiSearch,
   fetch: openaiFetch,

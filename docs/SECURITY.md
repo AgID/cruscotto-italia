@@ -133,7 +133,6 @@ non modificabile in runtime.
 | `search_comune` | `query` (string), `limit` (int) | ❌ no |
 | `comune_kpi` | `istat_code` (6 digits), `denominazione` (string) | ❌ no |
 | `comune_dashboard` | `istat_code` (6 digits), `denominazione` (string) | ❌ no |
-| `comune_opere_dettaglio` | `istat_code` (6 digits) | ❌ no |
 | `anncsu_civico_search` | `istat_code`, `odonimo`, `civico`, `limit` | ❌ no |
 | `search` (OpenAI compat) | `query` (string) | ❌ no |
 | `fetch` (OpenAI compat) | `id` (ISTAT 6 digits) | ❌ no |
@@ -177,7 +176,6 @@ che gira separatamente sulla VM AgID. Non esistono tool generici tipo
 | `search_comune` | Match testuale su anagrafica comuni ISTAT |
 | `comune_kpi` | Lettura KPI sintetici di un comune (~620 token) |
 | `comune_dashboard` | Lettura vista completa di un comune (sezioni federate) |
-| `comune_opere_dettaglio` | Lista opere BDAP-MOP di un comune |
 | `anncsu_civico_search` | Query civici/strade ANNCSU di un comune |
 | `search` / `fetch` | Adapter ChatGPT MCP custom connector |
 

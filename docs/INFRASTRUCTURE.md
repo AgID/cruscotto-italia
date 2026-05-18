@@ -23,7 +23,7 @@ Cruscotto Italia è strutturato in 4 livelli:
 - **Account**: Cloudflare
 - **Endpoint**: `cruscotto-italia-mcp.piersoftckan.biz/mcp` (custom domain) e fallback `cruscotto-italia-mcp.datigovit.workers.dev/mcp`
 - **Stack**: TypeScript, Cloudflare Workers, binding R2 (`DATA`) + KV (`CACHE` + `MCP_RATE_LIMITER`)
-- **Tools MCP esposti**: `mcp_info`, `search_comune`, `comune_dashboard` (single-fetch, 21 sezioni), `comune_opere_dettaglio` (dettaglio BDAP filtrato al 2025), `anncsu_civico_search` (query puntuali civici ANNCSU con filtri server-side)
+- **Tools MCP esposti**: `mcp_info`, `search_comune`, `comune_kpi` (KPI sintetici ~620 token), `comune_dashboard` (single-fetch, 21 sezioni con dettaglio opere BDAP-MOP incluso), `anncsu_civico_search` (query puntuali civici ANNCSU con filtri server-side)
 
 ### 1.3 Storage R2 (Cloudflare)
 
