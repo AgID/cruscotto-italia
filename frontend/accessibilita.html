@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Dichiarazione di accessibilità · Cruscotto Italia</title>
+<title>Dichiarazione di accessibilità · Cruscotto Italia e SIMBA</title>
 <link rel="icon" href="/favicon.ico" type="image/vnd.microsoft.icon">
 <meta name="description" content="Dichiarazione di accessibilità di Cruscotto Italia ai sensi della L. 4/2004 come modificata da D.Lgs. 106/2018 e della Direttiva UE 2016/2102.">
 <!-- Design Italia: Titillium Web self-hosted -->
@@ -223,9 +223,9 @@ code {
     <div class="label">Stato di conformità</div>
     <div class="value">Pienamente conforme</div>
     <p style="margin-top:var(--sp-3); margin-bottom:0; font-size:var(--fs-sm); color: var(--ink-soft);">
-      Il sito web Cruscotto Italia è <strong>pienamente conforme</strong> ai
-      requisiti previsti dall'allegato A della norma <strong>UNI CEI EN 301 549</strong>
-      e ai criteri WCAG 2.1 livello AA.
+      I siti web <strong>Cruscotto Italia</strong> e <strong>SIMBA chatbot</strong>
+      sono <strong>pienamente conformi</strong> ai requisiti previsti dall'allegato A
+      della norma <strong>UNI CEI EN 301 549</strong> e ai criteri WCAG 2.1 livello AA.
     </p>
   </div>
 
@@ -238,12 +238,15 @@ code {
         <td>Agenzia per l'Italia Digitale (AgID)</td>
       </tr>
       <tr>
-        <th>Sito web</th>
-        <td><code>cruscotto-italia.piersoftckan.biz</code></td>
-      </tr>
-      <tr>
-        <th>Categoria del sito</th>
-        <td>Sito web informativo che federa dataset pubblici di interesse nazionale per comune</td>
+        <th>Siti web inclusi nella dichiarazione</th>
+        <td>
+          <ul style="margin:0; padding-left:1.2em;">
+            <li><strong>Cruscotto Italia</strong> — <code>cruscotto-italia.dati.gov.it</code>
+              (sito informativo che federa dataset pubblici di interesse nazionale per comune)</li>
+            <li><strong>SIMBA chatbot</strong> — <code>chatbot.dati.gov.it</code>
+              (assistente conversazionale per esplorazione open data CKAN e SPARQL)</li>
+          </ul>
+        </td>
       </tr>
       <tr>
         <th>Indirizzo email feedback</th>
@@ -264,10 +267,16 @@ code {
   </ul>
 
   <h3>Pagine sottoposte a verifica</h3>
+  <p><strong>Cruscotto Italia</strong>:</p>
   <ul>
     <li>Home page (<code>/</code>)</li>
     <li>Pagina informativa di progetto (<code>/about.html</code>)</li>
-    <li>Pagina di dettaglio comune (<code>/comune.html?istat=*</code>) — testata sul caso ISTAT 016024 (Bergamo)</li>
+    <li>Pagina di dettaglio comune (<code>/comune.html?istat=*</code>) — testata su Lecce (075035), Roma (058091), Matera (077014), Morterone (097055)</li>
+    <li>Questa stessa pagina (<code>/accessibilita.html</code>)</li>
+  </ul>
+  <p><strong>SIMBA chatbot</strong>:</p>
+  <ul>
+    <li>Home applicativo (<code>/chatbot/</code>) — sidebar, area conversazionale, stato sistemi, banner privacy</li>
   </ul>
 
   <h2>Risultati della verifica</h2>
@@ -426,16 +435,26 @@ code {
 
   <h2>Modalità di invio delle segnalazioni</h2>
 
-  <p>Eventuali segnalazioni di problemi di accessibilità riscontrati su questo sito, nonché richieste di informazioni o contenuti non accessibili, possono essere inviate all'indirizzo email <a href="mailto:dati@agid.gov.it?subject=Cruscotto%20Italia%20-%20Segnalazione%20accessibilit%C3%A0">dati@agid.gov.it</a>.</p>
+  <p>Eventuali segnalazioni di problemi di accessibilità riscontrati su questo sito, nonché richieste di informazioni o contenuti non accessibili, possono essere inviate all'indirizzo email <a href="mailto:dati@agid.gov.it?subject=Cruscotto%20Italia%20o%20SIMBA%20-%20Segnalazione%20accessibilit%C3%A0">dati@agid.gov.it</a>.</p>
 
   <p>Ai sensi della Direttiva (UE) 2016/2102, qualora l'utente non riceva risposta soddisfacente entro un termine ragionevole, è possibile presentare una segnalazione tramite il <strong>meccanismo di attuazione previsto dall'art. 3-quinquies della Legge 4/2004</strong>, contattando il <strong>Difensore civico per il digitale</strong> presso l'AgID all'indirizzo <a href="mailto:protocollo@pec.agid.gov.it">protocollo@pec.agid.gov.it</a>.</p>
 
   <h2>Informazioni sul sito</h2>
 
   <ul>
-    <li><strong>Tecnologie utilizzate</strong>: HTML5, CSS3, JavaScript (vanilla, no framework), Chart.js (visualizzazioni), Leaflet (mappe).</li>
+    <li><strong>Tecnologie utilizzate</strong>:
+      <ul>
+        <li><em>Cruscotto Italia</em>: HTML5, CSS3, JavaScript (vanilla, no framework), Chart.js 4.4.1 (visualizzazioni), Leaflet 1.9.4 (mappe), Titillium Web (typography). Zero CDN runtime, tutte le librerie vendored con SHA-384 integrity.</li>
+        <li><em>SIMBA chatbot</em>: React 18 + Vite (frontend), Node.js Express (backend), Python guardrail/RDF/validatore microservizi, Ollama (LLM runtime su GPU). Stack containerizzato Docker.</li>
+      </ul>
+    </li>
     <li><strong>Verifica conformità</strong>: Pa11y 9.1.1 + W3C Nu HTML Checker (html-validator 7.0.1).</li>
-    <li><strong>Codice sorgente</strong>: pubblicato in modalità open source con licenza AGPL-3.0 su <a href="https://github.com/AgID/cruscotto-italia" target="_blank" rel="noopener">GitHub</a>.</li>
+    <li><strong>Codice sorgente</strong>: pubblicato in modalità open source con licenza AGPL-3.0:
+      <ul>
+        <li>Cruscotto Italia: <a href="https://github.com/AgID/cruscotto-italia" target="_blank" rel="noopener">github.com/AgID/cruscotto-italia</a></li>
+        <li>SIMBA chatbot: <a href="https://github.com/AgID/simba-chatbot" target="_blank" rel="noopener">github.com/AgID/simba-chatbot</a></li>
+      </ul>
+    </li>
     <li><strong>Linee guida di riferimento</strong>: WCAG 2.1 (livello AA), UNI CEI EN 301 549, Linee Guida AgID sull'accessibilità degli strumenti informatici.</li>
   </ul>
 
