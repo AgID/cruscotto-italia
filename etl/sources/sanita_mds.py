@@ -1203,7 +1203,7 @@ def main() -> int:
                         help="Solo 'local' supportato (R2 rimosso dall'infrastruttura AgID)")
     parser.add_argument("--outdir", default="/var/www/cruscotto-italia/data/sanita_mds",
                         help="Local output directory (default: /var/www/cruscotto-italia/data/sanita_mds)")
-    parser.add_argument("--cache-dir", default="cache/sanita_mds",
+    parser.add_argument("--cache-dir", default="/tmp/cruscotto-sanita-mds-cache",
                         help="Cache directory for downloaded CSVs")
     parser.add_argument("--no-cache", action="store_true",
                         help="Re-download CSV ignorando la cache locale")
