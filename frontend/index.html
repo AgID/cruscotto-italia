@@ -1155,8 +1155,8 @@ document.addEventListener('click', (e) => {
     box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.15);
     font-family: var(--font-sans, 'Titillium Web'), sans-serif;
   }
-  /* L'attributo hidden deve vincere display:flex (specificità) */
-  .privacy-banner[hidden] {
+  /* Stato chiuso: classe controllata da JS, display:none coerente */
+  .privacy-banner.is-hidden {
     display: none !important;
   }
   .privacy-banner > .privacy-banner-text {
@@ -1191,7 +1191,7 @@ document.addEventListener('click', (e) => {
     outline-offset: 2px;
   }
 </style>
-<div class="privacy-banner" id="privacy-banner" role="region" aria-label="Informativa privacy" hidden>
+<div class="privacy-banner is-hidden" id="privacy-banner" role="region" aria-label="Informativa privacy">
   <div class="privacy-banner-text">
     Questo servizio non utilizza cookie di profilazione né strumenti di tracciamento.
     I log standard del server (indirizzo IP, pagina visitata) sono conservati per amministrazione
@@ -1207,10 +1207,10 @@ document.addEventListener('click', (e) => {
   } catch (e) { /* localStorage può fallire in private mode */ }
   var banner = document.getElementById('privacy-banner');
   if (!banner) return;
-  banner.hidden = false;
+  banner.classList.remove('is-hidden');
   document.getElementById('privacy-ok-btn').addEventListener('click', function() {
     try { localStorage.setItem('privacy_ok', '1'); } catch (e) {}
-    banner.hidden = true;
+    banner.classList.add('is-hidden');
   });
 })();
 </script>
