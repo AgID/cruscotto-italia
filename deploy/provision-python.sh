@@ -60,7 +60,7 @@ echo "  ✓ $REQ_FILE"
 # Install
 echo
 echo "▶ Installazione dipendenze ETL sistema-wide…"
-python3 -m pip install --root-user-action=ignore -r "$REQ_FILE"
+python3 -m pip install --root-user-action=ignore --break-system-packages -r "$REQ_FILE"
 
 # Smoke test: tutti gli import critici devono funzionare per l'utente ubuntu
 # (sotto cui girano gli ETL in produzione)
