@@ -1649,6 +1649,24 @@ function fmtNum(n) {
   return Number(n).toLocaleString('it-IT');
 }
 
+// Formatta data ISO (YYYY-MM-DD oppure YYYY-MM-DDTHH:MM:SS...) in formato
+// italiano leggibile: "18 maggio 2026". Restituisce "—" se input vuoto/null.
+// Robusta a: input gia' parziale, input non valido, mese fuori range 1-12.
+function formatDataIT(iso) {
+  if (!iso || iso === '—' || iso === 'n.d.') return '—';
+  // Accetta sia 'YYYY-MM-DD' che 'YYYY-MM-DDTHH:MM:SS...'
+  const datePart = String(iso).split('T')[0];
+  const parts = datePart.split('-');
+  if (parts.length !== 3) return iso; // fallback: ritorna originale
+  const [y, m, d] = parts;
+  const mese = parseInt(m, 10);
+  const giorno = parseInt(d, 10);
+  if (isNaN(mese) || isNaN(giorno) || mese < 1 || mese > 12) return iso;
+  const mesi = ['', 'gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno',
+                'luglio', 'agosto', 'settembre', 'ottobre', 'novembre', 'dicembre'];
+  return `${giorno} ${mesi[mese]} ${y}`;
+}
+
 // === Palette grafici istituzionale (Design Italia) ===
 // Legge i token CSS da tokens.css :root, cambiando i token si aggiornano i grafici.
 function getCSS(varName) {
@@ -5290,7 +5308,7 @@ function renderCarburantiTab(d) {
   const pmin = k.prezzo_min || {};
   const cheapestBenz = carbCheapest(d.punti, 'benzina_self');
   const cheapestGas = carbCheapest(d.punti, 'gasolio_self');
-  const dataLastMod = d._data_last_modified || '—';
+  const dataLastMod = formatDataIT(d._data_last_modified);
   const pctAuto = (k.n_impianti > 0 && k.n_autostradali != null)
     ? (k.n_autostradali / k.n_impianti * 100) : null;
   const fmtPrezzo = (v) => (v != null && !isNaN(v)) ? '€ ' + v.toFixed(3) : '—';
@@ -6650,7 +6668,7 @@ function renderAnncsuTab(d) {
       </div>`;
   }
   const k = d.kpi;
-  const snapshot = d._snapshot_date || '';
+  const snapshot = formatDataIT(d._snapshot_date);
 
   // KPI sempre presenti
   const cards = [];
@@ -6750,7 +6768,7 @@ function renderAnncsuTab(d) {
       <p class="muted">
         Dati conferiti dal Comune all'Archivio Nazionale dei Numeri Civici e
         delle Strade Urbane (ANNCSU), realizzato da Agenzia delle Entrate
-        e ISTAT ai sensi del DPCM 12/05/2016. Snapshot: ${snapshot || 'n.d.'}.
+        e ISTAT ai sensi del DPCM 12/05/2016. Snapshot: ${snapshot}.
       </p>
       <div class="kpi-cards">${cardsHtml}</div>
       ${mapBlock}
