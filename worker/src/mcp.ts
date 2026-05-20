@@ -218,7 +218,11 @@ async function trackToolCall(
 function rpcOk(id: string | number | null | undefined, result: unknown): Response {
   const payload: JsonRpcResponse = { jsonrpc: "2.0", id: id ?? null, result };
   return new Response(JSON.stringify(payload), {
-    headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+    headers: {
+      "Content-Type": "application/json",
+      "Access-Control-Allow-Origin": "*",
+      "Cache-Control": "private, max-age=60",
+    },
   });
 }
 
@@ -230,6 +234,10 @@ function rpcError(
 ): Response {
   const payload: JsonRpcResponse = { jsonrpc: "2.0", id, error: { code, message, data } };
   return new Response(JSON.stringify(payload), {
-    headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+    headers: {
+      "Content-Type": "application/json",
+      "Access-Control-Allow-Origin": "*",
+      "Cache-Control": "no-store",
+    },
   });
 }
