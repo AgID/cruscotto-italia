@@ -1756,9 +1756,9 @@ function renderComune(data) {
   const tabs = [
     { id: 'panoramica', label: 'Panoramica', kpi: '' },
     { id: 'anncsu', label: 'ANNCSU', kpi: k.anncsu?.kpi?.n_strade != null ? fmtNum(k.anncsu.kpi.n_strade) + (k.anncsu.kpi.n_civici != null ? ' / ' + fmtNum(k.anncsu.kpi.n_civici) : '') : '—' },
-    { id: 'censimento', label: 'Censimento', kpi: k.censimento?.kpi_comune?.n_sezioni != null ? fmtNum(k.censimento.kpi_comune.n_sezioni) : '—' },
     { id: 'aria', label: 'Aria', kpi: '<span data-tab-aria-n><span class="tab-spinner"></span></span>' },
     { id: 'banda-larga', label: 'Banda larga', kpi: k.agcom_bbmap?.kpi?.copertura_ftth_desi_pct != null ? Math.round(k.agcom_bbmap.kpi.copertura_ftth_desi_pct) + '%' : '—' },
+    { id: 'censimento', label: 'Censimento 2021', kpi: k.censimento?.kpi_comune?.n_sezioni != null ? fmtNum(k.censimento.kpi_comune.n_sezioni) : '—' },
     { id: 'contratti', label: 'Contratti ANAC', kpi: fmtNum(k.contratti?.count || 0) },
     { id: 'demografia', label: 'Demografia', kpi: k.popolazione != null ? fmtNum(k.popolazione) : '—' },
     { id: 'carburanti', label: 'Distributori e prezzi', kpi: k.carburanti?.kpi?.n_impianti != null ? fmtNum(k.carburanti.kpi.n_impianti) : '—' },
