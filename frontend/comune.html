@@ -1272,6 +1272,10 @@ footer a{color:rgba(255,255,255,0.85);text-decoration:none}
 .censimento-bar-legend .dot-occ{background:#1B7BBC;}
 .censimento-bar-legend .dot-vuo{background:#E89400;}
 .censimento-map-section{margin:28px 0 16px;}
+.censimento-controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:10px 0 14px;}
+.censimento-controls label{font-family:var(--mono);font-size:11px;color:var(--ink-mute);text-transform:uppercase;letter-spacing:.06em;}
+.censimento-select{font-family:var(--serif);font-size:14px;color:var(--ink);background:var(--paper);border:1px solid var(--paper-2);border-radius:4px;padding:7px 12px;min-height:36px;cursor:pointer;min-width:280px;}
+.censimento-select:focus{outline:2px solid var(--accent);outline-offset:2px;}
 .censimento-map-note{font-size:13px;line-height:1.55;margin:0 0 12px;}
 .censimento-map{height:480px;border-radius:8px;overflow:hidden;background:#eef2f5;position:relative;z-index:0;isolation:isolate;}
 .censimento-map-loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--ink-mute);font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.06em;background:#eef2f5;z-index:2;}
@@ -7477,8 +7481,25 @@ function renderCensimentoTab(d) {
   // Mappa choropleth (lazy fetch /data/censimento_full/<istat>.geojson in 12.3)
   const mapBlock = d._has_full ? `
     <div class="censimento-map-section">
-      <h3 class="section-h-small">Choropleth — densità popolazione per sezione</h3>
-      <p class="muted censimento-map-note">
+      <h3 class="section-h-small">Choropleth — indicatore per sezione</h3>
+      <div class="censimento-controls">
+        <label for="censimento-indicator">Indicatore:</label>
+        <select id="censimento-indicator" class="censimento-select" aria-label="Seleziona indicatore da visualizzare sulla mappa">
+          <option value="densita" selected>Densità popolazione (ab./km²)</option>
+          <option value="pct_over65">% Popolazione 65+</option>
+          <option value="pct_under15">% Popolazione 0-14</option>
+          <option value="pct_stranieri">% Stranieri</option>
+          <option value="pct_laureati">% Laureati (su pop. 9+)</option>
+          <option value="pct_occupati">% Occupati 15-64</option>
+          <option value="pct_unipersonali">% Famiglie unipersonali</option>
+          <option value="pct_abit_vuote">% Abitazioni vuote</option>
+          <option value="edifici_res">Edifici residenziali (assoluto)</option>
+          <option value="pct_extra_ue">% Stranieri Extra-UE (su stranieri)</option>
+          <option value="indice_vecchiaia">Indice di vecchiaia</option>
+          <option value="pct_donne_occ">% Donne occupate (su occupati 15-64)</option>
+        </select>
+      </div>
+      <p class="muted censimento-map-note" id="censimento-map-note">
         Mappa interattiva delle ${fmtNum(k.n_sezioni || 0)} sezioni di censimento.
         Il colore rappresenta la densità di popolazione (ab./km²).
         Sezioni in grigio = territorio non rilevato (parchi, aree industriali, infrastrutture).
@@ -7486,7 +7507,7 @@ function renderCensimentoTab(d) {
       <div id="censimento-map" class="censimento-map" role="region" aria-label="Mappa choropleth sezioni di censimento">
         <div class="censimento-map-loading" data-censimento-loading>Caricamento sezioni di censimento…</div>
       </div>
-      <div class="censimento-legend" id="censimento-legend" aria-label="Legenda densità popolazione"></div>
+      <div class="censimento-legend" id="censimento-legend" aria-label="Legenda dell'indicatore visualizzato"></div>
     </div>
   ` : '';
 
@@ -7513,6 +7534,153 @@ function renderCensimentoTab(d) {
 const CENSIMENTO_PALETTE = ['#deebf7', '#9ecae1', '#4292c6', '#2171b5', '#08519c'];
 const CENSIMENTO_NA_COLOR = '#cccccc';  // sezione senza dato (no_vars)
 
+// Metadati dei 12 indicatori derivati. Tutti calcolati client-side dalle vars raw.
+// `unit`: stringa per legenda. `decimals`: per formatRange (0 = numeri interi,
+// 1 = una cifra decimale). `note`: testo descrittivo per #censimento-map-note.
+const CENSIMENTO_INDICATORS = {
+  densita: {
+    label: 'Densità popolazione',
+    unit: 'ab./km²',
+    decimals: 0,
+    note: 'Densità di popolazione residente (ab./km²). Sezioni in grigio = territorio non rilevato.',
+  },
+  pct_over65: {
+    label: '% Popolazione 65+',
+    unit: '%',
+    decimals: 1,
+    note: 'Percentuale di residenti con 65 anni o più. Indicatore di invecchiamento del tessuto residenziale.',
+  },
+  pct_under15: {
+    label: '% Popolazione 0-14',
+    unit: '%',
+    decimals: 1,
+    note: 'Percentuale di residenti minori di 15 anni. Indicatore di presenza di famiglie giovani.',
+  },
+  pct_stranieri: {
+    label: '% Stranieri',
+    unit: '%',
+    decimals: 1,
+    note: 'Percentuale di residenti stranieri (UE + Extra-UE) sulla popolazione totale.',
+  },
+  pct_laureati: {
+    label: '% Laureati',
+    unit: '%',
+    decimals: 1,
+    note: 'Percentuale di residenti 9+ con titolo terziario (laurea o superiore) sulla pop. 9+.',
+  },
+  pct_occupati: {
+    label: '% Occupati 15-64',
+    unit: '%',
+    decimals: 1,
+    note: 'Percentuale di occupati 15-64 sulla popolazione 15-64 residente. Tasso di occupazione di sezione.',
+  },
+  pct_unipersonali: {
+    label: '% Famiglie unipersonali',
+    unit: '%',
+    decimals: 1,
+    note: 'Percentuale di famiglie con un solo componente sul totale famiglie.',
+  },
+  pct_abit_vuote: {
+    label: '% Abitazioni vuote',
+    unit: '%',
+    decimals: 1,
+    note: 'Percentuale di abitazioni vuote o occupate solo da non-residenti sul totale abitazioni.',
+  },
+  edifici_res: {
+    label: 'Edifici residenziali',
+    unit: '',
+    decimals: 0,
+    note: 'Numero assoluto di edifici a uso residenziale rilevati nella sezione.',
+  },
+  pct_extra_ue: {
+    label: '% Stranieri Extra-UE',
+    unit: '%',
+    decimals: 1,
+    note: 'Percentuale di stranieri Extra-UE sul totale stranieri della sezione.',
+  },
+  indice_vecchiaia: {
+    label: 'Indice di vecchiaia',
+    unit: '',
+    decimals: 0,
+    note: 'Rapporto popolazione 65+ / popolazione 0-14 × 100. Valori > 100 = più anziani che giovani.',
+  },
+  pct_donne_occ: {
+    label: '% Donne occupate',
+    unit: '%',
+    decimals: 1,
+    note: 'Percentuale di donne occupate 15-64 sul totale occupati 15-64.',
+  },
+};
+
+// Calcola valore dell'indicatore per una feature. Ritorna null se dato assente
+// o denominatore = 0. Per le formule vedere HANDOFF sezione 8.3.
+function _censimentoComputeIndicator(feature, indicator) {
+  const p = feature.properties || {};
+  const v = p.vars || {};
+  const safe = (k) => (v[k] != null && isFinite(v[k])) ? v[k] : 0;
+  const has = (k) => (v[k] != null && isFinite(v[k]));
+
+  switch (indicator) {
+    case 'densita': {
+      if (!has('P1') || !p.area_mq || p.area_mq <= 0) return null;
+      return v.P1 / (p.area_mq / 1e6);
+    }
+    case 'pct_over65': {
+      if (!has('P1') || v.P1 === 0) return null;
+      const o65 = safe('P27') + safe('P28') + safe('P29');
+      return o65 / v.P1 * 100;
+    }
+    case 'pct_under15': {
+      if (!has('P1') || v.P1 === 0) return null;
+      const u15 = safe('P14') + safe('P15') + safe('P16');
+      return u15 / v.P1 * 100;
+    }
+    case 'pct_stranieri': {
+      if (!has('P1') || v.P1 === 0) return null;
+      return safe('ST1') / v.P1 * 100;
+    }
+    case 'pct_laureati': {
+      if (!has('P83') || v.P83 === 0) return null;
+      return safe('P90') / v.P83 * 100;
+    }
+    case 'pct_occupati': {
+      // Approssimazione: pop 15-64 = somma P17..P26 (fasce 15-19..60-64)
+      const pop1564 = safe('P17') + safe('P18') + safe('P19') + safe('P20') +
+                      safe('P21') + safe('P22') + safe('P23') + safe('P24') +
+                      safe('P25') + safe('P26');
+      if (pop1564 === 0) return null;
+      return safe('P101') / pop1564 * 100;
+    }
+    case 'pct_unipersonali': {
+      if (!has('PF1') || v.PF1 === 0) return null;
+      return safe('PF3') / v.PF1 * 100;
+    }
+    case 'pct_abit_vuote': {
+      if (!has('A8') || v.A8 === 0) return null;
+      return safe('A3') / v.A8 * 100;
+    }
+    case 'edifici_res': {
+      return has('E3') ? v.E3 : null;
+    }
+    case 'pct_extra_ue': {
+      if (!has('ST1') || v.ST1 === 0) return null;
+      return safe('ST19') / v.ST1 * 100;
+    }
+    case 'indice_vecchiaia': {
+      const u15 = safe('P14') + safe('P15') + safe('P16');
+      const o65 = safe('P27') + safe('P28') + safe('P29');
+      if (u15 === 0) return null;
+      return o65 / u15 * 100;
+    }
+    case 'pct_donne_occ': {
+      if (!has('P101') || v.P101 === 0) return null;
+      return safe('P103') / v.P101 * 100;
+    }
+    default:
+      return null;
+  }
+}
+
 // Calcola breakpoint quantili (5 classi) escludendo i null.
 function _censimentoBreakpoints(values) {
   const valid = values.filter(v => v != null && isFinite(v) && v > 0).sort((a, b) => a - b);
@@ -7532,16 +7700,77 @@ function _censimentoColorFor(value, breaks) {
   return CENSIMENTO_PALETTE[CENSIMENTO_PALETTE.length - 1];
 }
 
-// Calcola densità (ab/km²) per una feature. Ritorna null se vars assenti o area_mq=0.
-function _censimentoDensita(feature) {
-  const p = feature.properties || {};
-  const v = p.vars || {};
-  const pop = v.P1;
-  const areaMq = p.area_mq;
-  if (pop == null || !isFinite(pop) || areaMq == null || !isFinite(areaMq) || areaMq <= 0) {
-    return null;
+// Formatta un range numerico per la legenda
+function _censimentoFormatRange(lo, hi, decimals) {
+  const fmt = (n) => {
+    if (n == null) return '∞';
+    if (decimals === 0) return fmtNum(Math.round(n));
+    return n.toFixed(decimals);
+  };
+  return `${lo == null ? '0' : fmt(lo)}–${fmt(hi)}`;
+}
+
+// Render legenda per un dato indicatore + breakpoints.
+function _censimentoRenderLegend(indicator, breaks, nNoData) {
+  const legendEl = document.getElementById('censimento-legend');
+  if (!legendEl) return;
+  const meta = CENSIMENTO_INDICATORS[indicator] || CENSIMENTO_INDICATORS.densita;
+  if (!breaks || breaks.length === 0) {
+    legendEl.innerHTML = `<span class="censimento-legend-item muted">Dati insufficienti per la legenda</span>`;
+    return;
   }
-  return pop / (areaMq / 1e6);
+  const u = meta.unit ? ` ${meta.unit}` : '';
+  const items = [];
+  items.push(`<span class="censimento-legend-item"><span class="censimento-legend-swatch" style="background:${CENSIMENTO_PALETTE[0]}"></span>${_censimentoFormatRange(0, breaks[0], meta.decimals)}${u}</span>`);
+  for (let i = 1; i < breaks.length; i++) {
+    items.push(`<span class="censimento-legend-item"><span class="censimento-legend-swatch" style="background:${CENSIMENTO_PALETTE[i]}"></span>${_censimentoFormatRange(breaks[i-1], breaks[i], meta.decimals)}${u}</span>`);
+  }
+  items.push(`<span class="censimento-legend-item"><span class="censimento-legend-swatch" style="background:${CENSIMENTO_PALETTE[breaks.length]}"></span>&gt; ${meta.decimals === 0 ? fmtNum(Math.round(breaks[breaks.length-1])) : breaks[breaks.length-1].toFixed(meta.decimals)}${u}</span>`);
+  if (nNoData > 0) {
+    items.push(`<span class="censimento-legend-item"><span class="censimento-legend-swatch" style="background:${CENSIMENTO_NA_COLOR}"></span>Non rilevata (${fmtNum(nNoData)})</span>`);
+  }
+  legendEl.innerHTML = items.join('');
+}
+
+// Applica un indicatore alla mappa: ricalcola valori, quantili, restyle, legenda, note.
+function _censimentoApplyIndicator(indicator) {
+  const inst = window.__censimentoInstance;
+  if (!inst) return;
+  const { fc, layer } = inst;
+
+  // Ricalcola valori per ogni feature (anche per indicatori non-densita)
+  const values = fc.features.map(f => _censimentoComputeIndicator(f, indicator));
+  const breaks = _censimentoBreakpoints(values);
+
+  let nNoData = 0;
+  layer.eachLayer((lyr) => {
+    const idx = lyr.__cnsIdx;
+    const v = (idx != null) ? values[idx] : null;
+    if (v == null) nNoData++;
+    lyr.setStyle({
+      fillColor: breaks ? _censimentoColorFor(v, breaks) : CENSIMENTO_NA_COLOR,
+      fillOpacity: 0.75,
+      weight: 0.6,
+      color: '#555',
+      opacity: 0.55,
+    });
+    // Aggiorna popup: ricomputa solo se aperto sarà refreshato al prossimo click
+    if (lyr.__cnsPopupFn) {
+      lyr.setPopupContent(lyr.__cnsPopupFn(indicator));
+    }
+  });
+
+  inst.indicator = indicator;
+  inst.breaks = breaks;
+
+  // Aggiorna nota descrittiva
+  const noteEl = document.getElementById('censimento-map-note');
+  const meta = CENSIMENTO_INDICATORS[indicator] || CENSIMENTO_INDICATORS.densita;
+  if (noteEl) {
+    noteEl.textContent = `${meta.note} Sezioni in grigio = territorio non rilevato.`;
+  }
+
+  _censimentoRenderLegend(indicator, breaks, nNoData);
 }
 
 // Lazy fetch + render choropleth Censimento.
@@ -7549,7 +7778,6 @@ function _censimentoDensita(feature) {
 async function initCensimentoMap(istat) {
   const mapEl = document.getElementById('censimento-map');
   const loadingEl = mapEl ? mapEl.querySelector('[data-censimento-loading]') : null;
-  const legendEl = document.getElementById('censimento-legend');
   if (!mapEl) return;
 
   let fc;
@@ -7573,10 +7801,6 @@ async function initCensimentoMap(istat) {
     return;
   }
 
-  // Calcola densità per ogni feature + quantili per legenda
-  const densities = fc.features.map(_censimentoDensita);
-  const breaks = _censimentoBreakpoints(densities);
-
   // Init Leaflet map
   const map = L.map(mapEl, { scrollWheelZoom: false, zoomControl: true });
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -7584,15 +7808,40 @@ async function initCensimentoMap(istat) {
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
   }).addTo(map);
 
-  // GeoJSON layer con styling choropleth
-  let nValid = 0, nNoData = 0;
+  // Stato iniziale: densità popolazione
+  const initialIndicator = 'densita';
+  const values0 = fc.features.map(f => _censimentoComputeIndicator(f, initialIndicator));
+  const breaks0 = _censimentoBreakpoints(values0);
+
+  // Genera popup dinamico per una feature
+  const makePopupFn = (feature) => (indicator) => {
+    const p = feature.properties || {};
+    const v = p.vars || {};
+    const sezLab = (p.sez != null) ? `Sezione n. ${p.sez}` : `Sezione ${p.id || ''}`;
+    const tipoLoc = p.tipo_loc ? p.tipo_loc.replace(/_/g, ' ') : '—';
+    const val = _censimentoComputeIndicator(feature, indicator);
+    const meta = CENSIMENTO_INDICATORS[indicator] || CENSIMENTO_INDICATORS.densita;
+    const valStr = val == null ? '—' : (meta.decimals === 0 ? fmtNum(Math.round(val)) : val.toFixed(meta.decimals));
+    const u = meta.unit ? ` ${meta.unit}` : '';
+    return `
+      <div class="censimento-section-popup">
+        <strong>${sezLab}</strong><br>
+        ${tipoLoc} · ${p.area_mq != null ? fmtNum(Math.round(p.area_mq)) + ' m²' : '—'}<br>
+        ${v.P1 != null ? `Pop. residente: <strong>${fmtNum(v.P1)}</strong> (M ${fmtNum(v.P2 || 0)} / F ${fmtNum(v.P3 || 0)})<br>` : '<em>Sezione non rilevata</em><br>'}
+        ${meta.label}: <strong>${valStr}${u}</strong>
+      </div>
+    `;
+  };
+
+  // GeoJSON layer
+  let nNoData0 = 0;
+  let _featIdx = 0;
   const layer = L.geoJSON(fc, {
     style: (feature) => {
-      const d = _censimentoDensita(feature);
-      if (d == null) { nNoData++; }
-      else { nValid++; }
+      const v = _censimentoComputeIndicator(feature, initialIndicator);
+      if (v == null) nNoData0++;
       return {
-        fillColor: breaks ? _censimentoColorFor(d, breaks) : CENSIMENTO_NA_COLOR,
+        fillColor: breaks0 ? _censimentoColorFor(v, breaks0) : CENSIMENTO_NA_COLOR,
         fillOpacity: 0.75,
         weight: 0.6,
         color: '#555',
@@ -7600,20 +7849,9 @@ async function initCensimentoMap(istat) {
       };
     },
     onEachFeature: (feature, lyr) => {
-      const p = feature.properties || {};
-      const v = p.vars || {};
-      const d = _censimentoDensita(feature);
-      const sezLab = (p.sez != null) ? `Sezione n. ${p.sez}` : `Sezione ${p.id || ''}`;
-      const tipoLoc = p.tipo_loc ? p.tipo_loc.replace(/_/g, ' ') : '—';
-      const popHtml = `
-        <div class="censimento-section-popup">
-          <strong>${sezLab}</strong><br>
-          ${tipoLoc} · ${p.area_mq != null ? fmtNum(Math.round(p.area_mq)) + ' m²' : '—'}<br>
-          ${v.P1 != null ? `Pop. residente: <strong>${fmtNum(v.P1)}</strong> (M ${fmtNum(v.P2 || 0)} / F ${fmtNum(v.P3 || 0)})<br>` : '<em>Sezione non rilevata</em><br>'}
-          ${d != null ? `Densità: <strong>${fmtNum(Math.round(d))}</strong> ab./km²` : ''}
-        </div>
-      `;
-      lyr.bindPopup(popHtml);
+      lyr.__cnsIdx = _featIdx++;
+      lyr.__cnsPopupFn = makePopupFn(feature);
+      lyr.bindPopup(lyr.__cnsPopupFn(initialIndicator));
     }
   }).addTo(map);
 
@@ -7621,33 +7859,24 @@ async function initCensimentoMap(istat) {
   try {
     map.fitBounds(layer.getBounds(), { padding: [12, 12] });
   } catch (e) {
-    map.setView([41.9, 12.5], 6);  // fallback Italia
+    map.setView([41.9, 12.5], 6);
   }
 
-  // Rimuovi overlay loading
   if (loadingEl) loadingEl.remove();
 
-  // Render legenda dinamica con range
-  if (legendEl && breaks) {
-    const formatRange = (lo, hi) => {
-      const loStr = lo == null ? '0' : fmtNum(Math.round(lo));
-      const hiStr = hi == null ? '∞' : fmtNum(Math.round(hi));
-      return `${loStr}–${hiStr}`;
-    };
-    const items = [];
-    items.push(`<span class="censimento-legend-item"><span class="censimento-legend-swatch" style="background:${CENSIMENTO_PALETTE[0]}"></span>${formatRange(0, breaks[0])} ab./km²</span>`);
-    for (let i = 1; i < breaks.length; i++) {
-      items.push(`<span class="censimento-legend-item"><span class="censimento-legend-swatch" style="background:${CENSIMENTO_PALETTE[i]}"></span>${formatRange(breaks[i-1], breaks[i])}</span>`);
-    }
-    items.push(`<span class="censimento-legend-item"><span class="censimento-legend-swatch" style="background:${CENSIMENTO_PALETTE[breaks.length]}"></span>&gt; ${fmtNum(Math.round(breaks[breaks.length-1]))}</span>`);
-    if (nNoData > 0) {
-      items.push(`<span class="censimento-legend-item"><span class="censimento-legend-swatch" style="background:${CENSIMENTO_NA_COLOR}"></span>Non rilevata (${fmtNum(nNoData)})</span>`);
-    }
-    legendEl.innerHTML = items.join('');
-  }
+  // Salva istanza prima di renderizzare la legenda
+  window.__censimentoInstance = { map, layer, fc, breaks: breaks0, indicator: initialIndicator };
 
-  // Espongo per usi futuri (12.4 dropdown indicatori, 12.5 click pannello sezione)
-  window.__censimentoInstance = { map, layer, fc, breaks };
+  // Render legenda iniziale (densità)
+  _censimentoRenderLegend(initialIndicator, breaks0, nNoData0);
+
+  // Bind dropdown change
+  const selEl = document.getElementById('censimento-indicator');
+  if (selEl) {
+    selEl.addEventListener('change', (e) => {
+      _censimentoApplyIndicator(e.target.value);
+    });
+  }
 }
 
 
