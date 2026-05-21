@@ -7884,12 +7884,15 @@ async function initCensimentoMap(istat) {
       lyr.on('click', () => {
         _censimentoRenderSectionDetail(feature);
         // Scroll smooth al pannello dettaglio appena renderizzato.
-        // requestAnimationFrame per attendere il primo paint del nuovo DOM.
+        // Calcolo manuale dell'offset per compensare gli header sticky
+        // (mini-mast ~76px + tabs-bar ~50px = ~130px di copertura).
+        // requestAnimationFrame attende il primo paint del nuovo DOM.
         requestAnimationFrame(() => {
           const detail = document.getElementById('censimento-section-detail');
-          if (detail) {
-            detail.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          }
+          if (!detail) return;
+          const STICKY_OFFSET = 140;  // ~76+50+padding
+          const targetTop = detail.getBoundingClientRect().top + window.pageYOffset - STICKY_OFFSET;
+          window.scrollTo({ top: targetTop, behavior: 'smooth' });
         });
       });
     }
