@@ -12,7 +12,7 @@
 import type { Env } from "../index.js";
 
 const KV_PREFIX = "r2cache:";
-const DEFAULT_TTL_SECONDS = 3600; // 1 hour
+const DEFAULT_TTL_SECONDS = 60; // 60s: bilanciato per propagare update ETL/cron veloce
 
 export async function fetchR2Json<T = unknown>(
   env: Env,
@@ -35,9 +35,11 @@ export async function fetchR2Json<T = unknown>(
   }
 
   // 2. Fetch from DATA_BASE_URL (B1: HTTPS instead of R2 binding)
+  // Cache CF edge: TTL 60s allineato a DEFAULT_TTL_SECONDS. Bilancia carico
+  // backend (1 fetch/min/shard popolare) e freshness post-ETL (max 60s di lag).
   const url = `${env.DATA_BASE_URL}/${r2Key}`;
   const r = await fetch(url, {
-    cf: { cacheTtl: 3600, cacheEverything: true },
+    cf: { cacheTtl: 60, cacheEverything: true },
     headers: env.DATA_BASIC_AUTH ? { "Authorization": `Basic ${env.DATA_BASIC_AUTH}` } : {},
   });
   if (r.status === 404) {
