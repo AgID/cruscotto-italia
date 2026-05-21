@@ -26,6 +26,7 @@ Sorgenti accorpate:
 - agcom_bbmap/<istat>.json       (AGCOM - Broadband Map, copertura banda larga)
 - carburanti/<istat>.json        (MIMIT - Osservatorio Prezzi Carburanti, anagrafica impianti + prezzi praticati)
 - runts/<istat>.json             (Min. Lavoro - Registro Unico Nazionale Terzo Settore, enti iscritti)
+- censimento/<istat>.json        (ISTAT Censimento permanente 2021 - KPI sezioni + distribuzioni)
 - lookup/anac-aggregato.json     (filtrato per CF)
 - lookup/comuni-bundle.json      (anagrafica)
 
@@ -88,6 +89,7 @@ SHARDS = [
     ("carburanti", "carburanti/{istat}.json"),
     ("runts",      "runts/{istat}.json"),
     ("asia",       "asia/{istat}.json"),
+    ("censimento", "censimento/{istat}.json"),
 ]
 
 # Shard con path assoluto (legacy, indipendenti da DATA_DIR)
