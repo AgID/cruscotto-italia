@@ -1710,6 +1710,11 @@ const ANNCSU_FULL_BASE = MCP_ENDPOINT.replace(/\/mcp$/, '/data/anncsu_full');
 // Restituisce FeatureCollection GeoJSON con geometrie EPSG:4326 + 119 vars per sezione.
 const CENSIMENTO_FULL_BASE = (location.origin + '/data/censimento_full');
 
+// Anno di riferimento del dataset Profilo (ISTAT Censimento permanente, comune-level).
+// Single source of truth: usato in tab label "Profilo {anno}" e in section-sub.
+// Aggiornare quando ISTAT pubblica il nuovo rilascio (annuale, in genere Q4).
+const PROFILO_YEAR = 2024;
+
 async function mcpCall(toolName, args) {
   const res = await fetch(MCP_ENDPOINT, {
     method: 'POST',
@@ -1832,7 +1837,7 @@ function renderComune(data) {
     { id: 'patrimonio-pa', label: 'Patrimonio PA', kpi: k.immobili_pa?.kpi?.n_totale != null ? fmtNum(k.immobili_pa.kpi.n_totale) : '—' },
     { id: 'pendolarismo', label: 'Pendolarismo', kpi: k.pendolarismo?.kpi?.saldo_netto != null ? (k.pendolarismo.kpi.saldo_netto > 0 ? '+' : '') + fmtNum(k.pendolarismo.kpi.saldo_netto) : '—' },
     { id: 'pnrr', label: 'PNRR', kpi: '<span data-tab-pnrr-count><span class="tab-spinner"></span></span>' },
-    { id: 'profilo', label: 'Profilo', kpi: '<span data-tab-profilo-pct><span class="tab-spinner"></span></span>' },
+    { id: 'profilo', label: `Profilo ${PROFILO_YEAR}`, kpi: '<span data-tab-profilo-pct><span class="tab-spinner"></span></span>' },
     { id: 'pun', label: 'Punti di ricarica', kpi: k.pun?.kpi?.n_attivi != null ? fmtNum(k.pun.kpi.n_attivi) : '—' },
     { id: 'redditi', label: 'Redditi e fisco', kpi: k.redditi?.anni?.[String(k.redditi.anni_disponibili?.slice(-1)[0])]?.reddito_complessivo?.medio != null ? '€' + fmtNum(k.redditi.anni[String(k.redditi.anni_disponibili.slice(-1)[0])].reddito_complessivo.medio) : '—' },
     { id: 'sanita', label: 'Sanità', kpi: k.sanita_mds?.farmacie?.kpi?.n_totale != null ? fmtNum(k.sanita_mds.farmacie.kpi.n_totale) : '—' },
@@ -1927,8 +1932,8 @@ function renderComune(data) {
             <div class="kpi-card-sub">${k.pnrr?.kpi?.totale_finanziamento_pnrr != null ? '€' + fmtNum(Math.round(k.pnrr.kpi.totale_finanziamento_pnrr)) : 'progetti attivi'}</div>
           </div>
 
-          <div class="kpi-card ${k.profilo?.istruzione?.terziario_pct != null ? '' : 'tbd'}" data-go-tab="profilo" tabindex="0" role="button" aria-label="Vai alla tab Profilo">
-            <div class="kpi-card-lab">Profilo</div>
+          <div class="kpi-card ${k.profilo?.istruzione?.terziario_pct != null ? '' : 'tbd'}" data-go-tab="profilo" tabindex="0" role="button" aria-label="Vai alla tab Profilo ${PROFILO_YEAR}">
+            <div class="kpi-card-lab">Profilo ${PROFILO_YEAR}</div>
             <div class="kpi-card-val">${k.profilo?.istruzione?.terziario_pct != null ? k.profilo.istruzione.terziario_pct.toFixed(1) : '—'}<span class="kpi-card-unit">${k.profilo?.istruzione?.terziario_pct != null ? '%' : ''}</span></div>
             <div class="kpi-card-sub">laureati (25-64 anni)</div>
           </div>
@@ -2415,7 +2420,7 @@ function renderProfiloTabSkeleton() {
       <h2 class="section-h">Profilo del <em>comune</em>.</h2>
       <p class="section-sub">
         Ritratto socio-demografico: chi vive in questo comune, con che istruzione,
-        che lavoro fa, come si muove. Fonte ISTAT, Censimento permanente, anno 2024.
+        che lavoro fa, come si muove. Fonte ISTAT, Censimento permanente, anno ${PROFILO_YEAR}.
       </p>
       <div id="profilo-content">
         <div class="spese-loading" role="status" aria-live="polite">
@@ -2493,19 +2498,19 @@ function renderProfiloContent(container, data) {
     </div>
 
     <div class="profilo-section">
-      <h3 class="profilo-section-h">§ Istruzione <em>2024</em></h3>
+      <h3 class="profilo-section-h">§ Istruzione <em>${PROFILO_YEAR}</em></h3>
       <p class="profilo-section-sub">Distribuzione del titolo di studio nella popolazione 25-64 anni.</p>
       ${istr.pop_riferimento_25_64 ? renderIstruzioneSection(istr) : '<div class="profilo-na">Dato non disponibile per questo comune.</div>'}
     </div>
 
     <div class="profilo-section">
-      <h3 class="profilo-section-h">§ Lavoro <em>2024</em></h3>
+      <h3 class="profilo-section-h">§ Lavoro <em>${PROFILO_YEAR}</em></h3>
       <p class="profilo-section-sub">Condizione professionale della popolazione 25-64 anni.</p>
       ${lav.pop_riferimento_25_64 ? renderLavoroSection(lav) : '<div class="profilo-na">Dato non disponibile.</div>'}
     </div>
 
     <div class="profilo-section">
-      <h3 class="profilo-section-h">§ Famiglie <em>2024</em></h3>
+      <h3 class="profilo-section-h">§ Famiglie <em>${PROFILO_YEAR}</em></h3>
       <p class="profilo-section-sub">Composizione familiare nel comune.</p>
       ${fam.n_famiglie ? renderFamiglieSection(fam) : '<div class="profilo-na">Dato non disponibile.</div>'}
     </div>
@@ -2515,13 +2520,13 @@ function renderProfiloContent(container, data) {
       <p class="profilo-section-sub">Spostamenti giornalieri della popolazione per lavoro o studio.</p>
       <div class="profilo-mobilita-warning">
         <strong>Anno di riferimento</strong>
-        Questo è l'ultimo anno per cui ISTAT pubblica dati di pendolarismo a livello comunale (Censimento permanente 2019). Le altre sezioni del profilo sono al 2024.
+        Questo è l'ultimo anno per cui ISTAT pubblica dati di pendolarismo a livello comunale (Censimento permanente 2019). Le altre sezioni del profilo sono al ${PROFILO_YEAR}.
       </div>
       ${mob.pendolari_totale_n ? renderMobilitaSection(mob) : '<div class="profilo-na">Dato non disponibile.</div>'}
     </div>
 
     <div class="profilo-section">
-      <h3 class="profilo-section-h">§ Cittadinanza <em>2024</em></h3>
+      <h3 class="profilo-section-h">§ Cittadinanza <em>${PROFILO_YEAR}</em></h3>
       <p class="profilo-section-sub">Composizione per cittadinanza della popolazione residente.</p>
       ${cit.pop_totale_n ? renderCittadinanzaSection(cit) : '<div class="profilo-na">Dato non disponibile.</div>'}
     </div>
