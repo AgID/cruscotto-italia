@@ -7890,7 +7890,7 @@ async function initCensimentoMap(istat) {
         requestAnimationFrame(() => {
           const detail = document.getElementById('censimento-section-detail');
           if (!detail) return;
-          const STICKY_OFFSET = 140;  // ~76+50+padding
+          const STICKY_OFFSET = 200;  // ~76+50+~70 per header pannello
           const targetTop = detail.getBoundingClientRect().top + window.pageYOffset - STICKY_OFFSET;
           window.scrollTo({ top: targetTop, behavior: 'smooth' });
         });
