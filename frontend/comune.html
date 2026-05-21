@@ -1737,6 +1737,7 @@ function renderComune(data) {
   const tabs = [
     { id: 'panoramica', label: 'Panoramica', kpi: '' },
     { id: 'anncsu', label: 'ANNCSU', kpi: k.anncsu?.kpi?.n_strade != null ? fmtNum(k.anncsu.kpi.n_strade) + (k.anncsu.kpi.n_civici != null ? ' / ' + fmtNum(k.anncsu.kpi.n_civici) : '') : '—' },
+    { id: 'censimento', label: 'Censimento', kpi: k.censimento?.kpi_comune?.n_sezioni != null ? fmtNum(k.censimento.kpi_comune.n_sezioni) : '—' },
     { id: 'aria', label: 'Aria', kpi: '<span data-tab-aria-n><span class="tab-spinner"></span></span>' },
     { id: 'banda-larga', label: 'Banda larga', kpi: k.agcom_bbmap?.kpi?.copertura_ftth_desi_pct != null ? Math.round(k.agcom_bbmap.kpi.copertura_ftth_desi_pct) + '%' : '—' },
     { id: 'contratti', label: 'Contratti ANAC', kpi: fmtNum(k.contratti?.count || 0) },
@@ -1929,6 +1930,7 @@ function renderComune(data) {
       ${renderPendolarismoTab(k.pendolarismo)}
       ${renderSanitaTab(k.sanita_mds)}
       ${renderAnncsuTab(k.anncsu)}
+      ${renderCensimentoTab(k.censimento)}
       ${renderPunTab(k.pun)}
       ${renderBandaLargaTab(k.agcom_bbmap, a, k.territorio)}
       ${renderCarburantiTab(k.carburanti)}
@@ -7364,6 +7366,51 @@ async function tryEnrichAnncsuFull(istat) {
 }
 
 
+// ============================================================================
+// CENSIMENTO ISTAT 2021 — Basi Territoriali + Variabili Censuarie
+// ============================================================================
+// Fonte: ISTAT Censimento permanente 2021, CC-BY 3.0 IT.
+// Dati comune-level nel dashboard A1 (sezione `censimento`).
+// Dettaglio per sezione di censimento in lazy fetch:
+//   GET /data/censimento_full/<istat>.geojson
+//
+// Step 12 (frontend): implementazione progressiva in micro-step.
+// 12.1 = stub minimale "in arrivo" + voce navbar.
+// ============================================================================
+
+function renderCensimentoTab(d) {
+  if (!d || !d.kpi_comune) {
+    return `
+      <div class="tab-pane" id="pane-censimento">
+        <div class="section-title">§ Censimento ISTAT 2021</div>
+        <h2 class="section-h">Dati <em>non disponibili</em>.</h2>
+        <p class="muted">Il comune non risulta nelle Basi Territoriali ISTAT 2021 (Censimento permanente).</p>
+      </div>`;
+  }
+  // Stub minimale µ-step 12.1: riconoscimento dato presente, contenuti veri in 12.2+.
+  const k = d.kpi_comune;
+  return `
+    <div class="tab-pane" id="pane-censimento">
+      <div class="section-title">§ Censimento ISTAT 2021</div>
+      <h2 class="section-h">Basi territoriali e variabili <em>censuarie</em>.</h2>
+      <p class="muted">
+        Fonte: ISTAT, Censimento permanente 2021 — Basi Territoriali + Variabili
+        censuarie per sezione. Licenza CC-BY 3.0 IT. Copertura 100% comuni inclusi TN/BZ.
+      </p>
+      <p>
+        Il comune ha <strong>${fmtNum(k.n_sezioni || 0)}</strong> sezioni di censimento
+        per una popolazione totale di <strong>${fmtNum(k.pop_totale || 0)}</strong> abitanti
+        su <strong>${k.area_kmq != null ? k.area_kmq.toFixed(1) : '—'}&thinsp;km²</strong>.
+      </p>
+      <p class="muted">
+        <em>Tab in costruzione</em>: choropleth interattivo, 4 chart riassuntivi
+        per sezione e tabella completa delle 119 variabili in arrivo nei prossimi rilasci.
+      </p>
+    </div>
+  `;
+}
+
+
 function renderVeicoliTab(v) {
   if (!v || !v.parco_veicoli) {
     return `
@@ -8681,6 +8728,7 @@ function adaptDashboardToOverview(d) {
       immobili_pa: d.immobili_pa,  // pass-through completo per renderImmobiliPaTab
       sanita_mds: d.sanita_mds,    // pass-through completo per renderSanitaTab
       anncsu: d.anncsu,  // pass-through completo per renderAnncsuTab
+      censimento: d.censimento,  // pass-through completo per renderCensimentoTab
       pun: d.pun,  // pass-through completo per renderPunTab
       agcom_bbmap: d.agcom_bbmap,  // pass-through completo per renderBandaLargaTab
       carburanti: d.carburanti,    // pass-through completo per renderCarburantiTab
