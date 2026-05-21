@@ -553,3 +553,131 @@ def parse_shapefile_region(zip_path: Path, region: int) -> list[dict]:
              skipped_bad_geom=n_skipped_bad_geom,
              elapsed_s=round(elapsed, 1))
     return out
+
+
+# ═════════════════════════════════════════════════════════════════════════
+# SMOKE TEST — esegui con: python -m etl.sources.censimento --smoke-test
+# ═════════════════════════════════════════════════════════════════════════
+# Scarica solo Valle d'Aosta (regione 2, ZIP piu' piccolo ~4MB BT + ~1MB
+# XLSX) e Cogne come comune campione per validare la pipeline su dato vero
+# senza scaricare i 250MB del file nazionale variabili.
+
+def _smoke_test() -> int:
+    """Test end-to-end veloce solo su Valle d'Aosta + comune Cogne.
+
+    Pre-condizione: ZIP nazionale Dati_regionali_2021.zip gia' presente in
+    CACHE_DIR (e' 250MB, non lo scarichiamo nello smoke). Per eseguirlo
+    la prima volta, lanciare prima con --download-vars.
+
+    Output atteso:
+    - Region 2 (VdA): 4485 sezioni totali
+    - Comune Cogne (PRO_COM=7021, istat=007021): ~12 sezioni
+    - Sample sezione: 1 record completo con vars + geom
+    """
+    region = 2  # Valle d'Aosta
+    cogne_istat = "007021"  # PRO_COM=7021 padded
+
+    print("=" * 70)
+    print("SMOKE TEST CENSIMENTO ISTAT - Valle d'Aosta / Cogne")
+    print("=" * 70)
+
+    # 1. Verifica/scarica BT regione 2
+    print(f"\n[1/4] Download BT regione R02_21.zip...")
+    bt_zip = download_bt_region(region)
+    print(f"      OK: {bt_zip} ({bt_zip.stat().st_size / 1024 / 1024:.1f} MB)")
+
+    # 2. Verifica file vars nazionale (pre-condizione)
+    vars_zip = CACHE_DIR / "Dati_regionali_2021.zip"
+    if not vars_zip.exists():
+        print(f"\n  ATTENZIONE: {vars_zip} non trovato.")
+        print(f"  Per popolare la cache, lancia prima:")
+        print(f"    python3 -m etl.sources.censimento --download-vars")
+        print(f"  (250 MB download, ~5-10 min). Smoke test interrotto.")
+        return 1
+    print(f"\n[2/4] File variabili nazionale: cache hit OK "
+          f"({vars_zip.stat().st_size / 1024 / 1024:.1f} MB)")
+
+    # 3. Parse XLSX variabili regione 2
+    print(f"\n[3/4] Parse XLSX variabili R02...")
+    vars_by_sezid = parse_vars_xlsx_from_zip(vars_zip, region)
+    print(f"      OK: {len(vars_by_sezid)} sezioni con variabili")
+    # Estraggo le sezioni di Cogne (PRO_COM == 7021)
+    cogne_sezid = {sid for sid, rec in vars_by_sezid.items()
+                   if rec["procom"] == 7021}
+    print(f"      Sezioni Cogne (PRO_COM=7021): {len(cogne_sezid)}")
+
+    # 4. Parse shapefile regione 2
+    print(f"\n[4/4] Parse shapefile R02...")
+    features = parse_shapefile_region(bt_zip, region)
+    print(f"      OK: {len(features)} sezioni totali in VdA")
+    cogne_features = [f for f in features if f["procom"] == cogne_istat]
+    print(f"      Sezioni Cogne in SHP: {len(cogne_features)}")
+
+    # 5. Cross-check sez_id geometrie vs vars
+    geom_sezids = {f["sez_id"] for f in cogne_features}
+    only_in_geom = geom_sezids - cogne_sezid
+    only_in_vars = cogne_sezid - geom_sezids
+    print(f"\n[CROSS] sez_id Cogne in geometrie: {len(geom_sezids)}, "
+          f"in vars: {len(cogne_sezid)}")
+    if only_in_geom:
+        print(f"        Solo in geometrie (no vars): {len(only_in_geom)} -> "
+              f"{sorted(only_in_geom)[:5]}")
+    if only_in_vars:
+        print(f"        Solo in vars (no geometria): {len(only_in_vars)} -> "
+              f"{sorted(only_in_vars)[:5]}")
+
+    # 6. Sample sezione completa (la prima di Cogne con vars+geom)
+    if cogne_features:
+        sample = cogne_features[0]
+        sid = sample["sez_id"]
+        vars_rec = vars_by_sezid.get(sid, {}).get("vars", {})
+        print(f"\n[SAMPLE] Prima sezione Cogne:")
+        print(f"  sez_id:    {sid}")
+        print(f"  sez:       {sample['sez']}")
+        print(f"  procom:    {sample['procom']}")
+        print(f"  tipo_loc:  {sample['tipo_loc']}")
+        print(f"  area_mq:   {sample['area_mq']}")
+        print(f"  geom rings: {len(sample['geom']['coordinates'])}, "
+              f"points ring0: {len(sample['geom']['coordinates'][0])}")
+        print(f"  primo punto: {sample['geom']['coordinates'][0][0]}  (lon, lat)")
+        print(f"  vars (first 5): "
+              f"{dict(list(vars_rec.items())[:5]) if vars_rec else 'NESSUNA'}")
+        print(f"  P1 popolazione: {vars_rec.get('P1', 'N/A')}")
+        print(f"  P101 occupati 15-64: {vars_rec.get('P101', 'N/A')}")
+        print(f"  ST1 stranieri: {vars_rec.get('ST1', 'N/A')}")
+        print(f"  PF1 famiglie: {vars_rec.get('PF1', 'N/A')}")
+        print(f"  A8 abitazioni tot: {vars_rec.get('A8', 'N/A')}")
+    else:
+        print(f"\n[ERROR] Nessuna sezione Cogne nelle geometrie!")
+        return 2
+
+    print(f"\n{'=' * 70}\nSMOKE TEST OK\n{'=' * 70}")
+    return 0
+
+
+def _download_vars_only() -> int:
+    """Scarica solo Dati_regionali_2021.zip (250MB) nella cache.
+    Necessario una sola volta prima dello smoke-test.
+    """
+    print("Download Dati_regionali_2021.zip (~250 MB, puo' richiedere 5-10 min)...")
+    out = download_dati_regionali()
+    print(f"OK: {out} ({out.stat().st_size / 1024 / 1024:.1f} MB)")
+    return 0
+
+
+if __name__ == "__main__":
+    import sys
+    args = sys.argv[1:]
+    if "--smoke-test" in args:
+        sys.exit(_smoke_test())
+    elif "--download-vars" in args:
+        sys.exit(_download_vars_only())
+    else:
+        print("Uso:")
+        print("  python3 -m etl.sources.censimento --download-vars")
+        print("      Scarica file variabili nazionale (250 MB, cache /tmp).")
+        print("  python3 -m etl.sources.censimento --smoke-test")
+        print("      Esegue smoke test su Valle d'Aosta + Cogne.")
+        print()
+        print("(Il main ETL completo verra' aggiunto in un commit successivo.)")
+        sys.exit(0)
