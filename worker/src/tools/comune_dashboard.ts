@@ -21,6 +21,11 @@
  *                                   e numeri civici certificati, sample 1000
  *                                   punti geo-ref. Full su anncsu_full/ via
  *                                   endpoint dedicato /data/anncsu_full/)
+ *   - censimento/<istat>.json      (ISTAT Basi Territoriali + Variabili
+ *                                   censuarie 2021. KPI comune-level + 5
+ *                                   distribuzioni. Geometrie full + 119
+ *                                   variabili per sezione su endpoint
+ *                                   /data/censimento_full/<istat>.geojson)
  *   - sanita_mds/<istat>.json      (Ministero Salute - farmacie e parafarmacie
  *                                   geo-localizzate, posti letto ospedalieri
  *                                   per stabilimento e disciplina. Licenza
@@ -125,6 +130,30 @@
  *                                       //             // completo fetch HTTP GET
  *                                       //             // /data/anncsu_full/<istat>.json
  *                                       //   }
+ *     "censimento":  { ... } | null    // ISTAT Censimento permanente 2021:
+ *                                       //   { _source, _license: "CC-BY 3.0 IT",
+ *                                       //     _anno_rilevazione: 2021,
+ *                                       //     _has_full: bool, _has_asc: bool,
+ *                                       //     kpi_comune: { n_sezioni, pop_totale,
+ *                                       //                   pop_maschi, pop_femmine,
+ *                                       //                   famiglie_totali,
+ *                                       //                   abitazioni_totali/occupate/vuote,
+ *                                       //                   edifici_residenziali,
+ *                                       //                   stranieri_totali/ue/extra_ue,
+ *                                       //                   occupati_15_64/maschi/femmine,
+ *                                       //                   area_kmq },
+ *                                       //     distribuzioni_comune: {
+ *                                       //       eta_5anni: {0-4,...,75+},
+ *                                       //       eta_per_fascia: {0-14,15-64,65+},
+ *                                       //       titolo_studio_9plus: {nessuno,
+ *                                       //         elementare,media,diploma,terziario},
+ *                                       //       famiglie_componenti: {1,2,3,4,5,6+},
+ *                                       //       stranieri_eta: {0-29,30-54,55+}
+ *                                       //     }
+ *                                       //   }
+ *                                       //   Per geometrie complete + 119 variabili
+ *                                       //   per sezione fetch HTTP GET
+ *                                       //   /data/censimento_full/<istat>.geojson
  *     "sanita_mds":  { ... } | null    // Ministero Salute - bundle sanita'
  *                                       //   territoriale (3 dataset MdS):
  *                                       //   { _license: "IODL v2.0",
@@ -365,7 +394,7 @@ interface DashboardShard {
 
 export const comuneDashboard: ToolDefinition = {
   description:
-    "Vista completa di un comune italiano in una sola chiamata (~250K token, sezioni complete con array dettagliati). PRIMA DI CHIAMARE QUESTO TOOL valuta se comune_kpi (~620 token, KPI sintetici) basta per la tua query: per domande puntuali ('popolazione di X', 'reddito medio di Y') o confronti tra comuni ('X vs Y') preferisci sempre comune_kpi. Usa comune_dashboard SOLO quando servono array dettagliati: top categorie merceologiche ANAC, settori BDAP, missioni PNRR, piramide età demografia, time series SIOPE mensili, mappa civici ANNCSU, punti ricarica EV, stabilimenti ospedalieri con discipline, top settori ATECO imprese (ASIA). Sezioni: anagrafica, demografia, censimento, turismo, PNRR (Italia Domani), territorio (ISPRA Suolo/IdroGEO/Rifiuti), qualita aria (ISPRA SNPA: PM10/PM2.5/NO2), opere pubbliche (BDAP-MOP), spese (SIOPE multi-anno), contratti (ANAC), scuole (MIUR), veicoli e incidenti (ISTAT + ACI), redditi IRPEF 2020-2024 (MEF DF), patrimonio immobili PA (MEF DE 2022), ANNCSU civici e strade (Agenzia Entrate + ISTAT), sanita territoriale farmacie/parafarmacie/ospedali (Min. Salute), punti ricarica EV (GSE/MASE PUN), banda larga FTTH (AGCOM BBmap), distributori e prezzi carburanti (MIMIT), enti del Terzo Settore RUNTS (Min. Lavoro - ODV/APS/EF/IS/SMS/ETS, 5x1000, rete associativa), imprese e addetti (ISTAT ASIA UL: unità locali, addetti, mix classi dimensionali, top settori ATECO 2 cifre, serie storica 2018-2023), pendolarismo per lavoro (ISTAT 2021 Censimento permanente: uscenti/entranti/saldo, auto-contenimento, top 10 destinazioni e origini con codice ISTAT). Richiede istat_code (6 cifre, es. '075035' per Lecce). Se hai solo il nome, chiama prima search_comune. Per il dettaglio completo dello schema di output per ogni sezione consulta lo skill cruscotto-italia-workflow.",
+    "Vista completa di un comune italiano in una sola chiamata (~250K token, sezioni complete con array dettagliati). PRIMA DI CHIAMARE QUESTO TOOL valuta se comune_kpi (~620 token, KPI sintetici) basta per la tua query: per domande puntuali ('popolazione di X', 'reddito medio di Y') o confronti tra comuni ('X vs Y') preferisci sempre comune_kpi. Usa comune_dashboard SOLO quando servono array dettagliati: top categorie merceologiche ANAC, settori BDAP, missioni PNRR, piramide età demografia, time series SIOPE mensili, mappa civici ANNCSU, punti ricarica EV, stabilimenti ospedalieri con discipline, top settori ATECO imprese (ASIA), KPI sezioni di censimento ISTAT 2021. Sezioni: anagrafica, demografia, censimento (profilo storico), turismo, PNRR (Italia Domani), territorio (ISPRA Suolo/IdroGEO/Rifiuti), qualita aria (ISPRA SNPA: PM10/PM2.5/NO2), opere pubbliche (BDAP-MOP), spese (SIOPE multi-anno), contratti (ANAC), scuole (MIUR), veicoli e incidenti (ISTAT + ACI), redditi IRPEF 2020-2024 (MEF DF), patrimonio immobili PA (MEF DE 2022), ANNCSU civici e strade (Agenzia Entrate + ISTAT), sanita territoriale farmacie/parafarmacie/ospedali (Min. Salute), punti ricarica EV (GSE/MASE PUN), banda larga FTTH (AGCOM BBmap), distributori e prezzi carburanti (MIMIT), enti del Terzo Settore RUNTS (Min. Lavoro - ODV/APS/EF/IS/SMS/ETS, 5x1000, rete associativa), imprese e addetti (ISTAT ASIA UL: unità locali, addetti, mix classi dimensionali, top settori ATECO 2 cifre, serie storica 2018-2023), pendolarismo per lavoro (ISTAT 2021 Censimento permanente: uscenti/entranti/saldo, auto-contenimento, top 10 destinazioni e origini con codice ISTAT), censimento sezioni di censimento 2021 (ISTAT Basi Territoriali + Variabili censuarie permanenti: KPI comune-level con n_sezioni, pop_totale, pop M/F, famiglie_totali, abitazioni totali/occupate/vuote, edifici residenziali, stranieri totali/UE/extra_UE, occupati 15-64 M/F, area_kmq; distribuzioni per fasce eta' 5anni e 0-14/15-64/65+, titolo di studio 9+ in 5 livelli, famiglie per componenti 1/2/3/4/5/6+, stranieri per fascia eta'; geometrie complete 119 variabili per sezione disponibili via lazy fetch su GET /data/censimento_full/<istat>.geojson; 33% sezioni 'no_vars' sono aree non residenziali non rilevate). Richiede istat_code (6 cifre, es. '075035' per Lecce). Se hai solo il nome, chiama prima search_comune. Per il dettaglio completo dello schema di output per ogni sezione consulta lo skill cruscotto-italia-workflow.",
   inputSchema: {
     type: "object",
     properties: {
