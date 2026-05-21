@@ -9218,24 +9218,25 @@ function initPendolarismoMap(d) {
 
   // Click sui marker (origin o destination): mostra popup col nome + numero pendolari
   function handleFlowmapClick(e) {
-    const isOrig = e.isOriginFeature;
     const p = e.layer && e.layer.feature ? e.layer.feature.properties : null;
     if (!p) {
       return;
     }
+    // Distingo il tipo di feature da p.kind (settato in fase di build delle
+    // FeatureCollection): 'out' = marker su comune destinazione (uscenti);
+    //                    'in'  = marker su comune origine (entranti).
+    // BUG fix 2026-05-21: prima si usava e.isOriginFeature che non viene mai
+    // settato da Leaflet → tutti i click entravano nel ramo else con popup
+    // che mostrava i KPI del comune corrente. Ora usiamo p.kind direttamente.
     let html;
-    if (isOrig) {
-      // L'utente ha cliccato il marker che rappresenta l'origine del flusso
-      html = '<b>' + p.origin_name + '</b><br>' + p.origin_id + '<br>' +
-             (p.kind === 'out'
-               ? 'Saldo netto: <b>' + ((k.saldo_netto >= 0 ? '+' : '') + k.saldo_netto.toLocaleString('it-IT')) + '</b>'
-               : p.count.toLocaleString('it-IT') + ' pendolari verso ' + p.destination_name);
-    } else {
-      // Cliccato il marker destinazione del flusso
+    if (p.kind === 'out') {
+      // Marker su comune DESTINAZIONE (uscenti da Taranto verso X)
       html = '<b>' + p.destination_name + '</b><br>' + p.destination_id + '<br>' +
-             (p.kind === 'in'
-               ? 'Saldo netto: <b>' + ((k.saldo_netto >= 0 ? '+' : '') + k.saldo_netto.toLocaleString('it-IT')) + '</b>'
-               : p.count.toLocaleString('it-IT') + ' pendolari da ' + p.origin_name);
+             p.count.toLocaleString('it-IT') + ' pendolari verso ' + p.destination_name;
+    } else {
+      // Marker su comune ORIGINE (entranti a Taranto da X), p.kind === 'in'
+      html = '<b>' + p.origin_name + '</b><br>' + p.origin_id + '<br>' +
+             p.count.toLocaleString('it-IT') + ' pendolari da ' + p.origin_name;
     }
     // Apro popup direttamente sul layer (CircleMarker) cliccato — più affidabile
     if (e.layer && e.layer.bindPopup) {
