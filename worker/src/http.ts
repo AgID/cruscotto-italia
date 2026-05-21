@@ -243,7 +243,7 @@ pre code {
     <li>Compila il form:
       <ul>
         <li><strong>Name</strong>: <code>Cruscotto Italia</code></li>
-        <li><strong>Remote MCP server URL</strong>: <code>https://cruscotto-italia-mcp.agid.workers.dev/mcp</code></li>
+        <li><strong>Remote MCP server URL</strong>: <code>https://cruscotto-italia-mcp.dati.gov.it/mcp</code></li>
       </ul>
     </li>
     <li>Lascia <em>Advanced settings</em> vuoto (nessuna autenticazione richiesta).</li>
@@ -260,7 +260,7 @@ pre code {
       "args": [
         "-y",
         "mcp-remote",
-        "https://cruscotto-italia-mcp.agid.workers.dev/mcp"
+        "https://cruscotto-italia-mcp.dati.gov.it/mcp"
       ]
     }
   }
@@ -273,10 +273,10 @@ pre code {
   <p><a href="https://cruscotto-italia.dati.gov.it/data/skills/cruscotto-italia-workflow-v1.9.0.zip" download><strong>cruscotto-italia-workflow-v1.9.0.zip</strong></a></p>
 
   <h3>ChatGPT (Custom GPT)</h3>
-  <p>Nei custom GPT con supporto MCP, aggiungi un nuovo server con URL <code>https://cruscotto-italia-mcp.agid.workers.dev/mcp</code> e tipo JSON-RPC 2.0. Nessuna autenticazione richiesta.</p>
+  <p>Nei custom GPT con supporto MCP, aggiungi un nuovo server con URL <code>https://cruscotto-italia-mcp.dati.gov.it/mcp</code> e tipo JSON-RPC 2.0. Nessuna autenticazione richiesta.</p>
 
   <h3>Client generico / curl</h3>
-  <pre><code>curl -X POST https://cruscotto-italia-mcp.agid.workers.dev/mcp \\
+  <pre><code>curl -X POST https://cruscotto-italia-mcp.dati.gov.it/mcp \\
   -H "Content-Type: application/json" \\
   -H "Accept: application/json, text/event-stream" \\
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'</code></pre>
