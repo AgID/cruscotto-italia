@@ -419,10 +419,11 @@ export const comuneDashboard: ToolDefinition = {
       validateIstatCode(resolvedIstat, "resolved_istat_code");
     }
 
-    // 2. Fetch del dashboard shard (no KV cache: file grandi)
+    // 2. Fetch del dashboard shard (no KV cache: file grandi; ttl 60s per
+    //    propagare gli update post-cron ETL in <1min al frontend)
     const shardKey = `dashboard/${resolvedIstat}.json`;
     const shard = await fetchR2Json<DashboardShard>(
-      env, shardKey, { useKvCache: false }
+      env, shardKey, { useKvCache: false, ttl: 60 }
     );
 
     if (!shard) {
