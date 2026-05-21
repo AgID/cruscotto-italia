@@ -168,6 +168,8 @@ import time
 import urllib.request
 import urllib.error
 
+import openpyxl
+
 
 # ═════════════════════════════════════════════════════════════════════════
 # FASE 1 — Download fonti (con cache locale per riusabilita')
@@ -253,3 +255,156 @@ def download_asc(force: bool = False) -> Path:
     if force and out.exists():
         out.unlink()
     return _http_get(URL_ASC, out, MIN_ZIP_SIZE_ASC, timeout=180)
+
+
+# ═════════════════════════════════════════════════════════════════════════
+# FASE 2 — Parse XLSX variabili censuarie (1 file per regione)
+# ═════════════════════════════════════════════════════════════════════════
+
+# Codici di colonna anagrafica (NON in VARS_NUMERIC, usati come metadata sezione)
+XLSX_META_COLS = ["CODREG", "REGIONE", "CODPRO", "PROVINCIA",
+                  "CODCOM", "COMUNE", "PROCOM", "SEZ21_ID",
+                  "COM_ASC1", "COM_ASC2", "COM_ASC3"]
+
+
+def _to_int(val) -> int:
+    """Cast robusto a int per celle XLSX: None -> 0, float/str -> int."""
+    if val is None:
+        return 0
+    if isinstance(val, int):
+        return val
+    if isinstance(val, float):
+        return int(val)
+    s = str(val).strip()
+    if not s or s.lower() in ("na", "n.a.", "n/a", "-"):
+        return 0
+    try:
+        return int(float(s))
+    except (ValueError, TypeError):
+        return 0
+
+
+def parse_vars_xlsx_from_zip(zip_path: Path, region: int) -> dict[int, dict]:
+    """Estrae il file R<NN>_indicatori_2021_sezioni.xlsx dal ZIP nazionale
+    e ritorna {SEZ21_ID: {"procom": int, "vars": {P1:..., P2:..., ...}}}.
+
+    Strategia:
+    1. Apre il ZIP outer e estrae solo l'XLSX della regione richiesta
+       (gli altri 19 file regionali restano non-letti, risparmio memoria)
+    2. openpyxl read_only=True data_only=True (no formule, streaming row)
+    3. Mappa header -> indice colonna (i nomi sono fissi dal TRACCIATO)
+    4. Per ogni riga emette il record con int-cast difensivo
+
+    Note ZIP64: il file nazionale Dati_regionali_2021.zip e' ZIP64 (>4GB
+    capability). openpyxl gestisce correttamente i sub-XLSX via zipfile.
+    """
+    if not 1 <= region <= 20:
+        raise ValueError(f"region deve essere 1-20, ricevuto {region}")
+
+    xlsx_name = f"R{region:02d}_indicatori_2021_sezioni.xlsx"
+    log.info("censimento_vars_parse_start",
+             zip_path=str(zip_path), xlsx=xlsx_name, region=region)
+    t0 = time.time()
+
+    # Estrai SOLO il file della regione richiesta in CACHE_DIR per riuso
+    xlsx_out = CACHE_DIR / xlsx_name
+    if not xlsx_out.exists():
+        with zipfile.ZipFile(zip_path, "r") as zf:
+            try:
+                with zf.open(xlsx_name) as src:
+                    xlsx_out.write_bytes(src.read())
+            except KeyError:
+                raise RuntimeError(
+                    f"File {xlsx_name} non trovato nel ZIP. "
+                    f"Files disponibili: {zf.namelist()[:5]}"
+                )
+
+    wb = openpyxl.load_workbook(xlsx_out, read_only=True, data_only=True)
+    ws = wb.active
+    log.info("censimento_vars_xlsx_opened",
+             region=region, sheet=ws.title, max_row=ws.max_row)
+
+    # Costruisci mapping header -> indice colonna dalla prima riga
+    rows = ws.iter_rows(values_only=True)
+    header = next(rows)
+    col_idx = {str(h).strip(): i for i, h in enumerate(header) if h is not None}
+
+    # Verifica che i campi essenziali esistano
+    missing_meta = [c for c in ["PROCOM", "SEZ21_ID"] if c not in col_idx]
+    if missing_meta:
+        raise RuntimeError(
+            f"Colonne meta mancanti nell'XLSX region {region}: {missing_meta}. "
+            f"Header trovato (primi 10): {list(col_idx.keys())[:10]}"
+        )
+    # Conta quante VARS_NUMERIC sono presenti vs mancanti (info, non blocca)
+    vars_present = [v for v in VARS_NUMERIC if v in col_idx]
+    vars_missing = [v for v in VARS_NUMERIC if v not in col_idx]
+    if vars_missing:
+        log.warning("censimento_vars_some_missing",
+                    region=region, missing=vars_missing[:5],
+                    n_missing=len(vars_missing),
+                    n_present=len(vars_present))
+
+    out: dict[int, dict] = {}
+    n_skipped_no_sez = 0
+    for row in rows:
+        if row is None:
+            continue
+        sez_id_raw = row[col_idx["SEZ21_ID"]] if "SEZ21_ID" in col_idx else None
+        if sez_id_raw is None:
+            n_skipped_no_sez += 1
+            continue
+        sez_id = _to_int(sez_id_raw)
+        if sez_id == 0:
+            n_skipped_no_sez += 1
+            continue
+        procom = _to_int(row[col_idx["PROCOM"]])
+        vars_dict = {v: _to_int(row[col_idx[v]]) for v in vars_present}
+        out[sez_id] = {"procom": procom, "vars": vars_dict}
+
+    elapsed = time.time() - t0
+    log.info("censimento_vars_parse_done",
+             region=region,
+             sezioni=len(out),
+             skipped_no_sez=n_skipped_no_sez,
+             vars_present=len(vars_present),
+             elapsed_s=round(elapsed, 1))
+    return out
+
+
+def parse_tracciato_from_zip(zip_path: Path) -> dict[str, str]:
+    """Estrae il TRACCIATO ISTAT dal ZIP variabili: dict {codice: descrizione}.
+
+    Utile per: generare la tabella collapsibile frontend con la descrizione
+    leggibile di ogni codice (es. 'P1' -> 'Popolazione residente - totale').
+    """
+    tracciato_name = "TRACCIATO FILE REGIONALI.xlsx"
+    log.info("censimento_tracciato_parse_start", zip_path=str(zip_path))
+
+    tracciato_out = CACHE_DIR / "TRACCIATO.xlsx"
+    if not tracciato_out.exists():
+        with zipfile.ZipFile(zip_path, "r") as zf:
+            try:
+                with zf.open(tracciato_name) as src:
+                    tracciato_out.write_bytes(src.read())
+            except KeyError:
+                log.warning("censimento_tracciato_not_in_zip",
+                            zip_path=str(zip_path),
+                            available=zf.namelist()[:5])
+                return {}
+
+    wb = openpyxl.load_workbook(tracciato_out, read_only=True, data_only=True)
+    ws = wb.active
+    out: dict[str, str] = {}
+    for r, row in enumerate(ws.iter_rows(values_only=True)):
+        if r == 0:
+            continue  # header NOME_CAMPO, DEFINIZIONE
+        if not row or row[0] is None:
+            continue
+        code = str(row[0]).strip()
+        desc = str(row[1]).strip() if row[1] is not None else ""
+        if code:
+            out[code] = desc
+
+    log.info("censimento_tracciato_parsed", n_codes=len(out))
+    return out
