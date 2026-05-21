@@ -16,6 +16,13 @@ python-dateutil>=2.9.0
 # Spreadsheet parsing (territorio.py + runts.py)
 openpyxl>=3.1.0
 
+# Shapefile + riproiezione coordinate (censimento.py)
+# pyshp: legge shapefile sezioni di censimento ISTAT BT2021 (DBF + SHP).
+# pyproj: riproietta da WGS84 UTM Zona 32N (EPSG:32632) a EPSG:4326
+#   per servire GeoJSON direttamente al frontend Leaflet.
+pyshp>=2.3.1
+pyproj>=3.6.0
+
 # Logging structured
 structlog>=24.1.0
 
