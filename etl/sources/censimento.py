@@ -556,6 +556,291 @@ def parse_shapefile_region(zip_path: Path, region: int) -> list[dict]:
 
 
 # ═════════════════════════════════════════════════════════════════════════
+# FASE 4 — Aggregati comune-level (KPI + distribuzioni)
+# ═════════════════════════════════════════════════════════════════════════
+# Vengono calcolati a partire dalle vars{} delle sezioni di ogni comune e
+# scritti in data/censimento/<istat>.json (sezione "censimento" del
+# dashboard A1). Le geometrie complete vanno in data/censimento_full/.
+
+# Mapping codice fascia -> label e codici sommabili per le distribuzioni.
+# Allineato al TRACCIATO ISTAT (vedi docstring del modulo).
+ETA_5ANNI_BUCKETS = [
+    ("0-4", "P14"), ("5-9", "P15"), ("10-14", "P16"), ("15-19", "P17"),
+    ("20-24", "P18"), ("25-29", "P19"), ("30-34", "P20"), ("35-39", "P21"),
+    ("40-44", "P22"), ("45-49", "P23"), ("50-54", "P24"), ("55-59", "P25"),
+    ("60-64", "P26"), ("65-69", "P27"), ("70-74", "P28"), ("75+", "P29"),
+]
+ETA_FASCE_AGGR = {
+    "0-14": ["P14", "P15", "P16"],
+    "15-64": ["P17", "P18", "P19", "P20", "P21", "P22",
+              "P23", "P24", "P25", "P26"],
+    "65+": ["P27", "P28", "P29"],
+}
+TITOLO_BUCKETS = [
+    ("nessuno", "P86"), ("elementare", "P87"), ("media", "P88"),
+    ("diploma", "P89"), ("terziario", "P90"),
+]
+FAMIGLIE_BUCKETS = [
+    ("1", "PF3"), ("2", "PF4"), ("3", "PF5"),
+    ("4", "PF6"), ("5", "PF7"), ("6+", "PF8"),
+]
+STRANIERI_ETA_BUCKETS = [
+    ("0-29", "ST3"), ("30-54", "ST4"), ("55+", "ST5"),
+]
+
+
+def aggregate_comune(features_with_vars: list[dict]) -> dict:
+    """Costruisce il dict aggregato comune-level (KPI + distribuzioni)
+    a partire dalla lista di sezioni (ognuna con 'vars' dict).
+
+    Output: dict serializzabile JSON pronto per essere scritto in
+    data/censimento/<istat>.json (sezione 'censimento' del dashboard A1).
+
+    NON include le geometrie (che vanno in censimento_full/).
+    """
+    def sumv(code: str) -> int:
+        """Somma il codice variabile su tutte le sezioni (default 0)."""
+        return sum(int(f.get("vars", {}).get(code, 0) or 0)
+                   for f in features_with_vars)
+
+    n_sezioni = len(features_with_vars)
+    area_kmq = round(
+        sum(f.get("area_mq", 0) for f in features_with_vars) / 1_000_000, 3
+    )
+
+    kpi_comune = {
+        "n_sezioni": n_sezioni,
+        "pop_totale": sumv("P1"),
+        "pop_maschi": sumv("P2"),
+        "pop_femmine": sumv("P3"),
+        "famiglie_totali": sumv("PF1"),
+        "abitazioni_totali": sumv("A8"),
+        "abitazioni_occupate": sumv("A2"),
+        "abitazioni_vuote": sumv("A3"),
+        "edifici_residenziali": sumv("E3"),
+        "stranieri_totali": sumv("ST1"),
+        "stranieri_ue": sumv("ST16"),
+        "stranieri_extra_ue": sumv("ST19"),
+        "occupati_15_64": sumv("P101"),
+        "occupati_maschi": sumv("P102"),
+        "occupati_femmine": sumv("P103"),
+        "area_kmq": area_kmq,
+    }
+
+    distribuzioni = {
+        "eta_5anni": {label: sumv(code) for label, code in ETA_5ANNI_BUCKETS},
+        "eta_per_fascia": {label: sum(sumv(c) for c in codes)
+                           for label, codes in ETA_FASCE_AGGR.items()},
+        "titolo_studio_9plus": {label: sumv(code) for label, code in TITOLO_BUCKETS},
+        "famiglie_componenti": {label: sumv(code) for label, code in FAMIGLIE_BUCKETS},
+        "stranieri_eta": {label: sumv(code) for label, code in STRANIERI_ETA_BUCKETS},
+    }
+
+    return {
+        "_etl_version": ETL_VERSION,
+        "_source": SOURCE_LABEL,
+        "_source_url": SOURCE_PAGE,
+        "_license": LICENSE,
+        "_anno_rilevazione": ANNO,
+        "_generated_at": datetime.now(timezone.utc).isoformat(),
+        "_has_full": True,   # i poligoni completi sono in /data/censimento_full/<istat>.geojson
+        "_has_asc": False,   # popolato dall'ETL ASC separato
+        "kpi_comune": kpi_comune,
+        "distribuzioni_comune": distribuzioni,
+    }
+
+
+# ═════════════════════════════════════════════════════════════════════════
+# FASE 5 — Main ETL: loop 20 regioni + scrittura GeoJSON + aggregati
+# ═════════════════════════════════════════════════════════════════════════
+
+DEFAULT_FULL_DIR = "/var/www/cruscotto-italia/data/censimento_full"
+DEFAULT_AGG_DIR = "/var/www/cruscotto-italia/data/censimento"
+
+
+def _write_atomic_json(path: Path, payload, *, indent: int | None = None) -> None:
+    """Scrive JSON atomic (tmp + rename) per evitare letture parziali se
+    nginx serve il file mentre l'ETL e' in corso.
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    if indent is None:
+        text = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
+    else:
+        text = json.dumps(payload, ensure_ascii=False, indent=indent)
+    tmp.write_text(text, encoding="utf-8")
+    tmp.replace(path)
+
+
+def run_etl(
+    regions: list[int],
+    full_outdir: Path,
+    agg_outdir: Path,
+    keep_cache: bool = True,
+) -> dict:
+    """Esegue l'ETL completo per le regioni indicate.
+
+    Sequenza:
+    1. Verifica/scarica Dati_regionali_2021.zip (vars nazionale).
+    2. Per ogni regione:
+       a. Download R<NN>_21.zip (shapefile BT).
+       b. Parse XLSX variabili regione -> {sez_id: {procom, vars}}.
+       c. Parse shapefile -> [{sez_id, procom, geom, ...}].
+       d. Merge: arricchisce ogni feature con il dict 'vars'.
+    3. Raggruppa tutte le sezioni per procom (codice ISTAT 6 cifre).
+    4. Per ogni comune scrive:
+       - {full_outdir}/<istat>.geojson : FeatureCollection sezioni + vars
+       - {agg_outdir}/<istat>.json     : KPI + distribuzioni aggregate
+
+    Ritorna stats dict per il manifest update.
+    """
+    full_outdir = Path(full_outdir)
+    agg_outdir = Path(agg_outdir)
+    full_outdir.mkdir(parents=True, exist_ok=True)
+    agg_outdir.mkdir(parents=True, exist_ok=True)
+
+    log.info("censimento_etl_start",
+             regions=regions,
+             full_outdir=str(full_outdir),
+             agg_outdir=str(agg_outdir))
+    t_total = time.time()
+
+    # 1. Vars nazionale (download SOLO se manca; ~250MB cache idempotente)
+    vars_zip = download_dati_regionali()
+
+    # 2. Loop regioni, costruisco lista globale sezioni con vars+geom
+    all_sezioni: list[dict] = []
+    per_region_stats: list[dict] = []
+
+    for region in regions:
+        t_reg = time.time()
+        log.info("censimento_region_start", region=region)
+
+        bt_zip = download_bt_region(region)
+        vars_by_sezid = parse_vars_xlsx_from_zip(vars_zip, region)
+        geo_features = parse_shapefile_region(bt_zip, region)
+
+        # Merge sez_id per sez_id
+        n_merged, n_no_vars = 0, 0
+        for feat in geo_features:
+            rec = vars_by_sezid.get(feat["sez_id"])
+            if rec is None:
+                n_no_vars += 1
+                feat["vars"] = {}
+            else:
+                feat["vars"] = rec["vars"]
+                n_merged += 1
+            all_sezioni.append(feat)
+
+        log.info("censimento_region_merged",
+                 region=region,
+                 n_features=len(geo_features),
+                 n_merged=n_merged,
+                 n_no_vars=n_no_vars,
+                 elapsed_s=round(time.time() - t_reg, 1))
+        per_region_stats.append({
+            "region": region,
+            "n_features": len(geo_features),
+            "n_merged": n_merged,
+            "n_no_vars": n_no_vars,
+        })
+
+    # 3. Raggruppa per procom
+    by_procom: dict[str, list[dict]] = defaultdict(list)
+    for sez in all_sezioni:
+        by_procom[sez["procom"]].append(sez)
+    log.info("censimento_grouped_by_procom",
+             total_sezioni=len(all_sezioni),
+             n_comuni=len(by_procom))
+
+    # 4. Validazione anagrafica (best-effort, non blocca)
+    try:
+        from etl.lib import local_lookup as _ll
+        bundle = _ll.load_comuni_bundle()
+        valid_istat = set(bundle.keys()) if bundle else None
+    except Exception as e:
+        log.warning("censimento_anagrafica_load_failed", error=str(e))
+        valid_istat = None
+    n_istat_not_in_bundle = 0
+    if valid_istat is not None:
+        missing_in_bundle = [p for p in by_procom if p not in valid_istat]
+        n_istat_not_in_bundle = len(missing_in_bundle)
+        if missing_in_bundle:
+            log.warning("censimento_istat_not_in_bundle",
+                        n=n_istat_not_in_bundle,
+                        sample=missing_in_bundle[:5])
+
+    # 5. Scrittura per comune (GeoJSON full + aggregati)
+    t_write = time.time()
+    n_written_full, n_written_agg = 0, 0
+    sample_files = []
+    for procom, sezioni in by_procom.items():
+        # 5a. GeoJSON FULL (geometrie + vars)
+        features_geojson = []
+        for s in sezioni:
+            features_geojson.append({
+                "type": "Feature",
+                "properties": {
+                    "id": s["sez_id"],
+                    "sez": s["sez"],
+                    "tipo_loc": s["tipo_loc"],
+                    "loc_id": s["loc_id"],
+                    "asc1": s["asc1"],
+                    "asc2": s["asc2"],
+                    "asc3": s["asc3"],
+                    "area_mq": s["area_mq"],
+                    "vars": s.get("vars", {}),
+                },
+                "geometry": s["geom"],
+            })
+        fc = {
+            "type": "FeatureCollection",
+            "_source": SOURCE_LABEL,
+            "_istat": procom,
+            "_n_sezioni": len(sezioni),
+            "_generated_at": datetime.now(timezone.utc).isoformat(),
+            "features": features_geojson,
+        }
+        full_path = full_outdir / f"{procom}.geojson"
+        _write_atomic_json(full_path, fc)
+        n_written_full += 1
+
+        # 5b. Aggregati comune-level (per dashboard A1)
+        agg = aggregate_comune(sezioni)
+        agg_path = agg_outdir / f"{procom}.json"
+        _write_atomic_json(agg_path, agg)
+        n_written_agg += 1
+
+        # Tiene 3 sample per log diagnostico finale
+        if len(sample_files) < 3:
+            sample_files.append({
+                "istat": procom,
+                "n_sezioni": len(sezioni),
+                "full_size_kb": round(full_path.stat().st_size / 1024, 1),
+                "agg_size_kb": round(agg_path.stat().st_size / 1024, 1),
+            })
+
+    log.info("censimento_write_done",
+             n_full=n_written_full,
+             n_agg=n_written_agg,
+             elapsed_s=round(time.time() - t_write, 1),
+             samples=sample_files)
+
+    elapsed_total = round(time.time() - t_total, 1)
+    stats = {
+        "regions": regions,
+        "n_comuni": len(by_procom),
+        "n_sezioni_totali": len(all_sezioni),
+        "n_istat_not_in_bundle": n_istat_not_in_bundle,
+        "per_region": per_region_stats,
+        "elapsed_s": elapsed_total,
+    }
+    log.info("censimento_etl_done", **{k: v for k, v in stats.items()
+                                       if k != "per_region"})
+    return stats
+
+
+# ═════════════════════════════════════════════════════════════════════════
 # SMOKE TEST — esegui con: python -m etl.sources.censimento --smoke-test
 # ═════════════════════════════════════════════════════════════════════════
 # Scarica solo Valle d'Aosta (regione 2, ZIP piu' piccolo ~4MB BT + ~1MB
@@ -667,17 +952,71 @@ def _download_vars_only() -> int:
 
 if __name__ == "__main__":
     import sys
-    args = sys.argv[1:]
-    if "--smoke-test" in args:
-        sys.exit(_smoke_test())
-    elif "--download-vars" in args:
+    parser = argparse.ArgumentParser(
+        description="ETL ISTAT Basi Territoriali + Variabili censuarie 2021"
+    )
+    parser.add_argument(
+        "--target", choices=["local"], default="local",
+        help="Target output (solo local supportato post local-first refactor)"
+    )
+    parser.add_argument(
+        "--regions", default="all",
+        help="Lista regioni 1-20 separate da virgola, o 'all' (default)"
+    )
+    parser.add_argument(
+        "--full-outdir", default=DEFAULT_FULL_DIR,
+        help=f"Directory GeoJSON full (default: {DEFAULT_FULL_DIR})"
+    )
+    parser.add_argument(
+        "--agg-outdir", default=DEFAULT_AGG_DIR,
+        help=f"Directory aggregati comune-level (default: {DEFAULT_AGG_DIR})"
+    )
+    parser.add_argument(
+        "--download-vars", action="store_true",
+        help="Scarica solo Dati_regionali_2021.zip nella cache, poi esce"
+    )
+    parser.add_argument(
+        "--smoke-test", action="store_true",
+        help="Smoke test su Valle d'Aosta + Cogne, poi esce"
+    )
+    args = parser.parse_args()
+
+    if args.download_vars:
         sys.exit(_download_vars_only())
+    if args.smoke_test:
+        sys.exit(_smoke_test())
+
+    # Parse regioni
+    if args.regions == "all":
+        regions = list(range(1, 21))
     else:
-        print("Uso:")
-        print("  python3 -m etl.sources.censimento --download-vars")
-        print("      Scarica file variabili nazionale (250 MB, cache /tmp).")
-        print("  python3 -m etl.sources.censimento --smoke-test")
-        print("      Esegue smoke test su Valle d'Aosta + Cogne.")
-        print()
-        print("(Il main ETL completo verra' aggiunto in un commit successivo.)")
-        sys.exit(0)
+        try:
+            regions = [int(r.strip()) for r in args.regions.split(",")]
+        except ValueError as e:
+            print(f"ERROR: --regions invalido: {e}", file=sys.stderr)
+            sys.exit(2)
+        for r in regions:
+            if not 1 <= r <= 20:
+                print(f"ERROR: regione {r} fuori range 1-20", file=sys.stderr)
+                sys.exit(2)
+
+    stats = run_etl(
+        regions=regions,
+        full_outdir=Path(args.full_outdir),
+        agg_outdir=Path(args.agg_outdir),
+    )
+
+    # Manifest update
+    try:
+        files_entry = [
+            {"key": f"censimento/{stats['n_comuni']}_comuni",
+             "n_comuni": stats["n_comuni"],
+             "n_sezioni_totali": stats["n_sezioni_totali"],
+             "regioni_processate": stats["regions"]},
+            {"key": f"censimento_full/{stats['n_comuni']}_geojson"},
+        ]
+        manifest.update_source("censimento", files_entry, status="ok")
+    except Exception as e:
+        log.error("censimento_manifest_update_failed", error=str(e))
+
+    sys.exit(0)
