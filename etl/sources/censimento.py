@@ -153,3 +153,103 @@ TIPO_LOC_MAP = {
     3: "case_sparse",
     4: "localita_produttiva",
 }
+
+CACHE_DIR = Path("/tmp/cruscotto_censimento")
+CACHE_DIR.mkdir(parents=True, exist_ok=True)
+
+# Soglie minime per validare ZIP "non corrotti" (in byte):
+# BT regionali piu' piccoli sono ~120KB (es. Molise small), quindi 50KB e' safe
+# Variabili Dati_regionali_2021.zip e' ~250MB
+MIN_ZIP_SIZE_BT = 50_000
+MIN_ZIP_SIZE_VARS = 100_000_000  # 100 MB
+MIN_ZIP_SIZE_ASC = 100_000
+
+import time
+import urllib.request
+import urllib.error
+
+
+# ═════════════════════════════════════════════════════════════════════════
+# FASE 1 — Download fonti (con cache locale per riusabilita')
+# ═════════════════════════════════════════════════════════════════════════
+
+def _http_get(url: str, dest: Path, min_size: int, timeout: int = 600) -> Path:
+    """Download HTTP con User-Agent + validazione magic bytes ZIP + size minima.
+
+    Cache idempotente: se 'dest' esiste e supera min_size, lo riusa senza
+    ri-scaricare. Per forzare il refresh, eliminare il file prima.
+    """
+    if dest.exists() and dest.stat().st_size >= min_size:
+        log.info("censimento_zip_cached",
+                 path=str(dest),
+                 size_mb=round(dest.stat().st_size / 1024 / 1024, 1))
+        return dest
+
+    log.info("censimento_zip_download_start", url=url, dest=str(dest))
+    t0 = time.time()
+    req = urllib.request.Request(url, headers={"User-Agent": UA})
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            data = resp.read()
+    except urllib.error.HTTPError as e:
+        raise RuntimeError(f"HTTP {e.code} su {url}: {e.reason}")
+    except urllib.error.URLError as e:
+        raise RuntimeError(f"URL error su {url}: {e.reason}")
+    elapsed = time.time() - t0
+
+    if len(data) < min_size:
+        snippet = data[:200].decode("utf-8", errors="ignore")
+        raise RuntimeError(
+            f"ZIP troppo piccolo ({len(data)} bytes < {min_size}), "
+            f"possibile errore HTTP. Snippet: {snippet}"
+        )
+    if data[:2] != b"PK":
+        raise RuntimeError(
+            f"Magic bytes non ZIP su {url}: {data[:4].hex()}"
+        )
+
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    dest.write_bytes(data)
+    log.info("censimento_zip_downloaded",
+             url=url,
+             size_mb=round(len(data) / 1024 / 1024, 1),
+             elapsed_s=round(elapsed, 1))
+    return dest
+
+
+def download_dati_regionali(force: bool = False) -> Path:
+    """Scarica Dati_regionali_2021.zip (~250MB) contenente 20 XLSX regionali
+    di variabili censuarie + 1 XLSX TRACCIATO_2021 con il dizionario.
+
+    Cache: /tmp/cruscotto_censimento/Dati_regionali_2021.zip
+    """
+    out = CACHE_DIR / "Dati_regionali_2021.zip"
+    if force and out.exists():
+        out.unlink()
+    return _http_get(URL_VARS, out, MIN_ZIP_SIZE_VARS, timeout=900)
+
+
+def download_bt_region(region: int, force: bool = False) -> Path:
+    """Scarica R<NN>_21.zip (shapefile sezioni di censimento) per la regione
+    indicata (1-20). R04 = Trentino-Alto Adige.
+
+    Cache: /tmp/cruscotto_censimento/R<NN>_21.zip
+    """
+    if not 1 <= region <= 20:
+        raise ValueError(f"region deve essere 1-20, ricevuto {region}")
+    url = URL_BT_REGION.format(region)
+    out = CACHE_DIR / f"R{region:02d}_21.zip"
+    if force and out.exists():
+        out.unlink()
+    return _http_get(url, out, MIN_ZIP_SIZE_BT, timeout=300)
+
+
+def download_asc(force: bool = False) -> Path:
+    """Scarica ASC_21.zip (aree subcomunali ~43 capoluoghi, overlay opzionale).
+
+    Cache: /tmp/cruscotto_censimento/ASC_21.zip
+    """
+    out = CACHE_DIR / "ASC_21.zip"
+    if force and out.exists():
+        out.unlink()
+    return _http_get(URL_ASC, out, MIN_ZIP_SIZE_ASC, timeout=180)
