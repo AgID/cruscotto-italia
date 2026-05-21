@@ -1297,6 +1297,36 @@ footer a{color:rgba(255,255,255,0.85);text-decoration:none}
 .censimento-chart-title{font-family:var(--mono);font-size:11px;color:var(--ink-mute);text-transform:uppercase;letter-spacing:.06em;margin:0 0 10px;}
 .censimento-chart-wrap{position:relative;height:200px;}
 .censimento-chart-empty{font-family:var(--serif);font-size:13px;color:var(--ink-mute);font-style:italic;padding:60px 10px;text-align:center;}
+
+/* Tabella variabili raw (12.6) */
+.cns-var-section{margin-top:24px;padding-top:18px;border-top:1px solid rgba(0,0,0,.08);}
+.cns-var-section-h{font-family:var(--serif);font-size:16px;font-weight:600;color:var(--ink);margin:0 0 4px;}
+.cns-var-section-note{font-size:12px;line-height:1.5;margin:0 0 14px;}
+.cns-var-family{margin-bottom:6px;background:var(--paper);border-radius:4px;}
+.cns-var-family[open] > .cns-var-family-summary{border-bottom:1px solid rgba(0,0,0,.06);}
+.cns-var-family-summary{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;cursor:pointer;font-family:var(--serif);font-size:14px;color:var(--ink);list-style:none;user-select:none;border-radius:4px;}
+.cns-var-family-summary::-webkit-details-marker{display:none;}
+.cns-var-family-summary::before{content:'▸';display:inline-block;margin-right:8px;color:var(--accent);font-size:12px;transition:transform .15s ease;flex-shrink:0;}
+.cns-var-family[open] > .cns-var-family-summary::before{transform:rotate(90deg);}
+.cns-var-family-summary:hover{background:var(--paper-2);}
+.cns-var-family-summary:focus{outline:2px solid var(--accent);outline-offset:-2px;border-radius:4px;}
+.cns-var-family-label{flex-grow:1;font-weight:600;}
+.cns-var-family-count{font-family:var(--mono);font-size:11px;color:var(--ink-mute);text-transform:uppercase;letter-spacing:.05em;flex-shrink:0;}
+.cns-var-table-wrap{overflow-x:auto;}
+.cns-var-table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:12px;}
+.cns-var-table th, .cns-var-table td{padding:7px 14px;text-align:left;border-bottom:1px solid rgba(0,0,0,.04);}
+.cns-var-table th{font-family:var(--mono);font-size:10px;color:var(--ink-mute);text-transform:uppercase;letter-spacing:.06em;background:var(--paper-2);font-weight:600;}
+.cns-var-table td.cns-var-code{font-weight:700;color:var(--accent);width:70px;white-space:nowrap;}
+.cns-var-table td.cns-var-descr{font-family:var(--serif);font-size:13px;color:var(--ink);}
+.cns-var-table td.cns-var-val{text-align:right;font-weight:600;color:var(--ink);width:90px;white-space:nowrap;}
+.cns-var-table th.cns-var-val{text-align:right;}
+.cns-var-table tr.cns-var-na td{color:var(--ink-mute);}
+.cns-var-table tbody tr:hover{background:var(--paper-2);}
+.visually-hidden{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
+@media (max-width:720px){
+  .cns-var-table th, .cns-var-table td{padding:6px 8px;font-size:11px;}
+  .cns-var-table td.cns-var-descr{font-size:12px;}
+}
 @media (max-width:720px){
   .censimento-charts-grid{grid-template-columns:1fr;gap:14px;}
   .censimento-chart-wrap{height:180px;}
@@ -7906,6 +7936,143 @@ async function initCensimentoMap(istat) {
 // Holders Chart.js per i 4 chart sezione (destroy + recreate al cambio sezione)
 const _CENSIMENTO_CHART_REFS = { eta: null, titolo: null, stranieri: null, famiglie: null };
 
+// Dizionario 119 variabili numeriche raggruppate in 8 famiglie semantiche.
+// Descrizioni adattate dal TRACCIATO ISTAT (Nota informativa Basi territoriali 2021).
+const CENSIMENTO_FAMILIES = [
+  {
+    id: 'pop',
+    label: 'Popolazione totale',
+    open: true,  // prima famiglia aperta di default
+    vars: [
+      ['P1',  'Popolazione residente totale'],
+      ['P2',  'Popolazione residente maschi'],
+      ['P3',  'Popolazione residente femmine'],
+    ],
+  },
+  {
+    id: 'eta_tot',
+    label: 'Popolazione per età (totale, 5 anni)',
+    vars: [
+      ['P14', '< 5 anni'], ['P15', '5–9'], ['P16', '10–14'], ['P17', '15–19'],
+      ['P18', '20–24'], ['P19', '25–29'], ['P20', '30–34'], ['P21', '35–39'],
+      ['P22', '40–44'], ['P23', '45–49'], ['P24', '50–54'], ['P25', '55–59'],
+      ['P26', '60–64'], ['P27', '65–69'], ['P28', '70–74'], ['P29', '≥ 75 anni'],
+    ],
+  },
+  {
+    id: 'eta_m',
+    label: 'Popolazione maschi per età (5 anni)',
+    vars: [
+      ['P30', '< 5 anni M'], ['P31', '5–9 M'], ['P32', '10–14 M'], ['P33', '15–19 M'],
+      ['P34', '20–24 M'], ['P35', '25–29 M'], ['P36', '30–34 M'], ['P37', '35–39 M'],
+      ['P38', '40–44 M'], ['P39', '45–49 M'], ['P40', '50–54 M'], ['P41', '55–59 M'],
+      ['P42', '60–64 M'], ['P43', '65–69 M'], ['P44', '70–74 M'], ['P45', '≥ 75 anni M'],
+    ],
+  },
+  {
+    id: 'eta_f',
+    label: 'Popolazione femmine per età (5 anni)',
+    vars: [
+      ['P67', '< 5 anni F'], ['P68', '5–9 F'], ['P69', '10–14 F'], ['P70', '15–19 F'],
+      ['P71', '20–24 F'], ['P72', '25–29 F'], ['P73', '30–34 F'], ['P74', '35–39 F'],
+      ['P75', '40–44 F'], ['P76', '45–49 F'], ['P77', '50–54 F'], ['P78', '55–59 F'],
+      ['P79', '60–64 F'], ['P80', '65–69 F'], ['P81', '70–74 F'], ['P82', '≥ 75 anni F'],
+    ],
+  },
+  {
+    id: 'studio',
+    label: 'Titolo di studio (popolazione 9+)',
+    vars: [
+      ['P83', 'Pop. 9+ totale'],
+      ['P84', 'Pop. 9+ maschi'],
+      ['P85', 'Pop. 9+ femmine'],
+      ['P86', 'Nessun titolo'],
+      ['P87', 'Licenza elementare'],
+      ['P88', 'Licenza media'],
+      ['P89', 'Diploma scuola superiore'],
+      ['P90', 'Titolo terziario (laurea o sup.)'],
+      ['P91', 'Nessun titolo (M)'],
+      ['P92', 'Elementare (M)'],
+      ['P93', 'Media (M)'],
+      ['P94', 'Diploma (M)'],
+      ['P95', 'Terziario (M)'],
+      ['P96', 'Nessun titolo (F)'],
+      ['P97', 'Elementare (F)'],
+      ['P98', 'Media (F)'],
+      ['P99', 'Diploma (F)'],
+      ['P100', 'Terziario (F)'],
+    ],
+  },
+  {
+    id: 'occupati_italiani',
+    label: 'Occupati 15–64 e cittadini italiani',
+    vars: [
+      ['P101', 'Occupati 15–64 totali'],
+      ['P102', 'Occupati 15–64 maschi'],
+      ['P103', 'Occupati 15–64 femmine'],
+      ['IT1', 'Italiani 0–14'],
+      ['IT2', 'Italiani 15–64'],
+      ['IT3', 'Italiani 65+'],
+      ['IT4', 'Italiani 0–14 (M)'],
+      ['IT5', 'Italiani 15–64 (M)'],
+      ['IT6', 'Italiani 65+ (M)'],
+      ['IT7', 'Italiani 0–14 (F)'],
+      ['IT8', 'Italiani 15–64 (F)'],
+      ['IT9', 'Italiani 65+ (F)'],
+      ['IT10', 'Occupati italiani 15–64 totali'],
+      ['IT11', 'Occupati italiani 15–64 (M)'],
+      ['IT12', 'Occupati italiani 15–64 (F)'],
+    ],
+  },
+  {
+    id: 'stranieri',
+    label: 'Stranieri (UE / Extra-UE, sesso, età)',
+    vars: [
+      ['ST1', 'Stranieri totali'],
+      ['ST2', 'Stranieri maschi'],
+      ['ST2_B', 'Stranieri femmine'],
+      ['ST3', 'Stranieri 0–29'],
+      ['ST4', 'Stranieri 30–54'],
+      ['ST5', 'Stranieri 55+'],
+      ['ST16', 'Stranieri UE totali'],
+      ['ST17', 'Stranieri UE (M)'],
+      ['ST18', 'Stranieri UE (F)'],
+      ['ST19', 'Stranieri Extra-UE totali'],
+      ['ST20', 'Stranieri Extra-UE (M)'],
+      ['ST21', 'Stranieri Extra-UE (F)'],
+      ['ST22', 'Stranieri 0–14 totali'],
+      ['ST23', 'Stranieri 15–64 totali'],
+      ['ST24', 'Stranieri 65+ totali'],
+      ['ST25', 'Stranieri 0–14 (M)'],
+      ['ST26', 'Stranieri 15–64 (M)'],
+      ['ST27', 'Stranieri 65+ (M)'],
+      ['ST28', 'Stranieri 0–14 (F)'],
+      ['ST29', 'Stranieri 15–64 (F)'],
+      ['ST30', 'Stranieri 65+ (F)'],
+      ['ST31', 'Occupati stranieri 15–64 totali'],
+      ['ST32', 'Occupati stranieri 15–64 (M)'],
+      ['ST33', 'Occupati stranieri 15–64 (F)'],
+    ],
+  },
+  {
+    id: 'famiglie_abit',
+    label: 'Famiglie, abitazioni ed edifici',
+    vars: [
+      ['PF1', 'Famiglie totali'],
+      ['PF3', 'Famiglie 1 componente'],
+      ['PF4', 'Famiglie 2 componenti'],
+      ['PF5', 'Famiglie 3 componenti'],
+      ['PF6', 'Famiglie 4 componenti'],
+      ['PF7', 'Famiglie 5 componenti'],
+      ['PF8', 'Famiglie 6+ componenti'],
+      ['A2', 'Abitazioni occupate da residenti'],
+      ['A3', 'Abitazioni vuote o solo non-residenti'],
+      ['A8', 'Abitazioni totali'],
+      ['E3', 'Edifici residenziali'],
+    ],
+  },
+];
+
 function _censimentoDestroyCharts() {
   Object.keys(_CENSIMENTO_CHART_REFS).forEach(k => {
     if (_CENSIMENTO_CHART_REFS[k]) {
@@ -7978,12 +8145,70 @@ function _censimentoRenderSectionDetail(feature) {
     _censimentoChartStranieri(v);
     _censimentoChartFamiglie(v);
   }, 0);
+
+  // Tabella collapsibile 8 famiglie × 119 vars (subito dopo i chart)
+  detailEl.insertAdjacentHTML('beforeend', _censimentoRenderVarsTable(v));
 }
 
 // Helper: somma sicura di chiavi
 function _cnsSum(v, keys) {
   return keys.reduce((a, k) => a + ((v[k] != null && isFinite(v[k])) ? v[k] : 0), 0);
 }
+
+// Tabella collapsibile 8 famiglie x 119 vars (raw, pass-through 1:1 ISTAT).
+// Pattern: <details><summary>famiglia</summary><table>vars</table></details>.
+// Prima famiglia 'pop' open di default. Valori null mostrati come "—".
+function _censimentoRenderVarsTable(v) {
+  if (!v) return '';
+  const sections = CENSIMENTO_FAMILIES.map(fam => {
+    const total = fam.vars.length;
+    const rows = fam.vars.map(([code, descr]) => {
+      const raw = v[code];
+      const val = (raw != null && isFinite(raw)) ? fmtNum(raw) : '—';
+      const isMissing = (raw == null || !isFinite(raw));
+      return `
+        <tr${isMissing ? ' class="cns-var-na"' : ''}>
+          <td class="cns-var-code">${code}</td>
+          <td class="cns-var-descr">${descr}</td>
+          <td class="cns-var-val">${val}</td>
+        </tr>
+      `;
+    }).join('');
+    return `
+      <details class="cns-var-family"${fam.open ? ' open' : ''}>
+        <summary class="cns-var-family-summary">
+          <span class="cns-var-family-label">${fam.label}</span>
+          <span class="cns-var-family-count">${total} ${total === 1 ? 'voce' : 'voci'}</span>
+        </summary>
+        <div class="cns-var-table-wrap">
+          <table class="cns-var-table">
+            <caption class="visually-hidden">${fam.label}: ${total} variabili del Censimento permanente 2021</caption>
+            <thead>
+              <tr>
+                <th scope="col" class="cns-var-code">Codice</th>
+                <th scope="col" class="cns-var-descr">Descrizione</th>
+                <th scope="col" class="cns-var-val">Valore</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+      </details>
+    `;
+  }).join('');
+
+  return `
+    <section class="cns-var-section" aria-labelledby="cns-var-h">
+      <h4 class="cns-var-section-h" id="cns-var-h">Tabella completa — 119 variabili ISTAT (raw)</h4>
+      <p class="cns-var-section-note muted">
+        Pass-through 1:1 del Censimento permanente 2021 — codici e descrizioni dal
+        tracciato ufficiale ISTAT. Clicca su una famiglia per espanderla.
+      </p>
+      ${sections}
+    </section>
+  `;
+}
+
 
 // CHART 1 — Piramide età M/F (P30-P45 maschi, P67-P82 femmine, fasce 5 anni)
 function _censimentoChartEta(v) {
