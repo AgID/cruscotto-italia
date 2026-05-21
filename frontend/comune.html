@@ -1259,6 +1259,25 @@ footer a{color:rgba(255,255,255,0.85);text-decoration:none}
   .veicoli-trend-wrap{height:200px;}
 }
 
+/* CENSIMENTO ISTAT 2021 — tab styles */
+.section-h-small{font-family:var(--serif);font-size:18px;font-weight:600;color:var(--ink);margin:24px 0 10px;}
+.censimento-mini-stats{margin:18px 0 24px;}
+.censimento-list{margin:8px 0 0;padding:0 0 0 18px;font-family:var(--serif);font-size:14px;line-height:1.7;color:var(--ink-soft);}
+.censimento-list li{margin-bottom:4px;}
+.censimento-bar{display:flex;height:28px;border-radius:4px;overflow:hidden;background:var(--paper-2);margin:10px 0;}
+.censimento-bar-occ{background:#1B7BBC;}
+.censimento-bar-vuo{background:#E89400;}
+.censimento-bar-legend{display:flex;flex-wrap:wrap;gap:18px;font-family:var(--mono);font-size:11px;color:var(--ink-soft);margin-top:6px;}
+.censimento-bar-legend .dot{display:inline-block;width:10px;height:10px;border-radius:2px;vertical-align:middle;margin-right:5px;}
+.censimento-bar-legend .dot-occ{background:#1B7BBC;}
+.censimento-bar-legend .dot-vuo{background:#E89400;}
+.censimento-map-section{margin:28px 0 16px;}
+.censimento-map-placeholder{height:380px;border-radius:8px;background:var(--paper-2);display:flex;align-items:center;justify-content:center;color:var(--ink-mute);font-family:var(--mono);font-size:12px;text-transform:uppercase;letter-spacing:.06em;border:1px dashed var(--paper-3,#d4d6db);}
+@media (max-width:720px){
+  .censimento-map-placeholder{height:280px;}
+  .censimento-bar-legend{font-size:10px;gap:10px;}
+}
+
 .scuola-row{display:grid;grid-template-columns:1fr 80px;gap:10px;align-items:start;padding:10px 4px;border-bottom:1px solid var(--paper-2);}
 .scuola-row:last-child{border-bottom:none;}
 .scuola-titolo{font-family:var(--serif);font-size:14px;color:var(--ink);line-height:1.25;}
@@ -7387,25 +7406,84 @@ function renderCensimentoTab(d) {
         <p class="muted">Il comune non risulta nelle Basi Territoriali ISTAT 2021 (Censimento permanente).</p>
       </div>`;
   }
-  // Stub minimale µ-step 12.1: riconoscimento dato presente, contenuti veri in 12.2+.
   const k = d.kpi_comune;
+  // 8 KPI cards (sempre presenti, "—" se ETL non ha aggregato la metrica).
+  const densita = (k.pop_totale && k.area_kmq) ? Math.round(k.pop_totale / k.area_kmq) : null;
+  const cards = [
+    { lab: 'Sezioni di censimento', val: fmtNum(k.n_sezioni || 0), unit: '' },
+    { lab: 'Popolazione totale',    val: fmtNum(k.pop_totale || 0), unit: 'ab.' },
+    { lab: 'Famiglie',              val: fmtNum(k.famiglie_totali || 0), unit: '' },
+    { lab: 'Abitazioni',            val: fmtNum(k.abitazioni_totali || 0), unit: '' },
+    { lab: 'Edifici residenziali',  val: fmtNum(k.edifici_residenziali || 0), unit: '' },
+    { lab: 'Stranieri',             val: fmtNum(k.stranieri_totali || 0), unit: k.pop_totale ? (((k.stranieri_totali || 0) / k.pop_totale * 100).toFixed(1) + '%') : '' },
+    { lab: 'Occupati 15-64',        val: fmtNum(k.occupati_15_64 || 0), unit: '' },
+    { lab: 'Densità',               val: densita != null ? fmtNum(densita) : '—', unit: 'ab./km²' },
+  ];
+  const cardsHtml = cards.map(c => `
+    <div class="kpi-card">
+      <div class="kpi-card-lab">${c.lab}</div>
+      <div class="kpi-card-val">${c.val}${c.unit ? `<span class="kpi-card-unit">${c.unit}</span>` : ''}</div>
+    </div>
+  `).join('');
+
+  // Distribuzione abitazioni (occupate vs vuote)
+  const aTot = k.abitazioni_totali || 0;
+  const aOcc = k.abitazioni_occupate || 0;
+  const aVuo = k.abitazioni_vuote || 0;
+  const pctVuote = aTot > 0 ? (aVuo / aTot * 100) : null;
+  const pctOcc = aTot > 0 ? (aOcc / aTot * 100) : null;
+  const abitBlock = aTot > 0 ? `
+    <div class="censimento-mini-stats">
+      <h3 class="section-h-small">Abitazioni: occupate vs vuote</h3>
+      <div class="censimento-bar">
+        <div class="censimento-bar-occ" style="width:${pctOcc.toFixed(1)}%" title="${fmtNum(aOcc)} occupate (${pctOcc.toFixed(1)}%)"></div>
+        <div class="censimento-bar-vuo" style="width:${pctVuote.toFixed(1)}%" title="${fmtNum(aVuo)} vuote (${pctVuote.toFixed(1)}%)"></div>
+      </div>
+      <div class="censimento-bar-legend">
+        <span><span class="dot dot-occ" aria-hidden="true"></span> Occupate da residenti: <strong>${fmtNum(aOcc)}</strong> (${pctOcc.toFixed(1)}%)</span>
+        <span><span class="dot dot-vuo" aria-hidden="true"></span> Vuote o non da residenti: <strong>${fmtNum(aVuo)}</strong> (${pctVuote.toFixed(1)}%)</span>
+      </div>
+    </div>
+  ` : '';
+
+  // Stranieri UE vs Extra-UE (se valorizzato)
+  const stTot = k.stranieri_totali || 0;
+  const stUE  = k.stranieri_ue || 0;
+  const stEU  = k.stranieri_extra_ue || 0;
+  const stranieriBlock = (stTot > 0) ? `
+    <div class="censimento-mini-stats">
+      <h3 class="section-h-small">Stranieri: UE vs Extra-UE</h3>
+      <ul class="censimento-list">
+        <li>Cittadini UE: <strong>${fmtNum(stUE)}</strong>${stTot ? ` (${(stUE/stTot*100).toFixed(1)}%)` : ''}</li>
+        <li>Cittadini Extra-UE: <strong>${fmtNum(stEU)}</strong>${stTot ? ` (${(stEU/stTot*100).toFixed(1)}%)` : ''}</li>
+      </ul>
+    </div>
+  ` : '';
+
+  // Placeholder mappa (verrà popolato in 12.3 con choropleth Leaflet lazy fetch)
+  const mapBlock = d._has_full ? `
+    <div class="censimento-map-section">
+      <h3 class="section-h-small">Choropleth per sezione di censimento</h3>
+      <p class="muted">In arrivo: mappa interattiva delle ${fmtNum(k.n_sezioni || 0)} sezioni con dropdown 12 indicatori derivati e click-per-dettaglio.</p>
+      <div id="censimento-map" class="censimento-map-placeholder" role="img" aria-label="Mappa choropleth sezioni di censimento (in arrivo)">
+        <span>Mappa choropleth in caricamento…</span>
+      </div>
+    </div>
+  ` : '';
+
   return `
     <div class="tab-pane" id="pane-censimento">
       <div class="section-title">§ Censimento ISTAT 2021</div>
       <h2 class="section-h">Basi territoriali e variabili <em>censuarie</em>.</h2>
       <p class="muted">
         Fonte: ISTAT, Censimento permanente 2021 — Basi Territoriali + Variabili
-        censuarie per sezione. Licenza CC-BY 3.0 IT. Copertura 100% comuni inclusi TN/BZ.
+        censuarie per sezione di censimento. Licenza CC-BY 3.0 IT.
+        Copertura 100% comuni inclusi TN/BZ. Aggiornamento decennale + revisioni.
       </p>
-      <p>
-        Il comune ha <strong>${fmtNum(k.n_sezioni || 0)}</strong> sezioni di censimento
-        per una popolazione totale di <strong>${fmtNum(k.pop_totale || 0)}</strong> abitanti
-        su <strong>${k.area_kmq != null ? k.area_kmq.toFixed(1) : '—'}&thinsp;km²</strong>.
-      </p>
-      <p class="muted">
-        <em>Tab in costruzione</em>: choropleth interattivo, 4 chart riassuntivi
-        per sezione e tabella completa delle 119 variabili in arrivo nei prossimi rilasci.
-      </p>
+      <div class="kpi-cards">${cardsHtml}</div>
+      ${abitBlock}
+      ${stranieriBlock}
+      ${mapBlock}
     </div>
   `;
 }
