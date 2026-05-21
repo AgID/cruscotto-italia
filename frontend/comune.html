@@ -1285,6 +1285,22 @@ footer a{color:rgba(255,255,255,0.85);text-decoration:none}
 .censimento-legend-swatch{display:inline-block;width:14px;height:14px;border-radius:2px;border:1px solid rgba(0,0,0,.08);}
 .censimento-section-popup{font-family:var(--mono);font-size:11px;line-height:1.45;color:var(--ink);}
 .censimento-section-popup strong{font-family:var(--serif);font-size:13px;color:var(--ink);}
+
+.censimento-section-detail{margin:28px 0 12px;padding:18px 20px;background:var(--paper-2);border-left:3px solid var(--accent);border-radius:4px;min-height:80px;}
+.censimento-section-hint{font-size:13px;color:var(--ink-mute);font-style:italic;text-align:center;padding:14px 0;margin:0;}
+.censimento-section-header{margin-bottom:18px;padding-bottom:10px;border-bottom:1px solid rgba(0,0,0,.08);}
+.censimento-section-title{font-family:var(--serif);font-size:18px;font-weight:600;color:var(--ink);margin:0 0 6px;}
+.censimento-section-meta{font-family:var(--mono);font-size:11px;color:var(--ink-mute);text-transform:uppercase;letter-spacing:.05em;}
+.censimento-section-meta strong{color:var(--ink);font-weight:600;}
+.censimento-charts-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:18px;}
+.censimento-chart-card{background:var(--paper);padding:14px;border-radius:4px;}
+.censimento-chart-title{font-family:var(--mono);font-size:11px;color:var(--ink-mute);text-transform:uppercase;letter-spacing:.06em;margin:0 0 10px;}
+.censimento-chart-wrap{position:relative;height:200px;}
+.censimento-chart-empty{font-family:var(--serif);font-size:13px;color:var(--ink-mute);font-style:italic;padding:60px 10px;text-align:center;}
+@media (max-width:720px){
+  .censimento-charts-grid{grid-template-columns:1fr;gap:14px;}
+  .censimento-chart-wrap{height:180px;}
+}
 @media (max-width:720px){
   .censimento-map{height:340px;}
   .censimento-legend{font-size:9px;gap:10px;}
@@ -7509,6 +7525,9 @@ function renderCensimentoTab(d) {
         <div class="censimento-map-loading" data-censimento-loading>Caricamento sezioni di censimento…</div>
       </div>
       <div class="censimento-legend" id="censimento-legend" aria-label="Legenda dell'indicatore visualizzato"></div>
+      <div id="censimento-section-detail" class="censimento-section-detail" aria-live="polite">
+        <p class="muted censimento-section-hint">Clicca una sezione sulla mappa per visualizzarne il dettaglio demografico.</p>
+      </div>
     </div>
   ` : '';
 
@@ -7853,6 +7872,9 @@ async function initCensimentoMap(istat) {
       lyr.__cnsIdx = _featIdx++;
       lyr.__cnsPopupFn = makePopupFn(feature);
       lyr.bindPopup(lyr.__cnsPopupFn(initialIndicator));
+      lyr.on('click', () => {
+        _censimentoRenderSectionDetail(feature);
+      });
     }
   }).addTo(map);
 
@@ -7878,6 +7900,247 @@ async function initCensimentoMap(istat) {
       _censimentoApplyIndicator(e.target.value);
     });
   }
+}
+
+
+// Holders Chart.js per i 4 chart sezione (destroy + recreate al cambio sezione)
+const _CENSIMENTO_CHART_REFS = { eta: null, titolo: null, stranieri: null, famiglie: null };
+
+function _censimentoDestroyCharts() {
+  Object.keys(_CENSIMENTO_CHART_REFS).forEach(k => {
+    if (_CENSIMENTO_CHART_REFS[k]) {
+      try { _CENSIMENTO_CHART_REFS[k].destroy(); } catch (e) {}
+      _CENSIMENTO_CHART_REFS[k] = null;
+    }
+  });
+}
+
+// Render pannello dettaglio per una feature selezionata sulla mappa.
+function _censimentoRenderSectionDetail(feature) {
+  const detailEl = document.getElementById('censimento-section-detail');
+  if (!detailEl) return;
+  _censimentoDestroyCharts();
+
+  const p = feature.properties || {};
+  const v = p.vars || {};
+  const sezLab = (p.sez != null) ? `Sezione di censimento n. ${p.sez}` : `Sezione ${p.id || '—'}`;
+  const tipoLoc = p.tipo_loc ? p.tipo_loc.replace(/_/g, ' ') : '—';
+  const hasVars = (v.P1 != null);
+
+  // Header sempre presente
+  const headerHtml = `
+    <div class="censimento-section-header">
+      <h3 class="censimento-section-title">${sezLab}</h3>
+      <div class="censimento-section-meta">
+        <span><strong>Tipo</strong>: ${tipoLoc}</span>
+        ${p.area_mq != null ? ` · <span><strong>Area</strong>: ${fmtNum(Math.round(p.area_mq))} m²</span>` : ''}
+        ${hasVars ? ` · <span><strong>Pop.</strong>: ${fmtNum(v.P1)} (M ${fmtNum(v.P2 || 0)} / F ${fmtNum(v.P3 || 0)})</span>` : ''}
+      </div>
+    </div>`;
+
+  // Sezione non rilevata: header + messaggio, niente chart
+  if (!hasVars) {
+    detailEl.innerHTML = headerHtml + `
+      <p class="censimento-chart-empty">
+        Sezione non rilevata dal Censimento permanente 2021 (area non residenziale,
+        parco, zona industriale o infrastruttura).
+      </p>
+    `;
+    return;
+  }
+
+  // Layout: 4 chart cards
+  detailEl.innerHTML = headerHtml + `
+    <div class="censimento-charts-grid">
+      <div class="censimento-chart-card">
+        <h4 class="censimento-chart-title">Piramide età (maschi vs femmine)</h4>
+        <div class="censimento-chart-wrap"><canvas id="cns-chart-eta" aria-label="Piramide età per fascia 5 anni"></canvas></div>
+      </div>
+      <div class="censimento-chart-card">
+        <h4 class="censimento-chart-title">Titolo di studio (pop. 9+)</h4>
+        <div class="censimento-chart-wrap"><canvas id="cns-chart-titolo" aria-label="Distribuzione titolo di studio"></canvas></div>
+      </div>
+      <div class="censimento-chart-card">
+        <h4 class="censimento-chart-title">Stranieri: UE vs Extra-UE</h4>
+        <div class="censimento-chart-wrap"><canvas id="cns-chart-stranieri" aria-label="Stranieri UE ed Extra-UE per sesso"></canvas></div>
+      </div>
+      <div class="censimento-chart-card">
+        <h4 class="censimento-chart-title">Famiglie per numero componenti</h4>
+        <div class="censimento-chart-wrap"><canvas id="cns-chart-famiglie" aria-label="Distribuzione famiglie per numero di componenti"></canvas></div>
+      </div>
+    </div>
+  `;
+
+  // Forza Chart.js a partire dopo il prossimo paint (canvas appena montati)
+  setTimeout(() => {
+    _censimentoChartEta(v);
+    _censimentoChartTitolo(v);
+    _censimentoChartStranieri(v);
+    _censimentoChartFamiglie(v);
+  }, 0);
+}
+
+// Helper: somma sicura di chiavi
+function _cnsSum(v, keys) {
+  return keys.reduce((a, k) => a + ((v[k] != null && isFinite(v[k])) ? v[k] : 0), 0);
+}
+
+// CHART 1 — Piramide età M/F (P30-P45 maschi, P67-P82 femmine, fasce 5 anni)
+function _censimentoChartEta(v) {
+  const canvas = document.getElementById('cns-chart-eta');
+  if (!canvas) return;
+  // 16 fasce 5 anni: <5, 5-9, ..., 70-74, >74
+  const labels = ['<5','5-9','10-14','15-19','20-24','25-29','30-34','35-39',
+                  '40-44','45-49','50-54','55-59','60-64','65-69','70-74','75+'];
+  const maleKeys   = ['P30','P31','P32','P33','P34','P35','P36','P37','P38','P39','P40','P41','P42','P43','P44','P45'];
+  const femaleKeys = ['P67','P68','P69','P70','P71','P72','P73','P74','P75','P76','P77','P78','P79','P80','P81','P82'];
+  // Maschi negativi per piramide
+  const males = maleKeys.map(k => -1 * ((v[k] != null && isFinite(v[k])) ? v[k] : 0));
+  const females = femaleKeys.map(k => (v[k] != null && isFinite(v[k])) ? v[k] : 0);
+  // Se tutti zero: skip
+  if (males.every(x => x === 0) && females.every(x => x === 0)) {
+    canvas.parentElement.innerHTML = '<p class="censimento-chart-empty">Dati età non rilevati.</p>';
+    return;
+  }
+  _CENSIMENTO_CHART_REFS.eta = new Chart(canvas.getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Maschi',   data: males,   backgroundColor: '#1B7BBC', borderWidth: 0 },
+        { label: 'Femmine',  data: females, backgroundColor: '#D9364F', borderWidth: 0 },
+      ]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        x: {
+          stacked: false,
+          ticks: { callback: (val) => fmtNum(Math.abs(val)), font: { size: 10 } },
+          grid: { color: 'rgba(0,0,0,.06)' },
+        },
+        y: { stacked: false, ticks: { font: { size: 10 } }, grid: { display: false } },
+      },
+      plugins: {
+        legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } },
+        tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${fmtNum(Math.abs(ctx.parsed.x))}` } },
+      }
+    }
+  });
+}
+
+// CHART 2 — Titolo di studio P86-P90 (pop 9+)
+function _censimentoChartTitolo(v) {
+  const canvas = document.getElementById('cns-chart-titolo');
+  if (!canvas) return;
+  const labels = ['Nessuno', 'Elementare', 'Media', 'Diploma', 'Terziario'];
+  const keys = ['P86','P87','P88','P89','P90'];
+  const data = keys.map(k => (v[k] != null && isFinite(v[k])) ? v[k] : 0);
+  if (data.every(x => x === 0)) {
+    canvas.parentElement.innerHTML = '<p class="censimento-chart-empty">Titoli di studio non rilevati.</p>';
+    return;
+  }
+  _CENSIMENTO_CHART_REFS.titolo = new Chart(canvas.getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Pop. 9+',
+        data,
+        backgroundColor: ['#9E9E9E','#C9A23E','#E89400','#1B7BBC','#08519c'],
+        borderWidth: 0,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        x: { ticks: { font: { size: 10 } }, grid: { display: false } },
+        y: { beginAtZero: true, ticks: { font: { size: 10 }, callback: (val) => fmtNum(val) }, grid: { color: 'rgba(0,0,0,.06)' } },
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: (ctx) => `${fmtNum(ctx.parsed.y)} persone` } },
+      }
+    }
+  });
+}
+
+// CHART 3 — Stranieri UE vs Extra-UE per sesso (ST16-ST21)
+function _censimentoChartStranieri(v) {
+  const canvas = document.getElementById('cns-chart-stranieri');
+  if (!canvas) return;
+  // ST16 UE tot, ST17 UE M, ST18 UE F
+  // ST19 Extra-UE tot, ST20 Extra-UE M, ST21 Extra-UE F
+  const ueM   = (v.ST17 != null && isFinite(v.ST17)) ? v.ST17 : 0;
+  const ueF   = (v.ST18 != null && isFinite(v.ST18)) ? v.ST18 : 0;
+  const euM   = (v.ST20 != null && isFinite(v.ST20)) ? v.ST20 : 0;
+  const euF   = (v.ST21 != null && isFinite(v.ST21)) ? v.ST21 : 0;
+  if (ueM + ueF + euM + euF === 0) {
+    canvas.parentElement.innerHTML = '<p class="censimento-chart-empty">Nessuno straniero residente nella sezione.</p>';
+    return;
+  }
+  _CENSIMENTO_CHART_REFS.stranieri = new Chart(canvas.getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels: ['UE', 'Extra-UE'],
+      datasets: [
+        { label: 'Maschi',  data: [ueM, euM], backgroundColor: '#1B7BBC', borderWidth: 0 },
+        { label: 'Femmine', data: [ueF, euF], backgroundColor: '#D9364F', borderWidth: 0 },
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        x: { stacked: true, ticks: { font: { size: 11 } }, grid: { display: false } },
+        y: { stacked: true, beginAtZero: true, ticks: { font: { size: 10 }, callback: (val) => fmtNum(val) }, grid: { color: 'rgba(0,0,0,.06)' } },
+      },
+      plugins: {
+        legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } },
+        tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${fmtNum(ctx.parsed.y)}` } },
+      }
+    }
+  });
+}
+
+// CHART 4 — Famiglie per numero componenti (PF3-PF8)
+function _censimentoChartFamiglie(v) {
+  const canvas = document.getElementById('cns-chart-famiglie');
+  if (!canvas) return;
+  const labels = ['1 comp.', '2 comp.', '3 comp.', '4 comp.', '5 comp.', '6+ comp.'];
+  const keys = ['PF3','PF4','PF5','PF6','PF7','PF8'];
+  const data = keys.map(k => (v[k] != null && isFinite(v[k])) ? v[k] : 0);
+  if (data.every(x => x === 0)) {
+    canvas.parentElement.innerHTML = '<p class="censimento-chart-empty">Composizione famiglie non rilevata.</p>';
+    return;
+  }
+  _CENSIMENTO_CHART_REFS.famiglie = new Chart(canvas.getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Famiglie',
+        data,
+        backgroundColor: '#7CB342',
+        borderWidth: 0,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        x: { ticks: { font: { size: 10 } }, grid: { display: false } },
+        y: { beginAtZero: true, ticks: { font: { size: 10 }, callback: (val) => fmtNum(val) }, grid: { color: 'rgba(0,0,0,.06)' } },
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: (ctx) => `${fmtNum(ctx.parsed.y)} famiglie` } },
+      }
+    }
+  });
 }
 
 
