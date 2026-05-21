@@ -1272,10 +1272,11 @@ footer a{color:rgba(255,255,255,0.85);text-decoration:none}
 .censimento-bar-legend .dot-occ{background:#1B7BBC;}
 .censimento-bar-legend .dot-vuo{background:#E89400;}
 .censimento-map-section{margin:28px 0 16px;}
-.censimento-controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:10px 0 14px;}
-.censimento-controls label{font-family:var(--mono);font-size:11px;color:var(--ink-mute);text-transform:uppercase;letter-spacing:.06em;}
-.censimento-select{font-family:var(--serif);font-size:14px;color:var(--ink);background:var(--paper);border:1px solid var(--paper-2);border-radius:4px;padding:7px 12px;min-height:36px;cursor:pointer;min-width:280px;}
-.censimento-select:focus{outline:2px solid var(--accent);outline-offset:2px;}
+.censimento-controls{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:10px 0 14px;padding:14px 16px;background:var(--paper-2);border-left:3px solid var(--accent);border-radius:4px;}
+.censimento-controls label{font-family:var(--mono);font-size:11px;color:var(--ink,#0c1b3d);font-weight:700;text-transform:uppercase;letter-spacing:.08em;}
+.censimento-select{font-family:var(--serif);font-size:14px;color:var(--ink,#0c1b3d);background:var(--paper);background-image:linear-gradient(45deg,transparent 50%,var(--accent) 50%),linear-gradient(135deg,var(--accent) 50%,transparent 50%);background-position:calc(100% - 18px) 50%,calc(100% - 12px) 50%;background-size:6px 6px,6px 6px;background-repeat:no-repeat;border:2px solid var(--accent);border-radius:4px;padding:8px 36px 8px 12px;min-height:40px;cursor:pointer;min-width:280px;appearance:none;-webkit-appearance:none;-moz-appearance:none;}
+.censimento-select:hover{border-color:var(--accent-2);}
+.censimento-select:focus{outline:3px solid var(--gold,#ffcb00);outline-offset:2px;}
 .censimento-map-note{font-size:13px;line-height:1.55;margin:0 0 12px;}
 .censimento-map{height:480px;border-radius:8px;overflow:hidden;background:#eef2f5;position:relative;z-index:0;isolation:isolate;}
 .censimento-map-loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--ink-mute);font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.06em;background:#eef2f5;z-index:2;}
