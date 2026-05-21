@@ -1272,10 +1272,17 @@ footer a{color:rgba(255,255,255,0.85);text-decoration:none}
 .censimento-bar-legend .dot-occ{background:#1B7BBC;}
 .censimento-bar-legend .dot-vuo{background:#E89400;}
 .censimento-map-section{margin:28px 0 16px;}
-.censimento-map-placeholder{height:380px;border-radius:8px;background:var(--paper-2);display:flex;align-items:center;justify-content:center;color:var(--ink-mute);font-family:var(--mono);font-size:12px;text-transform:uppercase;letter-spacing:.06em;border:1px dashed var(--paper-3,#d4d6db);}
+.censimento-map-note{font-size:13px;line-height:1.55;margin:0 0 12px;}
+.censimento-map{height:480px;border-radius:8px;overflow:hidden;background:#eef2f5;position:relative;z-index:0;isolation:isolate;}
+.censimento-map-loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--ink-mute);font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.06em;background:#eef2f5;z-index:2;}
+.censimento-legend{display:flex;flex-wrap:wrap;gap:14px;margin:12px 0 0;font-family:var(--mono);font-size:10px;color:var(--ink-mute);text-transform:uppercase;letter-spacing:.05em;}
+.censimento-legend-item{display:inline-flex;align-items:center;gap:6px;}
+.censimento-legend-swatch{display:inline-block;width:14px;height:14px;border-radius:2px;border:1px solid rgba(0,0,0,.08);}
+.censimento-section-popup{font-family:var(--mono);font-size:11px;line-height:1.45;color:var(--ink);}
+.censimento-section-popup strong{font-family:var(--serif);font-size:13px;color:var(--ink);}
 @media (max-width:720px){
-  .censimento-map-placeholder{height:280px;}
-  .censimento-bar-legend{font-size:10px;gap:10px;}
+  .censimento-map{height:340px;}
+  .censimento-legend{font-size:9px;gap:10px;}
 }
 
 .scuola-row{display:grid;grid-template-columns:1fr 80px;gap:10px;align-items:start;padding:10px 4px;border-bottom:1px solid var(--paper-2);}
@@ -1647,6 +1654,11 @@ const MCP_ENDPOINT = window.location.hostname === 'localhost'
 // Stessa origine del Worker MCP (Cloudflare lo serve, CORS *).
 const ANNCSU_FULL_BASE = MCP_ENDPOINT.replace(/\/mcp$/, '/data/anncsu_full');
 
+// Endpoint statico nginx GET /data/censimento_full/<istat>.geojson
+// (NON via Worker MCP: pass-through diretto filesystem AgID VM).
+// Restituisce FeatureCollection GeoJSON con geometrie EPSG:4326 + 119 vars per sezione.
+const CENSIMENTO_FULL_BASE = (location.origin + '/data/censimento_full');
+
 async function mcpCall(toolName, args) {
   const res = await fetch(MCP_ENDPOINT, {
     method: 'POST',
@@ -1737,6 +1749,8 @@ function renderComune(data) {
   window.__immobiliPaInited = false;
   window.__anncsuData = k.anncsu || null;
   window.__anncsuInited = false;
+  window.__censimentoData = k.censimento || null;
+  window.__censimentoInited = false;
   window.__sanitaData = k.sanita_mds || null;
   window.__sanitaInited = false;
   window.__punData = k.pun || null;
@@ -7460,14 +7474,19 @@ function renderCensimentoTab(d) {
     </div>
   ` : '';
 
-  // Placeholder mappa (verrà popolato in 12.3 con choropleth Leaflet lazy fetch)
+  // Mappa choropleth (lazy fetch /data/censimento_full/<istat>.geojson in 12.3)
   const mapBlock = d._has_full ? `
     <div class="censimento-map-section">
-      <h3 class="section-h-small">Choropleth per sezione di censimento</h3>
-      <p class="muted">In arrivo: mappa interattiva delle ${fmtNum(k.n_sezioni || 0)} sezioni con dropdown 12 indicatori derivati e click-per-dettaglio.</p>
-      <div id="censimento-map" class="censimento-map-placeholder" role="img" aria-label="Mappa choropleth sezioni di censimento (in arrivo)">
-        <span>Mappa choropleth in caricamento…</span>
+      <h3 class="section-h-small">Choropleth — densità popolazione per sezione</h3>
+      <p class="muted censimento-map-note">
+        Mappa interattiva delle ${fmtNum(k.n_sezioni || 0)} sezioni di censimento.
+        Il colore rappresenta la densità di popolazione (ab./km²).
+        Sezioni in grigio = territorio non rilevato (parchi, aree industriali, infrastrutture).
+      </p>
+      <div id="censimento-map" class="censimento-map" role="region" aria-label="Mappa choropleth sezioni di censimento">
+        <div class="censimento-map-loading" data-censimento-loading>Caricamento sezioni di censimento…</div>
       </div>
+      <div class="censimento-legend" id="censimento-legend" aria-label="Legenda densità popolazione"></div>
     </div>
   ` : '';
 
@@ -7486,6 +7505,149 @@ function renderCensimentoTab(d) {
       ${mapBlock}
     </div>
   `;
+}
+
+
+// Palette choropleth: 5 classi sequenziali blu->arancio (color-blind friendly).
+// Pensata per indicatori "più alto = più denso/intenso".
+const CENSIMENTO_PALETTE = ['#deebf7', '#9ecae1', '#4292c6', '#2171b5', '#08519c'];
+const CENSIMENTO_NA_COLOR = '#cccccc';  // sezione senza dato (no_vars)
+
+// Calcola breakpoint quantili (5 classi) escludendo i null.
+function _censimentoBreakpoints(values) {
+  const valid = values.filter(v => v != null && isFinite(v) && v > 0).sort((a, b) => a - b);
+  if (valid.length === 0) return null;
+  const n = valid.length;
+  // 4 cut points per 5 classi: quintili
+  const cuts = [0.2, 0.4, 0.6, 0.8].map(q => valid[Math.min(Math.floor(q * n), n - 1)]);
+  // Deduplica (per dataset piccoli con molti valori uguali)
+  return Array.from(new Set(cuts));
+}
+
+function _censimentoColorFor(value, breaks) {
+  if (value == null || !isFinite(value) || value <= 0) return CENSIMENTO_NA_COLOR;
+  for (let i = 0; i < breaks.length; i++) {
+    if (value <= breaks[i]) return CENSIMENTO_PALETTE[i];
+  }
+  return CENSIMENTO_PALETTE[CENSIMENTO_PALETTE.length - 1];
+}
+
+// Calcola densità (ab/km²) per una feature. Ritorna null se vars assenti o area_mq=0.
+function _censimentoDensita(feature) {
+  const p = feature.properties || {};
+  const v = p.vars || {};
+  const pop = v.P1;
+  const areaMq = p.area_mq;
+  if (pop == null || !isFinite(pop) || areaMq == null || !isFinite(areaMq) || areaMq <= 0) {
+    return null;
+  }
+  return pop / (areaMq / 1e6);
+}
+
+// Lazy fetch + render choropleth Censimento.
+// Indicatore default: densità popolazione (P1 / area_kmq).
+async function initCensimentoMap(istat) {
+  const mapEl = document.getElementById('censimento-map');
+  const loadingEl = mapEl ? mapEl.querySelector('[data-censimento-loading]') : null;
+  const legendEl = document.getElementById('censimento-legend');
+  if (!mapEl) return;
+
+  let fc;
+  try {
+    const url = `${CENSIMENTO_FULL_BASE}/${istat}.geojson`;
+    const res = await fetch(url);
+    if (!res.ok) {
+      if (loadingEl) loadingEl.textContent = 'Dati di sezione non disponibili per questo comune.';
+      console.warn(`Censimento full fetch failed: HTTP ${res.status} for ${url}`);
+      return;
+    }
+    fc = await res.json();
+  } catch (err) {
+    if (loadingEl) loadingEl.textContent = 'Errore di rete nel caricamento delle sezioni.';
+    console.warn(`Censimento full fetch error: ${err.message}`);
+    return;
+  }
+
+  if (!fc || !Array.isArray(fc.features) || fc.features.length === 0) {
+    if (loadingEl) loadingEl.textContent = 'Nessuna sezione di censimento trovata.';
+    return;
+  }
+
+  // Calcola densità per ogni feature + quantili per legenda
+  const densities = fc.features.map(_censimentoDensita);
+  const breaks = _censimentoBreakpoints(densities);
+
+  // Init Leaflet map
+  const map = L.map(mapEl, { scrollWheelZoom: false, zoomControl: true });
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+  }).addTo(map);
+
+  // GeoJSON layer con styling choropleth
+  let nValid = 0, nNoData = 0;
+  const layer = L.geoJSON(fc, {
+    style: (feature) => {
+      const d = _censimentoDensita(feature);
+      if (d == null) { nNoData++; }
+      else { nValid++; }
+      return {
+        fillColor: breaks ? _censimentoColorFor(d, breaks) : CENSIMENTO_NA_COLOR,
+        fillOpacity: 0.75,
+        weight: 0.6,
+        color: '#555',
+        opacity: 0.55,
+      };
+    },
+    onEachFeature: (feature, lyr) => {
+      const p = feature.properties || {};
+      const v = p.vars || {};
+      const d = _censimentoDensita(feature);
+      const sezLab = (p.sez != null) ? `Sezione n. ${p.sez}` : `Sezione ${p.id || ''}`;
+      const tipoLoc = p.tipo_loc ? p.tipo_loc.replace(/_/g, ' ') : '—';
+      const popHtml = `
+        <div class="censimento-section-popup">
+          <strong>${sezLab}</strong><br>
+          ${tipoLoc} · ${p.area_mq != null ? fmtNum(Math.round(p.area_mq)) + ' m²' : '—'}<br>
+          ${v.P1 != null ? `Pop. residente: <strong>${fmtNum(v.P1)}</strong> (M ${fmtNum(v.P2 || 0)} / F ${fmtNum(v.P3 || 0)})<br>` : '<em>Sezione non rilevata</em><br>'}
+          ${d != null ? `Densità: <strong>${fmtNum(Math.round(d))}</strong> ab./km²` : ''}
+        </div>
+      `;
+      lyr.bindPopup(popHtml);
+    }
+  }).addTo(map);
+
+  // Fit bounds
+  try {
+    map.fitBounds(layer.getBounds(), { padding: [12, 12] });
+  } catch (e) {
+    map.setView([41.9, 12.5], 6);  // fallback Italia
+  }
+
+  // Rimuovi overlay loading
+  if (loadingEl) loadingEl.remove();
+
+  // Render legenda dinamica con range
+  if (legendEl && breaks) {
+    const formatRange = (lo, hi) => {
+      const loStr = lo == null ? '0' : fmtNum(Math.round(lo));
+      const hiStr = hi == null ? '∞' : fmtNum(Math.round(hi));
+      return `${loStr}–${hiStr}`;
+    };
+    const items = [];
+    items.push(`<span class="censimento-legend-item"><span class="censimento-legend-swatch" style="background:${CENSIMENTO_PALETTE[0]}"></span>${formatRange(0, breaks[0])} ab./km²</span>`);
+    for (let i = 1; i < breaks.length; i++) {
+      items.push(`<span class="censimento-legend-item"><span class="censimento-legend-swatch" style="background:${CENSIMENTO_PALETTE[i]}"></span>${formatRange(breaks[i-1], breaks[i])}</span>`);
+    }
+    items.push(`<span class="censimento-legend-item"><span class="censimento-legend-swatch" style="background:${CENSIMENTO_PALETTE[breaks.length]}"></span>&gt; ${fmtNum(Math.round(breaks[breaks.length-1]))}</span>`);
+    if (nNoData > 0) {
+      items.push(`<span class="censimento-legend-item"><span class="censimento-legend-swatch" style="background:${CENSIMENTO_NA_COLOR}"></span>Non rilevata (${fmtNum(nNoData)})</span>`);
+    }
+    legendEl.innerHTML = items.join('');
+  }
+
+  // Espongo per usi futuri (12.4 dropdown indicatori, 12.5 click pannello sezione)
+  window.__censimentoInstance = { map, layer, fc, breaks };
 }
 
 
@@ -8015,6 +8177,17 @@ function bindTabSwitching() {
             }
           }, 0);
           window.__anncsuInited = true;
+        }
+      }
+
+      // Lazy-init mappa choropleth Censimento al primo click
+      if (tab.dataset.tab === 'censimento') {
+        if (window.__censimentoData && window.__censimentoData._has_full && !window.__censimentoInited) {
+          const istatParam = new URLSearchParams(window.location.search).get('istat');
+          if (istatParam) {
+            setTimeout(() => initCensimentoMap(istatParam), 0);
+            window.__censimentoInited = true;
+          }
         }
       }
 
