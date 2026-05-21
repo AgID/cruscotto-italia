@@ -9,7 +9,7 @@ import type { ToolDefinition } from "./index.js";
 
 export const mcpInfo: ToolDefinition = {
   description:
-    "Returns server metadata, version, and data freshness for each integrated source (ANAC, BDAP-MOP, SIOPE, Italia Domani PNRR, ISTAT, ISPRA, MIUR, ACI, MEF Federalismo Fiscale, MEF Patrimonio Immobiliare PA, Agenzia delle Entrate/ISTAT ANNCSU, Ministero della Salute Open Data, GSE/MASE Piattaforma Unica Nazionale punti di ricarica, AGCOM Broadband Map, MIMIT Osservatorio Prezzi Carburanti, Ministero del Lavoro Registro Unico Nazionale Terzo Settore RUNTS, ISTAT Archivio Statistico Imprese Attive ASIA UL, ISTAT Matrice Pendolarismo 2021).",
+    "Returns server metadata, version, and data freshness for each integrated source (ANAC, BDAP-MOP, SIOPE, Italia Domani PNRR, ISTAT, ISPRA, MIUR, ACI, MEF Federalismo Fiscale, MEF Patrimonio Immobiliare PA, Agenzia delle Entrate/ISTAT ANNCSU, Ministero della Salute Open Data, GSE/MASE Piattaforma Unica Nazionale punti di ricarica, AGCOM Broadband Map, MIMIT Osservatorio Prezzi Carburanti, Ministero del Lavoro Registro Unico Nazionale Terzo Settore RUNTS, ISTAT Archivio Statistico Imprese Attive ASIA UL, ISTAT Matrice Pendolarismo 2021, ISTAT Basi Territoriali + Variabili Censuarie 2021).",
   inputSchema: {
     type: "object",
     properties: {},
@@ -27,9 +27,9 @@ export const mcpInfo: ToolDefinition = {
     }
     return {
       service: "cruscotto-italia-mcp",
-      version: "0.14.1",
+      version: "0.15.0",
       protocol: "MCP 2024-11-05",
-      datasets: 23,
+      datasets: 24,
       institutions: 15,
       municipalities: 7918,
       sources: {
@@ -139,6 +139,13 @@ export const mcpInfo: ToolDefinition = {
           license: "CC BY 4.0 ex art. 52 c.2 D.Lgs 82/2005 (CAD) - open data di default delle PA; dato pubblicato ex D.Lgs 117/2017 art. 53 (pubblicita' legale RUNTS)",
           datasets: [
             "Ministero del Lavoro e delle Politiche Sociali - Registro Unico Nazionale del Terzo Settore (RUNTS, D.Lgs 117/2017): anagrafica completa degli enti del Terzo Settore iscritti su base comunale (sede legale). 145.898 enti totali in 7.547 comuni (95,3% copertura). Mix nazionale per sezione: APS 47% > ODV 27% > IS 15% > ETS 11% > EF 0,4% > SMS 0,1%. 52% degli enti iscritti al beneficio 5x1000. Campi: codice fiscale, repertorio, denominazione, sezione (ODV/APS/EF/IS/SMS/ETS), legale rappresentante, rete associativa, provincia/comune sede legale, 5x1000, data iscrizione. KPI per comune: n_totale, mix per sezione, n_5x1000 + percentuale, n_rete_associativa, iscrizioni per anno. Aggiornamento quotidiano del file XLSX bulk sulla pagina ASP.NET di servizi.lavoro.gov.it (snapshot YYYYMMDD_iscritti_v1.0.xlsx).",
+          ],
+        },
+        istat_censimento: {
+          canonical: "https://www.istat.it/notizia/basi-territoriali-e-variabili-censuarie/",
+          license: "CC-BY 3.0 IT",
+          datasets: [
+            "ISTAT - Basi Territoriali 2021 + Variabili censuarie del Censimento permanente 2021. Geometrie delle 756.376 sezioni di censimento nazionali (poligoni WGS84 EPSG:4326 RFC 7946) accorpate per comune, integrate con 119 variabili demografiche/abitative per sezione: popolazione totale + sesso (P1-P3), 16 fasce eta' 5-anni per totale/maschi/femmine (P14-P82), titolo di studio (P86-P100 nessuno/elementare/media/diploma/terziario per sesso), occupati 15-64 (P101-P103), italiani per fascia eta' (IT1-IT12), stranieri UE/extra-UE per sesso/eta'/occupazione (ST1-ST33), famiglie per numero componenti 1-6+ (PF1, PF3-PF8), abitazioni occupate/vuote/totali (A2, A3, A8), edifici residenziali (E3). Copertura 7904/7896 comuni (100% incluso TN/BZ). 252.467 sezioni 'no_vars' (33%) sono aree non residenziali (parchi, aree industriali, infrastrutture) non rilevate dal censimento permanente per assenza di residenti. KPI comune-level pre-calcolati in censimento/<istat>.json (~3-5 KB), geometrie complete in /data/censimento_full/<istat>.geojson lazy-fetch (30 KB - 3 MB). Aggiornamento annuale ISTAT (ultimo rilascio 14/05/2026).",
           ],
         },
       },
