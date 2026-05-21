@@ -7556,7 +7556,7 @@ function renderCensimentoTab(d) {
       </div>
       <div class="censimento-legend" id="censimento-legend" aria-label="Legenda dell'indicatore visualizzato"></div>
       <div id="censimento-section-detail" class="censimento-section-detail" aria-live="polite">
-        <p class="muted censimento-section-hint">Clicca una sezione sulla mappa per visualizzarne il dettaglio demografico.</p>
+        <p class="muted censimento-section-hint">Clicca una sezione sulla mappa per visualizzare grafici e tabella completa delle 119 variabili demografiche e abitative.</p>
       </div>
     </div>
   ` : '';
@@ -7804,10 +7804,6 @@ function _censimentoApplyIndicator(indicator) {
       color: '#555',
       opacity: 0.55,
     });
-    // Aggiorna popup: ricomputa solo se aperto sarà refreshato al prossimo click
-    if (lyr.__cnsPopupFn) {
-      lyr.setPopupContent(lyr.__cnsPopupFn(indicator));
-    }
   });
 
   inst.indicator = indicator;
@@ -7863,26 +7859,6 @@ async function initCensimentoMap(istat) {
   const values0 = fc.features.map(f => _censimentoComputeIndicator(f, initialIndicator));
   const breaks0 = _censimentoBreakpoints(values0);
 
-  // Genera popup dinamico per una feature
-  const makePopupFn = (feature) => (indicator) => {
-    const p = feature.properties || {};
-    const v = p.vars || {};
-    const sezLab = (p.sez != null) ? `Sezione n. ${p.sez}` : `Sezione ${p.id || ''}`;
-    const tipoLoc = p.tipo_loc ? p.tipo_loc.replace(/_/g, ' ') : '—';
-    const val = _censimentoComputeIndicator(feature, indicator);
-    const meta = CENSIMENTO_INDICATORS[indicator] || CENSIMENTO_INDICATORS.densita;
-    const valStr = val == null ? '—' : (meta.decimals === 0 ? fmtNum(Math.round(val)) : val.toFixed(meta.decimals));
-    const u = meta.unit ? ` ${meta.unit}` : '';
-    return `
-      <div class="censimento-section-popup">
-        <strong>${sezLab}</strong><br>
-        ${tipoLoc} · ${p.area_mq != null ? fmtNum(Math.round(p.area_mq)) + ' m²' : '—'}<br>
-        ${v.P1 != null ? `Pop. residente: <strong>${fmtNum(v.P1)}</strong> (M ${fmtNum(v.P2 || 0)} / F ${fmtNum(v.P3 || 0)})<br>` : '<em>Sezione non rilevata</em><br>'}
-        ${meta.label}: <strong>${valStr}${u}</strong>
-      </div>
-    `;
-  };
-
   // GeoJSON layer
   let nNoData0 = 0;
   let _featIdx = 0;
@@ -7900,10 +7876,16 @@ async function initCensimentoMap(istat) {
     },
     onEachFeature: (feature, lyr) => {
       lyr.__cnsIdx = _featIdx++;
-      lyr.__cnsPopupFn = makePopupFn(feature);
-      lyr.bindPopup(lyr.__cnsPopupFn(initialIndicator));
       lyr.on('click', () => {
         _censimentoRenderSectionDetail(feature);
+        // Scroll smooth al pannello dettaglio appena renderizzato.
+        // requestAnimationFrame per attendere il primo paint del nuovo DOM.
+        requestAnimationFrame(() => {
+          const detail = document.getElementById('censimento-section-detail');
+          if (detail) {
+            detail.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        });
       });
     }
   }).addTo(map);
