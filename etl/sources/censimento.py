@@ -169,6 +169,8 @@ import urllib.request
 import urllib.error
 
 import openpyxl
+import shapefile  # pyshp
+from pyproj import Transformer
 
 
 # ═════════════════════════════════════════════════════════════════════════
@@ -407,4 +409,147 @@ def parse_tracciato_from_zip(zip_path: Path) -> dict[str, str]:
             out[code] = desc
 
     log.info("censimento_tracciato_parsed", n_codes=len(out))
+    return out
+
+
+# ═════════════════════════════════════════════════════════════════════════
+# FASE 3 — Parse shapefile sezioni di censimento (1 file per regione)
+# ═════════════════════════════════════════════════════════════════════════
+
+# Sistema riferimento nativo ISTAT BT2021:
+# WGS84 UTM Zona 32N = EPSG:32632 (proiezione metrica, x/y in metri)
+# Output target: EPSG:4326 (lon/lat decimali, standard GeoJSON RFC 7946)
+SHP_CRS_SRC = "EPSG:32632"
+SHP_CRS_DST = "EPSG:4326"
+
+# Tolleranza arrotondamento coordinate riprorettate: 6 decimali = ~11cm
+# Risparmia ~30% sul filesize GeoJSON rispetto a 8+ decimali.
+COORD_DECIMALS = 6
+
+# Campi DBF attesi nello shapefile R<NN>_21_WGS84.dbf (validati su R02 Valle d'Aosta).
+# Se ISTAT cambia layout, l'ETL fallira' con KeyError nel parser (failure loud).
+SHP_DBF_FIELDS_REQUIRED = ["PRO_COM", "SEZ21", "SEZ21_ID", "TIPO_LOC"]
+
+
+def _extract_shp_region(zip_path: Path, region: int) -> Path:
+    """Estrae i 4 file shapefile (.shp .dbf .shx .prj) della regione dal ZIP
+    BT regionale in una sottodir cache. Ritorna il path al file .shp principale.
+
+    Layout atteso del ZIP regionale (verificato su R02_21.zip):
+      SHP/R<NN>_21_WGS84.shp
+      SHP/R<NN>_21_WGS84.dbf
+      SHP/R<NN>_21_WGS84.shx
+      SHP/R<NN>_21_WGS84.prj
+      TAB/...  (CSV/XLSX duplicati: ignorati, usiamo Dati_regionali_2021.zip)
+    """
+    shp_dir = CACHE_DIR / f"R{region:02d}_21_shp"
+    shp_main = shp_dir / "SHP" / f"R{region:02d}_21_WGS84.shp"
+    if shp_main.exists():
+        return shp_main
+
+    shp_dir.mkdir(parents=True, exist_ok=True)
+    log.info("censimento_shp_extract_start", region=region, zip=str(zip_path))
+    with zipfile.ZipFile(zip_path, "r") as zf:
+        # Estrai solo i 4 file SHP/ (no TAB/ duplicati)
+        prefix = "SHP/"
+        n_extracted = 0
+        for name in zf.namelist():
+            if name.startswith(prefix) and not name.endswith("/"):
+                zf.extract(name, shp_dir)
+                n_extracted += 1
+        log.info("censimento_shp_extracted", region=region, files=n_extracted)
+
+    if not shp_main.exists():
+        raise RuntimeError(
+            f"File shapefile principale non trovato dopo estrazione: {shp_main}"
+        )
+    return shp_main
+
+
+def parse_shapefile_region(zip_path: Path, region: int) -> list[dict]:
+    """Estrae e parsa lo shapefile sezioni della regione.
+
+    Ritorna lista di dict per ogni sezione:
+      {
+        "sez_id": int (SEZ21_ID, chiave globale univoca),
+        "procom": str (codice ISTAT 6 cifre PRO_COM zero-padded),
+        "sez": int (SEZ21, progressivo locale al comune),
+        "tipo_loc": str (label da TIPO_LOC_MAP, default "altro"),
+        "asc1": int, "asc2": int, "asc3": int (codici aree subcomunali),
+        "area_mq": float (SHAPE_Area dal DBF),
+        "geom": dict GeoJSON Polygon EPSG:4326 (lon/lat WGS84)
+      }
+
+    Le geometrie sono riproiettate da UTM 32N a WGS84 lon/lat e arrotondate
+    a 6 decimali (~11cm). I poligoni con buchi (MultiPolygon-like via 'parts')
+    sono gestiti come rings multiple del Polygon GeoJSON.
+    """
+    shp_path = _extract_shp_region(zip_path, region)
+    log.info("censimento_shp_parse_start", region=region, shp=str(shp_path))
+    t0 = time.time()
+
+    sf = shapefile.Reader(str(shp_path), encoding="utf-8")
+    transformer = Transformer.from_crs(SHP_CRS_SRC, SHP_CRS_DST, always_xy=True)
+
+    # Verifica colonne DBF essenziali
+    field_names = [f[0] for f in sf.fields[1:]]  # skip DeletionFlag
+    missing = [c for c in SHP_DBF_FIELDS_REQUIRED if c not in field_names]
+    if missing:
+        raise RuntimeError(
+            f"DBF region {region}: campi mancanti {missing}. "
+            f"Trovati (primi 10): {field_names[:10]}"
+        )
+
+    out: list[dict] = []
+    n_skipped_no_geom = 0
+    n_skipped_bad_geom = 0
+
+    for shape, rec in zip(sf.shapes(), sf.records()):
+        d = rec.as_dict()
+
+        # Skip se shape non e' Polygon (5) o MultiPatch (31).
+        # ISTAT BT2021 sono tutti Polygon ma difensivi.
+        if shape.shapeType != shapefile.POLYGON:
+            n_skipped_bad_geom += 1
+            continue
+        if not shape.points or len(shape.points) < 4:
+            # Polygon valido ha almeno 4 punti (ring chiuso)
+            n_skipped_no_geom += 1
+            continue
+
+        # Riproietta ring per ring (shape.parts e' la lista di start-index dei ring)
+        parts = list(shape.parts) + [len(shape.points)]
+        rings = []
+        for i in range(len(parts) - 1):
+            start, end = parts[i], parts[i + 1]
+            ring = []
+            for x, y in shape.points[start:end]:
+                lon, lat = transformer.transform(x, y)
+                ring.append([round(lon, COORD_DECIMALS), round(lat, COORD_DECIMALS)])
+            rings.append(ring)
+
+        # ISTAT campo PRO_COM e' int (es. 7001 = Aosta), padded a 6 cifre come istat
+        procom_int = int(d.get("PRO_COM") or 0)
+        procom_str = f"{procom_int:06d}"
+
+        out.append({
+            "sez_id": int(d.get("SEZ21_ID") or 0),
+            "procom": procom_str,
+            "sez": int(d.get("SEZ21") or 0),
+            "tipo_loc": TIPO_LOC_MAP.get(int(d.get("TIPO_LOC") or 0), "altro"),
+            "loc_id": int(d.get("LOC21_ID") or 0),
+            "asc1": int(d.get("COM_ASC1") or 0),
+            "asc2": int(d.get("COM_ASC2") or 0),
+            "asc3": int(d.get("COM_ASC3") or 0),
+            "area_mq": round(float(d.get("SHAPE_Area") or 0), 1),
+            "geom": {"type": "Polygon", "coordinates": rings},
+        })
+
+    elapsed = time.time() - t0
+    log.info("censimento_shp_parse_done",
+             region=region,
+             features=len(out),
+             skipped_no_geom=n_skipped_no_geom,
+             skipped_bad_geom=n_skipped_bad_geom,
+             elapsed_s=round(elapsed, 1))
     return out
