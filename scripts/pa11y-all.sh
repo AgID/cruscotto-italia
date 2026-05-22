@@ -36,6 +36,8 @@ TESTS=(
   "Carburanti:pa11y-carburanti.sh"
   "Terzo Settore:pa11y-runts.sh"
   "Imprese ASIA:pa11y-asia.sh"
+  "Pendolarismo:pa11y-pendolarismo.sh"
+  "Censimento 2021:pa11y-censimento.sh"
 )
 
 echo "######################################################################"
