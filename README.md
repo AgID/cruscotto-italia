@@ -34,6 +34,7 @@ Cercando un comune ("Lecce") si ottiene una vista a 360° su:
 - 🤝 **Enti del Terzo Settore** (Ministero del Lavoro — RUNTS, D.Lgs 117/2017: ODV, APS, EF, IS, SMS, ETS)
 - 🏭 **Imprese e addetti** (ISTAT — ASIA UL, serie 2018-2023)
 - 🚌 **Pendolarismo** (ISTAT Censimento permanente 2021 — matrice OD origine/destinazione lavoro)
+- 🗺️ **Censimento sezioni 2021** (ISTAT Basi Territoriali — 756.376 sezioni di censimento con 119 variabili demografiche/abitative per sezione)
 
 L'elenco completo, con licenze, frequenze di aggiornamento e link diretti
 alle fonti istituzionali, è disponibile nella pagina pubblica `about.html`
@@ -102,6 +103,7 @@ Dettagli architetturali completi: [`DESIGN.md`](DESIGN.md) ·
 | **Weekly** (lunedì 04:00 UTC) | ANAC OCDS, PNRR, sanità MdS, RUNTS, dashboard | cron VM AgID | automatico |
 | **Monthly** (5° del mese 04:00 UTC) | anagrafica, BDAP-MOP, SIOPE, ANNCSU, AGCOM banda larga | cron VM AgID | automatico |
 | **Annual** (1 feb / 1 apr / 1 lug, 04:00 UTC) | demografia POSAS, profilo Censimento, turismo, territorio, scuole, veicoli, redditi IRPEF, immobili PA | cron VM AgID | automatico |
+| **Decennale** (manuale, prossimo 2031) | censimento Basi Territoriali (sezioni + 119 vars) | run manuale `python -m etl.sources.censimento` su VM | `workflow_dispatch` |
 | **ISTAT refresh** (manuale) | istat_profilo, asia, pendolarismo | GitHub Actions `ubuntu-latest` | `workflow_dispatch` |
 
 ### Perché 2 esecutori distinti
@@ -143,7 +145,7 @@ per consentire l'interrogazione dei dati civici da chatbot AI compatibili
 - `comune_kpi` — KPI sintetici di un comune (~620 token, primo tool da
   chiamare per query puntuali e confronti)
 - `comune_dashboard` — vista unificata: una sola chiamata restituisce le
-  23 sezioni del comune (anagrafica, demografia, contratti, opere
+  25 sezioni del comune (anagrafica, demografia, contratti, opere
   pubbliche BDAP-MOP con dettaglio progetti CUP, ANNCSU, sanità,
   banda larga, ecc.)
 - `anncsu_civico_search` — query puntuali sui numeri civici certificati
@@ -161,8 +163,9 @@ per consentire l'interrogazione dei dati civici da chatbot AI compatibili
 
 È disponibile una skill Claude che documenta l'uso del connettore
 (inventario dei 5 tool, schema di `comune_dashboard`, pattern operativi
-e caveat per sezione). Scaricabile da
-`https://cruscotto-italia-mcp.dati.gov.it/skills/cruscotto-italia-workflow-vX.Y.Z.zip`.
+e caveat per sezione). Versione corrente:
+`https://cruscotto-italia-mcp.dati.gov.it/skills/cruscotto-italia-workflow-v2.0.0.zip`
+(elenco completo con storici in `docs/skills/README.md`).
 
 ### Esempi di domande supportate
 
@@ -255,14 +258,14 @@ cruscotto-italia/
 │
 ├── frontend/                 ← single-file HTML (vanilla JS)
 │   ├── index.html
-│   ├── comune.html           ← vista comune-centric, 23 tab
+│   ├── comune.html           ← vista comune-centric, 24 tab
 │   ├── about.html            ← elenco fonti + metodologia
 │   └── vendor/               ← Chart.js, Leaflet, JSZip (SHA-384)
 │
 ├── etl/                      ← Python ETL pipeline
 │   ├── requirements.txt
 │   ├── pyproject.toml        ← ruff + mypy + pytest config
-│   ├── sources/              ← un modulo per fonte (17 ETL VM + 3 ETL ISTAT su Actions)
+│   ├── sources/              ← un modulo per fonte (18 ETL VM + 3 ETL ISTAT su Actions)
 │   │   ├── anagrafica.py        ← spina dorsale ISTAT comuni + IPA
 │   │   ├── anac.py              ← contratti pubblici (OCDS)
 │   │   ├── bdap.py              ← BDAP-MOP opere pubbliche
@@ -285,6 +288,7 @@ cruscotto-italia/
 │   │   ├── runts.py             ← Min. Lavoro RUNTS Terzo Settore
 │   │   ├── asia.py              ← ISTAT ASIA UL imprese *via Actions*
 │   │   ├── pendolarismo.py      ← ISTAT matrice OD *via Actions*
+│   │   ├── censimento.py        ← ISTAT Basi Territoriali 2021 (119 vars/sezione)
 │   │   └── dashboard.py         ← aggregator unified shard (A1)
 │   └── lib/
 │       ├── local_lookup.py   ← utility lookup local-first
