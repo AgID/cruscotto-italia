@@ -58,7 +58,7 @@ Amministrazione, AgID).
                   ┌────────────────────────────────────────┐
                   │  Cloudflare Worker (MCP server)        │
                   │  cruscotto-italia-mcp.dati.gov.it      │
-                  │  - 5 tool MCP (search_comune,          │
+                  │  - 6 tool MCP (search_comune,          │
                   │    comune_dashboard, ecc.)             │
                   │  - JSON-RPC 2.0 stateless              │
                   └────────────────┬───────────────────────┘
@@ -138,7 +138,7 @@ per consentire l'interrogazione dei dati civici da chatbot AI compatibili
 **Endpoint pubblico** (post 19/05/2026): `https://cruscotto-italia-mcp.dati.gov.it/mcp`
 **Endpoint transitorio** (Worker AgID): `https://cruscotto-italia-mcp.agid.workers.dev/mcp`
 
-**Tool esposti** (5):
+**Tool esposti** (6):
 
 - `mcp_info` — metadata del servizio, elenco fonti integrate, licenze
 - `search_comune` — ricerca per nome → codice ISTAT (gestione omonimi)
@@ -150,6 +150,10 @@ per consentire l'interrogazione dei dati civici da chatbot AI compatibili
   banda larga, ecc.)
 - `anncsu_civico_search` — query puntuali sui numeri civici certificati
   con filtri server-side (odonimo, civico)
+- `censimento_sezione_search` — ranking o lookup sulle 119 variabili
+  censuarie raw del Censimento Permanente 2021 a livello di singola
+  sezione di censimento sub-comunale (modalità lookup con `sez_id` o
+  ranking con `var_name` ± `denominator_var` per percentuali)
 
 **Rate limit**: 60 richieste/minuto per IP.
 
@@ -162,9 +166,9 @@ per consentire l'interrogazione dei dati civici da chatbot AI compatibili
 ### Skill Claude (opzionale)
 
 È disponibile una skill Claude che documenta l'uso del connettore
-(inventario dei 5 tool, schema di `comune_dashboard`, pattern operativi
+(inventario dei 6 tool, schema di `comune_dashboard`, pattern operativi
 e caveat per sezione). Versione corrente:
-`https://cruscotto-italia-mcp.dati.gov.it/skills/cruscotto-italia-workflow-v2.0.0.zip`
+`https://cruscotto-italia-mcp.dati.gov.it/skills/cruscotto-italia-workflow-v2.1.0.zip`
 (elenco completo con storici in `docs/skills/README.md`).
 
 ### Esempi di domande supportate

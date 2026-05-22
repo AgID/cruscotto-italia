@@ -11,23 +11,24 @@ l'intent dell'utente.
 
 ## Pacchetto corrente
 
-- **`cruscotto-italia-workflow-v2.0.0.zip`** — workflow del connettore MCP:
-  inventario dei **6 tool** (introduce `comune_kpi` per query puntuali e
-  confronti tra comuni: ~620 token, **24 gruppi tematici** di KPI
-  sintetici), schema completo di `comune_dashboard` (**25 sezioni**
-  inclusa la nuova `censimento` per Basi Territoriali ISTAT 2021 con
-  119 variabili per sezione di censimento), tool `anncsu_civico_search`
-  per query puntuali sui civici, endpoint REST non-MCP
+- **`cruscotto-italia-workflow-v2.1.0.zip`** — workflow del connettore MCP:
+  inventario dei **6 tool** (incluso il nuovo `censimento_sezione_search`
+  per ranking/lookup sulle 119 variabili censuarie raw a livello di
+  sezione di censimento sub-comunale; `comune_kpi` 24 gruppi tematici;
+  `comune_dashboard` 25 sezioni; `anncsu_civico_search` per civici;
+  `search_comune` + `mcp_info`), endpoint REST non-MCP
   `/data/anncsu_full/<istat>.json` e `/data/censimento_full/<istat>.geojson`,
-  decision tree tool selection, **Pattern 7 censimento sezioni 2021**
-  con tabella dei 12 indicatori derivati (densità, % over 65,
-  indice vecchiaia, ecc.), pattern operativi multi-comune e caveat
-  per sezione.
+  decision tree tool selection, Pattern 7 censimento sezioni con esempi
+  d'uso (lookup, ranking per popolazione, ranking percentuale stranieri
+  Extra-UE, abitazioni vuote), catalogo codici variabili ISTAT più
+  frequenti (P*/IT*/ST*/PF*/A*/E*), pattern operativi multi-comune
+  e caveat per sezione.
 
 ## Pacchetti storici
 
 Le versioni precedenti restano disponibili per audit:
 
+- `cruscotto-italia-workflow-v2.0.0.zip` (skill prima del 6° tool)
 - `cruscotto-italia-workflow-v1.9.0.zip` (skill pre-censimento BT)
 - `cruscotto-italia-workflow-v1.8.1.zip`
 - `cruscotto-italia-workflow-v1.8.0.zip`
