@@ -45,9 +45,11 @@ STANDARD="${STANDARD:-WCAG2AA}"
 # BASIC_AUTH="user:pass" abilita HTTP Basic Auth via header Authorization
 # (utile pre-deploy AgID quando nginx blindato con htpasswd).
 BASIC_AUTH="${BASIC_AUTH:-}"
-# HOST_HEADER serve a matchare il server_name vhost nginx quando si testa
-# via 127.0.0.1 (bypass DNS pubblico non risolvibile da Chrome headless).
-HOST_HEADER="${HOST_HEADER:-cruscotto-italia.dati.gov.it}"
+# HOST_HEADER opzionale: se valorizzato, aggiunge header Host (utile solo
+# per bypass DNS via 127.0.0.1). Quando si usa il dominio reale (con
+# /etc/hosts o DNS pubblico) DEVE restare vuoto, altrimenti puppeteer
+# rigetta: 'Unsafe header: host' (header riservato CDP).
+HOST_HEADER="${HOST_HEADER:-}"
 
 if ! command -v "$PA11Y" >/dev/null 2>&1 && [[ "$PA11Y" != npx* ]]; then
   echo "ERRORE: $PA11Y non trovato. Installa con: npm install -g pa11y"
@@ -67,14 +69,24 @@ CONFIG_FILE="$(mktemp /tmp/pa11y-censimento-config.XXXXXX).json"
 # Trap rimuove entrambi.
 trap "rm -f $CONFIG_FILE \"${CONFIG_FILE%.json}\"" EXIT
 
-# Costruisce blocco "headers" JSON: sempre presente l'header Host (per
-# matchare il vhost quando si testa via IP), opzionalmente Authorization.
-HEADERS_JSON='"headers": {"Host": "'$HOST_HEADER'"'
+# Costruisce blocco "headers" JSON. Possibili headers:
+# - Host: solo se HOST_HEADER non vuoto (usato per bypass DNS via 127.0.0.1).
+# - Authorization: solo se BASIC_AUTH set.
+# Se nessuno e' set, blocco "headers" omesso interamente.
+HEADERS_PARTS=()
+if [ -n "$HOST_HEADER" ]; then
+  HEADERS_PARTS+=("\"Host\": \"$HOST_HEADER\"")
+fi
 if [ -n "$BASIC_AUTH" ]; then
   AUTH_B64="$(printf '%s' "$BASIC_AUTH" | base64 | tr -d '\n')"
-  HEADERS_JSON="${HEADERS_JSON}"', "Authorization": "Basic '$AUTH_B64'"'
+  HEADERS_PARTS+=("\"Authorization\": \"Basic $AUTH_B64\"")
 fi
-HEADERS_JSON="${HEADERS_JSON}"'},'
+HEADERS_JSON=""
+if [ ${#HEADERS_PARTS[@]} -gt 0 ]; then
+  IFS=', '
+  HEADERS_JSON="\"headers\": {${HEADERS_PARTS[*]}},"
+  unset IFS
+fi
 
 # wait piu' lungo (5500ms): il choropleth fa fetch lazy del geojson
 # (3MB per Milano) + parse pyproj-free + render 13.000 poligoni.
