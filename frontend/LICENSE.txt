@@ -25,7 +25,10 @@ FONTI ORIGINARIE E LORO LICENZE
 - ISPRA (Suolo, IdroGEO, Catasto Rifiuti, SNPA Aria) . CC BY 4.0
 - ISTAT (POSAS, Censimento, Turismo, Incidenti,
   ASIA UL - Archivio Statistico Imprese Attive
-  Unita' Locali, Matrice pendolarismo lavoro 2021) ... CC BY 3.0 IT
+  Unita' Locali, Matrice pendolarismo lavoro 2021,
+  Basi Territoriali 2021 + Variabili censuarie del
+  Censimento permanente con 119 variabili per
+  sezione di censimento) ............................. CC BY 3.0 IT
 - MIUR (Anagrafe Scuole) ............................. CC BY 4.0
 - ACI (Parco veicolare — LOD) ........................ CC BY 4.0
 - MEF Dipartimento Finanze (Redditi IRPEF) ........... CC BY 3.0

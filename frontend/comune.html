@@ -9893,7 +9893,9 @@ FONTI INTEGRATE
 - ISPRA                             Consumo suolo, IdroGEO, rifiuti, SNPA qualità aria
 - ISTAT                             Demografia, profilo censimento, turismo, incidenti,
                                     ASIA UL imprese e addetti,
-                                    Matrice pendolarismo per lavoro 2021 (Censimento permanente)
+                                    Matrice pendolarismo per lavoro 2021 (Censimento permanente),
+                                    Basi Territoriali 2021 + Variabili censuarie del
+                                    Censimento permanente (119 var per sezione di censimento)
 - MIUR                              Anagrafe scuole statali
 - ACI                               Parco veicolare per classe Euro (LOD)
 - MEF Dipartimento delle Finanze    Redditi IRPEF su base comunale 2020-2024
@@ -9922,6 +9924,10 @@ dimensione del file:
   REST /data/anncsu_full/<istat>.json)
 - pun.punti, immobili_pa.punti, carburanti.punti: max 500 punti
 - runts.enti: max 5.000 enti (solo Roma è cappata, 6.616 totali)
+- censimento: solo aggregati comune-level + distribuzioni in
+  dati-completi.json. Per i poligoni georeferenziati delle sezioni
+  di censimento + 119 variabili per sezione usa l'endpoint REST
+  /data/censimento_full/<istat>.geojson (30 KB - 3 MB, EPSG:4326).
 
 I dati di origine sono pubblicati dalle istituzioni elencate in
 LICENSE.txt e disponibili sui rispettivi portali open data.
