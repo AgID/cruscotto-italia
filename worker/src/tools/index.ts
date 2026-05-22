@@ -23,12 +23,14 @@
  *       - Vista dettagliata singolo-comune → comune_dashboard (pesante)
  *       - Dettaglio specifico → anncsu_civico_search
  *
- * Tool attivi (5):
+ * Tool attivi (6):
  *   - mcp_info: metadata server + freshness datasets
  *   - search_comune: nome -> codice ISTAT (preliminare ai tool comune_*)
  *   - comune_kpi: KPI sintetici (~620 token, primo tool da chiamare)
- *   - comune_dashboard: workhorse pesante, vista completa 21 sezioni
+ *   - comune_dashboard: workhorse pesante, vista completa 25 sezioni
  *   - anncsu_civico_search: query puntuali civici ANNCSU
+ *   - censimento_sezione_search: ranking/lookup sezioni di censimento
+ *     ISTAT 2021 con 119 variabili censuarie raw (sub-comunale)
  *
  * Storico: comune_opere_dettaglio (tool BDAP dedicato) deprecato il
  * 18/05/2026: dati gia' inclusi in comune_dashboard.opere, e endpoint
@@ -43,6 +45,7 @@ import { comuneKpi } from "./comune_kpi.js";
 import { searchComune } from "./search_comune.js";
 import { mcpInfo } from "./mcp_info.js";
 import { anncsuCivicoSearch } from "./anncsu_civico_search.js";
+import { censimentoSezioneSearch } from "./censimento_sezione_search.js";
 import { openaiSearch, openaiFetch } from "./openai_compat.js";
 
 export type ToolHandler = (
@@ -71,6 +74,12 @@ export const tools = {
 
   // Specializzato: query puntuali civici ANNCSU (non ridondante con dashboard)
   anncsu_civico_search: anncsuCivicoSearch,
+
+  // Specializzato: ranking/lookup sezioni di censimento ISTAT 2021 con 119
+  // variabili censuarie raw (granularita' sub-comunale, non duplica
+  // comune_dashboard.censimento che e' aggregato comune-level)
+  censimento_sezione_search: censimentoSezioneSearch,
+
   // OpenAI ChatGPT MCP custom connector compatibility (obbligatori, schema fisso)
   search: openaiSearch,
   fetch: openaiFetch,
