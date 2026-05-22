@@ -62,8 +62,10 @@ declare -A TESTS=(
   ["Morterone"]="097055"
 )
 
-CONFIG_FILE="$(mktemp --suffix=.json /tmp/pa11y-censimento-config.XXXXXX)"
-trap "rm -f $CONFIG_FILE" EXIT
+CONFIG_FILE="$(mktemp /tmp/pa11y-censimento-config.XXXXXX).json"
+# mktemp crea file senza .json; il file finale e' quello col .json (creato da cat sotto).
+# Trap rimuove entrambi.
+trap "rm -f $CONFIG_FILE \"${CONFIG_FILE%.json}\"" EXIT
 
 # Costruisce blocco "headers" JSON: sempre presente l'header Host (per
 # matchare il vhost quando si testa via IP), opzionalmente Authorization.
