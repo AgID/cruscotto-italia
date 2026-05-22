@@ -236,7 +236,11 @@ export const censimentoSezioneSearch: ToolDefinition = {
     if (cached) return cached;
 
     // === Fetch geojson da nginx VM (DATA_BASE_URL/censimento_full/<istat>.geojson) ===
-    const fc = await fetchR2Json<CensimentoFC>(env, `censimento_full/${istatCode}.geojson`);
+    // bustEdgeCache: durante il rollout iniziale (e dopo eventuali fix nginx)
+    // serve a evitare 403/404 cachati da CF edge.
+    const fc = await fetchR2Json<CensimentoFC>(env, `censimento_full/${istatCode}.geojson`, {
+      bustEdgeCache: true,
+    });
     if (!fc?.features) {
       const result = {
         anagrafica: { istat_code: detail.istat_code, denominazione: detail.denominazione },

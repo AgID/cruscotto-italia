@@ -18,9 +18,9 @@ const DEFAULT_TTL_SECONDS = 3600; // 1h default (file stabili: lookup/*, anncsu_
 export async function fetchR2Json<T = unknown>(
   env: Env,
   r2Key: string,
-  options: { ttl?: number; useKvCache?: boolean } = {}
+  options: { ttl?: number; useKvCache?: boolean; bustEdgeCache?: boolean } = {}
 ): Promise<T | null> {
-  const { ttl = DEFAULT_TTL_SECONDS, useKvCache = true } = options;
+  const { ttl = DEFAULT_TTL_SECONDS, useKvCache = true, bustEdgeCache = false } = options;
   const cacheKey = `${KV_PREFIX}${r2Key}`;
 
   // 1. Try KV cache
@@ -38,7 +38,13 @@ export async function fetchR2Json<T = unknown>(
   // 2. Fetch from DATA_BASE_URL (B1: HTTPS instead of R2 binding)
   // Cache CF edge: TTL allineato al parametro `ttl` (default 1h per file
   // stabili come lookup/*, override 60s da caller per file daily).
-  const url = `${env.DATA_BASE_URL}/${r2Key}`;
+  // bustEdgeCache: appende ?v=<timestamp> per forzare miss su CF edge cache
+  // quando si vuole evitare 403/404 cachati da run precedenti.
+  let url = `${env.DATA_BASE_URL}/${r2Key}`;
+  if (bustEdgeCache) {
+    const sep = url.includes("?") ? "&" : "?";
+    url = `${url}${sep}_cb=${Date.now()}`;
+  }
   const r = await fetch(url, {
     cf: { cacheTtl: ttl, cacheEverything: true },
     headers: env.DATA_BASIC_AUTH ? { "Authorization": `Basic ${env.DATA_BASIC_AUTH}` } : {},
