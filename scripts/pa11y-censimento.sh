@@ -42,6 +42,9 @@ set -uo pipefail
 BASE_URL="${BASE_URL:-https://cruscotto-italia.dati.gov.it}"
 PA11Y="${PA11Y:-pa11y}"
 STANDARD="${STANDARD:-WCAG2AA}"
+# BASIC_AUTH="user:pass" abilita HTTP Basic Auth via header Authorization
+# (utile pre-deploy AgID quando nginx blindato con htpasswd).
+BASIC_AUTH="${BASIC_AUTH:-}"
 
 if ! command -v "$PA11Y" >/dev/null 2>&1 && [[ "$PA11Y" != npx* ]]; then
   echo "ERRORE: $PA11Y non trovato. Installa con: npm install -g pa11y"
@@ -59,6 +62,13 @@ declare -A TESTS=(
 CONFIG_FILE="$(mktemp --suffix=.json /tmp/pa11y-censimento-config.XXXXXX)"
 trap "rm -f $CONFIG_FILE" EXIT
 
+# Costruisce blocco "headers" JSON se BASIC_AUTH e' fornito
+HEADERS_JSON=""
+if [ -n "$BASIC_AUTH" ]; then
+  AUTH_B64="$(printf '%s' "$BASIC_AUTH" | base64 | tr -d '\n')"
+  HEADERS_JSON='"headers": {"Authorization": "Basic '$AUTH_B64'"},'
+fi
+
 # wait piu' lungo (5500ms): il choropleth fa fetch lazy del geojson
 # (3MB per Milano) + parse pyproj-free + render 13.000 poligoni.
 cat > "$CONFIG_FILE" <<EOF
@@ -68,6 +78,7 @@ cat > "$CONFIG_FILE" <<EOF
   "wait": 5500,
   "runners": ["htmlcs"],
   "includeWarnings": true,
+  ${HEADERS_JSON}
   "hideElements": ".leaflet-tile-container, .leaflet-marker-icon, .leaflet-overlay-pane svg, .leaflet-zoom-animated, canvas",
   "chromeLaunchConfig": {
     "args": ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"]
