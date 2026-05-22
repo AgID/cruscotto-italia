@@ -81,7 +81,7 @@ cat > "$CONFIG_FILE" <<EOF
   ${HEADERS_JSON}
   "hideElements": ".leaflet-tile-container, .leaflet-marker-icon, .leaflet-overlay-pane svg, .leaflet-zoom-animated, canvas",
   "chromeLaunchConfig": {
-    "args": ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"]
+    "args": ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--host-resolver-rules=MAP cruscotto-italia.dati.gov.it 127.0.0.1, MAP chatbot.dati.gov.it 127.0.0.1", "--ignore-certificate-errors"]
   },
   "actions": [
     "wait for element [data-tab='censimento'] to be visible",
