@@ -69,17 +69,14 @@ CONFIG_FILE="$(mktemp /tmp/pa11y-censimento-config.XXXXXX).json"
 # Trap rimuove entrambi.
 trap "rm -f $CONFIG_FILE \"${CONFIG_FILE%.json}\"" EXIT
 
-# Costruisce blocco "headers" JSON. Possibili headers:
-# - Host: solo se HOST_HEADER non vuoto (usato per bypass DNS via 127.0.0.1).
-# - Authorization: solo se BASIC_AUTH set.
-# Se nessuno e' set, blocco "headers" omesso interamente.
+# Costruisce blocco "headers" JSON. Solo Host (se HOST_HEADER set, per
+# bypass DNS via 127.0.0.1). BASIC_AUTH viene iniettata direttamente
+# nell'URL (https://user:pass@host/...) per evitare l'header
+# Authorization via puppeteer Fetch.continueRequest che incappa nel
+# blocco 'Unsafe header'.
 HEADERS_PARTS=()
 if [ -n "$HOST_HEADER" ]; then
   HEADERS_PARTS+=("\"Host\": \"$HOST_HEADER\"")
-fi
-if [ -n "$BASIC_AUTH" ]; then
-  AUTH_B64="$(printf '%s' "$BASIC_AUTH" | base64 | tr -d '\n')"
-  HEADERS_PARTS+=("\"Authorization\": \"Basic $AUTH_B64\"")
 fi
 HEADERS_JSON=""
 if [ ${#HEADERS_PARTS[@]} -gt 0 ]; then
@@ -100,7 +97,7 @@ cat > "$CONFIG_FILE" <<EOF
   ${HEADERS_JSON}
   "hideElements": ".leaflet-tile-container, .leaflet-marker-icon, .leaflet-overlay-pane svg, .leaflet-zoom-animated, canvas",
   "chromeLaunchConfig": {
-    "args": ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--ignore-certificate-errors"]
+    "args": ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--ignore-certificate-errors", "--host-resolver-rules=MAP cruscotto-italia.dati.gov.it 127.0.0.1, MAP chatbot.dati.gov.it 127.0.0.1"]
   },
   "actions": [
     "wait for element [data-tab='censimento'] to be visible",
@@ -121,11 +118,22 @@ echo "======================================================================"
 
 for NAME in "${!TESTS[@]}"; do
   ISTAT="${TESTS[$NAME]}"
-  URL="${BASE_URL}/comune.html?istat=${ISTAT}"
+  # Inject BASIC_AUTH nell'URL invece che negli headers (puppeteer rifiuta
+  # Authorization via Fetch.continueRequest come 'Unsafe header'). Chrome
+  # gestisce nativamente https://user:pass@host/path.
+  if [ -n "$BASIC_AUTH" ]; then
+    # Estrai schema (https://) e resto dell'URL
+    SCHEMA="${BASE_URL%%://*}"
+    REST="${BASE_URL#*://}"
+    URL="${SCHEMA}://${BASIC_AUTH}@${REST}/comune.html?istat=${ISTAT}"
+  else
+    URL="${BASE_URL}/comune.html?istat=${ISTAT}"
+  fi
   TOTAL=$((TOTAL + 1))
   echo ""
   echo "--- $NAME ($ISTAT) ---"
-  echo "URL: $URL"
+  # Mostra URL senza credenziali nel log
+  echo "URL: ${BASE_URL}/comune.html?istat=${ISTAT}"
   $PA11Y \
     --config "$CONFIG_FILE" \
     --reporter cli \
