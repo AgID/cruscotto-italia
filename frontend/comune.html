@@ -4745,6 +4745,9 @@ function initImmobiliPa(d) {
 
   // ---- 2) Mappa con OSM (stessa tile-source di Aria)
   const map = L.map('impa-map-main', { scrollWheelZoom: false, zoomControl: true }).fitBounds(bounds, { padding: [20, 20] });
+  // A11y/UX: scroll-wheel + pinch trackpad abilitati solo dopo click.
+  map.on('focus', () => map.scrollWheelZoom.enable());
+  map.on('blur',  () => map.scrollWheelZoom.disable());
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19,
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
@@ -5557,6 +5560,11 @@ async function initCarburanti(d, regione) {
 
   // 2) Mappa Leaflet + tile OSM
   const map = L.map('carburanti-map-main', { scrollWheelZoom: false, zoomControl: true }).fitBounds(bounds, { padding: [20, 20] });
+  // A11y/UX: scroll-wheel + pinch trackpad abilitati solo dopo click sulla
+  // mappa (focus), disabilitati su blur. Cosi' lo scroll normale della
+  // pagina non viene catturato accidentalmente passando sopra la mappa.
+  map.on('focus', () => map.scrollWheelZoom.enable());
+  map.on('blur',  () => map.scrollWheelZoom.disable());
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19,
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
@@ -5942,6 +5950,9 @@ function initPun(d) {
 
   // ---- 2) Mappa Leaflet + tile OSM
   const map = L.map('pun-map-main', { scrollWheelZoom: false, zoomControl: true }).fitBounds(bounds, { padding: [20, 20] });
+  // A11y/UX: scroll-wheel + pinch trackpad abilitati solo dopo click.
+  map.on('focus', () => map.scrollWheelZoom.enable());
+  map.on('blur',  () => map.scrollWheelZoom.disable());
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19,
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
@@ -6936,6 +6947,9 @@ function initAnncsu(d) {
   );
   const map = L.map('anncsu-map', { scrollWheelZoom: false, zoomControl: true })
     .fitBounds(bounds, { padding: [20, 20] });
+  // A11y/UX: scroll-wheel + pinch trackpad abilitati solo dopo click.
+  map.on('focus', () => map.scrollWheelZoom.enable());
+  map.on('blur',  () => map.scrollWheelZoom.disable());
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19,
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
@@ -7862,6 +7876,9 @@ async function initCensimentoMap(istat) {
 
   // Init Leaflet map
   const map = L.map(mapEl, { scrollWheelZoom: false, zoomControl: true });
+  // A11y/UX: scroll-wheel + pinch trackpad abilitati solo dopo click.
+  map.on('focus', () => map.scrollWheelZoom.enable());
+  map.on('blur',  () => map.scrollWheelZoom.disable());
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19,
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
@@ -10175,6 +10192,9 @@ function initPendolarismoMap(d) {
     scrollWheelZoom: false,
     attributionControl: true,
   }).setView(selfCoord, 9);
+  // A11y/UX: scroll-wheel + pinch trackpad abilitati solo dopo click.
+  map.on('focus', () => map.scrollWheelZoom.enable());
+  map.on('blur',  () => map.scrollWheelZoom.disable());
 
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 18,
