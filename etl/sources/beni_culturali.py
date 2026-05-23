@@ -1291,50 +1291,18 @@ def load_comuni_soppressi() -> dict[tuple[str, str], str]:
 CULTURAL_ON_RAW_PATH = Path("/tmp/cruscotto_cultural_on/cultural_on_raw.json")
 
 
-def build_provincia_name_to_sigla(comuni_bundle: dict) -> dict[str, str]:
-    """Costruisce reverse-lookup nome esteso provincia -> sigla 2-char.
-
-    Cultural-ON usa nome esteso ("Roma", "Milano", "Cagliari"); il nostro
-    gazetteer e tutto il resto del codice usano la sigla 2-char.
-    Costruisco la mappa dal bundle anagrafica corrente.
-
-    Casi limite ISTAT:
-      - "Bolzano/Bozen" e "Trento" (province bilingui): nel bundle il
-        campo provincia_nome puo' essere "Bolzano - Bozen" con trattino.
-        Normalizzo via normalize() per renderlo case/accent insensitive.
-      - "Roma" appare sia come comune che come provincia: il dict comune
-        ha campo separato 'provincia_nome' (provincia di appartenenza).
-    """
-    out: dict[str, str] = {}
-    for istat, c in comuni_bundle.items():
-        nome = (c.get("provincia_nome") or "").strip()
-        sigla = (c.get("provincia") or "").strip().upper()
-        if nome and sigla and len(sigla) == 2:
-            out[normalize(nome)] = sigla
-    return out
-
-
 def load_cultural_on(cache_path: Path = None,
-                     prov_name_to_sigla: dict[str, str] | None = None
+                     name_to_istats: dict[str, list[str]] | None = None
                      ) -> list[dict]:
-    """Carica i luoghi Cultural-ON e li converte allo schema record ArCo
-    per poterli accodare alla lista `beni` prima di group_by_istat().
+    """Carica i luoghi Cultural-ON e li converte in record con istat
+    gia' risolto (campo _istat_match), pronti per essere accodati
+    direttamente agli shard.
 
-    Schema output (uniforme a fetch_arco_immobili):
-      uri, denom, tipo_raw, addr_raw, sigla_provincia, comune_label,
-      lat, lon, descrizione, image, tutela, soprintendenza, cis_link,
-      _fonte: "cultural_on"
-
-    Note di mapping:
-      - tipo_raw: categoria gia' normalizzata Cultural-ON
-        (museo/architettura/area_archeologica/chiesa/monumento/
-        archivio/biblioteca/parco_giardino/altro). _categoria_for()
-        usa CATEGORIA_ARCO dict che NON contiene questi slug, quindi
-        per Cultural-ON l'algoritmo categoria sara' diverso: il campo
-        b["_categoria_culturalon"] precalcolato vince via CULTURAL_ON_CATEGORIA_MAP.
-      - sigla_provincia: provincia_label nome esteso -> sigla via reverse lookup
-      - cis_link: l'URI stesso (perche' Cultural-ON e' il dataset visitabile)
-      - tutela / soprintendenza: None (non presenti in Cultural-ON)
+    Match: SOLO nome comune normalizzato (Cultural-ON ha campo
+    comune_label es. "Roma", "Rocca di Papa"). Riusiamo name_to_istats
+    di load_lookups(). Comuni omonimi (Castro, Calliano, ecc.) sono
+    nel dict come list[istat] di lunghezza > 1: li skippiamo come
+    "ambigui" (sono ~6 nomi su ~2645 comuni, perdita trascurabile).
     """
     if cache_path is None:
         cache_path = CULTURAL_ON_RAW_PATH
@@ -1347,52 +1315,48 @@ def load_cultural_on(cache_path: Path = None,
     raw = json.loads(cache_path.read_text())
     log.info("beni_culturali_cultural_on_loaded_raw", n=len(raw))
 
-    if prov_name_to_sigla is None:
-        prov_name_to_sigla = {}
+    if name_to_istats is None:
+        name_to_istats = {}
 
     out: list[dict] = []
-    n_no_sigla = 0
+    n_no_match = 0
+    n_ambiguous = 0
     for r in raw:
-        prov_name = r.get("provincia_label", "")
-        sigla = prov_name_to_sigla.get(normalize(prov_name)) if prov_name else None
-        if not sigla:
-            n_no_sigla += 1
-            # Skippo i record senza sigla (impossibile matchare comune)
-            # ma loggo in modo aggregato. Top province problematiche ammontano
-            # a poche decine, quasi sempre dataset upstream rotto.
+        comune = r.get("comune_label", "")
+        if not comune:
+            n_no_match += 1
             continue
-        # Categoria Cultural-ON gia' normalizzata: prendo la prima
+        candidates = name_to_istats.get(normalize(comune), [])
+        if not candidates:
+            n_no_match += 1
+            continue
+        if len(candidates) > 1:
+            n_ambiguous += 1
+            continue
+        istat = candidates[0]
         cat_co = (r.get("categorie") or ["altro"])[0]
-        # Mappo direttamente alla macro Cruscotto (no passare per CATEGORIA_ARCO)
         macro = CULTURAL_ON_CATEGORIA_MAP.get(cat_co, "altro")
         out.append({
             "uri": r["uri"],
             "denom": _clean_text(r.get("denom")),
-            # Hack: salvo direttamente la macro in tipo_raw cosi' _categoria_for()
-            # quando incontra una macro nota ('museo','biblioteca',...) la riconosce
-            # via CATEGORIA_ARCO che e' lookup case-insensitive. In effetti gia'
-            # 'museo' e 'parco_giardino' sono macro, ma 'biblioteca'/'archivio'/
-            # 'archeologia' no. Per essere certi salvo anche un campo dedicato
-            # che build_kpi e _slim usano in priorita'.
             "tipo_raw": cat_co,
             "_categoria_cultural_on": macro,
+            "_istat_match": istat,
             "addr_raw": _clean_text(r.get("indirizzo")),
-            "sigla_provincia": sigla,
-            "comune_label": r.get("comune_label"),
+            "comune_label": comune,
             "lat": r.get("lat"),
             "lon": r.get("lon"),
             "descrizione": _clean_text(r.get("descrizione")),
             "image": _clean_url(r.get("image")) if r.get("image") else None,
             "tutela": None,
             "soprintendenza": None,
-            # cis_link: l'URI stesso. Sara' usato dal frontend per linkare
-            # alla scheda Cultural-ON DBUnico 2.0 visitabile.
             "cis_link": r["uri"],
             "_fonte": "cultural_on",
         })
     log.info("beni_culturali_cultural_on_loaded",
-             n_records=len(out),
-             n_no_sigla=n_no_sigla)
+             n_matched=len(out),
+             n_no_match=n_no_match,
+             n_ambiguous=n_ambiguous)
     return out
 
 
@@ -1815,28 +1779,28 @@ def main() -> int:
     # FASE 4b: Cultural-ON DBUnico 2.0 — luoghi visitabili (musei, biblioteche,
     # archivi, parchi archeologici, ecc.) MiC. Il file /tmp/cruscotto_cultural_on/
     # cultural_on_raw.json viene prodotto da etl.sources.cultural_on.
-    # Schema gia' allineato a ArCo nella funzione load_cultural_on().
-    # Se il file non esiste (prima esecuzione), skip silenzioso: ETL ArCo
-    # funziona comunque, solo perdiamo i ~6700 luoghi visitabili.
-    comuni_bundle = local_lookup.load_comuni_bundle() or {}
-    prov_name_to_sigla = build_provincia_name_to_sigla(comuni_bundle)
-    cultural_on = load_cultural_on(prov_name_to_sigla=prov_name_to_sigla)
-    if cultural_on:
-        n_arco = len(beni)
-        # Marca i record ArCo originali con _fonte="arco" (per coerenza
-        # con le 2 fonti nel record build_kpi e _slim_*).
-        for b in beni:
-            b.setdefault("_fonte", "arco")
-        beni.extend(cultural_on)
-        log.info("beni_culturali_merged_cultural_on",
-                 n_arco=n_arco,
-                 n_cultural_on=len(cultural_on),
-                 n_totale=len(beni))
+    # Match diretto per nome comune (skip ambigui ~6 omonimi italiani).
+    cultural_on = load_cultural_on(name_to_istats=name_to_istats)
 
-    # FASE 5: group by istat (con fallback by-name + by-soppressi)
+    # FASE 5: group by istat (con fallback by-name + by-soppressi) — SOLO ArCo
+    # Cultural-ON ha gia' _istat_match risolto, lo accodiamo dopo.
+    for b in beni:
+        b.setdefault("_fonte", "arco")
+
     grouped, n_unmatched = group_by_istat(
         beni, pair_to_istat, name_to_istats, soppressi
     )
+
+    # Accodo Cultural-ON direttamente al grouped[istat]
+    if cultural_on:
+        n_added = 0
+        for r in cultural_on:
+            istat = r["_istat_match"]
+            grouped.setdefault(istat, []).append(r)
+            n_added += 1
+        log.info("beni_culturali_cultural_on_appended",
+                 n_records=n_added,
+                 n_comuni_with_cultural_on=len({r['_istat_match'] for r in cultural_on}))
     pct_unmatched = round(100.0 * n_unmatched / len(beni), 3) if beni else 0
     log.info("beni_culturali_grouped",
              records=len(beni),
