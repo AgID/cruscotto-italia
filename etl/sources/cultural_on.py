@@ -345,12 +345,12 @@ TEL_CHANNEL_PHONE = "https://w3id.org/italia/controlled-vocabulary/classificatio
 TEL_CHANNEL_FAX = "https://w3id.org/italia/controlled-vocabulary/classifications-for-public-services/channel/033"
 
 
-def _query_anagrafica(limit: int, offset: int) -> str:
-    """Query anagrafica completa per ogni CulturalInstituteOrSite.
+def _query_anagrafica_core(limit: int, offset: int) -> str:
+    """Query anagrafica CORE: solo i campi REQUIRED + provincia OPTIONAL.
 
-    NB: niente GROUP BY / ORDER BY (WAF triggers). LIMIT/OFFSET ok.
-    institutionalCISName e dc:type sono REQUIRED (filtro qualita');
-    il resto OPTIONAL.
+    Restituisce ?s ?name ?type ?comune ?provincia. Tutti i campi qui sono
+    quasi sempre presenti (institutionalCISName, dc:type, hasSite full).
+    Tempo medio per pagina 2000: ~3 secondi.
 
     Un singolo ?s puo' avere PIU' righe se ha PIU' dc:type. Aggrego
     lato Python.
@@ -358,14 +358,8 @@ def _query_anagrafica(limit: int, offset: int) -> str:
     return f"""PREFIX cis: <http://dati.beniculturali.it/cis/>
 PREFIX clvapit: <https://w3id.org/italia/onto/CLV/>
 PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
-PREFIX geo: <http://www.w3.org/2003/01/geo/wgs84_pos#>
-PREFIX foaf: <http://xmlns.com/foaf/0.1/>
 PREFIX dc: <http://purl.org/dc/elements/1.1/>
-PREFIX l0: <https://w3id.org/italia/onto/l0/>
-SELECT ?s ?name ?identifier ?descrizione ?type
-       ?comune ?provincia ?indirizzo ?cap
-       ?lat ?lon ?image
-WHERE {{
+SELECT ?s ?name ?type ?comune ?provincia WHERE {{
   ?s a cis:CulturalInstituteOrSite .
   ?s cis:institutionalCISName ?name .
   FILTER(lang(?name) = "it")
@@ -375,24 +369,45 @@ WHERE {{
   ?addr clvapit:hasCity ?city .
   ?city rdfs:label ?comune .
   OPTIONAL {{ ?addr clvapit:hasProvince ?prov . ?prov rdfs:label ?provincia }}
-  OPTIONAL {{ ?addr clvapit:postCode ?cap }}
-  OPTIONAL {{ ?addr clvapit:fullAddress ?indirizzo }}
+}} LIMIT {limit} OFFSET {offset}"""
+
+
+def _query_anagrafica_dettagli(limit: int, offset: int) -> str:
+    """Query anagrafica DETTAGLI: tutti i campi OPTIONAL su CIS + Address.
+
+    Separata dalla CORE per evitare il cross-product di 15 OPTIONAL che
+    portava in timeout server-side l'endpoint MiC. Tempo medio per
+    pagina 2000: ~5 secondi.
+
+    Restituisce ?s ?identifier ?indirizzo ?cap ?lat ?lon ?image ?descrizione.
+    Da joinare con CORE lato Python via ?s.
+    """
+    return f"""PREFIX cis: <http://dati.beniculturali.it/cis/>
+PREFIX clvapit: <https://w3id.org/italia/onto/CLV/>
+PREFIX geo: <http://www.w3.org/2003/01/geo/wgs84_pos#>
+PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+PREFIX l0: <https://w3id.org/italia/onto/l0/>
+SELECT ?s ?identifier ?indirizzo ?cap ?lat ?lon ?image ?descrizione WHERE {{
+  ?s a cis:CulturalInstituteOrSite .
+  OPTIONAL {{ ?s l0:identifier ?identifier }}
+  OPTIONAL {{ ?s cis:hasSite ?site . ?site cis:siteAddress ?addr .
+             OPTIONAL {{ ?addr clvapit:fullAddress ?indirizzo }}
+             OPTIONAL {{ ?addr clvapit:postCode ?cap }} }}
   OPTIONAL {{ ?s geo:lat ?lat }}
   OPTIONAL {{ ?s geo:long ?lon }}
   OPTIONAL {{ ?s foaf:depiction ?image }}
   OPTIONAL {{ ?s l0:description ?descrizione . FILTER(lang(?descrizione) = "it") }}
-  OPTIONAL {{ ?s l0:identifier ?identifier }}
 }} LIMIT {limit} OFFSET {offset}"""
 
 
 def fetch_anagrafica_sparql(skip_cache: bool = False) -> list[dict]:
-    """Scarica tutti i record anagrafica SPARQL, aggrega righe duplicate
-    (un luogo con N dc:type genera N righe) in N luoghi distinti.
+    """Scarica tutti i record anagrafica SPARQL in 2 passate (core + dettagli)
+    + aggrega righe duplicate (un luogo con N dc:type genera N righe).
 
     Cache su disco: /tmp/cruscotto_cultural_on/anagrafica.json.
     Ritorna list[dict] di luoghi normalizzati con chiavi:
-      id, denom, descrizione, categorie[], comune_label, provincia_label,
-      indirizzo, cap, lat, lon, image
+      uri, id, denom, descrizione, categorie[], categorie_raw[],
+      comune_label, provincia_label, indirizzo, cap, lat, lon, image
     """
     cache_path = CACHE_DIR / "anagrafica.json"
     today = datetime.now().strftime("%Y%m%d")
@@ -408,18 +423,17 @@ def fetch_anagrafica_sparql(skip_cache: bool = False) -> list[dict]:
              page_size=SPARQL_PAGE_SIZE)
     t0 = time.time()
 
-    # aggregato: ?s -> dict luogo (per accumulare categorie multiple)
+    # --- FASE 1A: CORE (denom + categoria + comune + provincia) ---
     luoghi: dict[str, dict] = {}
     offset = 0
     page_num = 0
     while True:
         page_num += 1
-        q = _query_anagrafica(SPARQL_PAGE_SIZE, offset)
+        q = _query_anagrafica_core(SPARQL_PAGE_SIZE, offset)
         result = _sparql_post(q)
         bindings = result.get("results", {}).get("bindings", [])
         if not bindings:
-            log.info("cultural_on_anagrafica_pagina_vuota", page=page_num,
-                     offset=offset)
+            log.info("cultural_on_core_pagina_vuota", page=page_num, offset=offset)
             break
 
         for b in bindings:
@@ -441,17 +455,58 @@ def fetch_anagrafica_sparql(skip_cache: bool = False) -> list[dict]:
                 "lon": None,
                 "image": None,
             })
-            # campi 1-1 (sovrascrivibili: stesso valore in tutte le righe)
             if cur["denom"] is None:
                 cur["denom"] = _clean_text(_bind_str(b, "name"))
-            if cur["id"] is None:
-                cur["id"] = _bind_str(b, "identifier")
-            if cur["descrizione"] is None:
-                cur["descrizione"] = _clean_text(_bind_str(b, "descrizione"))
             if cur["comune_label"] is None:
                 cur["comune_label"] = _clean_text(_bind_str(b, "comune"))
             if cur["provincia_label"] is None:
                 cur["provincia_label"] = _clean_text(_bind_str(b, "provincia"))
+            raw_type = _bind_str(b, "type")
+            if raw_type:
+                if raw_type not in cur["categorie_raw"]:
+                    cur["categorie_raw"].append(raw_type)
+                mapped = CATEGORIA_LUOGO.get(raw_type)
+                if mapped and mapped not in cur["categorie"]:
+                    cur["categorie"].append(mapped)
+
+        log.info("cultural_on_core_pagina", page=page_num, offset=offset,
+                 bindings=len(bindings), luoghi_aggregati=len(luoghi))
+
+        if len(bindings) < SPARQL_PAGE_SIZE:
+            break
+        offset += SPARQL_PAGE_SIZE
+        time.sleep(SPARQL_SLEEP_BETWEEN_PAGES)
+
+    log.info("cultural_on_core_done", n_luoghi=len(luoghi),
+             secs=round(time.time() - t0, 1))
+
+    # --- FASE 1B: DETTAGLI (id, descr, indirizzo, cap, lat, lon, image) ---
+    t1 = time.time()
+    offset = 0
+    page_num = 0
+    while True:
+        page_num += 1
+        q = _query_anagrafica_dettagli(SPARQL_PAGE_SIZE, offset)
+        result = _sparql_post(q)
+        bindings = result.get("results", {}).get("bindings", [])
+        if not bindings:
+            log.info("cultural_on_dett_pagina_vuota", page=page_num, offset=offset)
+            break
+
+        n_match = 0
+        for b in bindings:
+            s_uri = _bind_str(b, "s")
+            if not s_uri:
+                continue
+            cur = luoghi.get(s_uri)
+            if cur is None:
+                # luogo non presente in CORE (senza institutionalCISName@it): skip
+                continue
+            n_match += 1
+            if cur["id"] is None:
+                cur["id"] = _bind_str(b, "identifier")
+            if cur["descrizione"] is None:
+                cur["descrizione"] = _clean_text(_bind_str(b, "descrizione"))
             if cur["indirizzo"] is None:
                 cur["indirizzo"] = _clean_text(_bind_str(b, "indirizzo"))
             if cur["cap"] is None:
@@ -462,31 +517,23 @@ def fetch_anagrafica_sparql(skip_cache: bool = False) -> list[dict]:
                 cur["lon"] = _bind_float(b, "lon")
             if cur["image"] is None:
                 cur["image"] = _bind_str(b, "image")
-            # campo N-1: categoria (dc:type) - accumula tutte le righe
-            raw_type = _bind_str(b, "type")
-            if raw_type:
-                if raw_type not in cur["categorie_raw"]:
-                    cur["categorie_raw"].append(raw_type)
-                mapped = CATEGORIA_LUOGO.get(raw_type)
-                if mapped and mapped not in cur["categorie"]:
-                    cur["categorie"].append(mapped)
 
-        log.info("cultural_on_anagrafica_pagina", page=page_num,
-                 offset=offset, bindings=len(bindings),
-                 luoghi_aggregati=len(luoghi))
+        log.info("cultural_on_dett_pagina", page=page_num, offset=offset,
+                 bindings=len(bindings), match_in_core=n_match)
 
         if len(bindings) < SPARQL_PAGE_SIZE:
-            # ultima pagina parziale
             break
         offset += SPARQL_PAGE_SIZE
         time.sleep(SPARQL_SLEEP_BETWEEN_PAGES)
+
+    log.info("cultural_on_dett_done",
+             secs=round(time.time() - t1, 1))
 
     result = list(luoghi.values())
     elapsed = time.time() - t0
     log.info("cultural_on_anagrafica_done",
              n_luoghi=len(result),
-             pagine=page_num,
-             secs=round(elapsed, 1))
+             secs_totali=round(elapsed, 1))
 
     cache_path.write_text(json.dumps(result, ensure_ascii=False))
     cache_marker.touch()
