@@ -14,7 +14,8 @@ In caso di riutilizzo, citare come segue:
    BDAP-MOP, SIOPE, Italia Domani, ISPRA, ISTAT, MIUR, ARPA, ACI, MEF,
    Agenzia delle Entrate, Ministero della Salute, GSE / Piattaforma
    Unica Nazionale, AGCOM Broadband Map, MIMIT Osservatorio Prezzi
-   Carburanti."
+   Carburanti, Ministero del Lavoro (RUNTS), Ministero della Cultura
+   (ICCD ArCo + Cultural-ON DBUnico 2.0)."
 
 FONTI ORIGINARIE E LORO LICENZE
 -------------------------------
@@ -67,6 +68,13 @@ FONTI ORIGINARIE E LORO LICENZE
                                                        gale RUNTS (D.
                                                        Lgs 117/2017
                                                        art. 53).
+- Ministero della Cultura - MiC (ICCD ArCo per
+  beni culturali immobili tutelati: chiese,
+  palazzi, castelli, ville, aree archeologiche,
+  monumenti, parchi e giardini storici; Cultural-ON
+  DBUnico 2.0 per Luoghi della Cultura visitabili:
+  musei, biblioteche, archivi con orari e
+  contatti) .......................................... CC BY 4.0
 - OpenStreetMap (cartografia) ........................ ODbL
 
 Per il dettaglio dei dataset e degli URL originari delle fonti,
