@@ -1179,7 +1179,11 @@ def _categoria_for(tipo_raw: str | None) -> str:
 # FASE 4 - Load lookups + mapping a ISTAT
 # =========================================================================
 
-def load_lookups() -> tuple[dict[tuple[str, str], str], set[str]]:
+def load_lookups() -> tuple[
+    dict[tuple[str, str], str],
+    set[str],
+    dict[str, list[str]],
+]:
     """Carica gazetteer comuni e costruisce mapping (sigla, COMUNE_NORM) -> istat6.
 
     Usa la sigla provincia (campo 'provincia' del bundle, 2 char) PIU' il
@@ -1187,9 +1191,14 @@ def load_lookups() -> tuple[dict[tuple[str, str], str], set[str]]:
     comuni omonimi italiani (Castro BG/LE, Calliano AT/TN, ...).
 
     Ritorna:
-      - (sigla, COMUNE_NORM_UPPER) -> istat6
+      - pair_to_istat: (sigla, COMUNE_NORM_UPPER) -> istat6 (chiave primaria)
       - canonical_istat: set di tutti gli ISTAT validi (per shardatura
         anche dei comuni vuoti)
+      - name_to_istats: COMUNE_NORM -> list[istat6]. Indice secondario per
+        risoluzione fallback quando la sigla in ArCo e' obsoleta (es. AP
+        invece di FM, CA invece di SU dopo riforme province 2009/2016).
+        Lista perche' i ~7 nomi-comune omonimi italiani devono restare
+        ambigui e NON essere risolti automaticamente (richiede sigla).
     """
     log.info("beni_culturali_lookups_loading")
     comuni = local_lookup.load_comuni_bundle()
@@ -1202,18 +1211,26 @@ def load_lookups() -> tuple[dict[tuple[str, str], str], set[str]]:
 
     pair_to_istat: dict[tuple[str, str], str] = {}
     canonical_istat: set[str] = set()
+    name_to_istats: dict[str, list[str]] = defaultdict(list)
+
     for istat, c in comuni.items():
         canonical_istat.add(istat)
         sigla = (c.get("provincia") or "").strip().upper()
         denom = c.get("denominazione", "")
         if sigla and denom:
-            key = (sigla, normalize(denom))
+            denom_norm = normalize(denom)
+            key = (sigla, denom_norm)
             pair_to_istat[key] = istat
+            name_to_istats[denom_norm].append(istat)
 
+    n_unique_names = sum(1 for v in name_to_istats.values() if len(v) == 1)
+    n_ambiguous_names = sum(1 for v in name_to_istats.values() if len(v) > 1)
     log.info("beni_culturali_lookups_loaded",
              n_comuni=len(canonical_istat),
-             n_pairs=len(pair_to_istat))
-    return pair_to_istat, canonical_istat
+             n_pairs=len(pair_to_istat),
+             n_unique_names=n_unique_names,
+             n_ambiguous_names=n_ambiguous_names)
+    return pair_to_istat, canonical_istat, dict(name_to_istats)
 
 
 # =========================================================================
@@ -1221,16 +1238,29 @@ def load_lookups() -> tuple[dict[tuple[str, str], str], set[str]]:
 # =========================================================================
 
 def group_by_istat(beni: list[dict],
-                   pair_to_istat: dict[tuple[str, str], str]
+                   pair_to_istat: dict[tuple[str, str], str],
+                   name_to_istats: dict[str, list[str]] | None = None
                    ) -> tuple[dict[str, list[dict]], int]:
     """Raggruppa beni ArCo per ISTAT del comune.
 
-    Match key: (sigla_provincia, normalize(comune_label)) -> istat6.
+    Strategia di match:
+      1. Tentativo primario: (sigla_provincia, normalize(comune_label)) -> istat6
+         risolve i ~91% dei beni la cui sigla ArCo e' corrente.
+      2. FALLBACK by-name (se name_to_istats fornito): se (1) fallisce,
+         cerca solo per nome comune ignorando la sigla. Risolve casi in
+         cui ArCo conserva sigla provincia storica (AP per comuni oggi FM
+         dopo riforma 2009; CA per comuni Sud Sardegna dopo 2016) ma il
+         nome comune esiste ancora ed e' UNIVOCO nel gazetteer corrente.
+         Se il nome e' ambiguo (omonimo, lista len > 1) NON risolve
+         automaticamente per evitare match scorretti.
+
     Ritorna (dict istat -> list beni, n_unmatched).
     """
     grouped: dict[str, list[dict]] = defaultdict(list)
     unmatched: dict[tuple[str, str], int] = defaultdict(int)
     n_unmatched = 0
+    n_resolved_by_name = 0
+    n_ambiguous_skipped = 0
 
     for b in beni:
         sigla = b.get("sigla_provincia")
@@ -1238,13 +1268,30 @@ def group_by_istat(beni: list[dict],
         if not sigla or not comune:
             n_unmatched += 1
             continue
-        key = (sigla, normalize(comune))
+        comune_norm = normalize(comune)
+        key = (sigla, comune_norm)
         istat = pair_to_istat.get(key)
+
+        if not istat and name_to_istats is not None:
+            # Fallback: cerca per solo nome (ignora sigla obsoleta)
+            candidates = name_to_istats.get(comune_norm, [])
+            if len(candidates) == 1:
+                istat = candidates[0]
+                n_resolved_by_name += 1
+            elif len(candidates) > 1:
+                # omonimo: non risolvere ambiguo, resta unmatched
+                n_ambiguous_skipped += 1
+
         if not istat:
             unmatched[key] += 1
             n_unmatched += 1
             continue
         grouped[istat].append(b)
+
+    if n_resolved_by_name or n_ambiguous_skipped:
+        log.info("beni_culturali_fallback_byname",
+                 n_resolved_by_name=n_resolved_by_name,
+                 n_ambiguous_skipped=n_ambiguous_skipped)
 
     if unmatched:
         top = sorted(unmatched.items(), key=lambda x: -x[1])[:20]
@@ -1522,10 +1569,10 @@ def main() -> int:
     log.info("beni_culturali_snapshot_date", date=snapshot_date)
 
     # FASE 4: lookups (sigla, comune) -> istat
-    pair_to_istat, canonical_istat = load_lookups()
+    pair_to_istat, canonical_istat, name_to_istats = load_lookups()
 
-    # FASE 5: group by istat
-    grouped, n_unmatched = group_by_istat(beni, pair_to_istat)
+    # FASE 5: group by istat (con fallback by-name per sigle obsolete)
+    grouped, n_unmatched = group_by_istat(beni, pair_to_istat, name_to_istats)
     pct_unmatched = round(100.0 * n_unmatched / len(beni), 3) if beni else 0
     log.info("beni_culturali_grouped",
              records=len(beni),
