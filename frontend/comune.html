@@ -4943,17 +4943,18 @@ function renderBeniCulturaliTab(d) {
   return `
     <div class="tab-pane" id="pane-beni-culturali">
       <div class="section-title">§ Beni culturali</div>
-      <h2 class="section-h">${fmtNum(totale)} ${totale === 1 ? 'bene tutelato' : 'beni tutelati'} dal <em>MiC</em>, catalogo ICCD ArCo.</h2>
+      <h2 class="section-h">${fmtNum(k.n_arco || totale)} ${(k.n_arco || totale) === 1 ? 'bene tutelato' : 'beni tutelati'} dal <em>MiC</em>, catalogo ICCD ArCo${k.n_cultural_on ? ` + ${fmtNum(k.n_cultural_on)} ${k.n_cultural_on === 1 ? 'Luogo della Cultura' : 'Luoghi della Cultura'} (Cultural-ON)` : ''}.</h2>
       <p class="muted" style="font-family:var(--mono);font-size:11px;margin-top:-8px;margin-bottom:18px;">
-        Fonte: <a href="https://dati.beniculturali.it/sparql" target="_blank" rel="noopener">MiC ICCD — ArCo Linked Open Data</a>.
-        Licenza CC BY 4.0. Snapshot del ${formatDataIT(d._snapshot_date || '')}.
+        Fonti: <a href="https://dati.beniculturali.it/sparql" target="_blank" rel="noopener">MiC ICCD — ArCo</a>
+        + <a href="https://dati.cultura.gov.it/lod/cultural-on/" target="_blank" rel="noopener">Cultural-ON DBUnico 2.0</a>.
+        Linked Open Data. Licenza CC BY 4.0. Snapshot del ${formatDataIT(d._snapshot_date || '')}.
       </p>
 
       <div class="kpi-cards">
         <div class="kpi-card">
-          <div class="kpi-card-lab">Totale beni</div>
+          <div class="kpi-card-lab">Totale</div>
           <div class="kpi-card-val">${fmtNum(totale)}</div>
-          <div class="kpi-card-sub">immobili tutelati</div>
+          <div class="kpi-card-sub">${k.n_cultural_on ? fmtNum(k.n_arco || 0) + ' ArCo + ' + fmtNum(k.n_cultural_on) + ' Cultural-ON' : 'immobili tutelati'}</div>
         </div>
         <div class="kpi-card ${k.n_visitabili ? '' : 'tbd'}">
           <div class="kpi-card-lab">Luoghi della Cultura visitabili</div>

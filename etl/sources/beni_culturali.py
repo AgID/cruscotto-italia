@@ -1520,6 +1520,8 @@ def build_kpi(beni: list[dict]) -> dict:
     if n == 0:
         return {
             "n_totale": 0,
+            "n_arco": 0,
+            "n_cultural_on": 0,
             "n_visitabili": 0,
             "n_con_coordinate": 0,
             "n_senza_coordinate": 0,
@@ -1530,6 +1532,7 @@ def build_kpi(beni: list[dict]) -> dict:
 
     mix: dict[str, int] = defaultdict(int)
     n_geo = n_foto = n_desc = n_visit = 0
+    n_arco = n_cultural_on = 0
     for b in beni:
         cat = _resolve_categoria(b)
         mix[cat] += 1
@@ -1539,6 +1542,11 @@ def build_kpi(beni: list[dict]) -> dict:
             n_foto += 1
         if b.get("descrizione"):
             n_desc += 1
+        # Conteggio per fonte: arco vs cultural_on
+        if b.get("_fonte") == "cultural_on":
+            n_cultural_on += 1
+        else:
+            n_arco += 1
         # Visitabile = record proveniente da Cultural-ON (luoghi della cultura
         # MiC con orari/contatti) OPPURE bene ArCo con cis_link valorizzato
         # (raro, ~2% dei beni ArCo, link cross-dataset).
@@ -1552,6 +1560,8 @@ def build_kpi(beni: list[dict]) -> dict:
 
     return {
         "n_totale": n,
+        "n_arco": n_arco,
+        "n_cultural_on": n_cultural_on,
         "n_visitabili": n_visit,
         "n_con_coordinate": n_geo,
         "n_senza_coordinate": n - n_geo,
