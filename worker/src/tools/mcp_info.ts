@@ -27,10 +27,10 @@ export const mcpInfo: ToolDefinition = {
     }
     return {
       service: "cruscotto-italia-mcp",
-      version: "0.16.0",
+      version: "0.17.0",
       protocol: "MCP 2024-11-05",
-      datasets: 24,
-      institutions: 15,
+      datasets: 25,
+      institutions: 16,
       municipalities: 7918,
       sources: {
         anac: {
@@ -146,6 +146,13 @@ export const mcpInfo: ToolDefinition = {
           license: "CC-BY 3.0 IT",
           datasets: [
             "ISTAT - Basi Territoriali 2021 + Variabili censuarie del Censimento permanente 2021. Geometrie delle 756.376 sezioni di censimento nazionali (poligoni WGS84 EPSG:4326 RFC 7946) accorpate per comune, integrate con 119 variabili demografiche/abitative per sezione: popolazione totale + sesso (P1-P3), 16 fasce eta' 5-anni per totale/maschi/femmine (P14-P82), titolo di studio (P86-P100 nessuno/elementare/media/diploma/terziario per sesso), occupati 15-64 (P101-P103), italiani per fascia eta' (IT1-IT12), stranieri UE/extra-UE per sesso/eta'/occupazione (ST1-ST33), famiglie per numero componenti 1-6+ (PF1, PF3-PF8), abitazioni occupate/vuote/totali (A2, A3, A8), edifici residenziali (E3). Copertura 7904/7896 comuni (100% incluso TN/BZ). 252.467 sezioni 'no_vars' (33%) sono aree non residenziali (parchi, aree industriali, infrastrutture) non rilevate dal censimento permanente per assenza di residenti. KPI comune-level pre-calcolati in censimento/<istat>.json (~3-5 KB), geometrie complete in /data/censimento_full/<istat>.geojson lazy-fetch (30 KB - 3 MB). Aggiornamento annuale ISTAT (ultimo rilascio 14/05/2026).",
+          ],
+        },
+        mic_arco: {
+          canonical: "https://dati.beniculturali.it/sparql",
+          license: "CC-BY 4.0",
+          datasets: [
+            "Ministero della Cultura (MiC) - ICCD/ArCo: catalogo nazionale dei beni culturali immobili tutelati (Immovable Cultural Property), pubblicato come Linked Open Data tramite endpoint SPARQL ufficiale. Dataset ~113.820 beni nazionali (chiese, palazzi, castelli, ville, aree archeologiche, monumenti, edifici di culto, parchi e giardini storici) catalogati ICCD secondo l'ontologia ArCo (Architecture of Knowledge). Per ogni bene: denominazione (rdfs:label), tipologia granulare (centinaia di slug ArCo CulturalPropertyType normalizzati in 9 macro-categorie: chiesa, palazzo, castello, archeologia, museo, monumento, infrastruttura, parco_giardino, altro), indirizzo civico completo, sigla provincia, coordinate WKT POINT (86% beni con geometria), foto (foaf:depiction, 97% beni), descrizione testuale (28% beni), soprintendenza di tutela (hasHeritageProtectionAgency), eventuale link a CulturalInstituteOrSite DBUnico 2.0 per i beni visitabili con orari/contatti. KPI per comune: n_totale, n_visitabili (subset con cis_link), n_con_coordinate/n_senza_coordinate, mix_categoria, pct_con_foto, pct_con_descrizione, beni_per_1000_ab. Copertura 5657/7895 comuni (71,6%). Lista compatta nello shard base (cap 30), lista completa con tutti i campi in /data/beni_culturali_full/<istat>.json per comuni grandi. Aggiornamento mensile via SPARQL paginato.",
           ],
         },
       },

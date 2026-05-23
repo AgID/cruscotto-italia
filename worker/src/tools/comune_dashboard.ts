@@ -390,6 +390,7 @@ interface DashboardShard {
   runts: unknown | null;
   asia: unknown | null;
   pendolarismo: unknown | null;
+  beni_culturali: unknown | null;
 }
 
 export const comuneDashboard: ToolDefinition = {
