@@ -541,33 +541,67 @@ SELECT ?s ?name ?type ?addrLabel WHERE {{
 }} LIMIT {limit} OFFSET {offset}"""
 
 
-def _query_arco_dettagli(limit: int, offset: int) -> str:
-    """Query DETTAGLI: coordinate WKT + descrizione + foto + tutela + soprintendenza.
-
-    REQUIRED: stesso filtro CORE (hasCulturalPropertyAddress) per
-    paginazione coerente.
-
-    Restituisce ?s ?wkt ?descrizione ?image ?tutela ?soprintendenza
+def _query_arco_coord(limit: int, offset: int) -> str:
+    """Query COORD: solo WKT serialization. Filtro REQUIRED address per
+    paginazione coerente con CORE. 1 OPTIONAL solo -> no cartesiano.
     """
-    return f"""PREFIX arco: <https://w3id.org/arco/ontology/arco/>
-PREFIX arco_loc: <https://w3id.org/arco/ontology/location/>
+    return f"""PREFIX arco_loc: <https://w3id.org/arco/ontology/location/>
 PREFIX clvapit: <https://w3id.org/italia/onto/CLV/>
-PREFIX dc: <http://purl.org/dc/elements/1.1/>
-PREFIX foaf: <http://xmlns.com/foaf/0.1/>
-PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
-SELECT ?s ?wkt ?descrizione ?image ?tutelaLabel ?soprintendenzaLabel WHERE {{
+SELECT ?s ?wkt WHERE {{
   ?s a <{ARCO_IMMOBILE_CLASS}> .
   ?s arco_loc:hasCulturalPropertyAddress ?addr .
   OPTIONAL {{
     ?s clvapit:hasGeometry ?geo .
     ?geo clvapit:serialization ?wkt .
   }}
+}} LIMIT {limit} OFFSET {offset}"""
+
+
+def _query_arco_descrizione(limit: int, offset: int) -> str:
+    """Query DESCRIZIONE: solo dc:description."""
+    return f"""PREFIX arco_loc: <https://w3id.org/arco/ontology/location/>
+PREFIX dc: <http://purl.org/dc/elements/1.1/>
+SELECT ?s ?descrizione WHERE {{
+  ?s a <{ARCO_IMMOBILE_CLASS}> .
+  ?s arco_loc:hasCulturalPropertyAddress ?addr .
   OPTIONAL {{ ?s dc:description ?descrizione }}
+}} LIMIT {limit} OFFSET {offset}"""
+
+
+def _query_arco_image(limit: int, offset: int) -> str:
+    """Query IMAGE: solo foaf:depiction."""
+    return f"""PREFIX arco_loc: <https://w3id.org/arco/ontology/location/>
+PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+SELECT ?s ?image WHERE {{
+  ?s a <{ARCO_IMMOBILE_CLASS}> .
+  ?s arco_loc:hasCulturalPropertyAddress ?addr .
   OPTIONAL {{ ?s foaf:depiction ?image }}
+}} LIMIT {limit} OFFSET {offset}"""
+
+
+def _query_arco_tutela(limit: int, offset: int) -> str:
+    """Query TUTELA: solo MibacScopeOfProtection.label."""
+    return f"""PREFIX arco: <https://w3id.org/arco/ontology/arco/>
+PREFIX arco_loc: <https://w3id.org/arco/ontology/location/>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+SELECT ?s ?tutelaLabel WHERE {{
+  ?s a <{ARCO_IMMOBILE_CLASS}> .
+  ?s arco_loc:hasCulturalPropertyAddress ?addr .
   OPTIONAL {{
     ?s arco:hasMibacScopeOfProtection ?tutela .
     ?tutela rdfs:label ?tutelaLabel .
   }}
+}} LIMIT {limit} OFFSET {offset}"""
+
+
+def _query_arco_soprintendenza(limit: int, offset: int) -> str:
+    """Query SOPRINTENDENZA: solo HeritageProtectionAgency.label."""
+    return f"""PREFIX arco: <https://w3id.org/arco/ontology/arco/>
+PREFIX arco_loc: <https://w3id.org/arco/ontology/location/>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+SELECT ?s ?soprintendenzaLabel WHERE {{
+  ?s a <{ARCO_IMMOBILE_CLASS}> .
+  ?s arco_loc:hasCulturalPropertyAddress ?addr .
   OPTIONAL {{
     ?s arco:hasHeritageProtectionAgency ?soprintendenza .
     ?soprintendenza rdfs:label ?soprintendenzaLabel .
@@ -671,52 +705,65 @@ def fetch_arco_immobili(skip_cache: bool = False) -> list[dict]:
     log.info("beni_culturali_core_done", n_beni=len(beni),
              secs=round(time.time() - t0, 1))
 
-    # --- FASE 1B: DETTAGLI ---
+    # --- FASE 1B: DETTAGLI (5 query separate per evitare cartesiano O(N^5)) ---
+    # La precedente query con 5 OPTIONAL su ?s generava da 3 a 10 righe per
+    # ogni bene (combinazione di N geometry x M tutele x ...). Splittando in
+    # query mono-OPTIONAL ogni pagina genera al massimo K righe per ?s, dove
+    # K e' la cardinalita' di quel solo predicato.
     t1 = time.time()
-    offset = 0
-    page_num = 0
-    while True:
-        page_num += 1
-        result = _sparql_post(_query_arco_dettagli(SPARQL_PAGE_SIZE, offset))
-        bindings = result.get("results", {}).get("bindings", [])
-        if not bindings:
-            log.info("beni_culturali_dett_pagina_vuota", page=page_num,
-                     offset=offset)
-            break
+    dettagli_specs = [
+        ("coord",       _query_arco_coord,         "wkt",                "lat_lon"),
+        ("descrizione", _query_arco_descrizione,   "descrizione",        "descrizione"),
+        ("image",       _query_arco_image,         "image",              "image"),
+        ("tutela",      _query_arco_tutela,        "tutelaLabel",        "tutela"),
+        ("soprintendenza", _query_arco_soprintendenza, "soprintendenzaLabel", "soprintendenza"),
+    ]
+    for sub_name, query_fn, var_name, field_name in dettagli_specs:
+        sub_t = time.time()
+        offset = 0
+        page_num = 0
+        while True:
+            page_num += 1
+            result = _sparql_post(query_fn(SPARQL_PAGE_SIZE, offset))
+            bindings = result.get("results", {}).get("bindings", [])
+            if not bindings:
+                break
 
-        n_match = 0
-        for b in bindings:
-            s_uri = _bind_str(b, "s")
-            if not s_uri:
-                continue
-            cur = beni.get(s_uri)
-            if cur is None:
-                continue  # bene senza addr label (skippato in CORE)
-            n_match += 1
-            if cur["lat"] is None:
-                wkt = _bind_str(b, "wkt")
-                if wkt:
-                    lat, lon = parse_wkt_point(wkt)
-                    cur["lat"] = lat
-                    cur["lon"] = lon
-            if cur["descrizione"] is None:
-                cur["descrizione"] = _clean_text(_bind_str(b, "descrizione"))
-            if cur["image"] is None:
-                cur["image"] = _bind_str(b, "image")
-            if cur["tutela"] is None:
-                cur["tutela"] = _clean_text(_bind_str(b, "tutelaLabel"))
-            if cur["soprintendenza"] is None:
-                cur["soprintendenza"] = _clean_text(_bind_str(b, "soprintendenzaLabel"))
+            n_match = 0
+            for b in bindings:
+                s_uri = _bind_str(b, "s")
+                if not s_uri:
+                    continue
+                cur = beni.get(s_uri)
+                if cur is None:
+                    continue
+                n_match += 1
+                raw = _bind_str(b, var_name)
+                if raw is None:
+                    continue
+                if field_name == "lat_lon":
+                    if cur["lat"] is None:
+                        lat, lon = parse_wkt_point(raw)
+                        if lat is not None and lon is not None:
+                            cur["lat"] = lat
+                            cur["lon"] = lon
+                else:
+                    if cur[field_name] is None:
+                        cur[field_name] = _clean_text(raw)
 
-        log.info("beni_culturali_dett_pagina", page=page_num, offset=offset,
-                 bindings=len(bindings), match_in_core=n_match)
+            log.info("beni_culturali_dett_pagina", sub=sub_name,
+                     page=page_num, offset=offset,
+                     bindings=len(bindings), match_in_core=n_match)
 
-        if len(bindings) < SPARQL_PAGE_SIZE:
-            break
-        offset += SPARQL_PAGE_SIZE
-        time.sleep(SPARQL_SLEEP_BETWEEN_PAGES)
+            if len(bindings) < SPARQL_PAGE_SIZE:
+                break
+            offset += SPARQL_PAGE_SIZE
+            time.sleep(SPARQL_SLEEP_BETWEEN_PAGES)
 
-    log.info("beni_culturali_dett_done", secs=round(time.time() - t1, 1))
+        log.info("beni_culturali_dett_sub_done", sub=sub_name,
+                 pagine=page_num, secs=round(time.time() - sub_t, 1))
+
+    log.info("beni_culturali_dett_done", secs_totali=round(time.time() - t1, 1))
 
     # --- FASE 1C: LINK Cultural-ON ---
     t2 = time.time()
