@@ -343,6 +343,30 @@ def _clean_phone(s: str | None) -> str | None:
     return s
 
 
+def _clean_denom(s: str | None) -> str | None:
+    """Pulisce la denominazione ArCo togliendo il suffisso comune in coda.
+
+    ArCo rdfs:label dei beni immobili ha pattern frequente:
+      "Villa Buratti (villa, suburbana) - Scorze' (VE)"
+      "Selvatico estense (giardino, privato) - Padova (PD)"
+
+    Tolghiamo " - Comune (SG)" finale per evitare ridondanza nella UI
+    (il comune e' gia' mostrato come contesto della tab).
+
+    Pattern: stringa che termina con ' - <comune> (XX)' dove XX e' una
+    sigla 2-char tra parentesi.
+    """
+    s = _clean_text(s)
+    if not s:
+        return None
+    # cerca " - " seguito da qualcosa + " (XX)" alla fine
+    import re
+    m = re.search(r"\s+-\s+[^\-]+\s+\(([A-Z]{2})\)\s*$", s)
+    if m and m.group(1) in VALID_SIGLE_PROVINCIA:
+        return s[:m.start()].strip()
+    return s
+
+
 # =========================================================================
 # Helper ArCo: parsing label indirizzo + estrazione WKT POINT
 # =========================================================================
@@ -485,6 +509,29 @@ def _test_arco_helpers() -> int:
         ok = got == expected
         mark = "OK" if ok else "FAIL"
         print(f"[{mark}] parse_wkt_point({wkt!r}) -> {got} (atteso {expected})")
+        if not ok:
+            failed += 1
+
+    print()
+    # --- _clean_denom ---
+    cases_denom = [
+        # (input, atteso)
+        ("Villa Buratti (villa, suburbana) - Scorze' (VE)",
+         "Villa Buratti (villa, suburbana)"),
+        ("Basilica di S. Giustina (giardino) - Padova (PD)",
+         "Basilica di S. Giustina (giardino)"),
+        ("Selvatico estense (giardino, privato) - Padova (PD)",
+         "Selvatico estense (giardino, privato)"),
+        ("Palazzo Reale",                "Palazzo Reale"),  # nessun pattern -> tolto
+        ("Casa - via Roma (XX)",         "Casa - via Roma (XX)"),  # XX non e' sigla valida
+        ("",                             None),
+        (None,                           None),
+    ]
+    for d, expected in cases_denom:
+        got = _clean_denom(d)
+        ok = got == expected
+        mark = "OK" if ok else "FAIL"
+        print(f"[{mark}] _clean_denom({d!r}) -> {got!r} (atteso {expected!r})")
         if not ok:
             failed += 1
 
@@ -686,7 +733,7 @@ def fetch_arco_immobili(skip_cache: bool = False) -> list[dict]:
                 "cis_link": None,
             })
             if cur["denom"] is None:
-                cur["denom"] = _clean_text(_bind_str(b, "name"))
+                cur["denom"] = _clean_denom(_bind_str(b, "name"))
             if cur["tipo_raw"] is None:
                 # typeLabel arriva gia' come label italiana risolta
                 # (es. "chiesa", "palazzo"). Vecchia versione leggeva ?type
