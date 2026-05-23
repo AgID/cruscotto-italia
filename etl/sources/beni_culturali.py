@@ -1370,6 +1370,10 @@ def load_cultural_on(cache_path: Path = None,
             "soprintendenza": None,
             "cis_link": r["uri"],
             "_fonte": "cultural_on",
+            # Contatti Cultural-ON: telefono, email, website per UI accordion
+            "telefono": r.get("telefono"),
+            "email": r.get("email"),
+            "website": r.get("website"),
         })
     log.info("beni_culturali_cultural_on_loaded",
              n_matched=len(out),
@@ -1627,6 +1631,11 @@ def _slim_bene_full(b: dict) -> dict:
         "soprintendenza": b.get("soprintendenza"),
         "cis_link": b.get("cis_link"),
         "fonte": b.get("_fonte") or "arco",
+        # Contatti Cultural-ON (solo per record _fonte='cultural_on';
+        # ArCo non ha questi campi, restano None)
+        "telefono": b.get("telefono"),
+        "email": b.get("email"),
+        "website": b.get("website"),
     }
 
 

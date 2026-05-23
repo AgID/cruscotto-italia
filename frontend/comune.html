@@ -1176,6 +1176,32 @@ footer a{color:rgba(255,255,255,0.85);text-decoration:none}
 .impa-cluster{background:transparent !important;border:none !important;}
 .impa-chart-wrap{height:480px;position:relative;}
 @media (max-width:720px){.impa-chart-wrap{height:420px;}}
+/* ---- Tab Beni Culturali - lista accordion ---- */
+.beni-list-section{margin-top:36px;}
+.beni-list-controls{display:flex;align-items:center;gap:16px;margin:12px 0 16px;flex-wrap:wrap;}
+.beni-list-controls .sanita-search-input{flex:0 1 360px;min-width:200px;}
+.beni-list-item{border:1px solid var(--border);border-radius:6px;margin-bottom:8px;background:#fff;overflow:hidden;}
+.beni-list-row{display:flex;align-items:center;gap:12px;padding:10px 14px;cursor:pointer;background:#fff;border:none;width:100%;text-align:left;font-family:var(--ui);font-size:14px;color:var(--ink);transition:background .15s ease;}
+.beni-list-row:hover{background:var(--bg-soft);}
+.beni-list-row:focus-visible{outline:2px solid var(--blu-italia);outline-offset:-2px;}
+.beni-list-cat-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0;}
+.beni-list-denom{flex:1;font-weight:500;}
+.beni-list-cat-label{font-family:var(--font-mono);font-size:11px;color:var(--ink-mute);text-transform:uppercase;letter-spacing:.05em;flex-shrink:0;}
+.beni-list-fonte{font-family:var(--font-mono);font-size:10px;padding:2px 6px;border-radius:3px;flex-shrink:0;}
+.beni-list-fonte-arco{background:#e6f0fa;color:#0066CC;}
+.beni-list-fonte-co{background:#fae6f4;color:#a050be;}
+.beni-list-toggle{font-family:var(--font-mono);font-size:14px;color:var(--ink-mute);width:16px;text-align:center;flex-shrink:0;transition:transform .15s ease;}
+.beni-list-row[aria-expanded="true"] .beni-list-toggle{transform:rotate(90deg);}
+.beni-list-detail{padding:0 14px 14px 14px;border-top:1px solid var(--paper-2);background:var(--bg-soft);font-family:var(--ui);font-size:13px;color:var(--ink);line-height:1.5;}
+.beni-list-detail[hidden]{display:none;}
+.beni-list-detail-grid{display:grid;grid-template-columns:auto 1fr;gap:10px 16px;padding:14px 0 4px;}
+.beni-list-detail-lab{font-family:var(--font-mono);font-size:11px;color:var(--ink-mute);text-transform:uppercase;letter-spacing:.05em;}
+.beni-list-detail-val{font-size:13px;color:var(--ink);word-break:break-word;}
+.beni-list-detail-val a{color:var(--blu-italia);text-decoration:underline;}
+.beni-list-detail-image{margin-top:12px;}
+.beni-list-detail-image img{max-width:100%;max-height:280px;border-radius:6px;display:block;}
+.beni-list-detail-desc{margin-top:12px;padding-top:12px;border-top:1px dashed var(--paper-2);font-size:13px;line-height:1.6;color:var(--ink);}
+.beni-list-empty{padding:32px 16px;text-align:center;color:var(--mute);font-family:var(--font-mono);font-size:13px;background:var(--bg-soft);border-radius:6px;}
 /* ---- Tab ANNCSU - Toponomastica (strade e civici) ---- */
 /* =========================================================================
    PATTERN UNIFORME KPI CARDS (design + accessibilita').
@@ -4995,6 +5021,18 @@ function renderBeniCulturaliTab(d) {
           <div class="veicoli-euro-note">9 macro-categorie ArCo &middot; normalizzazione da slug ICCD</div>
         </div>
       </div>
+
+      <!-- Lista accordion sotto la mappa (popolata da initBeniCulturali con shard FULL se disponibile) -->
+      <div class="beni-list-section">
+        <h3 class="veicoli-col-h">Elenco beni <span class="muted" style="font-family:var(--mono);font-size:11px;font-weight:normal" id="beni-list-count"></span></h3>
+        <div class="beni-list-controls">
+          <input type="search" id="beni-list-search" class="sanita-search-input"
+                 placeholder="Cerca per nome bene&hellip;"
+                 aria-label="Cerca bene per nome">
+          <span class="muted" style="font-family:var(--mono);font-size:11px" id="beni-list-status"></span>
+        </div>
+        <div id="beni-list-items" role="list" aria-live="polite"></div>
+      </div>
     </div>`;
 }
 
@@ -5035,6 +5073,9 @@ function initBeniCulturali(d) {
     // entro 1-2 secondi. Mostro placeholder neutro.
     if (d._full_shard_available) {
       mapEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted);font-family:var(--mono);font-size:12px;">Caricamento dataset completo&hellip;</div>';
+      // Render lista accordion sul base (anche se non in mappa)
+      renderBeniList(d.luoghi || [], true);
+      initBeniListSearch();
       // Espongo subito un'istanza minimale con reloadLuoghi che inizializza
       // la mappa al primo arrivo dei dati FULL.
       window.__beniCulturaliInstance = {
@@ -5048,6 +5089,9 @@ function initBeniCulturali(d) {
       return;
     }
     mapEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted);font-family:var(--mono);font-size:12px;">Nessun bene geo-referenziato in questo comune.</div>';
+    // Comunque renderizza la lista (potrebbe avere beni senza coord ma con dati)
+    renderBeniList(d.luoghi || [], false);
+    initBeniListSearch();
     return;
   }
   const lats = luoghi.map(p => p.lat);
@@ -5190,10 +5234,18 @@ function initBeniCulturali(d) {
     });
   }
 
+  // ---- 7) Lista accordion sotto la mappa (riusabile per shard base e full)
+  // luoghi_all include ANCHE quelli senza coord, per la lista (per la
+  // mappa abbiamo gia' filtrato in luoghi).
+  let luoghi_all = (d.luoghi || []).slice();
+  renderBeniList(luoghi_all, d._full_shard_available);
+  initBeniListSearch();
+
   // Espongo l'istanza per il reload da shard FULL (vedi tryEnrichBeniCulturaliFull)
   window.__beniCulturaliInstance = {
     reloadLuoghi(newLuoghi) {
-      luoghi = (newLuoghi || []).filter(p => p.lat != null && p.lon != null);
+      luoghi_all = (newLuoghi || []).slice();
+      luoghi = luoghi_all.filter(p => p.lat != null && p.lon != null);
       activeCats = new Set(luoghi.map(p => p.categoria || 'altro'));
       // refit bounds + redraw
       if (luoghi.length) {
@@ -5211,6 +5263,9 @@ function initBeniCulturali(d) {
       if (countEl) countEl.textContent = fmtNum(luoghi.length);
       const statusEl = document.getElementById('beni-load-status');
       if (statusEl) statusEl.innerHTML = `Cluster auto-aggregati &middot; ${fmtNum(luoghi.length)} beni geo-referenziati (dataset completo)`;
+      // Aggiorno la lista accordion con il full dataset (no piu' "caricamento...")
+      renderBeniList(luoghi_all, false);
+      initBeniListSearch();
     }
   };
 }
@@ -5233,6 +5288,119 @@ async function tryEnrichBeniCulturaliFull(istat) {
   } catch (err) {
     console.warn(`Beni culturali full enrich error: ${err.message}`);
   }
+}
+
+// Render lista accordion sotto la mappa.
+// luoghi: array di record (con campi denom, categoria, indirizzo, image,
+//   descrizione, fonte, cis_link, telefono, email, website opzionali).
+// isPartial: true se i dati arrivano dallo shard base (cap 30) e
+//   l'enrichment FULL e' in corso; mostriamo lo status "caricamento...".
+function renderBeniList(luoghi, isPartial) {
+  const container = document.getElementById('beni-list-items');
+  const countEl = document.getElementById('beni-list-count');
+  const statusEl = document.getElementById('beni-list-status');
+  if (!container) return;
+  // Cache per la ricerca: salviamo array in window per filtraggio efficiente
+  window.__beniListAll = luoghi.slice();
+  if (countEl) countEl.textContent = `(${fmtNum(luoghi.length)} ${luoghi.length === 1 ? 'bene' : 'beni'})`;
+  if (statusEl) statusEl.textContent = isPartial ? 'caricamento dataset completo…' : '';
+  if (!luoghi.length) {
+    container.innerHTML = '<div class="beni-list-empty">Nessun bene trovato.</div>';
+    return;
+  }
+  // Ordino per nome (denom alfa) per esplorazione consistente
+  const sorted = luoghi.slice().sort((a, b) =>
+    ((a.denom || '').toUpperCase()).localeCompare((b.denom || '').toUpperCase(), 'it')
+  );
+  container.innerHTML = sorted.map((b, idx) => renderBeniListItem(b, idx)).join('');
+  // Bind click handler delegato per accordion
+  container.addEventListener('click', (ev) => {
+    const btn = ev.target.closest('.beni-list-row');
+    if (!btn) return;
+    const expanded = btn.getAttribute('aria-expanded') === 'true';
+    btn.setAttribute('aria-expanded', expanded ? 'false' : 'true');
+    const detail = btn.parentElement.querySelector('.beni-list-detail');
+    if (detail) detail.hidden = expanded;
+  }, { once: false });
+}
+
+function _escapeHtmlBeni(s) {
+  if (s == null) return '';
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+function renderBeniListItem(b, idx) {
+  const cat = b.categoria || 'altro';
+  const color = BENI_CAT_COLORS[cat] || '#9E9E9E';
+  const catLabel = BENI_CAT_LABELS[cat] || cat;
+  const denom = _escapeHtmlBeni(b.denom || '(senza nome)');
+  const fonte = b.fonte || 'arco';
+  const fonteCls = fonte === 'cultural_on' ? 'beni-list-fonte-co' : 'beni-list-fonte-arco';
+  const fonteLab = fonte === 'cultural_on' ? 'Cultural-ON' : 'MiC ArCo';
+  const rowId = `beni-row-${idx}`;
+  const detailId = `beni-detail-${idx}`;
+  // Costruisco i campi del detail
+  const rows = [];
+  if (b.indirizzo) rows.push(['Indirizzo', _escapeHtmlBeni(b.indirizzo)]);
+  if (b.tutela) rows.push(['Tutela', _escapeHtmlBeni(b.tutela)]);
+  if (b.soprintendenza) rows.push(['Soprintendenza', _escapeHtmlBeni(b.soprintendenza)]);
+  if (b.telefono) rows.push(['Telefono', `<a href="tel:${_escapeHtmlBeni(b.telefono)}">${_escapeHtmlBeni(b.telefono)}</a>`]);
+  if (b.email) rows.push(['Email', `<a href="mailto:${_escapeHtmlBeni(b.email)}">${_escapeHtmlBeni(b.email)}</a>`]);
+  if (b.website) rows.push(['Sito web', `<a href="${_escapeHtmlBeni(b.website)}" target="_blank" rel="noopener">${_escapeHtmlBeni(b.website)}</a>`]);
+  if (b.cis_link) rows.push(['Scheda Cultural-ON', `<a href="${_escapeHtmlBeni(b.cis_link)}" target="_blank" rel="noopener">apri scheda &rarr;</a>`]);
+  if (b.lat != null && b.lon != null) rows.push(['Coordinate', `${b.lat.toFixed(5)}, ${b.lon.toFixed(5)}`]);
+  const rowsHtml = rows.map(([lab, val]) => `
+    <span class="beni-list-detail-lab">${lab}</span>
+    <span class="beni-list-detail-val">${val}</span>
+  `).join('');
+  const imageHtml = b.image ? `
+    <div class="beni-list-detail-image">
+      <img src="${_escapeHtmlBeni(b.image)}" alt="${denom}" loading="lazy" onerror="this.style.display='none'">
+    </div>` : '';
+  const descHtml = b.descrizione ? `<div class="beni-list-detail-desc">${_escapeHtmlBeni(b.descrizione)}</div>` : '';
+  return `<div class="beni-list-item" role="listitem">
+    <button type="button" id="${rowId}" class="beni-list-row" aria-expanded="false" aria-controls="${detailId}">
+      <span class="beni-list-cat-dot" style="background:${color}" aria-hidden="true"></span>
+      <span class="beni-list-denom">${denom}</span>
+      <span class="beni-list-cat-label">${catLabel}</span>
+      <span class="beni-list-fonte ${fonteCls}">${fonteLab}</span>
+      <span class="beni-list-toggle" aria-hidden="true">&rsaquo;</span>
+    </button>
+    <div id="${detailId}" class="beni-list-detail" role="region" aria-labelledby="${rowId}" hidden>
+      <div class="beni-list-detail-grid">${rowsHtml}</div>
+      ${imageHtml}
+      ${descHtml}
+    </div>
+  </div>`;
+}
+
+// Filtraggio client-side per testo libero (case-insensitive sul denom + indirizzo)
+function initBeniListSearch() {
+  const input = document.getElementById('beni-list-search');
+  const container = document.getElementById('beni-list-items');
+  const countEl = document.getElementById('beni-list-count');
+  if (!input || !container) return;
+  const handler = () => {
+    const q = (input.value || '').trim().toLowerCase();
+    const items = container.querySelectorAll('.beni-list-item');
+    let visible = 0;
+    items.forEach(it => {
+      const txt = (it.querySelector('.beni-list-denom')?.textContent || '').toLowerCase();
+      const detTxt = (it.querySelector('.beni-list-detail-val')?.textContent || '').toLowerCase();
+      const match = !q || txt.includes(q) || detTxt.includes(q);
+      it.style.display = match ? '' : 'none';
+      if (match) visible++;
+    });
+    if (countEl) {
+      const tot = window.__beniListAll?.length || 0;
+      countEl.textContent = q
+        ? `(${fmtNum(visible)} di ${fmtNum(tot)})`
+        : `(${fmtNum(tot)} ${tot === 1 ? 'bene' : 'beni'})`;
+    }
+  };
+  // Rimpiazzo eventuale handler precedente (al reload FULL)
+  input.oninput = handler;
 }
 
 // ===========================================================================
