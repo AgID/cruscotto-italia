@@ -209,15 +209,19 @@ def normalize(s: str) -> str:
     Stessa logica di runts.normalize() / pnrr_progetti.normalize():
       1. Split su '/' (per nomi bilingui bundle tipo "Bolzano/Bozen")
       2. NFD-strip degli accenti
-      3. Apostrofi (dritti e tipografici) rimossi
+      3. Apostrofi (dritti, tipografici e backtick) rimossi
       4. Trattini sostituiti con spazio
       5. Uppercase + collapse di spazi multipli
+
+    Nota backtick: ArCo MiC usa ` (U+0060 GRAVE ACCENT) invece di '
+    apostrofo dritto in label di comuni come "Sant`Elpidio a Mare",
+    "Porto Sant`Elpidio". Lo rimuoviamo per allinearci al bundle ISTAT.
     """
     if not s:
         return ""
     s = s.split("/")[0]
     s = unicodedata.normalize("NFD", s).encode("ascii", "ignore").decode()
-    s = s.replace("'", "").replace("\u2019", "")
+    s = s.replace("'", "").replace("\u2019", "").replace("`", "")
     s = s.replace("-", " ")
     return " ".join(s.upper().split())
 
