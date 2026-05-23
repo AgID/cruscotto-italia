@@ -1321,6 +1321,7 @@ def load_cultural_on(cache_path: Path = None,
     out: list[dict] = []
     n_no_match = 0
     n_ambiguous = 0
+    n_out_of_bbox = 0
     for r in raw:
         comune = r.get("comune_label", "")
         if not comune:
@@ -1336,6 +1337,23 @@ def load_cultural_on(cache_path: Path = None,
         istat = candidates[0]
         cat_co = (r.get("categorie") or ["altro"])[0]
         macro = CULTURAL_ON_CATEGORIA_MAP.get(cat_co, "altro")
+        # Filtro bbox Italia (stesso range di parse_wkt_point per ArCo):
+        # lat 30-50, lon 5-22. Cultural-ON a volte ha record con coord
+        # palesemente sbagliate (continente sbagliato, lat/lon swapped,
+        # placeholder 0,0): NON le passiamo nella mappa.
+        co_lat = r.get("lat")
+        co_lon = r.get("lon")
+        if co_lat is not None and co_lon is not None:
+            try:
+                co_lat = float(co_lat)
+                co_lon = float(co_lon)
+                if not (30.0 <= co_lat <= 50.0) or not (5.0 <= co_lon <= 22.0):
+                    co_lat = None
+                    co_lon = None
+                    n_out_of_bbox += 1
+            except (TypeError, ValueError):
+                co_lat = None
+                co_lon = None
         out.append({
             "uri": r["uri"],
             "denom": _clean_text(r.get("denom")),
@@ -1344,8 +1362,8 @@ def load_cultural_on(cache_path: Path = None,
             "_istat_match": istat,
             "addr_raw": _clean_text(r.get("indirizzo")),
             "comune_label": comune,
-            "lat": r.get("lat"),
-            "lon": r.get("lon"),
+            "lat": co_lat,
+            "lon": co_lon,
             "descrizione": _clean_text(r.get("descrizione")),
             "image": _clean_url(r.get("image")) if r.get("image") else None,
             "tutela": None,
@@ -1356,7 +1374,8 @@ def load_cultural_on(cache_path: Path = None,
     log.info("beni_culturali_cultural_on_loaded",
              n_matched=len(out),
              n_no_match=n_no_match,
-             n_ambiguous=n_ambiguous)
+             n_ambiguous=n_ambiguous,
+             n_out_of_bbox=n_out_of_bbox)
     return out
 
 
