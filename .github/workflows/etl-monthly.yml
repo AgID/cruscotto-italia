@@ -60,7 +60,7 @@ on:
   workflow_dispatch:
     inputs:
       sources:
-        description: 'Comma-separated list (anagrafica,bdap,siope,anncsu,sanita_mds_refresh,agcom_bbmap) or "all"'
+        description: 'Comma-separated list (anagrafica,bdap,siope,anncsu,sanita_mds_refresh,agcom_bbmap,beni_culturali) or "all"'
         required: false
         default: 'all'
       siope_no_cache:
@@ -221,3 +221,51 @@ jobs:
           shopt -u nullglob
           printf '%s\n' "${files[@]:0:5}"
           echo "Totale shard: ${#files[@]}"
+
+  # ---------------------------------------------------------------------------
+  # Beni Culturali — ArCo ImmovableCulturalProperty (MiC)
+  # FUNZIONA su Azure: l'endpoint SPARQL del MiC e' aperto (no WAF cloud-restrict)
+  beni_culturali:
+    name: ETL · Beni Culturali ArCo (MiC)
+    runs-on: ubuntu-latest
+    if: ${{ contains(github.event.inputs.sources, 'beni_culturali') || github.event.inputs.sources == 'all' || github.event.inputs.sources == '' }}
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: etl/requirements.txt
+      - run: pip install -r etl/requirements.txt
+      - name: Show runner public IP
+        run: |
+          echo "Runner IP: $(curl -sS -m 5 https://api.ipify.org || echo unknown)"
+      - name: Unit test helpers (parse_address_label + parse_wkt_point)
+        run: |
+          python -m etl.sources.beni_culturali --test-helpers
+      - name: Run Beni Culturali ETL (~20 min, 113k beni ArCo)
+        env:
+          DATA_DIR: /tmp/etl-smoke
+        run: |
+          set -o pipefail
+          mkdir -p /tmp/etl-smoke/beni_culturali /tmp/etl-smoke/beni_culturali_full
+          python -m etl.sources.beni_culturali \
+            --outdir=/tmp/etl-smoke/beni_culturali \
+            --full-outdir=/tmp/etl-smoke/beni_culturali_full \
+            --full-shards 2>&1 | tee /tmp/beni-culturali-etl.log | tail -60
+          echo ""
+          echo "=== Beni Culturali shard prodotti ==="
+          shopt -s nullglob
+          files=(/tmp/etl-smoke/beni_culturali/*.json)
+          full_files=(/tmp/etl-smoke/beni_culturali_full/*.json)
+          shopt -u nullglob
+          echo "Base shard: ${#files[@]}"
+          echo "Full shard: ${#full_files[@]}"
+          # Quick check su 4 comuni test (Roma, Lecce, Matera, Morterone)
+          for istat in 058091 075035 077014 097055; do
+            if [ -f "/tmp/etl-smoke/beni_culturali/$istat.json" ]; then
+              echo "--- $istat ---"
+              python -c "import json; d=json.load(open('/tmp/etl-smoke/beni_culturali/$istat.json')); print(f\"n_totale={d['kpi']['n_totale']} mix={d['kpi']['mix_categoria']}\")"
+            fi
+          done
