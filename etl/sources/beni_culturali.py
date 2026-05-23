@@ -516,24 +516,34 @@ ARCO_IMMOBILE_CLASS = "https://w3id.org/arco/ontology/arco/ImmovableCulturalProp
 
 
 def _query_arco_core(limit: int, offset: int) -> str:
-    """Query CORE: nome + indirizzo (label da parsare) + tipo.
+    """Query CORE: nome + indirizzo (label da parsare) + tipologia (label risolta).
 
-    Restituisce ?s ?name ?type ?addrLabel
-    REQUIRED tutti: serve indirizzo per estrarre sigla+comune.
-    Senza queste 3 informazioni un record non e' utilizzabile per Cruscotto.
+    Restituisce ?s ?name ?typeLabel ?addrLabel.
 
-    Tempo atteso per LIMIT 2000: ~3-5 secondi.
+    Nota: hasCulturalPropertyType punta a una risorsa, NON a un literal.
+    Per ottenere lo slug umano (chiesa, palazzo, ...) facciamo il join
+    inline con rdfs:label della risorsa tipo. FILTER lang='it' per
+    prendere solo la label italiana e non duplicare con quella inglese.
+
+    REQUIRED: nome + indirizzo (label). Tipologia OPTIONAL: qualche bene
+    non ha tipo assegnato (es. ICCD non ancora processato).
+
+    Tempo atteso per LIMIT 2000: ~5-8 secondi (un OPTIONAL piccolo).
     """
     return f"""PREFIX arco: <https://w3id.org/arco/ontology/arco/>
 PREFIX arco_loc: <https://w3id.org/arco/ontology/location/>
 PREFIX arco_deno: <https://w3id.org/arco/ontology/denotative-description/>
 PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
-SELECT ?s ?name ?type ?addrLabel WHERE {{
+SELECT ?s ?name ?typeLabel ?addrLabel WHERE {{
   ?s a <{ARCO_IMMOBILE_CLASS}> .
   ?s rdfs:label ?name .
   ?s arco_loc:hasCulturalPropertyAddress ?addr .
   ?addr rdfs:label ?addrLabel .
-  OPTIONAL {{ ?s arco_deno:hasCulturalPropertyType ?type }}
+  OPTIONAL {{
+    ?s arco_deno:hasCulturalPropertyType ?type .
+    ?type rdfs:label ?typeLabel .
+    FILTER(lang(?typeLabel) = "it")
+  }}
 }} LIMIT {limit} OFFSET {offset}"""
 
 
@@ -678,10 +688,12 @@ def fetch_arco_immobili(skip_cache: bool = False) -> list[dict]:
             if cur["denom"] is None:
                 cur["denom"] = _clean_text(_bind_str(b, "name"))
             if cur["tipo_raw"] is None:
-                t_uri = _bind_str(b, "type")
-                if t_uri:
-                    # estrai slug finale (es. .../CulturalPropertyType/chiesa -> chiesa)
-                    cur["tipo_raw"] = t_uri.rsplit("/", 1)[-1]
+                # typeLabel arriva gia' come label italiana risolta
+                # (es. "chiesa", "palazzo"). Vecchia versione leggeva ?type
+                # come URI hash MD5 -> serviva risoluzione separata.
+                t_label = _bind_str(b, "typeLabel")
+                if t_label:
+                    cur["tipo_raw"] = t_label.strip().lower()
             if cur["addr_raw"] is None:
                 lab = _clean_text(_bind_str(b, "addrLabel"))
                 if lab:
