@@ -73,8 +73,7 @@ cat > "$CONFIG_FILE" <<EOF
   "actions": [
     "wait for element [data-tab='beni-culturali'] to be visible",
     "click element [data-tab='beni-culturali']",
-    "wait for element #pane-beni-culturali to be visible",
-    "wait for 2000"
+    "wait for element #pane-beni-culturali to be visible"
   ]
 }
 EOF
