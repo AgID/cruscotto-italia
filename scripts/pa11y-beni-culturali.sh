@@ -39,10 +39,13 @@ set -uo pipefail
 BASE_URL="${BASE_URL:-https://cruscotto-italia.dati.gov.it}"
 PA11Y="${PA11Y:-pa11y}"
 STANDARD="${STANDARD:-WCAG2AA}"
+# BASIC_AUTH="user:pass" abilita HTTP Basic Auth via URL injection
+# (utile pre-deploy AgID quando nginx e' blindato con htpasswd).
+BASIC_AUTH="${BASIC_AUTH:-}"
 
 if ! command -v "$PA11Y" >/dev/null 2>&1 && [[ "$PA11Y" != npx* ]]; then
   echo "ERRORE: $PA11Y non trovato. Installa con: npm install -g pa11y"
-  echo "Oppure: PA11Y='npx pa11y' bash scripts/pa11y-beni-culturali.sh"
+  echo "Oppure: PA11Y='npx --yes pa11y' bash scripts/pa11y-beni-culturali.sh"
   exit 1
 fi
 
@@ -87,11 +90,21 @@ echo "======================================================================"
 
 for NAME in "${!TESTS[@]}"; do
   ISTAT="${TESTS[$NAME]}"
-  URL="${BASE_URL}/comune.html?istat=${ISTAT}"
+  # Inject BASIC_AUTH nell'URL invece che negli headers (puppeteer rifiuta
+  # Authorization via Fetch.continueRequest come 'Unsafe header'). Chrome
+  # gestisce nativamente https://user:pass@host/path.
+  if [ -n "$BASIC_AUTH" ]; then
+    SCHEMA="${BASE_URL%%://*}"
+    REST="${BASE_URL#*://}"
+    URL="${SCHEMA}://${BASIC_AUTH}@${REST}/comune.html?istat=${ISTAT}"
+  else
+    URL="${BASE_URL}/comune.html?istat=${ISTAT}"
+  fi
   TOTAL=$((TOTAL + 1))
   echo ""
   echo "--- $NAME ($ISTAT) ---"
-  echo "URL: $URL"
+  # Mostra URL senza credenziali nel log
+  echo "URL: ${BASE_URL}/comune.html?istat=${ISTAT}"
   $PA11Y \
     --config "$CONFIG_FILE" \
     --reporter cli \
