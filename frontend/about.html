@@ -582,24 +582,28 @@ footer a:hover { color: #fff !important; }
         <tr data-fonte-row="MIC-ARCO">
           <td>MiC &middot; ICCD</td>
           <td>
-            <strong>ArCo &mdash; Beni culturali immobili tutelati</strong>
-            Catalogo nazionale dell'Istituto Centrale per il Catalogo e
-            la Documentazione (ICCD) del Ministero della Cultura,
-            pubblicato come <em>Linked Open Data</em> tramite l'ontologia
-            <strong>ArCo</strong> (Architecture of Knowledge).
-            <strong>113.820 beni immobili tutelati</strong> in tutto il
-            Paese: chiese, palazzi, castelli, ville, aree archeologiche,
+            <strong>ArCo + Cultural-ON &mdash; Beni culturali immobili e Luoghi della Cultura</strong>
+            Unione di due dataset MiC complementari. <strong>ArCo</strong>
+            (Architecture of Knowledge) e' il catalogo nazionale
+            dell'Istituto Centrale per il Catalogo e la Documentazione
+            (ICCD), pubblicato come <em>Linked Open Data</em>:
+            <strong>113.817 beni immobili tutelati</strong> &mdash;
+            chiese, palazzi, castelli, ville, aree archeologiche,
             monumenti, edifici di culto, parchi e giardini storici.
-            Per ogni bene: denominazione, tipologia granulare ArCo
-            (normalizzata in 9 macro-categorie: chiesa, palazzo,
-            castello, archeologia, museo, monumento, infrastruttura,
-            parco/giardino, altro), indirizzo civico completo con sigla
-            provincia, coordinate geografiche (86% beni georeferenziati),
-            fotografia (97% beni), descrizione testuale (28% beni),
-            soprintendenza di tutela, ed eventuale collegamento al
-            <em>Cultural-ON DBUnico 2.0</em> per i beni visitabili
-            (orari, contatti). Copertura <strong>5.657 comuni</strong>
-            su 7.895 (71%). Aggiornamento mensile via endpoint SPARQL.
+            <strong>Cultural-ON DBUnico 2.0</strong> e' il dataset dei
+            <strong>Luoghi della Cultura visitabili</strong>:
+            <strong>6.603 record</strong> di musei, biblioteche, archivi
+            e aree archeologiche con orari di apertura, contatti
+            (telefono, email, sito web) e scheda online.
+            Per ogni bene: denominazione, tipologia granulare
+            (normalizzata in 11 macro-categorie: chiesa, palazzo,
+            castello, archeologia, museo, biblioteca, archivio,
+            monumento, infrastruttura, parco/giardino, altro), indirizzo
+            civico, coordinate, fotografia, descrizione testuale,
+            soprintendenza di tutela, e per i Luoghi della Cultura
+            anche contatti completi e link alla scheda Cultural-ON.
+            Copertura <strong>6.088 comuni</strong> su 7.895 (77,1%).
+            Aggiornamento mensile via endpoint SPARQL.
             Licenza <strong>CC BY 4.0</strong>.
           </td>
           <td class="freq">mensile</td>
@@ -846,10 +850,11 @@ footer a:hover { color: #fff !important; }
       <div class="aggiorna-row">
         <div class="aggiorna-cadence">Mensile</div>
         <div class="aggiorna-what">
-          <strong>Beni culturali immobili tutelati (MiC ArCo)</strong> &mdash;
-          catalogo nazionale ICCD del Ministero della Cultura,
-          aggiornato via endpoint SPARQL: chiese, palazzi, castelli,
-          ville, aree archeologiche, monumenti.
+          <strong>Beni culturali (MiC ArCo + Cultural-ON)</strong> &mdash;
+          beni immobili tutelati ICCD via endpoint SPARQL (chiese,
+          palazzi, castelli, ville, aree archeologiche, monumenti) e
+          Luoghi della Cultura visitabili (musei, biblioteche, archivi)
+          dal DBUnico 2.0.
         </div>
         <div class="aggiorna-when">giorno 5 di ogni mese</div>
       </div>
