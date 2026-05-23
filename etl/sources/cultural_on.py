@@ -253,8 +253,11 @@ def _sparql_post(query: str, timeout: int = SPARQL_TIMEOUT) -> dict:
             r = requests.get(
                 SPARQL_ENDPOINT,
                 params={"query": query, "format": "application/json"},
-                headers={"User-Agent": USER_AGENT,
-                         "Accept": "application/sparql-results+json"},
+                headers={"User-Agent": USER_AGENT},
+                # NB: NO header Accept. Aggiungerlo provoca 406 Not Acceptable
+                # sul vhost HTTPS del MiC (test 23/05/2026 da VM AgID).
+                # Il content-type del response e' negoziato via query param
+                # 'format=application/json' (gia' settato sotto in params).
                 timeout=timeout,
             )
             # WAF MiC ritorna HTML 200 con "Web Application Firewall" se blocca
