@@ -503,289 +503,126 @@ if __name__ == "__main__":
         sys.exit(_test_arco_helpers())
 
 
+
 # =========================================================================
-# FASE 2 - Query anagrafica paginata
+# FASE 2 - SPARQL: query builders ArCo Beni Immobili
+# =========================================================================
+#
+# Strategia (lezioni dal precedente lavoro su Cultural-ON):
+# - HTTPS (HTTP bloccato da egress Aruba/AgID)
+# - Niente header Accept (provoca 406)
+# - Paginazione 2000/page (5000 va in timeout server)
+# - Split in Q1A core (campi REQUIRED) + Q1B dettagli (OPTIONAL pesanti)
+# - Stesso filtro REQUIRED su tutte le query per paginazione coerente
 # =========================================================================
 
-# Channel SOAS per smapit:hasTelephoneType (controlled vocabulary AgID)
-TEL_CHANNEL_PHONE = "https://w3id.org/italia/controlled-vocabulary/classifications-for-public-services/channel/031"
-TEL_CHANNEL_FAX = "https://w3id.org/italia/controlled-vocabulary/classifications-for-public-services/channel/033"
+ARCO_IMMOBILE_CLASS = "https://w3id.org/arco/ontology/arco/ImmovableCulturalProperty"
 
 
-def _query_anagrafica_core(limit: int, offset: int) -> str:
-    """Query anagrafica CORE: solo i campi REQUIRED + provincia OPTIONAL.
+def _query_arco_core(limit: int, offset: int) -> str:
+    """Query CORE: nome + indirizzo (label da parsare) + tipo.
 
-    Restituisce ?s ?name ?type ?comune ?provincia. Tutti i campi qui sono
-    quasi sempre presenti (institutionalCISName, dc:type, hasSite full).
-    Tempo medio per pagina 2000: ~3 secondi.
+    Restituisce ?s ?name ?type ?addrLabel
+    REQUIRED tutti: serve indirizzo per estrarre sigla+comune.
+    Senza queste 3 informazioni un record non e' utilizzabile per Cruscotto.
 
-    Un singolo ?s puo' avere PIU' righe se ha PIU' dc:type. Aggrego
-    lato Python.
+    Tempo atteso per LIMIT 2000: ~3-5 secondi.
     """
-    return f"""PREFIX cis: <http://dati.beniculturali.it/cis/>
-PREFIX clvapit: <https://w3id.org/italia/onto/CLV/>
+    return f"""PREFIX arco: <https://w3id.org/arco/ontology/arco/>
+PREFIX arco_loc: <https://w3id.org/arco/ontology/location/>
+PREFIX arco_deno: <https://w3id.org/arco/ontology/denotative-description/>
 PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+SELECT ?s ?name ?type ?addrLabel WHERE {{
+  ?s a <{ARCO_IMMOBILE_CLASS}> .
+  ?s rdfs:label ?name .
+  ?s arco_loc:hasCulturalPropertyAddress ?addr .
+  ?addr rdfs:label ?addrLabel .
+  OPTIONAL {{ ?s arco_deno:hasCulturalPropertyType ?type }}
+}} LIMIT {limit} OFFSET {offset}"""
+
+
+def _query_arco_dettagli(limit: int, offset: int) -> str:
+    """Query DETTAGLI: coordinate WKT + descrizione + foto + tutela + soprintendenza.
+
+    REQUIRED: stesso filtro CORE (hasCulturalPropertyAddress) per
+    paginazione coerente.
+
+    Restituisce ?s ?wkt ?descrizione ?image ?tutela ?soprintendenza
+    """
+    return f"""PREFIX arco: <https://w3id.org/arco/ontology/arco/>
+PREFIX arco_loc: <https://w3id.org/arco/ontology/location/>
+PREFIX clvapit: <https://w3id.org/italia/onto/CLV/>
 PREFIX dc: <http://purl.org/dc/elements/1.1/>
-SELECT ?s ?name ?type ?comune ?provincia WHERE {{
-  ?s a cis:CulturalInstituteOrSite .
-  ?s cis:institutionalCISName ?name .
-  FILTER(lang(?name) = "it")
-  ?s dc:type ?type .
-  ?s cis:hasSite ?site .
-  ?site cis:siteAddress ?addr .
-  ?addr clvapit:hasCity ?city .
-  ?city rdfs:label ?comune .
-  OPTIONAL {{ ?addr clvapit:hasProvince ?prov . ?prov rdfs:label ?provincia }}
-}} LIMIT {limit} OFFSET {offset}"""
-
-
-def _query_anagrafica_dettagli(limit: int, offset: int) -> str:
-    """Query anagrafica DETTAGLI: tutti i campi OPTIONAL su CIS + Address.
-
-    Separata dalla CORE per evitare il cross-product di 15 OPTIONAL che
-    portava in timeout server-side l'endpoint MiC.
-
-    IMPORTANTE: deve avere lo STESSO filtro REQUIRED della CORE
-    (institutionalCISName@it) per restituire lo stesso universo di
-    ~6700 ?s, paginazione allineata. Altrimenti SPARQL store risponde
-    sui ~60000 CIS totali e quasi nessun ?s matcha il dizionario CORE.
-
-    Tempo medio per pagina 2000: ~5 secondi.
-
-    Restituisce ?s ?identifier ?indirizzo ?cap ?lat ?lon ?image ?descrizione.
-    Da joinare con CORE lato Python via ?s.
-    """
-    return f"""PREFIX cis: <http://dati.beniculturali.it/cis/>
-PREFIX clvapit: <https://w3id.org/italia/onto/CLV/>
-PREFIX geo: <http://www.w3.org/2003/01/geo/wgs84_pos#>
 PREFIX foaf: <http://xmlns.com/foaf/0.1/>
-PREFIX l0: <https://w3id.org/italia/onto/l0/>
-SELECT ?s ?identifier ?indirizzo ?cap ?lat ?lon ?image ?descrizione WHERE {{
-  ?s a cis:CulturalInstituteOrSite .
-  ?s cis:institutionalCISName ?name .
-  FILTER(lang(?name) = "it")
-  OPTIONAL {{ ?s l0:identifier ?identifier }}
-  OPTIONAL {{ ?s cis:hasSite ?site . ?site cis:siteAddress ?addr .
-             OPTIONAL {{ ?addr clvapit:fullAddress ?indirizzo }}
-             OPTIONAL {{ ?addr clvapit:postCode ?cap }} }}
-  OPTIONAL {{ ?s geo:lat ?lat }}
-  OPTIONAL {{ ?s geo:long ?lon }}
-  OPTIONAL {{ ?s foaf:depiction ?image }}
-  OPTIONAL {{ ?s l0:description ?descrizione . FILTER(lang(?descrizione) = "it") }}
-}} LIMIT {limit} OFFSET {offset}"""
-
-
-def fetch_anagrafica_sparql(skip_cache: bool = False) -> list[dict]:
-    """Scarica tutti i record anagrafica SPARQL in 2 passate (core + dettagli)
-    + aggrega righe duplicate (un luogo con N dc:type genera N righe).
-
-    Cache su disco: /tmp/cruscotto_cultural_on/anagrafica.json.
-    Ritorna list[dict] di luoghi normalizzati con chiavi:
-      uri, id, denom, descrizione, categorie[], categorie_raw[],
-      comune_label, provincia_label, indirizzo, cap, lat, lon, image
-    """
-    cache_path = CACHE_DIR / "anagrafica.json"
-    today = datetime.now().strftime("%Y%m%d")
-    cache_marker = CACHE_DIR / f"anagrafica.{today}.ok"
-
-    if not skip_cache and cache_path.exists() and cache_marker.exists():
-        data = json.loads(cache_path.read_text())
-        log.info("cultural_on_anagrafica_cache_hit", path=str(cache_path),
-                 n=len(data))
-        return data
-
-    log.info("cultural_on_anagrafica_fetch_start", endpoint=SPARQL_ENDPOINT,
-             page_size=SPARQL_PAGE_SIZE)
-    t0 = time.time()
-
-    # --- FASE 1A: CORE (denom + categoria + comune + provincia) ---
-    luoghi: dict[str, dict] = {}
-    offset = 0
-    page_num = 0
-    while True:
-        page_num += 1
-        q = _query_anagrafica_core(SPARQL_PAGE_SIZE, offset)
-        result = _sparql_post(q)
-        bindings = result.get("results", {}).get("bindings", [])
-        if not bindings:
-            log.info("cultural_on_core_pagina_vuota", page=page_num, offset=offset)
-            break
-
-        for b in bindings:
-            s_uri = _bind_str(b, "s")
-            if not s_uri:
-                continue
-            cur = luoghi.setdefault(s_uri, {
-                "uri": s_uri,
-                "id": None,
-                "denom": None,
-                "descrizione": None,
-                "categorie": [],
-                "categorie_raw": [],
-                "comune_label": None,
-                "provincia_label": None,
-                "indirizzo": None,
-                "cap": None,
-                "lat": None,
-                "lon": None,
-                "image": None,
-            })
-            if cur["denom"] is None:
-                cur["denom"] = _clean_text(_bind_str(b, "name"))
-            if cur["comune_label"] is None:
-                cur["comune_label"] = _clean_text(_bind_str(b, "comune"))
-            if cur["provincia_label"] is None:
-                cur["provincia_label"] = _clean_text(_bind_str(b, "provincia"))
-            raw_type = _bind_str(b, "type")
-            if raw_type:
-                if raw_type not in cur["categorie_raw"]:
-                    cur["categorie_raw"].append(raw_type)
-                mapped = CATEGORIA_LUOGO.get(raw_type)
-                if mapped and mapped not in cur["categorie"]:
-                    cur["categorie"].append(mapped)
-
-        log.info("cultural_on_core_pagina", page=page_num, offset=offset,
-                 bindings=len(bindings), luoghi_aggregati=len(luoghi))
-
-        if len(bindings) < SPARQL_PAGE_SIZE:
-            break
-        offset += SPARQL_PAGE_SIZE
-        time.sleep(SPARQL_SLEEP_BETWEEN_PAGES)
-
-    log.info("cultural_on_core_done", n_luoghi=len(luoghi),
-             secs=round(time.time() - t0, 1))
-
-    # --- FASE 1B: DETTAGLI (id, descr, indirizzo, cap, lat, lon, image) ---
-    t1 = time.time()
-    offset = 0
-    page_num = 0
-    while True:
-        page_num += 1
-        q = _query_anagrafica_dettagli(SPARQL_PAGE_SIZE, offset)
-        result = _sparql_post(q)
-        bindings = result.get("results", {}).get("bindings", [])
-        if not bindings:
-            log.info("cultural_on_dett_pagina_vuota", page=page_num, offset=offset)
-            break
-
-        n_match = 0
-        for b in bindings:
-            s_uri = _bind_str(b, "s")
-            if not s_uri:
-                continue
-            cur = luoghi.get(s_uri)
-            if cur is None:
-                # luogo non presente in CORE (senza institutionalCISName@it): skip
-                continue
-            n_match += 1
-            if cur["id"] is None:
-                cur["id"] = _bind_str(b, "identifier")
-            if cur["descrizione"] is None:
-                cur["descrizione"] = _clean_text(_bind_str(b, "descrizione"))
-            if cur["indirizzo"] is None:
-                cur["indirizzo"] = _clean_text(_bind_str(b, "indirizzo"))
-            if cur["cap"] is None:
-                cur["cap"] = _clean_text(_bind_str(b, "cap"))
-            if cur["lat"] is None:
-                cur["lat"] = _bind_float(b, "lat")
-            if cur["lon"] is None:
-                cur["lon"] = _bind_float(b, "lon")
-            if cur["image"] is None:
-                cur["image"] = _bind_str(b, "image")
-
-        log.info("cultural_on_dett_pagina", page=page_num, offset=offset,
-                 bindings=len(bindings), match_in_core=n_match)
-
-        if len(bindings) < SPARQL_PAGE_SIZE:
-            break
-        offset += SPARQL_PAGE_SIZE
-        time.sleep(SPARQL_SLEEP_BETWEEN_PAGES)
-
-    log.info("cultural_on_dett_done",
-             secs=round(time.time() - t1, 1))
-
-    result = list(luoghi.values())
-    elapsed = time.time() - t0
-    log.info("cultural_on_anagrafica_done",
-             n_luoghi=len(result),
-             secs_totali=round(elapsed, 1))
-
-    cache_path.write_text(json.dumps(result, ensure_ascii=False))
-    cache_marker.touch()
-    return result
-
-
-# =========================================================================
-# FASE 3 - Query contatti paginata (telefono, email, website, prenotazioni)
-# =========================================================================
-
-def _query_contatti(limit: int, offset: int) -> str:
-    """Query contatti per ogni CulturalInstituteOrSite.
-
-    Restituisce N righe per ?s (un luogo puo' avere piu' contact point,
-    o un solo contact point con piu' canali). Aggreghiamo lato Python.
-
-    IMPORTANTE: filtro institutionalCISName@it come la CORE per
-    restringere l'universo dei ?s ai 6717 luoghi della CORE e mantenere
-    paginazione coerente (altrimenti SPARQL store risponde su tutti i
-    60000+ CIS con contact point, pochissimi matchano CORE).
-
-    OPTIONAL su tutti i sub-pattern: vogliamo TUTTI i luoghi anche senza
-    contatti, per non perdere righe se manca solo l'email.
-    """
-    return f"""PREFIX cis: <http://dati.beniculturali.it/cis/>
-PREFIX smapit: <https://w3id.org/italia/onto/SM/>
 PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
-SELECT ?s ?telefono ?fax ?email ?website ?prenotazione
-WHERE {{
-  ?s a cis:CulturalInstituteOrSite .
-  ?s cis:institutionalCISName ?name .
-  FILTER(lang(?name) = "it")
-  ?s smapit:hasOnlineContactPoint ?cp .
+SELECT ?s ?wkt ?descrizione ?image ?tutelaLabel ?soprintendenzaLabel WHERE {{
+  ?s a <{ARCO_IMMOBILE_CLASS}> .
+  ?s arco_loc:hasCulturalPropertyAddress ?addr .
   OPTIONAL {{
-    ?cp smapit:hasTelephone ?tel .
-    ?tel smapit:hasTelephoneType <{TEL_CHANNEL_PHONE}> .
-    ?tel smapit:telephoneNumber ?telefono .
+    ?s clvapit:hasGeometry ?geo .
+    ?geo clvapit:serialization ?wkt .
+  }}
+  OPTIONAL {{ ?s dc:description ?descrizione }}
+  OPTIONAL {{ ?s foaf:depiction ?image }}
+  OPTIONAL {{
+    ?s arco:hasMibacScopeOfProtection ?tutela .
+    ?tutela rdfs:label ?tutelaLabel .
   }}
   OPTIONAL {{
-    ?cp smapit:hasTelephone ?fax_n .
-    ?fax_n smapit:hasTelephoneType <{TEL_CHANNEL_FAX}> .
-    ?fax_n smapit:telephoneNumber ?fax .
+    ?s arco:hasHeritageProtectionAgency ?soprintendenza .
+    ?soprintendenza rdfs:label ?soprintendenzaLabel .
   }}
-  OPTIONAL {{ ?cp smapit:hasEmail ?em . ?em smapit:emailAddress ?email }}
-  OPTIONAL {{ ?cp smapit:hasWebSite ?ws . ?ws smapit:URL ?website }}
 }} LIMIT {limit} OFFSET {offset}"""
 
 
-def fetch_contatti_sparql(skip_cache: bool = False) -> dict[str, dict]:
-    """Scarica i contatti SPARQL e ritorna dict uri -> dict contatti.
+def _query_arco_cis_link(limit: int, offset: int) -> str:
+    """Query LINK Cultural-ON: associazione bene immobile -> CulturalInstituteOrSite.
 
-    Cache: /tmp/cruscotto_cultural_on/contatti.json (mappa uri -> contatti).
+    Pochi beni immobili sono anche luoghi di Cultural-ON (es. Palazzo di Brera
+    = bene immobile + Pinacoteca di Brera = CIS Cultural-ON). Questo link
+    permette il merge per arricchire i beni "visitabili" con orari/contatti.
     """
-    cache_path = CACHE_DIR / "contatti.json"
+    return f"""PREFIX arco_loc: <https://w3id.org/arco/ontology/location/>
+SELECT ?s ?cis WHERE {{
+  ?s a <{ARCO_IMMOBILE_CLASS}> .
+  ?s arco_loc:hasCulturalInstituteOrSite ?cis .
+}} LIMIT {limit} OFFSET {offset}"""
+
+
+def fetch_arco_immobili(skip_cache: bool = False) -> list[dict]:
+    """Scarica tutti i beni immobili ArCo in 2 passate (core + dettagli)
+    + parsing indirizzo + parsing WKT.
+
+    Cache: /tmp/cruscotto_cultural_on/arco_immobili.json.
+
+    Ritorna list[dict] con chiavi per ogni bene:
+      uri, denom, tipo_raw, addr_raw, sigla_provincia, comune_label,
+      lat, lon, descrizione, image, tutela, soprintendenza, cis_link (URI o None)
+    """
+    cache_path = CACHE_DIR / "arco_immobili.json"
     today = datetime.now().strftime("%Y%m%d")
-    cache_marker = CACHE_DIR / f"contatti.{today}.ok"
+    cache_marker = CACHE_DIR / f"arco_immobili.{today}.ok"
 
     if not skip_cache and cache_path.exists() and cache_marker.exists():
         data = json.loads(cache_path.read_text())
-        log.info("cultural_on_contatti_cache_hit", path=str(cache_path),
-                 n=len(data))
+        log.info("beni_culturali_cache_hit", path=str(cache_path), n=len(data))
         return data
 
-    log.info("cultural_on_contatti_fetch_start", endpoint=SPARQL_ENDPOINT,
+    log.info("beni_culturali_fetch_start", endpoint=SPARQL_ENDPOINT,
              page_size=SPARQL_PAGE_SIZE)
     t0 = time.time()
 
-    contatti: dict[str, dict] = {}
+    beni: dict[str, dict] = {}
+
+    # --- FASE 1A: CORE ---
     offset = 0
     page_num = 0
     while True:
         page_num += 1
-        q = _query_contatti(SPARQL_PAGE_SIZE, offset)
-        result = _sparql_post(q)
+        result = _sparql_post(_query_arco_core(SPARQL_PAGE_SIZE, offset))
         bindings = result.get("results", {}).get("bindings", [])
         if not bindings:
-            log.info("cultural_on_contatti_pagina_vuota", page=page_num,
+            log.info("beni_culturali_core_pagina_vuota", page=page_num,
                      offset=offset)
             break
 
@@ -793,66 +630,132 @@ def fetch_contatti_sparql(skip_cache: bool = False) -> dict[str, dict]:
             s_uri = _bind_str(b, "s")
             if not s_uri:
                 continue
-            cur = contatti.setdefault(s_uri, {
-                "telefono": None, "fax": None,
-                "email": None, "website": None,
-                "prenotazione": None,
+            cur = beni.setdefault(s_uri, {
+                "uri": s_uri,
+                "denom": None,
+                "tipo_raw": None,
+                "addr_raw": None,
+                "sigla_provincia": None,
+                "comune_label": None,
+                "lat": None,
+                "lon": None,
+                "descrizione": None,
+                "image": None,
+                "tutela": None,
+                "soprintendenza": None,
+                "cis_link": None,
             })
-            # prima occorrenza vince (se NON gia' valorizzato)
-            if cur["telefono"] is None:
-                cur["telefono"] = _clean_phone(_bind_str(b, "telefono"))
-            if cur["fax"] is None:
-                cur["fax"] = _clean_phone(_bind_str(b, "fax"))
-            if cur["email"] is None:
-                cur["email"] = _clean_email(_bind_str(b, "email"))
-            if cur["website"] is None:
-                cur["website"] = _clean_url(_bind_str(b, "website"))
+            if cur["denom"] is None:
+                cur["denom"] = _clean_text(_bind_str(b, "name"))
+            if cur["tipo_raw"] is None:
+                t_uri = _bind_str(b, "type")
+                if t_uri:
+                    # estrai slug finale (es. .../CulturalPropertyType/chiesa -> chiesa)
+                    cur["tipo_raw"] = t_uri.rsplit("/", 1)[-1]
+            if cur["addr_raw"] is None:
+                lab = _clean_text(_bind_str(b, "addrLabel"))
+                if lab:
+                    cur["addr_raw"] = lab
+                    sigla, comune = parse_address_label(lab)
+                    cur["sigla_provincia"] = sigla
+                    cur["comune_label"] = comune
 
-        log.info("cultural_on_contatti_pagina", page=page_num,
-                 offset=offset, bindings=len(bindings),
-                 luoghi_aggregati=len(contatti))
+        log.info("beni_culturali_core_pagina", page=page_num, offset=offset,
+                 bindings=len(bindings), beni_aggregati=len(beni))
 
         if len(bindings) < SPARQL_PAGE_SIZE:
             break
         offset += SPARQL_PAGE_SIZE
         time.sleep(SPARQL_SLEEP_BETWEEN_PAGES)
 
+    log.info("beni_culturali_core_done", n_beni=len(beni),
+             secs=round(time.time() - t0, 1))
+
+    # --- FASE 1B: DETTAGLI ---
+    t1 = time.time()
+    offset = 0
+    page_num = 0
+    while True:
+        page_num += 1
+        result = _sparql_post(_query_arco_dettagli(SPARQL_PAGE_SIZE, offset))
+        bindings = result.get("results", {}).get("bindings", [])
+        if not bindings:
+            log.info("beni_culturali_dett_pagina_vuota", page=page_num,
+                     offset=offset)
+            break
+
+        n_match = 0
+        for b in bindings:
+            s_uri = _bind_str(b, "s")
+            if not s_uri:
+                continue
+            cur = beni.get(s_uri)
+            if cur is None:
+                continue  # bene senza addr label (skippato in CORE)
+            n_match += 1
+            if cur["lat"] is None:
+                wkt = _bind_str(b, "wkt")
+                if wkt:
+                    lat, lon = parse_wkt_point(wkt)
+                    cur["lat"] = lat
+                    cur["lon"] = lon
+            if cur["descrizione"] is None:
+                cur["descrizione"] = _clean_text(_bind_str(b, "descrizione"))
+            if cur["image"] is None:
+                cur["image"] = _bind_str(b, "image")
+            if cur["tutela"] is None:
+                cur["tutela"] = _clean_text(_bind_str(b, "tutelaLabel"))
+            if cur["soprintendenza"] is None:
+                cur["soprintendenza"] = _clean_text(_bind_str(b, "soprintendenzaLabel"))
+
+        log.info("beni_culturali_dett_pagina", page=page_num, offset=offset,
+                 bindings=len(bindings), match_in_core=n_match)
+
+        if len(bindings) < SPARQL_PAGE_SIZE:
+            break
+        offset += SPARQL_PAGE_SIZE
+        time.sleep(SPARQL_SLEEP_BETWEEN_PAGES)
+
+    log.info("beni_culturali_dett_done", secs=round(time.time() - t1, 1))
+
+    # --- FASE 1C: LINK Cultural-ON ---
+    t2 = time.time()
+    offset = 0
+    page_num = 0
+    n_links = 0
+    while True:
+        page_num += 1
+        result = _sparql_post(_query_arco_cis_link(SPARQL_PAGE_SIZE, offset))
+        bindings = result.get("results", {}).get("bindings", [])
+        if not bindings:
+            break
+        for b in bindings:
+            s_uri = _bind_str(b, "s")
+            cis_uri = _bind_str(b, "cis")
+            if s_uri and cis_uri:
+                cur = beni.get(s_uri)
+                if cur and cur["cis_link"] is None:
+                    cur["cis_link"] = cis_uri
+                    n_links += 1
+        log.info("beni_culturali_link_pagina", page=page_num, offset=offset,
+                 bindings=len(bindings))
+        if len(bindings) < SPARQL_PAGE_SIZE:
+            break
+        offset += SPARQL_PAGE_SIZE
+        time.sleep(SPARQL_SLEEP_BETWEEN_PAGES)
+
+    log.info("beni_culturali_link_done", n_links=n_links,
+             secs=round(time.time() - t2, 1))
+
+    result = list(beni.values())
     elapsed = time.time() - t0
-    log.info("cultural_on_contatti_done",
-             n_luoghi=len(contatti),
-             pagine=page_num,
-             secs=round(elapsed, 1))
+    log.info("beni_culturali_fetch_done",
+             n_beni=len(result),
+             n_con_geo=sum(1 for x in result if x["lat"] and x["lon"]),
+             n_con_comune=sum(1 for x in result if x["comune_label"]),
+             n_con_cis_link=sum(1 for x in result if x["cis_link"]),
+             secs_totali=round(elapsed, 1))
 
-    cache_path.write_text(json.dumps(contatti, ensure_ascii=False))
+    cache_path.write_text(json.dumps(result, ensure_ascii=False))
     cache_marker.touch()
-    return contatti
-
-
-# =========================================================================
-# FASE 4 - Merge anagrafica + contatti
-# =========================================================================
-
-def merge_anagrafica_contatti(anagrafica: list[dict],
-                              contatti: dict[str, dict]) -> list[dict]:
-    """Aggiunge i campi di contatto ai record anagrafica.
-
-    I luoghi senza contact point restano con telefono/email/website=None.
-    """
-    merged = 0
-    out = []
-    for luogo in anagrafica:
-        c = contatti.get(luogo["uri"], {})
-        luogo_out = dict(luogo)
-        luogo_out["telefono"] = c.get("telefono")
-        luogo_out["fax"] = c.get("fax")
-        luogo_out["email"] = c.get("email")
-        luogo_out["website"] = c.get("website")
-        luogo_out["prenotazione"] = c.get("prenotazione")
-        if any(luogo_out.get(k) for k in ("telefono", "email", "website")):
-            merged += 1
-        out.append(luogo_out)
-    log.info("cultural_on_merge_done",
-             n_totale=len(out),
-             n_con_contatti=merged,
-             pct_contatti=round(merged * 100 / len(out), 1) if out else 0)
-    return out
+    return result
