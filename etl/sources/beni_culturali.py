@@ -496,11 +496,7 @@ def _test_arco_helpers() -> int:
     return 0 if not failed else 1
 
 
-# Quick CLI: python3 -m etl.sources.beni_culturali --test-helpers
-if __name__ == "__main__":
-    import sys
-    if "--test-helpers" in sys.argv:
-        sys.exit(_test_arco_helpers())
+# (Il blocco if __name__ e' alla fine del file, dopo lo Step 2)
 
 
 
@@ -806,3 +802,471 @@ def fetch_arco_immobili(skip_cache: bool = False) -> list[dict]:
     cache_path.write_text(json.dumps(result, ensure_ascii=False))
     cache_marker.touch()
     return result
+
+
+# =========================================================================
+# FASE 3 - Categoria normalizzata (whitelist)
+# =========================================================================
+#
+# Lo slug ArCo CulturalPropertyType ha decine di valori granulari
+# (chiesa, palazzo, torre, fortificazione, villa, abbazia, ...). Mappiamo
+# in 8 macro-categorie per KPI mix_categoria e icone mappa.
+#
+# Verra' raffinata sul dataset reale: al primo run sul server vedremo
+# i top 30-50 slug ArCo effettivi e completiamo la whitelist.
+# =========================================================================
+
+CATEGORIA_ARCO: dict[str, str] = {
+    # chiese e edifici di culto
+    "chiesa":                    "chiesa",
+    "cattedrale":                "chiesa",
+    "basilica":                  "chiesa",
+    "santuario":                 "chiesa",
+    "oratorio":                  "chiesa",
+    "abbazia":                   "chiesa",
+    "monastero":                 "chiesa",
+    "convento":                  "chiesa",
+    "battistero":                "chiesa",
+    "cappella":                  "chiesa",
+    "edificio-di-culto":         "chiesa",
+
+    # palazzi e ville
+    "palazzo":                   "palazzo",
+    "palazzo-nobiliare":         "palazzo",
+    "palazzo-vescovile":         "palazzo",
+    "villa":                     "palazzo",
+    "casa":                      "palazzo",
+    "casa-nobiliare":            "palazzo",
+    "casa-padronale":            "palazzo",
+
+    # fortificazioni
+    "castello":                  "castello",
+    "fortezza":                  "castello",
+    "rocca":                     "castello",
+    "torre":                     "castello",
+    "mura":                      "castello",
+    "bastione":                  "castello",
+    "fortino":                   "castello",
+    "fortificazione":            "castello",
+
+    # archeologia
+    "area-archeologica":         "archeologia",
+    "sito-archeologico":         "archeologia",
+    "necropoli":                 "archeologia",
+    "tomba":                     "archeologia",
+    "domus":                     "archeologia",
+    "anfiteatro":                "archeologia",
+    "teatro-romano":             "archeologia",
+    "tempio":                    "archeologia",
+    "terme":                     "archeologia",
+
+    # monumenti e infrastrutture
+    "monumento":                 "monumento",
+    "fontana":                   "monumento",
+    "obelisco":                  "monumento",
+    "ponte":                     "infrastruttura",
+    "acquedotto":                "infrastruttura",
+    "mulino":                    "infrastruttura",
+
+    # parchi e giardini
+    "parco":                     "parco_giardino",
+    "giardino":                  "parco_giardino",
+    "parco-storico":             "parco_giardino",
+    "giardino-storico":          "parco_giardino",
+
+    # musei e istituzioni (sovrapposizione con Cultural-ON)
+    "museo":                     "museo",
+    "biblioteca":                "museo",
+    "archivio":                  "museo",
+    "galleria":                  "museo",
+    "pinacoteca":                "museo",
+}
+
+CATEGORIA_PRIORITA_BENI = [
+    "chiesa", "palazzo", "castello", "archeologia",
+    "museo", "monumento", "infrastruttura", "parco_giardino", "altro",
+]
+
+
+def _categoria_for(tipo_raw: str | None) -> str:
+    """Mappa lo slug ArCo grezzo alla categoria normalizzata.
+
+    Strategia: lookup esatto sulla whitelist; se assente, marca 'altro'.
+    Il primo run sul dataset reale ci permettera' di estendere la
+    whitelist con gli slug ArCo non coperti (vedremo i top 20-50
+    'altro' nei log post-ETL).
+    """
+    if not tipo_raw:
+        return "altro"
+    return CATEGORIA_ARCO.get(tipo_raw.lower(), "altro")
+
+
+# =========================================================================
+# FASE 4 - Load lookups + mapping a ISTAT
+# =========================================================================
+
+def load_lookups() -> tuple[dict[tuple[str, str], str], set[str]]:
+    """Carica gazetteer comuni e costruisce mapping (sigla, COMUNE_NORM) -> istat6.
+
+    Usa la sigla provincia (campo 'provincia' del bundle, 2 char) PIU' il
+    nome del comune normalizzato come chiave. Risolve naturalmente i 7
+    comuni omonimi italiani (Castro BG/LE, Calliano AT/TN, ...).
+
+    Ritorna:
+      - (sigla, COMUNE_NORM_UPPER) -> istat6
+      - canonical_istat: set di tutti gli ISTAT validi (per shardatura
+        anche dei comuni vuoti)
+    """
+    log.info("beni_culturali_lookups_loading")
+    comuni = local_lookup.load_comuni_bundle()
+    if comuni is None:
+        raise SystemExit(
+            "Local lookup 'comuni-bundle.json' assente in "
+            f"{local_lookup.get_lookup_dir()}. "
+            "Esegui prima 'python -m etl.sources.anagrafica'."
+        )
+
+    pair_to_istat: dict[tuple[str, str], str] = {}
+    canonical_istat: set[str] = set()
+    for istat, c in comuni.items():
+        canonical_istat.add(istat)
+        sigla = (c.get("provincia") or "").strip().upper()
+        denom = c.get("denominazione", "")
+        if sigla and denom:
+            key = (sigla, normalize(denom))
+            pair_to_istat[key] = istat
+
+    log.info("beni_culturali_lookups_loaded",
+             n_comuni=len(canonical_istat),
+             n_pairs=len(pair_to_istat))
+    return pair_to_istat, canonical_istat
+
+
+# =========================================================================
+# FASE 5 - Group by ISTAT
+# =========================================================================
+
+def group_by_istat(beni: list[dict],
+                   pair_to_istat: dict[tuple[str, str], str]
+                   ) -> tuple[dict[str, list[dict]], int]:
+    """Raggruppa beni ArCo per ISTAT del comune.
+
+    Match key: (sigla_provincia, normalize(comune_label)) -> istat6.
+    Ritorna (dict istat -> list beni, n_unmatched).
+    """
+    grouped: dict[str, list[dict]] = defaultdict(list)
+    unmatched: dict[tuple[str, str], int] = defaultdict(int)
+    n_unmatched = 0
+
+    for b in beni:
+        sigla = b.get("sigla_provincia")
+        comune = b.get("comune_label")
+        if not sigla or not comune:
+            n_unmatched += 1
+            continue
+        key = (sigla, normalize(comune))
+        istat = pair_to_istat.get(key)
+        if not istat:
+            unmatched[key] += 1
+            n_unmatched += 1
+            continue
+        grouped[istat].append(b)
+
+    if unmatched:
+        top = sorted(unmatched.items(), key=lambda x: -x[1])[:20]
+        log.warning("beni_culturali_unmatched",
+                    n_distinct=len(unmatched),
+                    n_records=n_unmatched,
+                    top=[(f"{s}/{c}", n) for (s, c), n in top])
+
+    return dict(grouped), n_unmatched
+
+
+# =========================================================================
+# FASE 6 - Build KPI per comune
+# =========================================================================
+
+def build_kpi(beni: list[dict]) -> dict:
+    """KPI aggregati per un singolo comune."""
+    n = len(beni)
+    if n == 0:
+        return {
+            "n_totale": 0,
+            "mix_categoria": {},
+            "pct_georef": 0.0,
+            "pct_con_foto": 0.0,
+            "pct_con_descrizione": 0.0,
+            "pct_con_tutela": 0.0,
+            "n_con_cis_link": 0,
+        }
+
+    mix: dict[str, int] = defaultdict(int)
+    n_geo = n_foto = n_desc = n_tut = n_cis = 0
+    for b in beni:
+        cat = _categoria_for(b.get("tipo_raw"))
+        mix[cat] += 1
+        if b.get("lat") is not None and b.get("lon") is not None:
+            n_geo += 1
+        if b.get("image"):
+            n_foto += 1
+        if b.get("descrizione"):
+            n_desc += 1
+        if b.get("tutela"):
+            n_tut += 1
+        if b.get("cis_link"):
+            n_cis += 1
+
+    # ordina mix per priorità categoria (non per count)
+    mix_sorted = {
+        c: mix[c] for c in CATEGORIA_PRIORITA_BENI if c in mix
+    }
+
+    return {
+        "n_totale": n,
+        "mix_categoria": mix_sorted,
+        "pct_georef": round(100.0 * n_geo / n, 1),
+        "pct_con_foto": round(100.0 * n_foto / n, 1),
+        "pct_con_descrizione": round(100.0 * n_desc / n, 1),
+        "pct_con_tutela": round(100.0 * n_tut / n, 1),
+        "n_con_cis_link": n_cis,
+    }
+
+
+# =========================================================================
+# FASE 7 - Build shard BASE + FULL
+# =========================================================================
+
+def _slim_bene_base(b: dict) -> dict:
+    """Versione compatta per shard base (senza descrizione, tutela, sopr.)."""
+    return {
+        "id": b["uri"].rsplit("/", 1)[-1],
+        "denom": b.get("denom"),
+        "categoria": _categoria_for(b.get("tipo_raw")),
+        "lat": b.get("lat"),
+        "lon": b.get("lon"),
+        "indirizzo": b.get("addr_raw"),
+        "image": b.get("image"),
+        # cis_link presente solo se valorizzato (per UI: link Cultural-ON arricchimento)
+        "cis_link": b.get("cis_link"),
+    }
+
+
+def _slim_bene_full(b: dict) -> dict:
+    """Versione completa per shard full (tutti i campi)."""
+    return {
+        "id": b["uri"].rsplit("/", 1)[-1],
+        "denom": b.get("denom"),
+        "categoria": _categoria_for(b.get("tipo_raw")),
+        "tipo_raw": b.get("tipo_raw"),
+        "lat": b.get("lat"),
+        "lon": b.get("lon"),
+        "indirizzo": b.get("addr_raw"),
+        "descrizione": b.get("descrizione"),
+        "image": b.get("image"),
+        "tutela": b.get("tutela"),
+        "soprintendenza": b.get("soprintendenza"),
+        "cis_link": b.get("cis_link"),
+    }
+
+
+def _sort_beni(beni: list[dict]) -> list[dict]:
+    """Ordina i beni per priorita' di rilevanza UX:
+      1. con foto > senza
+      2. con descrizione > senza
+      3. denominazione alfabetica
+    """
+    return sorted(
+        beni,
+        key=lambda b: (
+            0 if b.get("image") else 1,
+            0 if b.get("descrizione") else 1,
+            (b.get("denom") or "").upper(),
+        ),
+    )
+
+
+def build_shard_base(istat: str,
+                     beni: list[dict],
+                     snapshot_date: str,
+                     generated_at: str) -> dict:
+    """Shard riassunto: KPI + lista compatta (cap LUOGHI_CAP_BASE)."""
+    kpi = build_kpi(beni)
+    sorted_beni = _sort_beni(beni)
+    truncated = len(sorted_beni) > LUOGHI_CAP_BASE
+    selected = sorted_beni[:LUOGHI_CAP_BASE]
+
+    shard = {
+        "_etl_version": ETL_VERSION,
+        "_source": SOURCE_LABEL,
+        "_source_url": SPARQL_ENDPOINT,
+        "_snapshot_date": snapshot_date,
+        "_generated_at": generated_at,
+        "kpi": kpi,
+        "luoghi": [_slim_bene_base(b) for b in selected],
+    }
+    if truncated:
+        shard["_luoghi_truncated"] = True
+        shard["_luoghi_total"] = len(beni)
+        shard["_luoghi_cap"] = LUOGHI_CAP_BASE
+        shard["_full_shard_available"] = True
+    return shard
+
+
+def build_shard_full(istat: str,
+                     beni: list[dict],
+                     snapshot_date: str,
+                     generated_at: str) -> dict:
+    """Shard completo: tutti i beni con tutti i campi."""
+    kpi = build_kpi(beni)
+    sorted_beni = _sort_beni(beni)
+    return {
+        "_etl_version": ETL_VERSION,
+        "_source": SOURCE_LABEL + " (full)",
+        "_source_url": SPARQL_ENDPOINT,
+        "_snapshot_date": snapshot_date,
+        "_generated_at": generated_at,
+        "_full": True,
+        "kpi": kpi,
+        "luoghi": [_slim_bene_full(b) for b in sorted_beni],
+    }
+
+
+def build_all_shards(grouped: dict[str, list[dict]],
+                     canonical_istat: set[str],
+                     snapshot_date: str,
+                     out_dir: Path,
+                     full_out_dir: Path | None = None) -> tuple[int, int, int]:
+    """Scrive uno shard JSON per ogni ISTAT canonico.
+
+    Comuni con 0 beni: shard con luoghi=[] per consistenza UX (la tab
+    frontend mostra "Nessun bene censito in questo comune" invece di
+    fallire con 404).
+
+    Ritorna (n_base_written, n_full_written, n_empty).
+    """
+    out_dir.mkdir(parents=True, exist_ok=True)
+    if full_out_dir is not None:
+        full_out_dir.mkdir(parents=True, exist_ok=True)
+    generated_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    n_base, n_full, n_empty = 0, 0, 0
+    for istat in sorted(canonical_istat):
+        beni = grouped.get(istat, [])
+        if not beni:
+            n_empty += 1
+
+        # Shard base sempre
+        shard_base = build_shard_base(istat, beni, snapshot_date, generated_at)
+        (out_dir / f"{istat}.json").write_text(
+            json.dumps(shard_base, ensure_ascii=False, separators=(",", ":")),
+            encoding="utf-8",
+        )
+        n_base += 1
+
+        # Shard full solo se: full_out_dir attivo + comune ha piu' di LUOGHI_CAP_BASE beni
+        if full_out_dir is not None and len(beni) > LUOGHI_CAP_BASE:
+            shard_full = build_shard_full(istat, beni, snapshot_date, generated_at)
+            (full_out_dir / f"{istat}.json").write_text(
+                json.dumps(shard_full, ensure_ascii=False, separators=(",", ":")),
+                encoding="utf-8",
+            )
+            n_full += 1
+
+        if n_base % 1000 == 0:
+            log.info("beni_culturali_shards_progress",
+                     base_written=n_base, full_written=n_full,
+                     total=len(canonical_istat))
+
+    log.info("beni_culturali_shards_done",
+             base_written=n_base, full_written=n_full,
+             empty=n_empty)
+    return n_base, n_full, n_empty
+
+
+# =========================================================================
+# FASE 8 - Main CLI
+# =========================================================================
+
+def main() -> int:
+    ap = argparse.ArgumentParser(
+        description="ETL Beni Culturali (ArCo Immobili tutelati MiC)",
+    )
+    ap.add_argument("--target", choices=["local"], default="local",
+                    help="Solo 'local' supportato (R2 rimosso dall'infrastruttura AgID)")
+    ap.add_argument("--outdir",
+                    default="/var/www/cruscotto-italia/data/beni_culturali",
+                    help="Directory shard base locali")
+    ap.add_argument("--full-shards", action="store_true",
+                    help="Genera anche shard FULL (beni_culturali_full/) "
+                         "per i comuni con piu' di LUOGHI_CAP_BASE beni.")
+    ap.add_argument("--full-outdir",
+                    default="/var/www/cruscotto-italia/data/beni_culturali_full",
+                    help="Directory shard FULL locali")
+    ap.add_argument("--skip-fetch", action="store_true",
+                    help="Riusa cache /tmp/cruscotto_cultural_on/arco_immobili.json")
+    args = ap.parse_args()
+
+    log.info("beni_culturali_etl_start")
+    t_start = time.time()
+
+    # FASE 1-2: fetch SPARQL (con cache)
+    beni = fetch_arco_immobili(skip_cache=False)
+    if not beni:
+        log.error("beni_culturali_no_beni_fetched")
+        return 1
+
+    # snapshot date: oggi (dataset ArCo non espone Last-Modified utile)
+    snapshot_date = datetime.now().strftime("%Y-%m-%d")
+    log.info("beni_culturali_snapshot_date", date=snapshot_date)
+
+    # FASE 4: lookups (sigla, comune) -> istat
+    pair_to_istat, canonical_istat = load_lookups()
+
+    # FASE 5: group by istat
+    grouped, n_unmatched = group_by_istat(beni, pair_to_istat)
+    pct_unmatched = round(100.0 * n_unmatched / len(beni), 3) if beni else 0
+    log.info("beni_culturali_grouped",
+             records=len(beni),
+             comuni_distinti=len(grouped),
+             unmatched=n_unmatched,
+             pct_unmatched=pct_unmatched)
+    if pct_unmatched > 5.0:
+        log.warning("beni_culturali_unmatched_high",
+                    pct=pct_unmatched,
+                    note="estendi mapping (sigla, comune) o controlla parser indirizzo")
+
+    # FASE 7: build shards (base + opzionale full)
+    out_dir = Path(args.outdir)
+    full_out_dir = Path(args.full_outdir) if args.full_shards else None
+    n_base, n_full, n_empty = build_all_shards(
+        grouped, canonical_istat, snapshot_date, out_dir, full_out_dir
+    )
+
+    # Manifest update best-effort
+    try:
+        files = [{"name": f.name,
+                  "size": f.stat().st_size,
+                  "key": f"beni_culturali/{f.name}"}
+                 for f in sorted(out_dir.glob("*.json"))]
+        manifest.update_source("beni_culturali", files, status="ok")
+        log.info("beni_culturali_manifest_updated", n_files=len(files))
+    except Exception as e:
+        log.warning("beni_culturali_manifest_update_skipped", err=str(e))
+
+    elapsed = time.time() - t_start
+    log.info("beni_culturali_etl_done",
+             elapsed_s=round(elapsed, 1),
+             base_shards=n_base,
+             full_shards=n_full,
+             empty_shards=n_empty,
+             snapshot=snapshot_date)
+    return 0
+
+
+# Sovrascrive l'__main__ del test runner (era prima di FASE 2) per
+# supportare sia --test-helpers che il full ETL
+if __name__ == "__main__":
+    import sys as _sys
+    if "--test-helpers" in _sys.argv:
+        _sys.exit(_test_arco_helpers())
+    _sys.exit(main())
