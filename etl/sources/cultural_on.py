@@ -118,7 +118,11 @@ log = structlog.get_logger(__name__)
 # =========================================================================
 
 DUMP_URL_DOC = "https://www.dati.gov.it/view-dataset/dataset?id=f43f148b-01fb-406d-8337-b92f8dbb6543"
-SPARQL_ENDPOINT = "http://dati.beniculturali.it/sparql"  # HTTP plain: HTTPS spesso da' 503
+SPARQL_ENDPOINT = "https://dati.beniculturali.it/sparql"
+# Note: il server MiC accetta sia HTTP che HTTPS sulle stesse risorse, ma:
+# - alcune reti corporate/cloud (es. Aruba egress) bloccano HTTP outbound -> usa HTTPS
+# - alcune sandbox CDN/proxy danno 503 su HTTPS (es. Cloudflare worker fetch) -> usa HTTP
+# Default HTTPS perche' lo scenario di prod e' Aruba/VM AgID dove HTTP e' bloccato.
 
 # Persistenza URL:
 # - L'endpoint SPARQL del MiC e' pubblico e attivo dal 2016, riconosciuto
