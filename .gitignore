@@ -21,6 +21,8 @@ venv/
 *.csv
 # Eccezione: METADATI.csv del frontend è statico e versionato
 !frontend/METADATI.csv
+# Eccezione: snapshot ISTAT comuni soppressi (static lookup, 198KB)
+!etl/lib/static/comuni-soppressi.csv
 *.csv.gz
 *.jsonl
 *.jsonl.gz

@@ -1183,6 +1183,63 @@ def _categoria_for(tipo_raw: str | None) -> str:
 # FASE 4 - Load lookups + mapping a ISTAT
 # =========================================================================
 
+# CSV ISTAT comuni soppressi versionato in repo (Elenco-comuni-soppressi.csv
+# da https://www.istat.it/storage/codici-unita-amministrative/).
+# Snapshot 2024-01-05, 2.338 entry uniche di soppressioni storiche.
+SOPPRESSI_CSV_PATH = Path(__file__).resolve().parent.parent / "lib" / "static" / "comuni-soppressi.csv"
+
+
+def load_comuni_soppressi() -> dict[tuple[str, str], str]:
+    """Carica il mapping comuni soppressi -> codice ISTAT comune erede.
+
+    Legge etl/data/comuni-soppressi.csv (snapshot ISTAT statico nel repo).
+    Costruisce dict[(sigla_old, denom_old_norm)] -> istat6_new.
+
+    Risolve fusioni storiche tipo:
+      ('MC', 'PIEVEBOVIGLIANA')  -> '043058' (Valfornace)
+      ('PR', 'ZIBELLO')          -> '034050' (Polesine Zibello)
+      ('PU', 'MONTEMAGGIORE AL METAURO') -> '041069' (Colli al Metauro)
+      ('VI', 'BARBARANO VICENTINO') -> '024124' (Barbarano Mossano)
+
+    NON copre rinominazioni (Negrar -> Negrar di Valpolicella) che
+    richiederebbero il file separato 'Elenco denominazioni precedenti'.
+
+    Se il file non esiste o e' vuoto, ritorna dict vuoto con warning
+    (degradazione graduale: l'ETL prosegue con il solo fallback by-name).
+    """
+    if not SOPPRESSI_CSV_PATH.exists():
+        log.warning("beni_culturali_soppressi_missing",
+                    path=str(SOPPRESSI_CSV_PATH),
+                    hint="scarica https://www.istat.it/storage/codici-unita-amministrative/Elenco-comuni-soppressi.zip")
+        return {}
+
+    import csv as _csv
+    mapping: dict[tuple[str, str], str] = {}
+    with open(SOPPRESSI_CSV_PATH, "r", encoding="utf-8") as f:
+        reader = _csv.reader(f, delimiter=";")
+        next(reader, None)  # skip header
+        for row in reader:
+            if len(row) < 9:
+                continue
+            sigla_old = row[1].strip().upper()
+            denom_old = row[4].strip()
+            codice_new = row[7].strip()
+            if not sigla_old or not denom_old or not codice_new:
+                continue
+            if len(codice_new) != 6:
+                continue
+            key = (sigla_old, normalize(denom_old))
+            # Stesso comune soppresso puo' apparire in piu' righe (eventi
+            # multipli nello storico). La PRIMA wins per determinismo;
+            # in pratica il codice erede e' sempre l'ultimo vigente.
+            if key not in mapping:
+                mapping[key] = codice_new
+    log.info("beni_culturali_soppressi_loaded",
+             path=str(SOPPRESSI_CSV_PATH),
+             n_entries=len(mapping))
+    return mapping
+
+
 def load_lookups() -> tuple[
     dict[tuple[str, str], str],
     set[str],
@@ -1243,12 +1300,13 @@ def load_lookups() -> tuple[
 
 def group_by_istat(beni: list[dict],
                    pair_to_istat: dict[tuple[str, str], str],
-                   name_to_istats: dict[str, list[str]] | None = None
+                   name_to_istats: dict[str, list[str]] | None = None,
+                   soppressi: dict[tuple[str, str], str] | None = None,
                    ) -> tuple[dict[str, list[dict]], int]:
     """Raggruppa beni ArCo per ISTAT del comune.
 
-    Strategia di match:
-      1. Tentativo primario: (sigla_provincia, normalize(comune_label)) -> istat6
+    Strategia di match (3 step in cascata):
+      1. PRIMARIO: (sigla_provincia, normalize(comune_label)) -> istat6
          risolve i ~91% dei beni la cui sigla ArCo e' corrente.
       2. FALLBACK by-name (se name_to_istats fornito): se (1) fallisce,
          cerca solo per nome comune ignorando la sigla. Risolve casi in
@@ -1257,6 +1315,11 @@ def group_by_istat(beni: list[dict],
          nome comune esiste ancora ed e' UNIVOCO nel gazetteer corrente.
          Se il nome e' ambiguo (omonimo, lista len > 1) NON risolve
          automaticamente per evitare match scorretti.
+      3. FALLBACK by-soppressi (se soppressi fornito): se (1) e (2)
+         falliscono, cerca (sigla_old, comune_old_norm) nel mapping
+         storico ISTAT comuni soppressi. Risolve fusioni amministrative
+         dove il comune originario non esiste piu' (es. Pievebovigliana
+         -> Valfornace 2017, Zibello -> Polesine Zibello 2016).
 
     Ritorna (dict istat -> list beni, n_unmatched).
     """
@@ -1265,6 +1328,7 @@ def group_by_istat(beni: list[dict],
     n_unmatched = 0
     n_resolved_by_name = 0
     n_ambiguous_skipped = 0
+    n_resolved_by_soppressi = 0
 
     for b in beni:
         sigla = b.get("sigla_provincia")
@@ -1277,7 +1341,7 @@ def group_by_istat(beni: list[dict],
         istat = pair_to_istat.get(key)
 
         if not istat and name_to_istats is not None:
-            # Fallback: cerca per solo nome (ignora sigla obsoleta)
+            # Fallback 2: cerca per solo nome (ignora sigla obsoleta)
             candidates = name_to_istats.get(comune_norm, [])
             if len(candidates) == 1:
                 istat = candidates[0]
@@ -1285,6 +1349,12 @@ def group_by_istat(beni: list[dict],
             elif len(candidates) > 1:
                 # omonimo: non risolvere ambiguo, resta unmatched
                 n_ambiguous_skipped += 1
+
+        if not istat and soppressi is not None:
+            # Fallback 3: lookup storico ISTAT comuni soppressi
+            istat = soppressi.get(key)
+            if istat:
+                n_resolved_by_soppressi += 1
 
         if not istat:
             unmatched[key] += 1
@@ -1296,6 +1366,10 @@ def group_by_istat(beni: list[dict],
         log.info("beni_culturali_fallback_byname",
                  n_resolved_by_name=n_resolved_by_name,
                  n_ambiguous_skipped=n_ambiguous_skipped)
+
+    if n_resolved_by_soppressi:
+        log.info("beni_culturali_fallback_soppressi",
+                 n_resolved=n_resolved_by_soppressi)
 
     if unmatched:
         top = sorted(unmatched.items(), key=lambda x: -x[1])[:20]
@@ -1574,9 +1648,12 @@ def main() -> int:
 
     # FASE 4: lookups (sigla, comune) -> istat
     pair_to_istat, canonical_istat, name_to_istats = load_lookups()
+    soppressi = load_comuni_soppressi()
 
-    # FASE 5: group by istat (con fallback by-name per sigle obsolete)
-    grouped, n_unmatched = group_by_istat(beni, pair_to_istat, name_to_istats)
+    # FASE 5: group by istat (con fallback by-name + by-soppressi)
+    grouped, n_unmatched = group_by_istat(
+        beni, pair_to_istat, name_to_istats, soppressi
+    )
     pct_unmatched = round(100.0 * n_unmatched / len(beni), 3) if beni else 0
     log.info("beni_culturali_grouped",
              records=len(beni),
