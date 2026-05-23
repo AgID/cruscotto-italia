@@ -349,21 +349,27 @@ def _clean_denom(s: str | None) -> str | None:
     ArCo rdfs:label dei beni immobili ha pattern frequente:
       "Villa Buratti (villa, suburbana) - Scorze' (VE)"
       "Selvatico estense (giardino, privato) - Padova (PD)"
+      "Palazzo Maccolani-Paganucci (palazzo) - Camerino (MC) (XIV)"
+      "Casa di pietra - Sant'Alberto di Romagna (RA) - sec. XVII"
 
-    Tolghiamo " - Comune (SG)" finale per evitare ridondanza nella UI
-    (il comune e' gia' mostrato come contesto della tab).
+    Tolghiamo " - Comune (SG)" finale (e tutto cio' che segue) per evitare
+    ridondanza nella UI (il comune e' gia' mostrato come contesto).
 
-    Pattern: stringa che termina con ' - <comune> (XX)' dove XX e' una
-    sigla 2-char tra parentesi.
+    Pattern: " - <comune> (XX)" dove XX e' una sigla 2-char valida.
+    Quando matcha, tagliamo da li' in poi (incluso eventuale suffisso
+    parentetico tipo " (XIV)" / " - sec. XVII").
     """
     s = _clean_text(s)
     if not s:
         return None
-    # cerca " - " seguito da qualcosa + " (XX)" alla fine
     import re
-    m = re.search(r"\s+-\s+[^\-]+\s+\(([A-Z]{2})\)\s*$", s)
-    if m and m.group(1) in VALID_SIGLE_PROVINCIA:
-        return s[:m.start()].strip()
+    # Cerca tutte le occorrenze di " - X (SIGLA)" e prendi l'ULTIMA (la piu' vicina
+    # alla fine) che abbia sigla provincia valida. Greedy taglio da li' in poi.
+    matches = list(re.finditer(r"\s+-\s+[^()\-]+?\s+\(([A-Z]{2})\)", s))
+    for m in reversed(matches):
+        sigla = m.group(1)
+        if sigla in VALID_SIGLE_PROVINCIA:
+            return s[:m.start()].strip()
     return s
 
 
@@ -522,8 +528,13 @@ def _test_arco_helpers() -> int:
          "Basilica di S. Giustina (giardino)"),
         ("Selvatico estense (giardino, privato) - Padova (PD)",
          "Selvatico estense (giardino, privato)"),
-        ("Palazzo Reale",                "Palazzo Reale"),  # nessun pattern -> tolto
-        ("Casa - via Roma (XX)",         "Casa - via Roma (XX)"),  # XX non e' sigla valida
+        # Nuovi pattern: suffisso extra (numero romano, secolo, ecc.)
+        ("Palazzo Maccolani-Paganucci (palazzo) - Camerino (MC) (XIV)",
+         "Palazzo Maccolani-Paganucci (palazzo)"),
+        ("Casa di pietra - Sant'Alberto di Romagna (RA) - sec. XVII",
+         "Casa di pietra"),
+        ("Palazzo Reale",                "Palazzo Reale"),  # nessun pattern
+        ("Casa - via Roma (XX)",         "Casa - via Roma (XX)"),  # XX non valida
         ("",                             None),
         (None,                           None),
     ]
@@ -676,9 +687,16 @@ SELECT ?s ?cis WHERE {{
 def fetch_type_dictionary(skip_cache: bool = False) -> dict[str, str]:
     """Scarica il vocabolario controllato CulturalPropertyType -> label IT.
 
-    Una sola chiamata SPARQL: il vocabolario e' piccolo (~100-200 tipi)
-    e cambia raramente. Restituisce dict[uri_completo] -> label_lowercase
-    (es. {".../CulturalPropertyType/513aa116...": "chiesa", ...}).
+    Indicizzato per DUE chiavi alternative:
+      1. URI completo (es. "https://w3id.org/arco/resource/Lombardia/.../HASH")
+      2. solo HASH finale (es. "513aa116e2841524cea1f365b412671c")
+
+    Motivazione: l'ontologia ArCo e' regionalizzata: lo stesso tipo
+    semantico "chiesa" esiste come `/Lombardia/.../HASH`, `/Veneto/.../HASH`,
+    `/Trento/.../HASH`, ecc. con il MEDESIMO suffisso HASH. Indicizzando
+    anche per HASH-only riusciamo a risolvere il bene immobile anche
+    quando il suo URI tipo proviene da un grafo regionale diverso da
+    quello del vocabolario controllato globale.
 
     Cache: /tmp/cruscotto_cultural_on/type_dict.json (riusata per 24h).
     """
@@ -707,19 +725,129 @@ SELECT ?type ?label WHERE {
     bindings = result.get("results", {}).get("bindings", [])
 
     dictionary: dict[str, str] = {}
+    n_full = n_hash = 0
     for b in bindings:
         uri = _bind_str(b, "type")
         label = _bind_str(b, "label")
-        if uri and label:
-            dictionary[uri] = label.strip().lower()
+        if not uri or not label:
+            continue
+        lab = label.strip().lower()
+        # 1. chiave URI completo
+        dictionary[uri] = lab
+        n_full += 1
+        # 2. chiave HASH-only (ultimo segmento) per fallback cross-regione
+        last_segment = uri.rsplit("/", 1)[-1]
+        if last_segment and last_segment != uri:
+            # se chiave esistente, non sovrascrivere (la prima vince per
+            # determinismo, ma in pratica labels per stesso hash sono identiche
+            # cross-regione perche' e' un vocabolario controllato).
+            if last_segment not in dictionary:
+                dictionary[last_segment] = lab
+                n_hash += 1
 
     log.info("beni_culturali_type_dict_fetched",
              n_tipi=len(dictionary),
+             n_full_uri=n_full,
+             n_hash_only=n_hash,
              secs=round(time.time() - t0, 1))
 
     cache_path.write_text(json.dumps(dictionary, ensure_ascii=False))
     cache_marker.touch()
     return dictionary
+
+
+def _resolve_tipo(tipo_raw: str | None, type_dict: dict[str, str]) -> str | None:
+    """Risolve tipo_raw (URI ArCo o gia' label) -> label umana lowercase.
+
+    Strategia:
+      1. Se gia' label umana (non URI), ritorna pulito
+      2. Lookup per URI completo nel dict
+      3. Fallback: estrai HASH finale e cerca nel dict (cross-regione)
+      4. Se niente matcha, ritorna None (sara' 'altro' in build_kpi)
+    """
+    if not tipo_raw:
+        return None
+    if not tipo_raw.startswith("http"):
+        # gia' label umana (caso run precedenti, e' una stringa pulita)
+        return tipo_raw.strip().lower()
+    # URI ArCo: prova prima full URI, poi solo hash
+    label = type_dict.get(tipo_raw)
+    if label:
+        return label
+    last_segment = tipo_raw.rsplit("/", 1)[-1]
+    return type_dict.get(last_segment)
+
+
+def repair_cache(cache_path: Path = None) -> int:
+    """Ripara la cache anagrafica esistente SENZA re-fetch SPARQL completo.
+
+    Operazioni eseguite IN-PLACE sui record cached:
+      1. _clean_denom() su tutti i denom (rimuove suffissi residui)
+      2. type-resolve via fetch_type_dictionary() con fallback hash-only
+         (risolve gli URI hash regionali rimasti irrisolti)
+
+    Riscrive arco_immobili.json. NON tocca il file marker giornaliero
+    (la cache resta valida per il refresh in giornata).
+
+    Tempo atteso: ~5-10 secondi (1 sola query SPARQL + iterazione locale).
+    Da chiamare dopo aver fetcheato i dati una volta e prima del
+    group_by_istat + build_shards.
+
+    Ritorna n_records riparati.
+    """
+    if cache_path is None:
+        cache_path = CACHE_DIR / "arco_immobili.json"
+    if not cache_path.exists():
+        log.error("beni_culturali_repair_no_cache", path=str(cache_path))
+        return 0
+
+    log.info("beni_culturali_repair_start", path=str(cache_path))
+    t0 = time.time()
+    beni = json.loads(cache_path.read_text())
+    log.info("beni_culturali_repair_loaded", n=len(beni))
+
+    # --- 1) Type dictionary (con fallback hash) ---
+    # Forzo skip_cache per essere certi di prendere l'indice nuovo con suffissi hash
+    type_dict_path = CACHE_DIR / "type_dict.json"
+    type_dict_marker = CACHE_DIR / f"type_dict.{datetime.now().strftime('%Y%m%d')}.ok"
+    type_dict_path.unlink(missing_ok=True)
+    type_dict_marker.unlink(missing_ok=True)
+    type_dict = fetch_type_dictionary()
+
+    # --- 2) Replay clean_denom + type-resolve su ogni record ---
+    n_denom_changed = 0
+    n_type_changed = 0
+    n_type_still_hash = 0
+    for b in beni:
+        # _clean_denom: anche se il denom era gia' "pulito" nel run precedente,
+        # rifacciamo la pulizia col regex aggiornato (case suffisso XIV ecc.)
+        old_denom = b.get("denom")
+        new_denom = _clean_denom(old_denom)
+        if new_denom != old_denom:
+            b["denom"] = new_denom
+            n_denom_changed += 1
+
+        # type-resolve
+        old_tipo = b.get("tipo_raw")
+        if old_tipo and old_tipo.startswith("http"):
+            # era rimasto un URI hash regionale: provo a risolvere ora
+            resolved = _resolve_tipo(old_tipo, type_dict)
+            if resolved:
+                b["tipo_raw"] = resolved
+                n_type_changed += 1
+            else:
+                n_type_still_hash += 1
+
+    cache_path.write_text(json.dumps(beni, ensure_ascii=False))
+
+    log.info("beni_culturali_repair_done",
+             n_records=len(beni),
+             n_denom_changed=n_denom_changed,
+             n_type_resolved=n_type_changed,
+             n_type_still_hash=n_type_still_hash,
+             dict_entries=len(type_dict),
+             secs=round(time.time() - t0, 1))
+    return n_denom_changed + n_type_changed
 
 
 def fetch_arco_immobili(skip_cache: bool = False) -> list[dict]:
@@ -1339,6 +1467,13 @@ def main() -> int:
                     help="Directory shard FULL locali")
     ap.add_argument("--skip-fetch", action="store_true",
                     help="Riusa cache /tmp/cruscotto_cultural_on/arco_immobili.json")
+    ap.add_argument("--no-repair", action="store_true",
+                    help="Salta la riparazione cache (type-resolve + clean_denom). "
+                         "Default: ripara automaticamente prima di build shards.")
+    ap.add_argument("--repair-only", action="store_true",
+                    help="Esegue SOLO repair_cache (type-resolve + clean_denom) sulla "
+                         "cache esistente ed esce, senza scrivere shards. "
+                         "Utile per riallineare cache dopo bug fix senza re-fetch SPARQL.")
     args = ap.parse_args()
 
     log.info("beni_culturali_etl_start")
@@ -1349,6 +1484,20 @@ def main() -> int:
     if not beni:
         log.error("beni_culturali_no_beni_fetched")
         return 1
+
+    # FASE 3: REPAIR — type-resolve + clean_denom in-memory sulla cache.
+    # Idempotente: rifare il repair sui dati gia' puliti non altera nulla.
+    # Costa ~5-10 secondi (1 query SPARQL + iterazione locale).
+    if args.repair_only or not args.no_repair:
+        n_repaired = repair_cache()
+        log.info("beni_culturali_repair_applied", n_changed=n_repaired)
+        # Ricarica beni post-repair (il file su disco e' stato riscritto)
+        beni = fetch_arco_immobili(skip_cache=False)
+
+    if args.repair_only:
+        log.info("beni_culturali_repair_only_done",
+                 elapsed_s=round(time.time() - t_start, 1))
+        return 0
 
     # snapshot date: oggi (dataset ArCo non espone Last-Modified utile)
     snapshot_date = datetime.now().strftime("%Y-%m-%d")
