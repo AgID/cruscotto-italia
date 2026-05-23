@@ -696,3 +696,86 @@ def merge_anagrafica_contatti(anagrafica: list[dict],
              n_con_contatti=merged,
              pct_contatti=round(merged * 100 / len(out), 1) if out else 0)
     return out
+
+
+# =========================================================================
+# FASE Final - Output combinato (anagrafica + contatti)
+# =========================================================================
+
+def write_combined_output(out_path: Path = None) -> int:
+    """Scrive l'output finale combinato in /tmp/cruscotto_cultural_on/cultural_on_raw.json.
+
+    Schema di output (lista di dict):
+      uri: URI ArCo del luogo
+      identifier: id breve (l0:identifier)
+      name: denominazione istituzionale ("institutionalCISName" @it)
+      types: list[str] dei dc:type (es. ["museo"], ["biblioteca","archivio"])
+      provincia: nome esteso provincia (es. "Roma")
+      comune: nome comune
+      indirizzo, cap, lat, lon, image, descrizione
+      telefono, fax, email, website, prenotazione (da merge contatti)
+
+    Pensato come input per il merge in beni_culturali.py: il consumer
+    rimappa (provincia, comune) -> ISTAT via gazetteer + soppressi e
+    accoda i record agli shard beni_culturali/<istat>.json esistenti.
+    """
+    if out_path is None:
+        out_path = CACHE_DIR / "cultural_on_raw.json"
+
+    log.info("cultural_on_combined_start")
+    t0 = time.time()
+    anagrafica = fetch_anagrafica_sparql()
+    if not anagrafica:
+        log.error("cultural_on_no_anagrafica")
+        return 0
+    contatti = fetch_contatti_sparql()
+    merged = merge_anagrafica_contatti(anagrafica, contatti)
+    out_path.write_text(json.dumps(merged, ensure_ascii=False, indent=None))
+    log.info("cultural_on_combined_done",
+             n_luoghi=len(merged),
+             path=str(out_path),
+             size_kb=round(out_path.stat().st_size / 1024, 1),
+             secs=round(time.time() - t0, 1))
+    return len(merged)
+
+
+# =========================================================================
+# CLI Main
+# =========================================================================
+
+def main() -> int:
+    """Entry point CLI per ETL Cultural-ON DBUnico 2.0.
+
+    Scarica via SPARQL paginato gli istituti culturali (musei, biblioteche,
+    archivi, parchi archeologici) dal MiC, arricchisce con contatti
+    (telefono/email/website), scrive /tmp/cruscotto_cultural_on/cultural_on_raw.json.
+
+    NON scrive shard per-comune: questo file e' input per il merge
+    in beni_culturali.py che riusa il gazetteer + soppressi gia' presenti.
+
+    Flag:
+      --skip-fetch: usa la cache (anagrafica.json + contatti.json) senza
+                    re-fetch SPARQL. Riscrive solo cultural_on_raw.json.
+
+    Tempo atteso fresh fetch: ~3-5 minuti.
+    Tempo atteso con cache: ~1 secondo.
+    """
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--out",
+                    default=str(CACHE_DIR / "cultural_on_raw.json"),
+                    help="Path output JSON combinato")
+    ap.add_argument("--skip-fetch", action="store_true",
+                    help="Usa cache (no SPARQL fetch)")
+    args = ap.parse_args()
+
+    log.info("cultural_on_etl_start")
+    t_start = time.time()
+    n = write_combined_output(Path(args.out))
+    log.info("cultural_on_etl_done",
+             n_luoghi=n,
+             elapsed_s=round(time.time() - t_start, 1))
+    return 0 if n > 0 else 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
