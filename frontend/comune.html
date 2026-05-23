@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>Vista comune · Cruscotto Italia</title>
+<link rel="icon" href="/favicon.ico" type="image/vnd.microsoft.icon">
 <link rel="stylesheet" href="/css/tokens.css?v=20260513l">
 <link rel="stylesheet" href="/css/base.css?v=20260513l">
 
@@ -171,11 +172,21 @@ a:hover{color:var(--accent)}
 .btn-download:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
 .btn-download:disabled{opacity:0.6;cursor:wait}
 .btn-download .ico{font-size:14px}
+/* Mobile: pulsante non sovrapposto al titolo, dimensione ridotta */
+@media (max-width: 720px){
+  .comune-actions{position:static;margin-top:12px;display:flex;justify-content:flex-end}
+  .btn-download{font-size:10px;padding:6px 10px;gap:4px;letter-spacing:0.04em}
+  .btn-download .ico{font-size:11px}
+}
+@media (max-width: 380px){
+  .btn-download{padding:7px 10px}
+  .btn-download .label{font-size:9px}
+}
 
 /* Tabs: vedi base.css (grid layout) */
 /* Tab content */
-.tab-pane{display:none;padding:48px 0}
-.tab-pane.active{display:block}
+.tab-pane{display:none;padding:48px 0;background:#fff}
+.tab-pane.active{display:block;background:#fff}
 .section-title{
   font-family:var(--serif);
   font-style:italic;
@@ -952,6 +963,9 @@ footer a{color:rgba(255,255,255,0.85);text-decoration:none}
 #aria-map .leaflet-top,
 #aria-map .leaflet-bottom,
 #aria-map .leaflet-control{z-index:1 !important;}
+#pendolarismo-map .leaflet-control{z-index:1000 !important;position:relative;}
+#pendolarismo-map .leaflet-top,#pendolarismo-map .leaflet-bottom{z-index:1000 !important;}
+#pendolarismo-map .leaflet-control-zoom{display:block !important;visibility:visible !important;opacity:1 !important;}
 #aria-map .leaflet-popup-pane{z-index:2 !important;}
 @media (max-width:720px){#aria-map{height:280px;}}
 .aria-map-legend{display:flex;flex-wrap:wrap;gap:18px;padding:10px 14px;background:var(--paper-2);font-family:var(--mono);font-size:11px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.08em;border-top:1px solid var(--paper);}
@@ -964,6 +978,13 @@ footer a{color:rgba(255,255,255,0.85);text-decoration:none}
 .aria-popup-meta{font-family:var(--mono)!important;font-size:10px!important;text-transform:uppercase!important;letter-spacing:.06em!important;color:#6a6259!important;display:block!important;}
 .aria-popup-code{font-family:var(--mono);font-size:11px;color:var(--accent);margin-top:4px;display:block;}
 .leaflet-container a.leaflet-popup-close-button{color:var(--ink-mute);}
+/* A11y/UX: il pinch a 2 dita e il wheel zoom devono agire SULLA MAPPA, non
+   sullo zoom dell'intera pagina. touch-action:none disabilita gli handler
+   nativi del browser (pinch-to-zoom, double-tap-zoom) limitatamente al
+   container Leaflet, lasciando intatto lo zoom della pagina nelle altre
+   aree (ALT+/- da tastiera, pinch fuori mappa). Senza questa regola Safari
+   iOS e Chrome Android intercettano il pinch prima che Leaflet lo veda. */
+.leaflet-container{touch-action:none;}
 .leaflet-control-attribution{font-family:var(--mono)!important;font-size:10px!important;background:rgba(244,239,230,.85)!important;}
 .aria-stazione-row{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;background:var(--paper);gap:14px;}
 .aria-staz-name{font-family:var(--serif);font-size:15px;color:var(--ink);font-weight:500;margin-bottom:4px;}
@@ -1150,11 +1171,49 @@ footer a{color:rgba(255,255,255,0.85);text-decoration:none}
 .impa-chip-all{background:var(--blu-italia);color:#fff;border-color:var(--blu-italia);font-weight:600;}
 .impa-chip-all:hover{background:var(--blu-italia-dark);border-color:var(--blu-italia-dark);}
 .impa-chip-all[aria-pressed="false"]{background:transparent;color:var(--ink);border-color:var(--border);}
-.impa-map{height:480px;border-radius:8px;overflow:hidden;background:#eef2f5;position:relative;z-index:0;isolation:isolate;}
+.impa-map{height:480px;border-radius:8px;overflow:hidden;background:#eef2f5;position:relative;z-index:0;isolation:isolate;touch-action:none;}
 @media (max-width:720px){.impa-map{height:360px;}}
 .impa-cluster{background:transparent !important;border:none !important;}
 .impa-chart-wrap{height:480px;position:relative;}
 @media (max-width:720px){.impa-chart-wrap{height:420px;}}
+/* ---- Tab Beni Culturali - lista accordion ---- */
+.beni-list-section{margin-top:36px;}
+.beni-list-controls{display:flex;align-items:center;gap:16px;margin:12px 0 16px;flex-wrap:wrap;}
+.beni-list-controls .sanita-search-input{flex:0 1 360px;min-width:200px;}
+.beni-list-item{border:1px solid var(--border);border-radius:6px;margin-bottom:8px;background:#fff;overflow:hidden;}
+.beni-list-row{display:flex;align-items:center;gap:12px;padding:10px 14px;cursor:pointer;background:#fff;border:none;width:100%;text-align:left;font-family:var(--ui);font-size:14px;color:var(--ink);transition:background .15s ease;}
+.beni-list-row:hover{background:var(--bg-soft);}
+.beni-list-row:focus-visible{outline:2px solid var(--blu-italia);outline-offset:-2px;}
+.beni-list-cat-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0;}
+.beni-list-denom{flex:1;font-weight:500;}
+.beni-list-cat-label{font-family:var(--font-mono);font-size:11px;color:var(--ink-mute);text-transform:uppercase;letter-spacing:.05em;flex-shrink:0;}
+.beni-list-fonte{font-family:var(--font-mono);font-size:10px;padding:2px 6px;border-radius:3px;flex-shrink:0;}
+.beni-list-fonte-arco{background:#e6f0fa;color:#0066CC;}
+.beni-list-fonte-co{background:#fae6f4;color:#6a1b9a;}
+.beni-list-toggle{font-family:var(--font-mono);font-size:14px;color:var(--ink-mute);width:16px;text-align:center;flex-shrink:0;transition:transform .15s ease;}
+.beni-list-row[aria-expanded="true"] .beni-list-toggle{transform:rotate(90deg);}
+.beni-list-detail{padding:0 14px 14px 14px;border-top:1px solid var(--paper-2);background:var(--bg-soft);font-family:var(--ui);font-size:13px;color:var(--ink);line-height:1.5;}
+.beni-list-detail[hidden]{display:none;}
+.beni-list-detail-inner{padding:14px 0 4px;display:grid;gap:16px;}
+.beni-list-detail-inner.has-image{grid-template-columns:1fr 280px;align-items:start;}
+@media (max-width:720px){.beni-list-detail-inner.has-image{grid-template-columns:1fr;}}
+.beni-list-detail-text{min-width:0;}
+.beni-list-detail-grid{display:grid;grid-template-columns:auto 1fr;gap:10px 16px;}
+.beni-list-detail-lab{font-family:var(--font-mono);font-size:11px;color:var(--ink-mute);text-transform:uppercase;letter-spacing:.05em;}
+.beni-list-detail-val{font-size:13px;color:var(--ink);word-break:break-word;}
+.beni-list-detail-val a{color:var(--blu-italia);text-decoration:underline;}
+.beni-list-detail-image{position:relative;width:100%;aspect-ratio:4/3;background:#e8eaf0;border-radius:6px;overflow:hidden;}
+.beni-list-detail-image img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;opacity:0;transition:opacity .25s ease;}
+.beni-list-detail-image img.loaded{opacity:1;}
+.beni-list-detail-image::before{content:"";position:absolute;inset:0;background:linear-gradient(90deg,#e8eaf0 0%,#f5f6fa 50%,#e8eaf0 100%);background-size:200% 100%;animation:beniSkeleton 1.4s ease-in-out infinite;}
+.beni-list-detail-image::after{content:"";position:absolute;top:50%;left:50%;width:28px;height:28px;margin:-14px 0 0 -14px;border:3px solid #cdd1db;border-top-color:#0066cc;border-radius:50%;animation:beniSpin .8s linear infinite;}
+.beni-list-detail-image.loaded::before,.beni-list-detail-image.loaded::after,.beni-list-detail-image.errored::before,.beni-list-detail-image.errored::after{display:none;}
+.beni-list-detail-image.errored{display:none;}
+@keyframes beniSkeleton{0%{background-position:200% 0;}100%{background-position:-200% 0;}}
+@keyframes beniSpin{to{transform:rotate(360deg);}}
+.beni-list-detail-desc{margin-top:12px;padding-top:12px;border-top:1px dashed var(--paper-2);font-size:13px;line-height:1.55;color:var(--ink);}
+.beni-list-detail-text .beni-list-detail-desc:first-child{margin-top:0;padding-top:0;border-top:0;}
+.beni-list-empty{padding:32px 16px;text-align:center;color:var(--mute);font-family:var(--font-mono);font-size:13px;background:var(--bg-soft);border-radius:6px;}
 /* ---- Tab ANNCSU - Toponomastica (strade e civici) ---- */
 /* =========================================================================
    PATTERN UNIFORME KPI CARDS (design + accessibilita').
@@ -1185,7 +1244,7 @@ footer a{color:rgba(255,255,255,0.85);text-decoration:none}
 .anncsu-h3{font-family:var(--serif);font-size:22px;color:var(--ink);font-weight:400;margin:0 0 8px;font-style:italic;}
 .anncsu-map-note{font-size:13px;line-height:1.55;margin:0 0 14px;}
 .anncsu-outlier-marker{display:inline-block;width:10px;height:10px;border-radius:50%;background:#D9364F;border:1.5px solid #fff;box-shadow:0 0 0 1px #D9364F;vertical-align:middle;margin:0 2px;}
-.anncsu-map{height:480px;border-radius:8px;overflow:hidden;background:#eef2f5;position:relative;z-index:0;isolation:isolate;}
+.anncsu-map{height:480px;border-radius:8px;overflow:hidden;background:#eef2f5;position:relative;z-index:0;isolation:isolate;touch-action:none;}
 @media (max-width:720px){.anncsu-map{height:380px;}}
 .anncsu-cluster{background:transparent !important;border:none !important;}
 .anncsu-legend{display:flex;flex-wrap:wrap;gap:14px;margin:0 0 12px;font-family:var(--mono);font-size:10px;color:var(--ink-mute);text-transform:uppercase;letter-spacing:.05em;}
@@ -1243,6 +1302,84 @@ footer a{color:rgba(255,255,255,0.85);text-decoration:none}
   .veicoli-parco-row{grid-template-columns:100px 1fr 70px;font-size:10px;gap:8px;}
   .veicoli-euro-wrap{height:200px;}
   .veicoli-trend-wrap{height:200px;}
+}
+
+/* CENSIMENTO ISTAT 2021 — tab styles */
+.section-h-small{font-family:var(--serif);font-size:18px;font-weight:600;color:var(--ink);margin:24px 0 10px;}
+.censimento-mini-stats{margin:18px 0 24px;}
+.censimento-list{margin:8px 0 0;padding:0 0 0 18px;font-family:var(--serif);font-size:14px;line-height:1.7;color:var(--ink-soft);}
+.censimento-list li{margin-bottom:4px;}
+.censimento-bar{display:flex;height:28px;border-radius:4px;overflow:hidden;background:var(--paper-2);margin:10px 0;}
+.censimento-bar-occ{background:#1B7BBC;}
+.censimento-bar-vuo{background:#E89400;}
+.censimento-bar-legend{display:flex;flex-wrap:wrap;gap:18px;font-family:var(--mono);font-size:13px;color:var(--ink-soft);margin-top:6px;}
+.censimento-bar-legend .dot{display:inline-block;width:10px;height:10px;border-radius:2px;vertical-align:middle;margin-right:5px;}
+.censimento-bar-legend .dot-occ{background:#1B7BBC;}
+.censimento-bar-legend .dot-vuo{background:#E89400;}
+.censimento-map-section{margin:28px 0 16px;}
+.censimento-controls{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:10px 0 14px;padding:14px 16px;background:var(--paper-2);border-left:3px solid var(--accent);border-radius:4px;}
+.censimento-controls label{font-family:var(--mono);font-size:13px;color:var(--ink,#0c1b3d);font-weight:700;text-transform:uppercase;letter-spacing:.08em;}
+.censimento-select{font-family:var(--serif);font-size:14px;color:var(--ink,#0c1b3d);background:var(--paper);background-image:linear-gradient(45deg,transparent 50%,var(--accent) 50%),linear-gradient(135deg,var(--accent) 50%,transparent 50%);background-position:calc(100% - 18px) 50%,calc(100% - 12px) 50%;background-size:6px 6px,6px 6px;background-repeat:no-repeat;border:2px solid var(--accent);border-radius:4px;padding:8px 36px 8px 12px;min-height:40px;cursor:pointer;min-width:280px;appearance:none;-webkit-appearance:none;-moz-appearance:none;}
+.censimento-select:hover{border-color:var(--accent-2);}
+.censimento-select:focus{outline:3px solid var(--gold,#ffcb00);outline-offset:2px;}
+.censimento-map-note{font-size:13px;line-height:1.55;margin:0 0 12px;}
+.censimento-map{height:480px;border-radius:8px;overflow:hidden;background:#eef2f5;position:relative;z-index:0;isolation:isolate;touch-action:none;}
+.censimento-map-loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--ink-mute);font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.06em;background:#eef2f5;z-index:2;}
+.censimento-legend{display:flex;flex-wrap:wrap;gap:14px;margin:12px 0 0;font-family:var(--mono);font-size:13px;color:var(--ink-mute);text-transform:uppercase;letter-spacing:.05em;}
+.censimento-legend-item{display:inline-flex;align-items:center;gap:6px;}
+.censimento-legend-swatch{display:inline-block;width:14px;height:14px;border-radius:2px;border:1px solid rgba(0,0,0,.08);}
+.censimento-section-popup{font-family:var(--mono);font-size:13px;line-height:1.5;color:var(--ink);}
+.censimento-section-popup strong{font-family:var(--serif);font-size:14px;color:var(--ink);}
+
+.censimento-section-detail{margin:28px 0 12px;padding:18px 20px;background:var(--paper-2);border-left:3px solid var(--accent);border-radius:4px;min-height:80px;scroll-margin-top:200px;}
+.censimento-section-hint{font-size:13px;color:var(--ink-mute);font-style:italic;text-align:center;padding:14px 0;margin:0;}
+.censimento-section-header{margin-bottom:18px;padding-bottom:10px;border-bottom:1px solid rgba(0,0,0,.08);}
+.censimento-section-title{font-family:var(--serif);font-size:18px;font-weight:600;color:var(--ink);margin:0 0 6px;}
+.censimento-section-meta{font-family:var(--mono);font-size:13px;color:var(--ink-mute);text-transform:uppercase;letter-spacing:.05em;}
+.censimento-section-meta strong{color:var(--ink);font-weight:600;}
+.censimento-charts-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:18px;}
+.censimento-chart-card{background:var(--paper);padding:14px;border-radius:4px;}
+.censimento-chart-title{font-family:var(--mono);font-size:13px;color:var(--ink-mute);text-transform:uppercase;letter-spacing:.06em;margin:0 0 10px;}
+.censimento-chart-wrap{position:relative;height:200px;}
+.censimento-chart-empty{font-family:var(--serif);font-size:13px;color:var(--ink-mute);font-style:italic;padding:60px 10px;text-align:center;}
+
+/* Tabella variabili raw (12.6) */
+.cns-var-section{margin-top:24px;padding-top:18px;border-top:1px solid rgba(0,0,0,.08);}
+.cns-var-section-h{font-family:var(--serif);font-size:16px;font-weight:600;color:var(--ink);margin:0 0 4px;}
+.cns-var-section-note{font-size:12px;line-height:1.5;margin:0 0 14px;}
+.cns-var-family{margin-bottom:6px;background:var(--paper);border-radius:4px;}
+.cns-var-family[open] > .cns-var-family-summary{border-bottom:1px solid rgba(0,0,0,.06);}
+.cns-var-family-summary{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;cursor:pointer;font-family:var(--serif);font-size:15px;color:var(--ink);list-style:none;user-select:none;border-radius:4px;}
+.cns-var-family-summary::-webkit-details-marker{display:none;}
+.cns-var-family-summary::before{content:'▸';display:inline-block;margin-right:8px;color:var(--accent);font-size:14px;transition:transform .15s ease;flex-shrink:0;}
+.cns-var-family[open] > .cns-var-family-summary::before{transform:rotate(90deg);}
+.cns-var-family-summary:hover{background:var(--paper-2);}
+.cns-var-family-summary:focus{outline:2px solid var(--accent);outline-offset:-2px;border-radius:4px;}
+.cns-var-family-label{flex-grow:1;font-weight:600;}
+.cns-var-family-count{font-family:var(--mono);font-size:13px;color:var(--ink-mute);text-transform:uppercase;letter-spacing:.05em;flex-shrink:0;}
+.cns-var-table-wrap{overflow-x:auto;}
+.cns-var-table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:14px;}
+.cns-var-table th, .cns-var-table td{padding:8px 14px;text-align:left;border-bottom:1px solid rgba(0,0,0,.04);}
+.cns-var-table th{font-family:var(--mono);font-size:12px;color:var(--ink-mute);text-transform:uppercase;letter-spacing:.06em;background:var(--paper-2);font-weight:600;}
+.cns-var-table td.cns-var-code{font-weight:700;color:var(--accent);width:80px;white-space:nowrap;}
+.cns-var-table td.cns-var-descr{font-family:var(--serif);font-size:14px;color:var(--ink);}
+.cns-var-table td.cns-var-val{text-align:right;font-weight:600;color:var(--ink);width:100px;white-space:nowrap;}
+.cns-var-table th.cns-var-val{text-align:right;}
+.cns-var-table tr.cns-var-na td{color:var(--ink-mute);}
+.cns-var-table tbody tr:hover{background:var(--paper-2);}
+.visually-hidden{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
+@media (max-width:720px){
+  .cns-var-table th, .cns-var-table td{padding:7px 9px;font-size:13px;}
+  .cns-var-table td.cns-var-descr{font-size:13px;}
+}
+@media (max-width:720px){
+  .censimento-charts-grid{grid-template-columns:1fr;gap:14px;}
+  .censimento-chart-wrap{height:180px;}
+  .censimento-section-detail{scroll-margin-top:260px;}
+}
+@media (max-width:720px){
+  .censimento-map{height:340px;}
+  .censimento-legend{font-size:12px;gap:10px;}
 }
 
 .scuola-row{display:grid;grid-template-columns:1fr 80px;gap:10px;align-items:start;padding:10px 4px;border-bottom:1px solid var(--paper-2);}
@@ -1368,6 +1505,100 @@ footer a:hover { color: #fff !important; }
   display:flex;justify-content:center;align-items:center;gap:18px;
   margin:18px 0;
 }
+
+/* Tab Pendolarismo: bg opaco per fix WCAG AA contrast 
+   (axe-core risale lo stack di antenati cercando bg opaco; senza
+   questa regola tutti gli elementi figli risultano 'indeterminate') */
+#pane-pendolarismo{background:#fff;}
+
+/* Tab Pendolarismo: classi color/contrast (fix WCAG AA) */
+.pendolarismo-tab-muted{
+  color:var(--mute);
+}
+.pendolarismo-tab-muted a{
+  color:var(--ink);
+  text-decoration:underline;
+}
+
+/* Tab Pendolarismo - tabelle top destinazioni/origini affiancate */
+.pendolarismo-tables-row{
+  display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:24px;
+}
+@media (max-width: 720px){
+  .pendolarismo-tables-row{grid-template-columns:1fr;}
+}
+.pendolarismo-table-box{display:flex;flex-direction:column;}
+.pendolarismo-table{
+  width:100%;border-collapse:collapse;font-size:14px;background:var(--surface);
+  border:1px solid var(--border);border-radius:10px;overflow:hidden;
+}
+.pendolarismo-table thead{background:#f4f7fb;}
+.pendolarismo-table thead th{
+  text-align:left;padding:10px 12px;font-weight:600;color:var(--ink);
+  border-bottom:2px solid var(--border);font-size:12px;
+  text-transform:uppercase;letter-spacing:0.03em;
+}
+.pendolarismo-table thead th.num,
+.pendolarismo-table tbody td.num{text-align:right;}
+.pendolarismo-table tbody td{
+  padding:8px 12px;border-bottom:1px solid var(--border);vertical-align:middle;
+}
+.pendolarismo-table tbody tr:last-child td{border-bottom:none;}
+.pendolarismo-table tbody tr:hover{background:#fafbfc;}
+.pendolarismo-table .rank{
+  width:32px;color:var(--muted);font-variant-numeric:tabular-nums;
+}
+.pendolarismo-table .istat-code{
+  font-family:var(--mono);font-size:13px;color:var(--ink);
+}
+.pendolarismo-table .num{
+  font-variant-numeric:tabular-nums;font-weight:600;
+}
+.pendolarismo-table .istat-code-mini{
+  font-family:var(--mono);font-size:11px;color:var(--muted);margin-left:6px;
+  font-weight:400;
+}
+
+/* Mappa flussi pendolari */
+.pendolarismo-map-controls{
+  display:flex;gap:12px;flex-wrap:wrap;margin:16px 0 8px;
+}
+.pendolarismo-map-btn{
+  display:inline-flex;align-items:center;gap:8px;padding:6px 14px;
+  border:1px solid var(--border);border-radius:20px;background:var(--surface);
+  font-size:13px;font-family:inherit;color:var(--ink);cursor:pointer;
+  transition:all 0.15s;
+}
+.pendolarismo-map-btn:hover{background:#f4f7fb;}
+.pendolarismo-map-btn[aria-pressed="false"]{opacity:0.45;background:#f8f9fa;}
+.pendolarismo-legend-dot{
+  display:inline-block;width:10px;height:10px;border-radius:50%;
+}
+.pendolarismo-map{
+  width:100%;height:480px;border:1px solid var(--border);border-radius:10px;
+  margin-top:8px;background:#f4f7fb;
+  position:relative;z-index:1;
+}
+.pendolarismo-map .leaflet-top, .pendolarismo-map .leaflet-bottom{z-index:5;}
+/* Animazione flusso pendolari: tratteggio mobile per dare senso direzionale */
+.pendolarismo-flow-line{
+  stroke-dasharray: 16, 8;
+  animation: pendolarismo-flow-march 1.2s linear infinite;
+}
+.pendolarismo-flow-in{
+  animation-direction: reverse;
+}
+@keyframes pendolarismo-flow-march{
+  from{stroke-dashoffset:24;}
+  to{stroke-dashoffset:0;}
+}
+@media (prefers-reduced-motion: reduce){
+  .pendolarismo-flow-line{animation:none;stroke-dasharray:none;}
+}
+@media (max-width: 720px){
+  .pendolarismo-map{height:380px;}
+}
+
 .runts-page-btn{
   width:38px;height:38px;border-radius:50%;border:1.5px solid var(--border);
   background:var(--surface);color:var(--ink);font-size:20px;font-weight:bold;
@@ -1467,6 +1698,8 @@ footer a:hover { color: #fff !important; }
   <script src="/vendor/chart.umd.min.js" integrity="sha384-9nhczxUqK87bcKHh20fSQcTGD4qq5GhayNYSYWqwBkINBhOfQLg/P5HG5lF1urn4" defer></script>
   <link rel="stylesheet" href="/vendor/leaflet.css" integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="anonymous">
   <script src="/vendor/leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin="anonymous" defer></script>
+  <script src="/vendor/tween.umd.js" integrity="sha384-mC3fM+AqoLJ/wejJW/hH8Qttg09iYQYsj9OUXbywLVh2T0N5FRnPWropXNLsVcza" crossorigin="anonymous" defer></script>
+  <script src="/vendor/CanvasFlowmapLayer.js" integrity="sha384-OH07Sw2MOqwS9hs60vR2EGdEiCZIbuCqQqY1IkjZNiVEfkFFo5MuFbgMLBVUSLO3" crossorigin="anonymous" defer></script>
   <script src="/vendor/jszip.min.js" integrity="sha384-+mbV2IY1Zk/X1p/nWllGySJSUN8uMs+gUAN10Or95UBH0fpj6GfKgPmgC5EXieXG" defer></script>
 </head>
 <body>
@@ -1474,6 +1707,11 @@ footer a:hover { color: #fff !important; }
 
 <div class="mini-mast">
   <div class="wrap">
+    <div class="mini-agid">
+      <a href="https://www.agid.gov.it/it" target="_blank" rel="noopener noreferrer" aria-label="Sito istituzionale AgID (apre in nuova scheda)">
+        <img src="/assets/logo-agid.png" alt="AgID — Agenzia per l'Italia Digitale" class="mini-agid-logo" width="97" height="24">
+      </a>
+    </div>
     <div class="mini-brand-wrap">
       <a href="/" class="mini-brand">Cruscotto <span class="it">Italia</span></a>
       <span class="mini-brand-sub">Dati pubblici aggregati per comune</span>
@@ -1506,12 +1744,22 @@ footer a:hover { color: #fff !important; }
 <script>
 const MCP_ENDPOINT = window.location.hostname === 'localhost'
   ? 'http://localhost:8787/mcp'
-  : 'https://cruscotto-italia-mcp.datigovit.workers.dev/mcp';
+  : 'https://cruscotto-italia-mcp.agid.workers.dev/mcp';
 
 // Base URL per fetch lazy degli shard ANNCSU FULL (Opzione C).
 // Endpoint Worker GET /data/anncsu_full/<istat>.json → pass-through R2.
 // Stessa origine del Worker MCP (Cloudflare lo serve, CORS *).
 const ANNCSU_FULL_BASE = MCP_ENDPOINT.replace(/\/mcp$/, '/data/anncsu_full');
+
+// Endpoint statico nginx GET /data/censimento_full/<istat>.geojson
+// (NON via Worker MCP: pass-through diretto filesystem AgID VM).
+// Restituisce FeatureCollection GeoJSON con geometrie EPSG:4326 + 119 vars per sezione.
+const CENSIMENTO_FULL_BASE = (location.origin + '/data/censimento_full');
+
+// Anno di riferimento del dataset Profilo (ISTAT Censimento permanente, comune-level).
+// Single source of truth: usato in tab label "Profilo {anno}" e in section-sub.
+// Aggiornare quando ISTAT pubblica il nuovo rilascio (annuale, in genere Q4).
+const PROFILO_YEAR = 2024;
 
 async function mcpCall(toolName, args) {
   const res = await fetch(MCP_ENDPOINT, {
@@ -1532,6 +1780,24 @@ async function mcpCall(toolName, args) {
 function fmtNum(n) {
   if (n === null || n === undefined) return '—';
   return Number(n).toLocaleString('it-IT');
+}
+
+// Formatta data ISO (YYYY-MM-DD oppure YYYY-MM-DDTHH:MM:SS...) in formato
+// italiano leggibile: "18 maggio 2026". Restituisce "—" se input vuoto/null.
+// Robusta a: input gia' parziale, input non valido, mese fuori range 1-12.
+function formatDataIT(iso) {
+  if (!iso || iso === '—' || iso === 'n.d.') return '—';
+  // Accetta sia 'YYYY-MM-DD' che 'YYYY-MM-DDTHH:MM:SS...'
+  const datePart = String(iso).split('T')[0];
+  const parts = datePart.split('-');
+  if (parts.length !== 3) return iso; // fallback: ritorna originale
+  const [y, m, d] = parts;
+  const mese = parseInt(m, 10);
+  const giorno = parseInt(d, 10);
+  if (isNaN(mese) || isNaN(giorno) || mese < 1 || mese > 12) return iso;
+  const mesi = ['', 'gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno',
+                'luglio', 'agosto', 'settembre', 'ottobre', 'novembre', 'dicembre'];
+  return `${giorno} ${mesi[mese]} ${y}`;
 }
 
 // === Palette grafici istituzionale (Design Italia) ===
@@ -1585,6 +1851,8 @@ function renderComune(data) {
   window.__immobiliPaInited = false;
   window.__anncsuData = k.anncsu || null;
   window.__anncsuInited = false;
+  window.__censimentoData = k.censimento || null;
+  window.__censimentoInited = false;
   window.__sanitaData = k.sanita_mds || null;
   window.__sanitaInited = false;
   window.__punData = k.pun || null;
@@ -1599,19 +1867,26 @@ function renderComune(data) {
   window.__runtsInited = false;
   window.__asiaData = k.asia || null;
   window.__asiaInited = false;
+  window.__pendolarismoData = k.pendolarismo || null;
+  window.__pendolarismoInited = false;
+  window.__beniCulturaliData = k.beni_culturali || null;
+  window.__beniCulturaliInited = false;
   const tabs = [
     { id: 'panoramica', label: 'Panoramica', kpi: '' },
     { id: 'anncsu', label: 'ANNCSU', kpi: k.anncsu?.kpi?.n_strade != null ? fmtNum(k.anncsu.kpi.n_strade) + (k.anncsu.kpi.n_civici != null ? ' / ' + fmtNum(k.anncsu.kpi.n_civici) : '') : '—' },
     { id: 'aria', label: 'Aria', kpi: '<span data-tab-aria-n><span class="tab-spinner"></span></span>' },
     { id: 'banda-larga', label: 'Banda larga', kpi: k.agcom_bbmap?.kpi?.copertura_ftth_desi_pct != null ? Math.round(k.agcom_bbmap.kpi.copertura_ftth_desi_pct) + '%' : '—' },
+    { id: 'beni-culturali', label: 'Beni culturali', kpi: k.beni_culturali?.kpi?.n_totale ? fmtNum(k.beni_culturali.kpi.n_totale) : '—' },
+    { id: 'censimento', label: 'Censimento 2021', kpi: k.censimento?.kpi_comune?.n_sezioni != null ? fmtNum(k.censimento.kpi_comune.n_sezioni) : '—' },
     { id: 'contratti', label: 'Contratti ANAC', kpi: fmtNum(k.contratti?.count || 0) },
     { id: 'demografia', label: 'Demografia', kpi: k.popolazione != null ? fmtNum(k.popolazione) : '—' },
     { id: 'carburanti', label: 'Distributori e prezzi', kpi: k.carburanti?.kpi?.n_impianti != null ? fmtNum(k.carburanti.kpi.n_impianti) : '—' },
     { id: 'asia', label: 'Imprese e addetti', kpi: k.asia?.kpi?.ul_totali != null ? fmtNum(k.asia.kpi.ul_totali) : '—' },
     { id: 'opere', label: 'Opere', kpi: k.opere?.count != null ? fmtNum(k.opere.count) : '—' },
     { id: 'patrimonio-pa', label: 'Patrimonio PA', kpi: k.immobili_pa?.kpi?.n_totale != null ? fmtNum(k.immobili_pa.kpi.n_totale) : '—' },
+    { id: 'pendolarismo', label: 'Pendolarismo', kpi: k.pendolarismo?.kpi?.saldo_netto != null ? (k.pendolarismo.kpi.saldo_netto > 0 ? '+' : '') + fmtNum(k.pendolarismo.kpi.saldo_netto) : '—' },
     { id: 'pnrr', label: 'PNRR', kpi: '<span data-tab-pnrr-count><span class="tab-spinner"></span></span>' },
-    { id: 'profilo', label: 'Profilo', kpi: '<span data-tab-profilo-pct><span class="tab-spinner"></span></span>' },
+    { id: 'profilo', label: `Profilo ${PROFILO_YEAR}`, kpi: '<span data-tab-profilo-pct><span class="tab-spinner"></span></span>' },
     { id: 'pun', label: 'Punti di ricarica', kpi: k.pun?.kpi?.n_attivi != null ? fmtNum(k.pun.kpi.n_attivi) : '—' },
     { id: 'redditi', label: 'Redditi e fisco', kpi: k.redditi?.anni?.[String(k.redditi.anni_disponibili?.slice(-1)[0])]?.reddito_complessivo?.medio != null ? '€' + fmtNum(k.redditi.anni[String(k.redditi.anni_disponibili.slice(-1)[0])].reddito_complessivo.medio) : '—' },
     { id: 'sanita', label: 'Sanità', kpi: k.sanita_mds?.farmacie?.kpi?.n_totale != null ? fmtNum(k.sanita_mds.farmacie.kpi.n_totale) : '—' },
@@ -1694,14 +1969,20 @@ function renderComune(data) {
             <div class="kpi-card-sub">beni immobili pubblici</div>
           </div>
 
+          <div class="kpi-card ${k.pendolarismo?.kpi?.saldo_netto != null ? '' : 'tbd'}" data-go-tab="pendolarismo" tabindex="0" role="button" aria-label="Vai alla tab Pendolarismo">
+            <div class="kpi-card-lab">Pendolarismo</div>
+            <div class="kpi-card-val">${k.pendolarismo?.kpi?.saldo_netto != null ? (k.pendolarismo.kpi.saldo_netto > 0 ? '+' : '') + fmtNum(k.pendolarismo.kpi.saldo_netto) : '—'}</div>
+            <div class="kpi-card-sub">${k.pendolarismo?.kpi?.auto_contenimento_pct != null ? 'auto-contenimento ' + k.pendolarismo.kpi.auto_contenimento_pct + '%' : 'saldo casa-lavoro/studio'}</div>
+          </div>
+
           <div class="kpi-card ${k.pnrr?.kpi?.n_progetti != null ? '' : 'tbd'}" data-go-tab="pnrr" tabindex="0" role="button" aria-label="Vai alla tab PNRR">
             <div class="kpi-card-lab">PNRR</div>
             <div class="kpi-card-val">${k.pnrr?.kpi?.n_progetti != null ? fmtNum(k.pnrr.kpi.n_progetti) : '—'}</div>
             <div class="kpi-card-sub">${k.pnrr?.kpi?.totale_finanziamento_pnrr != null ? '€' + fmtNum(Math.round(k.pnrr.kpi.totale_finanziamento_pnrr)) : 'progetti attivi'}</div>
           </div>
 
-          <div class="kpi-card ${k.profilo?.istruzione?.terziario_pct != null ? '' : 'tbd'}" data-go-tab="profilo" tabindex="0" role="button" aria-label="Vai alla tab Profilo">
-            <div class="kpi-card-lab">Profilo</div>
+          <div class="kpi-card ${k.profilo?.istruzione?.terziario_pct != null ? '' : 'tbd'}" data-go-tab="profilo" tabindex="0" role="button" aria-label="Vai alla tab Profilo ${PROFILO_YEAR}">
+            <div class="kpi-card-lab">Profilo ${PROFILO_YEAR}</div>
             <div class="kpi-card-val">${k.profilo?.istruzione?.terziario_pct != null ? k.profilo.istruzione.terziario_pct.toFixed(1) : '—'}<span class="kpi-card-unit">${k.profilo?.istruzione?.terziario_pct != null ? '%' : ''}</span></div>
             <div class="kpi-card-sub">laureati (25-64 anni)</div>
           </div>
@@ -1784,13 +2065,16 @@ function renderComune(data) {
       ${renderVeicoliTab(k.veicoli)}
       ${renderRedditiTab(k.redditi)}
       ${renderImmobiliPaTab(k.immobili_pa)}
+      ${renderPendolarismoTab(k.pendolarismo)}
       ${renderSanitaTab(k.sanita_mds)}
       ${renderAnncsuTab(k.anncsu)}
+      ${renderCensimentoTab(k.censimento)}
       ${renderPunTab(k.pun)}
       ${renderBandaLargaTab(k.agcom_bbmap, a, k.territorio)}
       ${renderCarburantiTab(k.carburanti)}
       ${renderRuntsTab(k.runts)}
       ${renderAsiaTab(k.asia)}
+      ${renderBeniCulturaliTab(k.beni_culturali)}
     </div>
   `;
 }
@@ -1805,32 +2089,21 @@ async function loadOpereDettaglio(istat) {
   const container = document.getElementById('opere-dettaglio-content');
   if (!container) return;
 
-  // Cache hit?
+  // I dati delle opere sono pre-popolati nella cache dal caricamento iniziale
+  // di comune_dashboard (sezione 'opere' dello shard A1 unified). Vedi il
+  // blocco "if (d.opere)" piu' in basso: window.__opereDettaglioCache[istat]
+  // = d.opere. Se la cache e' vuota qui, qualcosa e' andato storto a monte.
   const cached = window.__opereDettaglioCache[istat];
   if (cached) {
     renderOpereDettaglioContent(container, cached);
     return;
   }
 
-  try {
-    const data = await mcpCall('comune_opere_dettaglio', { istat_code: istat });
-    if (data.error) {
-      container.innerHTML = `
-        <div class="placeholder">
-          <strong>Dati non disponibili</strong>
-          ${data.error}
-        </div>`;
-      return;
-    }
-    window.__opereDettaglioCache[istat] = data;
-    renderOpereDettaglioContent(container, data);
-  } catch (err) {
-    container.innerHTML = `
-      <div class="placeholder">
-        <strong>Errore di rete</strong>
-        ${err.message}
-      </div>`;
-  }
+  container.innerHTML = `
+    <div class="placeholder">
+      <strong>Dati non ancora caricati</strong>
+      <p>Ricarica la pagina per visualizzare il dettaglio opere pubbliche.</p>
+    </div>`;
 }
 
 function renderOpereDettaglioContent(container, data) {
@@ -2197,7 +2470,7 @@ function renderProfiloTabSkeleton() {
       <h2 class="section-h">Profilo del <em>comune</em>.</h2>
       <p class="section-sub">
         Ritratto socio-demografico: chi vive in questo comune, con che istruzione,
-        che lavoro fa, come si muove. Fonte ISTAT, Censimento permanente, anno 2024.
+        che lavoro fa, come si muove. Fonte ISTAT, Censimento permanente, anno ${PROFILO_YEAR}.
       </p>
       <div id="profilo-content">
         <div class="spese-loading" role="status" aria-live="polite">
@@ -2275,19 +2548,19 @@ function renderProfiloContent(container, data) {
     </div>
 
     <div class="profilo-section">
-      <h3 class="profilo-section-h">§ Istruzione <em>2024</em></h3>
+      <h3 class="profilo-section-h">§ Istruzione <em>${PROFILO_YEAR}</em></h3>
       <p class="profilo-section-sub">Distribuzione del titolo di studio nella popolazione 25-64 anni.</p>
       ${istr.pop_riferimento_25_64 ? renderIstruzioneSection(istr) : '<div class="profilo-na">Dato non disponibile per questo comune.</div>'}
     </div>
 
     <div class="profilo-section">
-      <h3 class="profilo-section-h">§ Lavoro <em>2024</em></h3>
+      <h3 class="profilo-section-h">§ Lavoro <em>${PROFILO_YEAR}</em></h3>
       <p class="profilo-section-sub">Condizione professionale della popolazione 25-64 anni.</p>
       ${lav.pop_riferimento_25_64 ? renderLavoroSection(lav) : '<div class="profilo-na">Dato non disponibile.</div>'}
     </div>
 
     <div class="profilo-section">
-      <h3 class="profilo-section-h">§ Famiglie <em>2024</em></h3>
+      <h3 class="profilo-section-h">§ Famiglie <em>${PROFILO_YEAR}</em></h3>
       <p class="profilo-section-sub">Composizione familiare nel comune.</p>
       ${fam.n_famiglie ? renderFamiglieSection(fam) : '<div class="profilo-na">Dato non disponibile.</div>'}
     </div>
@@ -2297,13 +2570,13 @@ function renderProfiloContent(container, data) {
       <p class="profilo-section-sub">Spostamenti giornalieri della popolazione per lavoro o studio.</p>
       <div class="profilo-mobilita-warning">
         <strong>Anno di riferimento</strong>
-        Questo è l'ultimo anno per cui ISTAT pubblica dati di pendolarismo a livello comunale (Censimento permanente 2019). Le altre sezioni del profilo sono al 2024.
+        Questo è l'ultimo anno per cui ISTAT pubblica dati di pendolarismo a livello comunale (Censimento permanente 2019). Le altre sezioni del profilo sono al ${PROFILO_YEAR}.
       </div>
       ${mob.pendolari_totale_n ? renderMobilitaSection(mob) : '<div class="profilo-na">Dato non disponibile.</div>'}
     </div>
 
     <div class="profilo-section">
-      <h3 class="profilo-section-h">§ Cittadinanza <em>2024</em></h3>
+      <h3 class="profilo-section-h">§ Cittadinanza <em>${PROFILO_YEAR}</em></h3>
       <p class="profilo-section-sub">Composizione per cittadinanza della popolazione residente.</p>
       ${cit.pop_totale_n ? renderCittadinanzaSection(cit) : '<div class="profilo-na">Dato non disponibile.</div>'}
     </div>
@@ -4514,6 +4787,9 @@ function initImmobiliPa(d) {
 
   // ---- 2) Mappa con OSM (stessa tile-source di Aria)
   const map = L.map('impa-map-main', { scrollWheelZoom: false, zoomControl: true }).fitBounds(bounds, { padding: [20, 20] });
+  // A11y/UX: scroll-wheel + pinch trackpad abilitati solo dopo click.
+  map.on('focus', () => map.scrollWheelZoom.enable());
+  map.on('blur',  () => map.scrollWheelZoom.disable());
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19,
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
@@ -4644,6 +4920,523 @@ function initImmobiliPa(d) {
       }
     });
   }
+}
+
+// ===========================================================================
+// Tab Beni Culturali — MiC ArCo Immovable Cultural Property
+// Single source: dashboard/<istat>.json sezione "beni_culturali" (mensile).
+// Pattern: lazy-load shard FULL (/data/beni_culturali_full/<istat>.json)
+// quando _full_shard_available=true (comuni con >30 beni). Cluster grid-based.
+// Marker color per macro-categoria (9 classi normalizzate da slug ArCo).
+// ===========================================================================
+
+const BENI_CAT_COLORS = {
+  "chiesa":         "#A050BE",  // viola — religioso
+  "palazzo":        "#0066CC",  // blu Italia — edifici signorili
+  "castello":       "#9B2335",  // bordeaux — difensivo
+  "archeologia":    "#E89400",  // arancio — antichita'
+  "museo":          "#D9364F",  // rosso — istituzionale
+  "monumento":      "#5C6F82",  // grigio scuro — commemorativo
+  "infrastruttura": "#8B6F47",  // marrone — opere civili
+  "parco_giardino": "#388E3C",  // verde — natura
+  "altro":          "#9E9E9E"   // grigio neutro
+};
+const BENI_CAT_LABELS = {
+  "chiesa":         "Chiese",
+  "palazzo":        "Palazzi",
+  "castello":       "Castelli",
+  "archeologia":    "Archeologia",
+  "museo":          "Musei",
+  "monumento":      "Monumenti",
+  "infrastruttura": "Infrastrutture",
+  "parco_giardino": "Parchi/Giardini",
+  "altro":          "Altro"
+};
+
+// Ordine canonico per render legenda (priorita' didascalica)
+const BENI_CAT_ORDER = [
+  "chiesa", "palazzo", "castello", "archeologia",
+  "museo", "monumento", "infrastruttura", "parco_giardino", "altro"
+];
+
+const BENI_FULL_BASE = (location.origin + '/data/beni_culturali_full');
+
+function renderBeniCulturaliTab(d) {
+  if (!d || !d.kpi || !d.kpi.n_totale) {
+    return `
+      <div class="tab-pane" id="pane-beni-culturali">
+        <div class="section-title">§ Beni culturali</div>
+        <h2 class="section-h">Nessun bene tutelato MiC <em>in questo comune</em>.</h2>
+        <p class="muted">Il comune non risulta nel catalogo nazionale ICCD del Ministero della Cultura
+        (ontologia ArCo, <em>Immovable Cultural Property</em>) come sede di beni immobili tutelati.
+        Copertura nazionale: 5.420 comuni su 7.895 (68,7%).</p>
+      </div>`;
+  }
+  const k = d.kpi;
+  const luoghi = d.luoghi || [];
+  const totale = k.n_totale;
+  const visibili = luoghi.length;
+  const pctCoord = (totale > 0) ? Math.round((k.n_con_coordinate || 0) * 100 / totale) : 0;
+
+  return `
+    <div class="tab-pane" id="pane-beni-culturali">
+      <div class="section-title">§ Beni culturali</div>
+      <h2 class="section-h">${fmtNum(k.n_arco || totale)} ${(k.n_arco || totale) === 1 ? 'bene tutelato' : 'beni tutelati'} dal <em>MiC</em>, catalogo ICCD ArCo${k.n_cultural_on ? ` + ${fmtNum(k.n_cultural_on)} ${k.n_cultural_on === 1 ? 'Luogo della Cultura' : 'Luoghi della Cultura'} (Cultural-ON)` : ''}.</h2>
+      <p class="muted" style="font-family:var(--mono);font-size:11px;margin-top:-8px;margin-bottom:18px;">
+        Fonti: <a href="https://dati.beniculturali.it/sparql" target="_blank" rel="noopener">MiC ICCD — ArCo</a>
+        + <a href="https://dati.cultura.gov.it/lod/cultural-on/" target="_blank" rel="noopener">Cultural-ON DBUnico 2.0</a>.
+        Linked Open Data. Licenza CC BY 4.0. Snapshot del ${formatDataIT(d._snapshot_date || '')}.
+      </p>
+
+      <div class="kpi-cards">
+        <div class="kpi-card">
+          <div class="kpi-card-lab">Totale</div>
+          <div class="kpi-card-val">${fmtNum(totale)}</div>
+          <div class="kpi-card-sub">${k.n_cultural_on ? fmtNum(k.n_arco || 0) + ' ArCo + ' + fmtNum(k.n_cultural_on) + ' Cultural-ON' : 'immobili tutelati'}</div>
+        </div>
+        <div class="kpi-card ${k.n_visitabili ? '' : 'tbd'}">
+          <div class="kpi-card-lab">Luoghi della Cultura visitabili</div>
+          <div class="kpi-card-val">${fmtNum(k.n_visitabili || 0)}</div>
+          <div class="kpi-card-sub">musei, biblioteche, archivi (Cultural-ON)</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-card-lab">Geo-referenziati</div>
+          <div class="kpi-card-val">${pctCoord}%</div>
+          <div class="kpi-card-sub">${fmtNum(k.n_con_coordinate || 0)} di ${fmtNum(totale)} con coordinate</div>
+        </div>
+        <div class="kpi-card ${k.pct_con_foto != null ? '' : 'tbd'}">
+          <div class="kpi-card-lab">Con foto</div>
+          <div class="kpi-card-val">${k.pct_con_foto != null ? k.pct_con_foto.toFixed(1) + '%' : '&mdash;'}</div>
+          <div class="kpi-card-sub">immagine ICCD disponibile</div>
+        </div>
+        <div class="kpi-card ${k.pct_con_descrizione != null ? '' : 'tbd'}">
+          <div class="kpi-card-lab">Con descrizione</div>
+          <div class="kpi-card-val">${k.pct_con_descrizione != null ? k.pct_con_descrizione.toFixed(1) + '%' : '&mdash;'}</div>
+          <div class="kpi-card-sub">scheda testuale presente</div>
+        </div>
+      </div>
+
+      <div class="veicoli-grid">
+        <div>
+          <h3 class="veicoli-col-h">Mappa beni georeferenziati (<span id="beni-map-count">${fmtNum(k.n_con_coordinate || 0)}</span>)</h3>
+          <div id="beni-map-main" class="impa-map" role="region" aria-label="Mappa beni culturali tutelati"></div>
+          <div class="impa-filters" id="beni-filters-main" role="group" aria-label="Filtri categoria">
+            ${renderBeniCulturaliFilters(k.mix_categoria || {})}
+          </div>
+          <div class="veicoli-euro-note" id="beni-load-status">Cluster auto-aggregati &middot; ${visibili} di ${fmtNum(totale)} beni caricati${d._full_shard_available ? ' &middot; <span id="beni-full-loading">caricamento dataset completo&hellip;</span>' : ''}</div>
+        </div>
+        <div>
+          <h3 class="veicoli-col-h">Mix per categoria</h3>
+          <div class="impa-chart-wrap">
+            <canvas id="beni-mix-chart" aria-label="Distribuzione beni culturali per categoria" role="img"></canvas>
+          </div>
+          <div class="veicoli-euro-note">9 macro-categorie ArCo &middot; normalizzazione da slug ICCD</div>
+        </div>
+      </div>
+
+      <!-- Lista accordion sotto la mappa (popolata da initBeniCulturali con shard FULL se disponibile) -->
+      <div class="beni-list-section">
+        <h3 class="veicoli-col-h">Elenco beni <span class="muted" style="font-family:var(--mono);font-size:11px;font-weight:normal" id="beni-list-count"></span></h3>
+        <div class="beni-list-controls">
+          <input type="search" id="beni-list-search" class="sanita-search-input"
+                 placeholder="Cerca per nome bene&hellip;"
+                 aria-label="Cerca bene per nome">
+          <span class="muted" style="font-family:var(--mono);font-size:11px" id="beni-list-status"></span>
+        </div>
+        <div id="beni-list-items" role="list" aria-live="polite"></div>
+      </div>
+    </div>`;
+}
+
+// Chip filtri categoria — ordinati per count desc, mostra solo categorie presenti
+function renderBeniCulturaliFilters(mixCategoria) {
+  const entries = Object.entries(mixCategoria || {})
+    .filter(([k, v]) => v > 0)
+    .sort((a, b) => b[1] - a[1]);
+  if (!entries.length) return '';
+  const chips = entries.map(([cat, count]) => {
+    const color = BENI_CAT_COLORS[cat] || '#9E9E9E';
+    const label = BENI_CAT_LABELS[cat] || cat;
+    return `<button type="button" class="impa-chip" data-cat="${cat}" aria-pressed="true">
+      <span class="impa-chip-dot" style="background:${color}" aria-hidden="true"></span>
+      <span class="impa-chip-label">${label}</span>
+      <span class="impa-chip-count">${fmtNum(count)}</span>
+    </button>`;
+  }).join('');
+  return `<button type="button" class="impa-chip impa-chip-all" data-cat="__all__" aria-pressed="true">
+    <span class="impa-chip-label">Tutti</span>
+  </button>${chips}`;
+}
+
+// Inizializza mappa Leaflet con marker per categoria + cluster grid-based
+// + chip filtri + Chart.js mix categoria. Stessa logica di initImmobiliPa
+// ma con luoghi compatti (id/denom/categoria/lat/lon/indirizzo/image/cis_link)
+// e con possibilita' di hot-reload da shard FULL via reloadLuoghi().
+function initBeniCulturali(d) {
+  if (!d || !d.luoghi) return;
+  let luoghi = (d.luoghi || []).filter(p => p.lat != null && p.lon != null);
+  const mapEl = document.getElementById('beni-map-main');
+  if (!mapEl || typeof L === 'undefined') return;
+
+  // ---- 1) Bounding box (con fallback se nessun punto geo)
+  if (!luoghi.length) {
+    // Se lo shard FULL e' disponibile, NON mostrare "nessun bene" subito:
+    // tryEnrichBeniCulturaliFull() sostituira' la mappa con i dati reali
+    // entro 1-2 secondi. Mostro placeholder neutro.
+    if (d._full_shard_available) {
+      mapEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted);font-family:var(--mono);font-size:12px;">Caricamento dataset completo&hellip;</div>';
+      // Render lista accordion sul base (anche se non in mappa)
+      renderBeniList(d.luoghi || [], true);
+      initBeniListSearch();
+      // Espongo subito un'istanza minimale con reloadLuoghi che inizializza
+      // la mappa al primo arrivo dei dati FULL.
+      window.__beniCulturaliInstance = {
+        reloadLuoghi(newLuoghi) {
+          // Rilancia init con i dati FULL (override d.luoghi)
+          const newD = Object.assign({}, d, { luoghi: newLuoghi });
+          window.__beniCulturaliInstance = null;  // permette re-init
+          initBeniCulturali(newD);
+        }
+      };
+      return;
+    }
+    mapEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted);font-family:var(--mono);font-size:12px;">Nessun bene geo-referenziato in questo comune.</div>';
+    // Comunque renderizza la lista (potrebbe avere beni senza coord ma con dati)
+    renderBeniList(d.luoghi || [], false);
+    initBeniListSearch();
+    return;
+  }
+  const lats = luoghi.map(p => p.lat);
+  const lons = luoghi.map(p => p.lon);
+  const bounds = L.latLngBounds([[Math.min(...lats), Math.min(...lons)], [Math.max(...lats), Math.max(...lons)]]);
+
+  // ---- 2) Mappa + tile OSM
+  const map = L.map('beni-map-main', { scrollWheelZoom: false, zoomControl: true }).fitBounds(bounds, { padding: [20, 20] });
+  map.on('focus', () => map.scrollWheelZoom.enable());
+  map.on('blur',  () => map.scrollWheelZoom.disable());
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+  }).addTo(map);
+
+  // ---- 3) Stato filtri
+  let activeCats = new Set(luoghi.map(p => p.categoria || 'altro'));
+
+  // ---- 4) Layer markers + cluster grid-based
+  let markersLayer = L.layerGroup().addTo(map);
+
+  function escapeHtml(s) {
+    if (!s) return '';
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  function makeDot(p) {
+    const cat = p.categoria || 'altro';
+    const color = BENI_CAT_COLORS[cat] || '#9E9E9E';
+    const denomEsc = escapeHtml(p.denom || '');
+    const indEsc = escapeHtml(p.indirizzo || '');
+    const catLabel = BENI_CAT_LABELS[cat] || cat;
+    const imgHtml = p.image ? `<div style="margin:6px 0"><img src="${escapeHtml(_forceHttpsBeniImg(p.image))}" alt="${denomEsc}" loading="lazy" style="max-width:200px;max-height:140px;border-radius:4px;display:block" onerror="this.style.display='none'"></div>` : '';
+    const cisHtml = p.cis_link ? `<div style="margin-top:6px;font-size:11px"><a href="${escapeHtml(p.cis_link)}" target="_blank" rel="noopener">Scheda Cultural-ON &rarr;</a></div>` : '';
+    return L.circleMarker([p.lat, p.lon], {
+      radius: 6, fillColor: color, color: '#fff', weight: 1.5, opacity: 1, fillOpacity: 0.85
+    }).bindPopup(`
+      <div style="font-family:var(--ui);font-size:12px;min-width:200px;max-width:240px">
+        <div style="font-weight:600;color:${color};margin-bottom:4px">${catLabel}</div>
+        <div style="font-weight:600;margin-bottom:2px">${denomEsc}</div>
+        ${indEsc ? `<div style="font-size:11px;color:var(--ink-mute);margin-bottom:4px">${indEsc}</div>` : ''}
+        ${imgHtml}
+        ${cisHtml}
+      </div>
+    `);
+  }
+  function makeCluster(lat, lon, count) {
+    const html = `<div style="background:#0066CC;color:#fff;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-family:var(--ui);font-weight:700;font-size:13px;box-shadow:0 2px 4px rgba(0,0,0,0.3);border:2px solid #fff">${count}</div>`;
+    return L.marker([lat, lon], {
+      icon: L.divIcon({ html, className: 'beni-cluster', iconSize: [32, 32], iconAnchor: [16, 16] })
+    });
+  }
+  function redrawClusters() {
+    markersLayer.clearLayers();
+    const z = map.getZoom();
+    const visible = luoghi.filter(p => activeCats.has(p.categoria || 'altro'));
+    if (z >= 14 || visible.length <= 50) {
+      visible.forEach(p => markersLayer.addLayer(makeDot(p)));
+      return;
+    }
+    const cellSize = z < 10 ? 0.05 : z < 12 ? 0.015 : 0.005;
+    const grid = new Map();
+    visible.forEach(p => {
+      const key = `${Math.floor(p.lat / cellSize)}_${Math.floor(p.lon / cellSize)}`;
+      if (!grid.has(key)) grid.set(key, []);
+      grid.get(key).push(p);
+    });
+    grid.forEach(cellPunti => {
+      if (cellPunti.length === 1) {
+        markersLayer.addLayer(makeDot(cellPunti[0]));
+      } else {
+        const avgLat = cellPunti.reduce((s, p) => s + p.lat, 0) / cellPunti.length;
+        const avgLon = cellPunti.reduce((s, p) => s + p.lon, 0) / cellPunti.length;
+        markersLayer.addLayer(makeCluster(avgLat, avgLon, cellPunti.length));
+      }
+    });
+  }
+  redrawClusters();
+  map.on('zoomend moveend', redrawClusters);
+
+  // ---- 5) Chip handlers
+  const filtersEl = document.getElementById('beni-filters-main');
+  if (filtersEl) {
+    filtersEl.addEventListener('click', (ev) => {
+      const btn = ev.target.closest('.impa-chip');
+      if (!btn) return;
+      const cat = btn.dataset.cat;
+      if (cat === '__all__') {
+        activeCats.clear();
+        luoghi.forEach(p => activeCats.add(p.categoria || 'altro'));
+        filtersEl.querySelectorAll('.impa-chip').forEach(b => b.setAttribute('aria-pressed', 'true'));
+      } else {
+        if (activeCats.has(cat)) {
+          activeCats.delete(cat);
+          btn.setAttribute('aria-pressed', 'false');
+        } else {
+          activeCats.add(cat);
+          btn.setAttribute('aria-pressed', 'true');
+        }
+        const allBtn = filtersEl.querySelector('.impa-chip-all');
+        if (allBtn) {
+          const totalCats = new Set(luoghi.map(p => p.categoria || 'altro')).size;
+          allBtn.setAttribute('aria-pressed', activeCats.size === totalCats ? 'true' : 'false');
+        }
+      }
+      redrawClusters();
+    });
+  }
+
+  // ---- 6) Chart.js bar orizzontale Mix categoria (in ordine BENI_CAT_ORDER)
+  const canvas = document.getElementById('beni-mix-chart');
+  if (canvas && window.Chart && d.kpi && d.kpi.mix_categoria) {
+    const mix = d.kpi.mix_categoria;
+    const entries = BENI_CAT_ORDER
+      .filter(cat => mix[cat] > 0)
+      .map(cat => [cat, mix[cat]]);
+    const labels = entries.map(([k]) => BENI_CAT_LABELS[k] || k);
+    const data = entries.map(([, v]) => v);
+    const colors = entries.map(([k]) => BENI_CAT_COLORS[k] || '#9E9E9E');
+    new Chart(canvas.getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [{ data, backgroundColor: colors, borderWidth: 0, barThickness: 'flex', maxBarThickness: 20 }]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { label: (ctx) => `${ctx.parsed.x} ${ctx.parsed.x === 1 ? 'bene' : 'beni'}` } }
+        },
+        scales: {
+          x: { beginAtZero: true, ticks: { font: { family: 'var(--mono)', size: 10 }, callback: (v) => fmtNum(v) } },
+          y: { ticks: { font: { family: 'var(--ui)', size: 11 } } }
+        }
+      }
+    });
+  }
+
+  // ---- 7) Lista accordion sotto la mappa (riusabile per shard base e full)
+  // luoghi_all include ANCHE quelli senza coord, per la lista (per la
+  // mappa abbiamo gia' filtrato in luoghi).
+  let luoghi_all = (d.luoghi || []).slice();
+  renderBeniList(luoghi_all, d._full_shard_available);
+  initBeniListSearch();
+
+  // Espongo l'istanza per il reload da shard FULL (vedi tryEnrichBeniCulturaliFull)
+  window.__beniCulturaliInstance = {
+    reloadLuoghi(newLuoghi) {
+      luoghi_all = (newLuoghi || []).slice();
+      luoghi = luoghi_all.filter(p => p.lat != null && p.lon != null);
+      activeCats = new Set(luoghi.map(p => p.categoria || 'altro'));
+      // refit bounds + redraw
+      if (luoghi.length) {
+        const ll = luoghi.map(p => [p.lat, p.lon]);
+        try { map.fitBounds(L.latLngBounds(ll), { padding: [20, 20] }); } catch (e) {}
+      }
+      // aggiorno chip filters mantenendo lo stato click
+      const filtersEl2 = document.getElementById('beni-filters-main');
+      if (filtersEl2) {
+        filtersEl2.querySelectorAll('.impa-chip').forEach(b => b.setAttribute('aria-pressed', 'true'));
+      }
+      redrawClusters();
+      // aggiorno il count nel titolo mappa
+      const countEl = document.getElementById('beni-map-count');
+      if (countEl) countEl.textContent = fmtNum(luoghi.length);
+      const statusEl = document.getElementById('beni-load-status');
+      if (statusEl) statusEl.innerHTML = `Cluster auto-aggregati &middot; ${fmtNum(luoghi.length)} beni geo-referenziati (dataset completo)`;
+      // Aggiorno la lista accordion con il full dataset (no piu' "caricamento...")
+      renderBeniList(luoghi_all, false);
+      initBeniListSearch();
+    }
+  };
+}
+
+// Enrichment lazy dello shard FULL (per comuni con >30 beni).
+// Endpoint statico nginx: GET /data/beni_culturali_full/<istat>.json
+async function tryEnrichBeniCulturaliFull(istat) {
+  if (!istat || !window.__beniCulturaliInstance) return;
+  try {
+    const url = `${BENI_FULL_BASE}/${istat}.json`;
+    const res = await fetch(url);
+    if (!res.ok) {
+      if (res.status >= 500) console.warn(`Beni culturali full enrich failed: HTTP ${res.status}`);
+      return;
+    }
+    const fullData = await res.json();
+    if (Array.isArray(fullData.luoghi)) {
+      window.__beniCulturaliInstance.reloadLuoghi(fullData.luoghi);
+    }
+  } catch (err) {
+    console.warn(`Beni culturali full enrich error: ${err.message}`);
+  }
+}
+
+// Render lista accordion sotto la mappa.
+// luoghi: array di record (con campi denom, categoria, indirizzo, image,
+//   descrizione, fonte, cis_link, telefono, email, website opzionali).
+// isPartial: true se i dati arrivano dallo shard base (cap 30) e
+//   l'enrichment FULL e' in corso; mostriamo lo status "caricamento...".
+function renderBeniList(luoghi, isPartial) {
+  const container = document.getElementById('beni-list-items');
+  const countEl = document.getElementById('beni-list-count');
+  const statusEl = document.getElementById('beni-list-status');
+  if (!container) return;
+  // Cache per la ricerca: salviamo array in window per filtraggio efficiente
+  window.__beniListAll = luoghi.slice();
+  if (countEl) countEl.textContent = `(${fmtNum(luoghi.length)} ${luoghi.length === 1 ? 'bene' : 'beni'})`;
+  if (statusEl) statusEl.textContent = isPartial ? 'caricamento dataset completo…' : '';
+  if (!luoghi.length) {
+    container.innerHTML = '<div class="beni-list-empty">Nessun bene trovato.</div>';
+    return;
+  }
+  // Ordino: prima Cultural-ON (luoghi visitabili con orari/contatti), poi ArCo
+  // (patrimonio architettonico tutelato). Dentro ciascun gruppo, alfa per denom.
+  const fonteRank = (b) => (b.fonte === 'cultural_on' ? 0 : 1);
+  const sorted = luoghi.slice().sort((a, b) => {
+    const fa = fonteRank(a), fb = fonteRank(b);
+    if (fa !== fb) return fa - fb;
+    return ((a.denom || '').toUpperCase()).localeCompare((b.denom || '').toUpperCase(), 'it');
+  });
+  container.innerHTML = sorted.map((b, idx) => renderBeniListItem(b, idx)).join('');
+  // Bind click handler delegato per accordion. Uso onclick (property) invece di
+  // addEventListener cosi' rimpiazza eventuali handler precedenti (al reload FULL
+  // renderBeniList viene richiamata e altrimenti i handler si accumulerebbero).
+  container.onclick = (ev) => {
+    const btn = ev.target.closest('.beni-list-row');
+    if (!btn || !container.contains(btn)) return;
+    const expanded = btn.getAttribute('aria-expanded') === 'true';
+    btn.setAttribute('aria-expanded', expanded ? 'false' : 'true');
+    const detail = document.getElementById(btn.getAttribute('aria-controls'));
+    if (detail) detail.hidden = expanded;
+  };
+}
+
+function _escapeHtmlBeni(s) {
+  if (s == null) return '';
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+// Force-HTTPS sui domini MiC noti. Trick puramente cosmetico per evitare
+// Mixed Content quando la pagina e' su HTTPS e l'URL foto sorgente e' http://.
+// Non modifichiamo i dati su disco: tutti i CDN MiC supportano TLS.
+function _forceHttpsBeniImg(u) {
+  if (!u || typeof u !== 'string') return u;
+  if (u.startsWith('http://') && /\.beniculturali\.it(\/|$)/i.test(u)) {
+    return 'https://' + u.slice(7);
+  }
+  return u;
+}
+
+function renderBeniListItem(b, idx) {
+  const cat = b.categoria || 'altro';
+  const color = BENI_CAT_COLORS[cat] || '#9E9E9E';
+  const catLabel = BENI_CAT_LABELS[cat] || cat;
+  const denom = _escapeHtmlBeni(b.denom || '(senza nome)');
+  const fonte = b.fonte || 'arco';
+  const fonteCls = fonte === 'cultural_on' ? 'beni-list-fonte-co' : 'beni-list-fonte-arco';
+  const fonteLab = fonte === 'cultural_on' ? 'Cultural-ON' : 'MiC ArCo';
+  const rowId = `beni-row-${idx}`;
+  const detailId = `beni-detail-${idx}`;
+  // Costruisco i campi del detail
+  const rows = [];
+  if (b.indirizzo) rows.push(['Indirizzo', _escapeHtmlBeni(b.indirizzo)]);
+  if (b.tutela) rows.push(['Tutela', _escapeHtmlBeni(b.tutela)]);
+  if (b.soprintendenza) rows.push(['Soprintendenza', _escapeHtmlBeni(b.soprintendenza)]);
+  if (b.telefono) rows.push(['Telefono', `<a href="tel:${_escapeHtmlBeni(b.telefono)}">${_escapeHtmlBeni(b.telefono)}</a>`]);
+  if (b.email) rows.push(['Email', `<a href="mailto:${_escapeHtmlBeni(b.email)}">${_escapeHtmlBeni(b.email)}</a>`]);
+  if (b.website) rows.push(['Sito web', `<a href="${_escapeHtmlBeni(b.website)}" target="_blank" rel="noopener">${_escapeHtmlBeni(b.website)}</a>`]);
+  if (b.cis_link) rows.push(['Scheda Cultural-ON', `<a href="${_escapeHtmlBeni(b.cis_link)}" target="_blank" rel="noopener">apri scheda &rarr;</a>`]);
+  if (b.lat != null && b.lon != null) rows.push(['Coordinate', `${b.lat.toFixed(5)}, ${b.lon.toFixed(5)}`]);
+  const rowsHtml = rows.map(([lab, val]) => `
+    <span class="beni-list-detail-lab">${lab}</span>
+    <span class="beni-list-detail-val">${val}</span>
+  `).join('');
+  const imageHtml = b.image ? `
+    <div class="beni-list-detail-image">
+      <img src="${_escapeHtmlBeni(_forceHttpsBeniImg(b.image))}" alt="${denom}" loading="lazy"
+           onload="this.classList.add('loaded');this.parentElement.classList.add('loaded')"
+           onerror="this.parentElement.classList.add('errored')">
+    </div>` : '';
+  const descHtml = b.descrizione ? `<div class="beni-list-detail-desc">${_escapeHtmlBeni(b.descrizione)}</div>` : '';
+  const innerCls = b.image ? 'beni-list-detail-inner has-image' : 'beni-list-detail-inner';
+  return `<div class="beni-list-item" role="listitem">
+    <button type="button" id="${rowId}" class="beni-list-row" aria-expanded="false" aria-controls="${detailId}">
+      <span class="beni-list-cat-dot" style="background:${color}" aria-hidden="true"></span>
+      <span class="beni-list-denom">${denom}</span>
+      <span class="beni-list-cat-label">${catLabel}</span>
+      <span class="beni-list-fonte ${fonteCls}">${fonteLab}</span>
+      <span class="beni-list-toggle" aria-hidden="true">&rsaquo;</span>
+    </button>
+    <div id="${detailId}" class="beni-list-detail" role="region" aria-labelledby="${rowId}" hidden>
+      <div class="${innerCls}">
+        <div class="beni-list-detail-text">
+          <div class="beni-list-detail-grid">${rowsHtml}</div>
+          ${descHtml}
+        </div>
+        ${imageHtml}
+      </div>
+    </div>
+  </div>`;
+}
+
+// Filtraggio client-side per testo libero (case-insensitive sul denom + indirizzo)
+function initBeniListSearch() {
+  const input = document.getElementById('beni-list-search');
+  const container = document.getElementById('beni-list-items');
+  const countEl = document.getElementById('beni-list-count');
+  if (!input || !container) return;
+  const handler = () => {
+    const q = (input.value || '').trim().toLowerCase();
+    const items = container.querySelectorAll('.beni-list-item');
+    let visible = 0;
+    items.forEach(it => {
+      const txt = (it.querySelector('.beni-list-denom')?.textContent || '').toLowerCase();
+      const detTxt = (it.querySelector('.beni-list-detail-val')?.textContent || '').toLowerCase();
+      const match = !q || txt.includes(q) || detTxt.includes(q);
+      it.style.display = match ? '' : 'none';
+      if (match) visible++;
+    });
+    if (countEl) {
+      const tot = window.__beniListAll?.length || 0;
+      countEl.textContent = q
+        ? `(${fmtNum(visible)} di ${fmtNum(tot)})`
+        : `(${fmtNum(tot)} ${tot === 1 ? 'bene' : 'beni'})`;
+    }
+  };
+  // Rimpiazzo eventuale handler precedente (al reload FULL)
+  input.oninput = handler;
 }
 
 // ===========================================================================
@@ -5168,8 +5961,7 @@ function renderCarburantiTab(d) {
         <p class="muted">L'Osservatorio Prezzi Carburanti del MIMIT non riporta impianti
         attivi per questo comune. Sono coperti <strong>~5.450 comuni su 7.896 (69%)</strong>:
         i comuni senza distributore sono per la quasi totalità micro-comuni di montagna
-        o piccoli paesi rurali. L'aggiornamento è quotidiano, snapshot
-        "Prezzo alle 8 di mattina".</p>
+        o piccoli paesi rurali. L'aggiornamento è quotidiano.</p>
       </div>`;
   }
   const k = d.kpi;
@@ -5177,7 +5969,7 @@ function renderCarburantiTab(d) {
   const pmin = k.prezzo_min || {};
   const cheapestBenz = carbCheapest(d.punti, 'benzina_self');
   const cheapestGas = carbCheapest(d.punti, 'gasolio_self');
-  const dataLastMod = d._data_last_modified || '—';
+  const dataLastMod = formatDataIT(d._data_last_modified);
   const pctAuto = (k.n_impianti > 0 && k.n_autostradali != null)
     ? (k.n_autostradali / k.n_impianti * 100) : null;
   const fmtPrezzo = (v) => (v != null && !isNaN(v)) ? '€ ' + v.toFixed(3) : '—';
@@ -5189,7 +5981,7 @@ function renderCarburantiTab(d) {
       <p class="section-sub">
         Anagrafica e prezzi praticati comunicati quotidianamente dai gestori al
         <a href="https://carburanti.mise.gov.it/" target="_blank" rel="noopener">MIMIT — Osservatorio Prezzi Carburanti</a>
-        (ai sensi dell'art.&nbsp;51 della Legge&nbsp;99/2009). Dato aggiornato giornalmente, snapshot "Prezzo alle 8 di mattina".
+        (ai sensi dell'art.&nbsp;51 della Legge&nbsp;99/2009). Dato aggiornato giornalmente.
       </p>
       <div class="kpi-cards">
         <div class="kpi-card">
@@ -5327,6 +6119,11 @@ async function initCarburanti(d, regione) {
 
   // 2) Mappa Leaflet + tile OSM
   const map = L.map('carburanti-map-main', { scrollWheelZoom: false, zoomControl: true }).fitBounds(bounds, { padding: [20, 20] });
+  // A11y/UX: scroll-wheel + pinch trackpad abilitati solo dopo click sulla
+  // mappa (focus), disabilitati su blur. Cosi' lo scroll normale della
+  // pagina non viene catturato accidentalmente passando sopra la mappa.
+  map.on('focus', () => map.scrollWheelZoom.enable());
+  map.on('blur',  () => map.scrollWheelZoom.disable());
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19,
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
@@ -5592,7 +6389,7 @@ async function initCarburantiChart(d, regione) {
   let nazData = window.__carburantiNazionale;
   if (!nazData) {
     try {
-      const r = await fetch('https://cruscotto-italia-data.r2.dev/carburanti/_nazionale.json',
+      const r = await fetch('/data/carburanti/_nazionale.json',
         { method: 'GET' });
       if (r.ok) {
         nazData = await r.json();
@@ -5712,6 +6509,9 @@ function initPun(d) {
 
   // ---- 2) Mappa Leaflet + tile OSM
   const map = L.map('pun-map-main', { scrollWheelZoom: false, zoomControl: true }).fitBounds(bounds, { padding: [20, 20] });
+  // A11y/UX: scroll-wheel + pinch trackpad abilitati solo dopo click.
+  map.on('focus', () => map.scrollWheelZoom.enable());
+  map.on('blur',  () => map.scrollWheelZoom.disable());
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19,
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
@@ -6537,7 +7337,7 @@ function renderAnncsuTab(d) {
       </div>`;
   }
   const k = d.kpi;
-  const snapshot = d._snapshot_date || '';
+  const snapshot = formatDataIT(d._snapshot_date);
 
   // KPI sempre presenti
   const cards = [];
@@ -6637,7 +7437,7 @@ function renderAnncsuTab(d) {
       <p class="muted">
         Dati conferiti dal Comune all'Archivio Nazionale dei Numeri Civici e
         delle Strade Urbane (ANNCSU), realizzato da Agenzia delle Entrate
-        e ISTAT ai sensi del DPCM 12/05/2016. Snapshot: ${snapshot || 'n.d.'}.
+        e ISTAT ai sensi del DPCM 12/05/2016. Snapshot: ${snapshot}.
       </p>
       <div class="kpi-cards">${cardsHtml}</div>
       ${mapBlock}
@@ -6706,6 +7506,9 @@ function initAnncsu(d) {
   );
   const map = L.map('anncsu-map', { scrollWheelZoom: false, zoomControl: true })
     .fitBounds(bounds, { padding: [20, 20] });
+  // A11y/UX: scroll-wheel + pinch trackpad abilitati solo dopo click.
+  map.on('focus', () => map.scrollWheelZoom.enable());
+  map.on('blur',  () => map.scrollWheelZoom.disable());
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19,
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
@@ -7230,6 +8033,909 @@ async function tryEnrichAnncsuFull(istat) {
     // Network error o JSON malformato: silenzioso
     console.warn(`ANNCSU full enrich error: ${err.message}`);
   }
+}
+
+
+// ============================================================================
+// CENSIMENTO ISTAT 2021 — Basi Territoriali + Variabili Censuarie
+// ============================================================================
+// Fonte: ISTAT Censimento permanente 2021, CC-BY 3.0 IT.
+// Dati comune-level nel dashboard A1 (sezione `censimento`).
+// Dettaglio per sezione di censimento in lazy fetch:
+//   GET /data/censimento_full/<istat>.geojson
+//
+// Step 12 (frontend): implementazione progressiva in micro-step.
+// 12.1 = stub minimale "in arrivo" + voce navbar.
+// ============================================================================
+
+function renderCensimentoTab(d) {
+  if (!d || !d.kpi_comune) {
+    return `
+      <div class="tab-pane" id="pane-censimento">
+        <div class="section-title">§ Censimento ISTAT 2021</div>
+        <h2 class="section-h">Dati <em>non disponibili</em>.</h2>
+        <p class="muted">Il comune non risulta nelle Basi Territoriali ISTAT 2021 (Censimento permanente).</p>
+      </div>`;
+  }
+  const k = d.kpi_comune;
+  // 8 KPI cards (sempre presenti, "—" se ETL non ha aggregato la metrica).
+  const densita = (k.pop_totale && k.area_kmq) ? Math.round(k.pop_totale / k.area_kmq) : null;
+  const cards = [
+    { lab: 'Sezioni di censimento', val: fmtNum(k.n_sezioni || 0), unit: '' },
+    { lab: 'Popolazione totale',    val: fmtNum(k.pop_totale || 0), unit: 'ab.' },
+    { lab: 'Famiglie',              val: fmtNum(k.famiglie_totali || 0), unit: '' },
+    { lab: 'Abitazioni',            val: fmtNum(k.abitazioni_totali || 0), unit: '' },
+    { lab: 'Edifici residenziali',  val: fmtNum(k.edifici_residenziali || 0), unit: '' },
+    { lab: 'Stranieri',             val: fmtNum(k.stranieri_totali || 0), unit: k.pop_totale ? (((k.stranieri_totali || 0) / k.pop_totale * 100).toFixed(1) + '%') : '' },
+    { lab: 'Occupati 15-64',        val: fmtNum(k.occupati_15_64 || 0), unit: '' },
+    { lab: 'Densità',               val: densita != null ? fmtNum(densita) : '—', unit: 'ab./km²' },
+  ];
+  const cardsHtml = cards.map(c => `
+    <div class="kpi-card">
+      <div class="kpi-card-lab">${c.lab}</div>
+      <div class="kpi-card-val">${c.val}${c.unit ? `<span class="kpi-card-unit">${c.unit}</span>` : ''}</div>
+    </div>
+  `).join('');
+
+  // Distribuzione abitazioni (occupate vs vuote)
+  const aTot = k.abitazioni_totali || 0;
+  const aOcc = k.abitazioni_occupate || 0;
+  const aVuo = k.abitazioni_vuote || 0;
+  const pctVuote = aTot > 0 ? (aVuo / aTot * 100) : null;
+  const pctOcc = aTot > 0 ? (aOcc / aTot * 100) : null;
+  const abitBlock = aTot > 0 ? `
+    <div class="censimento-mini-stats">
+      <h3 class="section-h-small">Abitazioni: occupate vs vuote</h3>
+      <div class="censimento-bar">
+        <div class="censimento-bar-occ" style="width:${pctOcc.toFixed(1)}%" title="${fmtNum(aOcc)} occupate (${pctOcc.toFixed(1)}%)"></div>
+        <div class="censimento-bar-vuo" style="width:${pctVuote.toFixed(1)}%" title="${fmtNum(aVuo)} vuote (${pctVuote.toFixed(1)}%)"></div>
+      </div>
+      <div class="censimento-bar-legend">
+        <span><span class="dot dot-occ" aria-hidden="true"></span> Occupate da residenti: <strong>${fmtNum(aOcc)}</strong> (${pctOcc.toFixed(1)}%)</span>
+        <span><span class="dot dot-vuo" aria-hidden="true"></span> Vuote o non da residenti: <strong>${fmtNum(aVuo)}</strong> (${pctVuote.toFixed(1)}%)</span>
+      </div>
+    </div>
+  ` : '';
+
+  // Stranieri UE vs Extra-UE (se valorizzato)
+  const stTot = k.stranieri_totali || 0;
+  const stUE  = k.stranieri_ue || 0;
+  const stEU  = k.stranieri_extra_ue || 0;
+  const stranieriBlock = (stTot > 0) ? `
+    <div class="censimento-mini-stats">
+      <h3 class="section-h-small">Stranieri: UE vs Extra-UE</h3>
+      <ul class="censimento-list">
+        <li>Cittadini UE: <strong>${fmtNum(stUE)}</strong>${stTot ? ` (${(stUE/stTot*100).toFixed(1)}%)` : ''}</li>
+        <li>Cittadini Extra-UE: <strong>${fmtNum(stEU)}</strong>${stTot ? ` (${(stEU/stTot*100).toFixed(1)}%)` : ''}</li>
+      </ul>
+    </div>
+  ` : '';
+
+  // Mappa choropleth (lazy fetch /data/censimento_full/<istat>.geojson in 12.3)
+  const mapBlock = d._has_full ? `
+    <div class="censimento-map-section">
+      <h3 class="section-h-small">Choropleth — indicatore per sezione</h3>
+      <div class="censimento-controls">
+        <label for="censimento-indicator">Indicatore:</label>
+        <select id="censimento-indicator" class="censimento-select" aria-label="Seleziona indicatore da visualizzare sulla mappa">
+          <option value="densita" selected>Densità popolazione (ab./km²)</option>
+          <option value="pct_over65">% Popolazione 65+</option>
+          <option value="pct_under15">% Popolazione 0-14</option>
+          <option value="pct_stranieri">% Stranieri</option>
+          <option value="pct_laureati">% Laureati (su pop. 9+)</option>
+          <option value="pct_occupati">% Occupati 15-64</option>
+          <option value="pct_unipersonali">% Famiglie unipersonali</option>
+          <option value="pct_abit_vuote">% Abitazioni vuote</option>
+          <option value="edifici_res">Edifici residenziali (assoluto)</option>
+          <option value="pct_extra_ue">% Stranieri Extra-UE (su stranieri)</option>
+          <option value="indice_vecchiaia">Indice di vecchiaia</option>
+          <option value="pct_donne_occ">% Donne occupate (su occupati 15-64)</option>
+        </select>
+      </div>
+      <p class="muted censimento-map-note" id="censimento-map-note">
+        Mappa interattiva delle ${fmtNum(k.n_sezioni || 0)} sezioni di censimento.
+        Il colore rappresenta la densità di popolazione (ab./km²).
+        Sezioni in grigio = territorio non rilevato (parchi, aree industriali, infrastrutture).
+      </p>
+      <div id="censimento-map" class="censimento-map" role="region" aria-label="Mappa choropleth sezioni di censimento">
+        <div class="censimento-map-loading" data-censimento-loading>Caricamento sezioni di censimento…</div>
+      </div>
+      <div class="censimento-legend" id="censimento-legend" aria-label="Legenda dell'indicatore visualizzato"></div>
+      <div id="censimento-section-detail" class="censimento-section-detail" aria-live="polite">
+        <p class="muted censimento-section-hint">Clicca una sezione sulla mappa per visualizzare grafici e tabella completa delle 119 variabili demografiche e abitative.</p>
+      </div>
+    </div>
+  ` : '';
+
+  return `
+    <div class="tab-pane" id="pane-censimento">
+      <div class="section-title">§ Censimento ISTAT 2021</div>
+      <h2 class="section-h">Basi territoriali e variabili <em>censuarie</em>.</h2>
+      <p class="muted">
+        Fonte: ISTAT, Censimento permanente 2021 — Basi Territoriali + Variabili
+        censuarie per sezione di censimento. Licenza CC-BY 3.0 IT.
+        Copertura 100% comuni inclusi TN/BZ. Aggiornamento decennale + revisioni.
+      </p>
+      <div class="kpi-cards">${cardsHtml}</div>
+      ${abitBlock}
+      ${stranieriBlock}
+      ${mapBlock}
+    </div>
+  `;
+}
+
+
+// Palette choropleth: 5 classi sequenziali blu->arancio (color-blind friendly).
+// Pensata per indicatori "più alto = più denso/intenso".
+const CENSIMENTO_PALETTE = ['#deebf7', '#9ecae1', '#4292c6', '#2171b5', '#08519c'];
+const CENSIMENTO_NA_COLOR = '#cccccc';  // sezione senza dato (no_vars)
+
+// Metadati dei 12 indicatori derivati. Tutti calcolati client-side dalle vars raw.
+// `unit`: stringa per legenda. `decimals`: per formatRange (0 = numeri interi,
+// 1 = una cifra decimale). `note`: testo descrittivo per #censimento-map-note.
+const CENSIMENTO_INDICATORS = {
+  densita: {
+    label: 'Densità popolazione',
+    unit: 'ab./km²',
+    decimals: 0,
+    note: 'Densità di popolazione residente (ab./km²). Sezioni in grigio = territorio non rilevato.',
+  },
+  pct_over65: {
+    label: '% Popolazione 65+',
+    unit: '%',
+    decimals: 1,
+    note: 'Percentuale di residenti con 65 anni o più. Indicatore di invecchiamento del tessuto residenziale.',
+  },
+  pct_under15: {
+    label: '% Popolazione 0-14',
+    unit: '%',
+    decimals: 1,
+    note: 'Percentuale di residenti minori di 15 anni. Indicatore di presenza di famiglie giovani.',
+  },
+  pct_stranieri: {
+    label: '% Stranieri',
+    unit: '%',
+    decimals: 1,
+    note: 'Percentuale di residenti stranieri (UE + Extra-UE) sulla popolazione totale.',
+  },
+  pct_laureati: {
+    label: '% Laureati',
+    unit: '%',
+    decimals: 1,
+    note: 'Percentuale di residenti 9+ con titolo terziario (laurea o superiore) sulla pop. 9+.',
+  },
+  pct_occupati: {
+    label: '% Occupati 15-64',
+    unit: '%',
+    decimals: 1,
+    note: 'Percentuale di occupati 15-64 sulla popolazione 15-64 residente. Tasso di occupazione di sezione.',
+  },
+  pct_unipersonali: {
+    label: '% Famiglie unipersonali',
+    unit: '%',
+    decimals: 1,
+    note: 'Percentuale di famiglie con un solo componente sul totale famiglie.',
+  },
+  pct_abit_vuote: {
+    label: '% Abitazioni vuote',
+    unit: '%',
+    decimals: 1,
+    note: 'Percentuale di abitazioni vuote o occupate solo da non-residenti sul totale abitazioni.',
+  },
+  edifici_res: {
+    label: 'Edifici residenziali',
+    unit: '',
+    decimals: 0,
+    note: 'Numero assoluto di edifici a uso residenziale rilevati nella sezione.',
+  },
+  pct_extra_ue: {
+    label: '% Stranieri Extra-UE',
+    unit: '%',
+    decimals: 1,
+    note: 'Percentuale di stranieri Extra-UE sul totale stranieri della sezione.',
+  },
+  indice_vecchiaia: {
+    label: 'Indice di vecchiaia',
+    unit: '',
+    decimals: 0,
+    note: 'Rapporto popolazione 65+ / popolazione 0-14 × 100. Valori > 100 = più anziani che giovani.',
+  },
+  pct_donne_occ: {
+    label: '% Donne occupate',
+    unit: '%',
+    decimals: 1,
+    note: 'Percentuale di donne occupate 15-64 sul totale occupati 15-64.',
+  },
+};
+
+// Calcola valore dell'indicatore per una feature. Ritorna null se dato assente
+// o denominatore = 0. Per le formule vedere HANDOFF sezione 8.3.
+function _censimentoComputeIndicator(feature, indicator) {
+  const p = feature.properties || {};
+  const v = p.vars || {};
+  const safe = (k) => (v[k] != null && isFinite(v[k])) ? v[k] : 0;
+  const has = (k) => (v[k] != null && isFinite(v[k]));
+
+  switch (indicator) {
+    case 'densita': {
+      if (!has('P1') || !p.area_mq || p.area_mq <= 0) return null;
+      return v.P1 / (p.area_mq / 1e6);
+    }
+    case 'pct_over65': {
+      if (!has('P1') || v.P1 === 0) return null;
+      const o65 = safe('P27') + safe('P28') + safe('P29');
+      return o65 / v.P1 * 100;
+    }
+    case 'pct_under15': {
+      if (!has('P1') || v.P1 === 0) return null;
+      const u15 = safe('P14') + safe('P15') + safe('P16');
+      return u15 / v.P1 * 100;
+    }
+    case 'pct_stranieri': {
+      if (!has('P1') || v.P1 === 0) return null;
+      return safe('ST1') / v.P1 * 100;
+    }
+    case 'pct_laureati': {
+      if (!has('P83') || v.P83 === 0) return null;
+      return safe('P90') / v.P83 * 100;
+    }
+    case 'pct_occupati': {
+      // Approssimazione: pop 15-64 = somma P17..P26 (fasce 15-19..60-64)
+      const pop1564 = safe('P17') + safe('P18') + safe('P19') + safe('P20') +
+                      safe('P21') + safe('P22') + safe('P23') + safe('P24') +
+                      safe('P25') + safe('P26');
+      if (pop1564 === 0) return null;
+      return safe('P101') / pop1564 * 100;
+    }
+    case 'pct_unipersonali': {
+      if (!has('PF1') || v.PF1 === 0) return null;
+      return safe('PF3') / v.PF1 * 100;
+    }
+    case 'pct_abit_vuote': {
+      if (!has('A8') || v.A8 === 0) return null;
+      return safe('A3') / v.A8 * 100;
+    }
+    case 'edifici_res': {
+      return has('E3') ? v.E3 : null;
+    }
+    case 'pct_extra_ue': {
+      if (!has('ST1') || v.ST1 === 0) return null;
+      return safe('ST19') / v.ST1 * 100;
+    }
+    case 'indice_vecchiaia': {
+      const u15 = safe('P14') + safe('P15') + safe('P16');
+      const o65 = safe('P27') + safe('P28') + safe('P29');
+      if (u15 === 0) return null;
+      return o65 / u15 * 100;
+    }
+    case 'pct_donne_occ': {
+      if (!has('P101') || v.P101 === 0) return null;
+      return safe('P103') / v.P101 * 100;
+    }
+    default:
+      return null;
+  }
+}
+
+// Calcola breakpoint quantili (5 classi) escludendo i null.
+function _censimentoBreakpoints(values) {
+  const valid = values.filter(v => v != null && isFinite(v) && v > 0).sort((a, b) => a - b);
+  if (valid.length === 0) return null;
+  const n = valid.length;
+  // 4 cut points per 5 classi: quintili
+  const cuts = [0.2, 0.4, 0.6, 0.8].map(q => valid[Math.min(Math.floor(q * n), n - 1)]);
+  // Deduplica (per dataset piccoli con molti valori uguali)
+  return Array.from(new Set(cuts));
+}
+
+function _censimentoColorFor(value, breaks) {
+  if (value == null || !isFinite(value) || value <= 0) return CENSIMENTO_NA_COLOR;
+  for (let i = 0; i < breaks.length; i++) {
+    if (value <= breaks[i]) return CENSIMENTO_PALETTE[i];
+  }
+  return CENSIMENTO_PALETTE[CENSIMENTO_PALETTE.length - 1];
+}
+
+// Formatta un range numerico per la legenda
+function _censimentoFormatRange(lo, hi, decimals) {
+  const fmt = (n) => {
+    if (n == null) return '∞';
+    if (decimals === 0) return fmtNum(Math.round(n));
+    return n.toFixed(decimals);
+  };
+  return `${lo == null ? '0' : fmt(lo)}–${fmt(hi)}`;
+}
+
+// Render legenda per un dato indicatore + breakpoints.
+function _censimentoRenderLegend(indicator, breaks, nNoData) {
+  const legendEl = document.getElementById('censimento-legend');
+  if (!legendEl) return;
+  const meta = CENSIMENTO_INDICATORS[indicator] || CENSIMENTO_INDICATORS.densita;
+  if (!breaks || breaks.length === 0) {
+    legendEl.innerHTML = `<span class="censimento-legend-item muted">Dati insufficienti per la legenda</span>`;
+    return;
+  }
+  const u = meta.unit ? ` ${meta.unit}` : '';
+  const items = [];
+  items.push(`<span class="censimento-legend-item"><span class="censimento-legend-swatch" style="background:${CENSIMENTO_PALETTE[0]}"></span>${_censimentoFormatRange(0, breaks[0], meta.decimals)}${u}</span>`);
+  for (let i = 1; i < breaks.length; i++) {
+    items.push(`<span class="censimento-legend-item"><span class="censimento-legend-swatch" style="background:${CENSIMENTO_PALETTE[i]}"></span>${_censimentoFormatRange(breaks[i-1], breaks[i], meta.decimals)}${u}</span>`);
+  }
+  items.push(`<span class="censimento-legend-item"><span class="censimento-legend-swatch" style="background:${CENSIMENTO_PALETTE[breaks.length]}"></span>&gt; ${meta.decimals === 0 ? fmtNum(Math.round(breaks[breaks.length-1])) : breaks[breaks.length-1].toFixed(meta.decimals)}${u}</span>`);
+  if (nNoData > 0) {
+    items.push(`<span class="censimento-legend-item"><span class="censimento-legend-swatch" style="background:${CENSIMENTO_NA_COLOR}"></span>Non rilevata (${fmtNum(nNoData)})</span>`);
+  }
+  legendEl.innerHTML = items.join('');
+}
+
+// Applica un indicatore alla mappa: ricalcola valori, quantili, restyle, legenda, note.
+function _censimentoApplyIndicator(indicator) {
+  const inst = window.__censimentoInstance;
+  if (!inst) return;
+  const { fc, layer } = inst;
+
+  // Ricalcola valori per ogni feature (anche per indicatori non-densita)
+  const values = fc.features.map(f => _censimentoComputeIndicator(f, indicator));
+  const breaks = _censimentoBreakpoints(values);
+
+  let nNoData = 0;
+  layer.eachLayer((lyr) => {
+    const idx = lyr.__cnsIdx;
+    const v = (idx != null) ? values[idx] : null;
+    if (v == null) nNoData++;
+    lyr.setStyle({
+      fillColor: breaks ? _censimentoColorFor(v, breaks) : CENSIMENTO_NA_COLOR,
+      fillOpacity: 0.75,
+      weight: 0.6,
+      color: '#555',
+      opacity: 0.55,
+    });
+  });
+
+  inst.indicator = indicator;
+  inst.breaks = breaks;
+
+  // Aggiorna nota descrittiva
+  const noteEl = document.getElementById('censimento-map-note');
+  const meta = CENSIMENTO_INDICATORS[indicator] || CENSIMENTO_INDICATORS.densita;
+  if (noteEl) {
+    noteEl.textContent = `${meta.note} Sezioni in grigio = territorio non rilevato.`;
+  }
+
+  _censimentoRenderLegend(indicator, breaks, nNoData);
+}
+
+// Lazy fetch + render choropleth Censimento.
+// Indicatore default: densità popolazione (P1 / area_kmq).
+async function initCensimentoMap(istat) {
+  const mapEl = document.getElementById('censimento-map');
+  const loadingEl = mapEl ? mapEl.querySelector('[data-censimento-loading]') : null;
+  if (!mapEl) return;
+
+  let fc;
+  try {
+    const url = `${CENSIMENTO_FULL_BASE}/${istat}.geojson`;
+    const res = await fetch(url);
+    if (!res.ok) {
+      if (loadingEl) loadingEl.textContent = 'Dati di sezione non disponibili per questo comune.';
+      console.warn(`Censimento full fetch failed: HTTP ${res.status} for ${url}`);
+      return;
+    }
+    fc = await res.json();
+  } catch (err) {
+    if (loadingEl) loadingEl.textContent = 'Errore di rete nel caricamento delle sezioni.';
+    console.warn(`Censimento full fetch error: ${err.message}`);
+    return;
+  }
+
+  if (!fc || !Array.isArray(fc.features) || fc.features.length === 0) {
+    if (loadingEl) loadingEl.textContent = 'Nessuna sezione di censimento trovata.';
+    return;
+  }
+
+  // Init Leaflet map
+  const map = L.map(mapEl, { scrollWheelZoom: false, zoomControl: true });
+  // A11y/UX: scroll-wheel + pinch trackpad abilitati solo dopo click.
+  map.on('focus', () => map.scrollWheelZoom.enable());
+  map.on('blur',  () => map.scrollWheelZoom.disable());
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+  }).addTo(map);
+
+  // Stato iniziale: densità popolazione
+  const initialIndicator = 'densita';
+  const values0 = fc.features.map(f => _censimentoComputeIndicator(f, initialIndicator));
+  const breaks0 = _censimentoBreakpoints(values0);
+
+  // GeoJSON layer
+  let nNoData0 = 0;
+  let _featIdx = 0;
+  const layer = L.geoJSON(fc, {
+    style: (feature) => {
+      const v = _censimentoComputeIndicator(feature, initialIndicator);
+      if (v == null) nNoData0++;
+      return {
+        fillColor: breaks0 ? _censimentoColorFor(v, breaks0) : CENSIMENTO_NA_COLOR,
+        fillOpacity: 0.75,
+        weight: 0.6,
+        color: '#555',
+        opacity: 0.55,
+      };
+    },
+    onEachFeature: (feature, lyr) => {
+      lyr.__cnsIdx = _featIdx++;
+      lyr.on('click', () => {
+        _censimentoRenderSectionDetail(feature);
+        // Scroll smooth al pannello dettaglio. L'offset per gli header
+        // sticky e' gestito da CSS via scroll-margin-top sulla classe
+        // .censimento-section-detail (vedi sopra), responsive desktop/mobile.
+        requestAnimationFrame(() => {
+          const detail = document.getElementById('censimento-section-detail');
+          if (detail) detail.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+      });
+    }
+  }).addTo(map);
+
+  // Fit bounds
+  try {
+    map.fitBounds(layer.getBounds(), { padding: [12, 12] });
+  } catch (e) {
+    map.setView([41.9, 12.5], 6);
+  }
+
+  if (loadingEl) loadingEl.remove();
+
+  // Salva istanza prima di renderizzare la legenda
+  window.__censimentoInstance = { map, layer, fc, breaks: breaks0, indicator: initialIndicator };
+
+  // Render legenda iniziale (densità)
+  _censimentoRenderLegend(initialIndicator, breaks0, nNoData0);
+
+  // Bind dropdown change
+  const selEl = document.getElementById('censimento-indicator');
+  if (selEl) {
+    selEl.addEventListener('change', (e) => {
+      _censimentoApplyIndicator(e.target.value);
+    });
+  }
+}
+
+
+// Holders Chart.js per i 4 chart sezione (destroy + recreate al cambio sezione)
+const _CENSIMENTO_CHART_REFS = { eta: null, titolo: null, stranieri: null, famiglie: null };
+
+// Dizionario 119 variabili numeriche raggruppate in 8 famiglie semantiche.
+// Descrizioni adattate dal TRACCIATO ISTAT (Nota informativa Basi territoriali 2021).
+const CENSIMENTO_FAMILIES = [
+  {
+    id: 'pop',
+    label: 'Popolazione totale',
+    open: true,  // prima famiglia aperta di default
+    vars: [
+      ['P1',  'Popolazione residente totale'],
+      ['P2',  'Popolazione residente maschi'],
+      ['P3',  'Popolazione residente femmine'],
+    ],
+  },
+  {
+    id: 'eta_tot',
+    label: 'Popolazione per età (totale, 5 anni)',
+    vars: [
+      ['P14', '< 5 anni'], ['P15', '5–9'], ['P16', '10–14'], ['P17', '15–19'],
+      ['P18', '20–24'], ['P19', '25–29'], ['P20', '30–34'], ['P21', '35–39'],
+      ['P22', '40–44'], ['P23', '45–49'], ['P24', '50–54'], ['P25', '55–59'],
+      ['P26', '60–64'], ['P27', '65–69'], ['P28', '70–74'], ['P29', '≥ 75 anni'],
+    ],
+  },
+  {
+    id: 'eta_m',
+    label: 'Popolazione maschi per età (5 anni)',
+    vars: [
+      ['P30', '< 5 anni M'], ['P31', '5–9 M'], ['P32', '10–14 M'], ['P33', '15–19 M'],
+      ['P34', '20–24 M'], ['P35', '25–29 M'], ['P36', '30–34 M'], ['P37', '35–39 M'],
+      ['P38', '40–44 M'], ['P39', '45–49 M'], ['P40', '50–54 M'], ['P41', '55–59 M'],
+      ['P42', '60–64 M'], ['P43', '65–69 M'], ['P44', '70–74 M'], ['P45', '≥ 75 anni M'],
+    ],
+  },
+  {
+    id: 'eta_f',
+    label: 'Popolazione femmine per età (5 anni)',
+    vars: [
+      ['P67', '< 5 anni F'], ['P68', '5–9 F'], ['P69', '10–14 F'], ['P70', '15–19 F'],
+      ['P71', '20–24 F'], ['P72', '25–29 F'], ['P73', '30–34 F'], ['P74', '35–39 F'],
+      ['P75', '40–44 F'], ['P76', '45–49 F'], ['P77', '50–54 F'], ['P78', '55–59 F'],
+      ['P79', '60–64 F'], ['P80', '65–69 F'], ['P81', '70–74 F'], ['P82', '≥ 75 anni F'],
+    ],
+  },
+  {
+    id: 'studio',
+    label: 'Titolo di studio (popolazione 9+)',
+    vars: [
+      ['P83', 'Pop. 9+ totale'],
+      ['P84', 'Pop. 9+ maschi'],
+      ['P85', 'Pop. 9+ femmine'],
+      ['P86', 'Nessun titolo'],
+      ['P87', 'Licenza elementare'],
+      ['P88', 'Licenza media'],
+      ['P89', 'Diploma scuola superiore'],
+      ['P90', 'Titolo terziario (laurea o sup.)'],
+      ['P91', 'Nessun titolo (M)'],
+      ['P92', 'Elementare (M)'],
+      ['P93', 'Media (M)'],
+      ['P94', 'Diploma (M)'],
+      ['P95', 'Terziario (M)'],
+      ['P96', 'Nessun titolo (F)'],
+      ['P97', 'Elementare (F)'],
+      ['P98', 'Media (F)'],
+      ['P99', 'Diploma (F)'],
+      ['P100', 'Terziario (F)'],
+    ],
+  },
+  {
+    id: 'occupati_italiani',
+    label: 'Occupati 15–64 e cittadini italiani',
+    vars: [
+      ['P101', 'Occupati 15–64 totali'],
+      ['P102', 'Occupati 15–64 maschi'],
+      ['P103', 'Occupati 15–64 femmine'],
+      ['IT1', 'Italiani 0–14'],
+      ['IT2', 'Italiani 15–64'],
+      ['IT3', 'Italiani 65+'],
+      ['IT4', 'Italiani 0–14 (M)'],
+      ['IT5', 'Italiani 15–64 (M)'],
+      ['IT6', 'Italiani 65+ (M)'],
+      ['IT7', 'Italiani 0–14 (F)'],
+      ['IT8', 'Italiani 15–64 (F)'],
+      ['IT9', 'Italiani 65+ (F)'],
+      ['IT10', 'Occupati italiani 15–64 totali'],
+      ['IT11', 'Occupati italiani 15–64 (M)'],
+      ['IT12', 'Occupati italiani 15–64 (F)'],
+    ],
+  },
+  {
+    id: 'stranieri',
+    label: 'Stranieri (UE / Extra-UE, sesso, età)',
+    vars: [
+      ['ST1', 'Stranieri totali'],
+      ['ST2', 'Stranieri maschi'],
+      ['ST2_B', 'Stranieri femmine'],
+      ['ST3', 'Stranieri 0–29'],
+      ['ST4', 'Stranieri 30–54'],
+      ['ST5', 'Stranieri 55+'],
+      ['ST16', 'Stranieri UE totali'],
+      ['ST17', 'Stranieri UE (M)'],
+      ['ST18', 'Stranieri UE (F)'],
+      ['ST19', 'Stranieri Extra-UE totali'],
+      ['ST20', 'Stranieri Extra-UE (M)'],
+      ['ST21', 'Stranieri Extra-UE (F)'],
+      ['ST22', 'Stranieri 0–14 totali'],
+      ['ST23', 'Stranieri 15–64 totali'],
+      ['ST24', 'Stranieri 65+ totali'],
+      ['ST25', 'Stranieri 0–14 (M)'],
+      ['ST26', 'Stranieri 15–64 (M)'],
+      ['ST27', 'Stranieri 65+ (M)'],
+      ['ST28', 'Stranieri 0–14 (F)'],
+      ['ST29', 'Stranieri 15–64 (F)'],
+      ['ST30', 'Stranieri 65+ (F)'],
+      ['ST31', 'Occupati stranieri 15–64 totali'],
+      ['ST32', 'Occupati stranieri 15–64 (M)'],
+      ['ST33', 'Occupati stranieri 15–64 (F)'],
+    ],
+  },
+  {
+    id: 'famiglie_abit',
+    label: 'Famiglie, abitazioni ed edifici',
+    vars: [
+      ['PF1', 'Famiglie totali'],
+      ['PF3', 'Famiglie 1 componente'],
+      ['PF4', 'Famiglie 2 componenti'],
+      ['PF5', 'Famiglie 3 componenti'],
+      ['PF6', 'Famiglie 4 componenti'],
+      ['PF7', 'Famiglie 5 componenti'],
+      ['PF8', 'Famiglie 6+ componenti'],
+      ['A2', 'Abitazioni occupate da residenti'],
+      ['A3', 'Abitazioni vuote o solo non-residenti'],
+      ['A8', 'Abitazioni totali'],
+      ['E3', 'Edifici residenziali'],
+    ],
+  },
+];
+
+function _censimentoDestroyCharts() {
+  Object.keys(_CENSIMENTO_CHART_REFS).forEach(k => {
+    if (_CENSIMENTO_CHART_REFS[k]) {
+      try { _CENSIMENTO_CHART_REFS[k].destroy(); } catch (e) {}
+      _CENSIMENTO_CHART_REFS[k] = null;
+    }
+  });
+}
+
+// Render pannello dettaglio per una feature selezionata sulla mappa.
+function _censimentoRenderSectionDetail(feature) {
+  const detailEl = document.getElementById('censimento-section-detail');
+  if (!detailEl) return;
+  _censimentoDestroyCharts();
+
+  const p = feature.properties || {};
+  const v = p.vars || {};
+  const sezLab = (p.sez != null) ? `Sezione di censimento n. ${p.sez}` : `Sezione ${p.id || '—'}`;
+  const tipoLoc = p.tipo_loc ? p.tipo_loc.replace(/_/g, ' ') : '—';
+  const hasVars = (v.P1 != null);
+
+  // Header sempre presente
+  const headerHtml = `
+    <div class="censimento-section-header">
+      <h3 class="censimento-section-title">${sezLab}</h3>
+      <div class="censimento-section-meta">
+        <span><strong>Tipo</strong>: ${tipoLoc}</span>
+        ${p.area_mq != null ? ` · <span><strong>Area</strong>: ${fmtNum(Math.round(p.area_mq))} m²</span>` : ''}
+        ${hasVars ? ` · <span><strong>Pop.</strong>: ${fmtNum(v.P1)} (M ${fmtNum(v.P2 || 0)} / F ${fmtNum(v.P3 || 0)})</span>` : ''}
+      </div>
+    </div>`;
+
+  // Sezione non rilevata: header + messaggio, niente chart
+  if (!hasVars) {
+    detailEl.innerHTML = headerHtml + `
+      <p class="censimento-chart-empty">
+        Sezione non rilevata dal Censimento permanente 2021 (area non residenziale,
+        parco, zona industriale o infrastruttura).
+      </p>
+    `;
+    return;
+  }
+
+  // Layout: 4 chart cards
+  detailEl.innerHTML = headerHtml + `
+    <div class="censimento-charts-grid">
+      <div class="censimento-chart-card">
+        <h4 class="censimento-chart-title">Piramide età (maschi vs femmine)</h4>
+        <div class="censimento-chart-wrap"><canvas id="cns-chart-eta" aria-label="Piramide età per fascia 5 anni"></canvas></div>
+      </div>
+      <div class="censimento-chart-card">
+        <h4 class="censimento-chart-title">Titolo di studio (pop. 9+)</h4>
+        <div class="censimento-chart-wrap"><canvas id="cns-chart-titolo" aria-label="Distribuzione titolo di studio"></canvas></div>
+      </div>
+      <div class="censimento-chart-card">
+        <h4 class="censimento-chart-title">Stranieri: UE vs Extra-UE</h4>
+        <div class="censimento-chart-wrap"><canvas id="cns-chart-stranieri" aria-label="Stranieri UE ed Extra-UE per sesso"></canvas></div>
+      </div>
+      <div class="censimento-chart-card">
+        <h4 class="censimento-chart-title">Famiglie per numero componenti</h4>
+        <div class="censimento-chart-wrap"><canvas id="cns-chart-famiglie" aria-label="Distribuzione famiglie per numero di componenti"></canvas></div>
+      </div>
+    </div>
+  `;
+
+  // Forza Chart.js a partire dopo il prossimo paint (canvas appena montati)
+  setTimeout(() => {
+    _censimentoChartEta(v);
+    _censimentoChartTitolo(v);
+    _censimentoChartStranieri(v);
+    _censimentoChartFamiglie(v);
+  }, 0);
+
+  // Tabella collapsibile 8 famiglie × 119 vars (subito dopo i chart)
+  detailEl.insertAdjacentHTML('beforeend', _censimentoRenderVarsTable(v));
+}
+
+// Helper: somma sicura di chiavi
+function _cnsSum(v, keys) {
+  return keys.reduce((a, k) => a + ((v[k] != null && isFinite(v[k])) ? v[k] : 0), 0);
+}
+
+// Tabella collapsibile 8 famiglie x 119 vars (raw, pass-through 1:1 ISTAT).
+// Pattern: <details><summary>famiglia</summary><table>vars</table></details>.
+// Prima famiglia 'pop' open di default. Valori null mostrati come "—".
+function _censimentoRenderVarsTable(v) {
+  if (!v) return '';
+  const sections = CENSIMENTO_FAMILIES.map(fam => {
+    const total = fam.vars.length;
+    const rows = fam.vars.map(([code, descr]) => {
+      const raw = v[code];
+      const val = (raw != null && isFinite(raw)) ? fmtNum(raw) : '—';
+      const isMissing = (raw == null || !isFinite(raw));
+      return `
+        <tr${isMissing ? ' class="cns-var-na"' : ''}>
+          <td class="cns-var-code">${code}</td>
+          <td class="cns-var-descr">${descr}</td>
+          <td class="cns-var-val">${val}</td>
+        </tr>
+      `;
+    }).join('');
+    return `
+      <details class="cns-var-family"${fam.open ? ' open' : ''}>
+        <summary class="cns-var-family-summary">
+          <span class="cns-var-family-label">${fam.label}</span>
+          <span class="cns-var-family-count">${total} ${total === 1 ? 'voce' : 'voci'}</span>
+        </summary>
+        <div class="cns-var-table-wrap">
+          <table class="cns-var-table">
+            <caption class="visually-hidden">${fam.label}: ${total} variabili del Censimento permanente 2021</caption>
+            <thead>
+              <tr>
+                <th scope="col" class="cns-var-code">Codice</th>
+                <th scope="col" class="cns-var-descr">Descrizione</th>
+                <th scope="col" class="cns-var-val">Valore</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+      </details>
+    `;
+  }).join('');
+
+  return `
+    <section class="cns-var-section" aria-labelledby="cns-var-h">
+      <h4 class="cns-var-section-h" id="cns-var-h">Tabella completa — 119 variabili ISTAT (raw)</h4>
+      <p class="cns-var-section-note muted">
+        Pass-through 1:1 del Censimento permanente 2021 — codici e descrizioni dal
+        tracciato ufficiale ISTAT. Clicca su una famiglia per espanderla.
+      </p>
+      ${sections}
+    </section>
+  `;
+}
+
+
+// CHART 1 — Piramide età M/F (P30-P45 maschi, P67-P82 femmine, fasce 5 anni)
+function _censimentoChartEta(v) {
+  const canvas = document.getElementById('cns-chart-eta');
+  if (!canvas) return;
+  // 16 fasce 5 anni: <5, 5-9, ..., 70-74, >74
+  const labels = ['<5','5-9','10-14','15-19','20-24','25-29','30-34','35-39',
+                  '40-44','45-49','50-54','55-59','60-64','65-69','70-74','75+'];
+  const maleKeys   = ['P30','P31','P32','P33','P34','P35','P36','P37','P38','P39','P40','P41','P42','P43','P44','P45'];
+  const femaleKeys = ['P67','P68','P69','P70','P71','P72','P73','P74','P75','P76','P77','P78','P79','P80','P81','P82'];
+  // Maschi negativi per piramide
+  const males = maleKeys.map(k => -1 * ((v[k] != null && isFinite(v[k])) ? v[k] : 0));
+  const females = femaleKeys.map(k => (v[k] != null && isFinite(v[k])) ? v[k] : 0);
+  // Se tutti zero: skip
+  if (males.every(x => x === 0) && females.every(x => x === 0)) {
+    canvas.parentElement.innerHTML = '<p class="censimento-chart-empty">Dati età non rilevati.</p>';
+    return;
+  }
+  _CENSIMENTO_CHART_REFS.eta = new Chart(canvas.getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Maschi',   data: males,   backgroundColor: '#1B7BBC', borderWidth: 0 },
+        { label: 'Femmine',  data: females, backgroundColor: '#D9364F', borderWidth: 0 },
+      ]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        x: {
+          stacked: false,
+          ticks: { callback: (val) => fmtNum(Math.abs(val)), font: { size: 13 } },
+          grid: { color: 'rgba(0,0,0,.06)' },
+        },
+        y: { stacked: false, ticks: { font: { size: 13 } }, grid: { display: false } },
+      },
+      plugins: {
+        legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 14 } } },
+        tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${fmtNum(Math.abs(ctx.parsed.x))}` } },
+      }
+    }
+  });
+}
+
+// CHART 2 — Titolo di studio P86-P90 (pop 9+)
+function _censimentoChartTitolo(v) {
+  const canvas = document.getElementById('cns-chart-titolo');
+  if (!canvas) return;
+  const labels = ['Nessuno', 'Elementare', 'Media', 'Diploma', 'Terziario'];
+  const keys = ['P86','P87','P88','P89','P90'];
+  const data = keys.map(k => (v[k] != null && isFinite(v[k])) ? v[k] : 0);
+  if (data.every(x => x === 0)) {
+    canvas.parentElement.innerHTML = '<p class="censimento-chart-empty">Titoli di studio non rilevati.</p>';
+    return;
+  }
+  _CENSIMENTO_CHART_REFS.titolo = new Chart(canvas.getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Pop. 9+',
+        data,
+        backgroundColor: ['#9E9E9E','#C9A23E','#E89400','#1B7BBC','#08519c'],
+        borderWidth: 0,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        x: { ticks: { font: { size: 13 } }, grid: { display: false } },
+        y: { beginAtZero: true, ticks: { font: { size: 13 }, callback: (val) => fmtNum(val) }, grid: { color: 'rgba(0,0,0,.06)' } },
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: (ctx) => `${fmtNum(ctx.parsed.y)} persone` } },
+      }
+    }
+  });
+}
+
+// CHART 3 — Stranieri UE vs Extra-UE per sesso (ST16-ST21)
+function _censimentoChartStranieri(v) {
+  const canvas = document.getElementById('cns-chart-stranieri');
+  if (!canvas) return;
+  // ST16 UE tot, ST17 UE M, ST18 UE F
+  // ST19 Extra-UE tot, ST20 Extra-UE M, ST21 Extra-UE F
+  const ueM   = (v.ST17 != null && isFinite(v.ST17)) ? v.ST17 : 0;
+  const ueF   = (v.ST18 != null && isFinite(v.ST18)) ? v.ST18 : 0;
+  const euM   = (v.ST20 != null && isFinite(v.ST20)) ? v.ST20 : 0;
+  const euF   = (v.ST21 != null && isFinite(v.ST21)) ? v.ST21 : 0;
+  if (ueM + ueF + euM + euF === 0) {
+    canvas.parentElement.innerHTML = '<p class="censimento-chart-empty">Nessuno straniero residente nella sezione.</p>';
+    return;
+  }
+  _CENSIMENTO_CHART_REFS.stranieri = new Chart(canvas.getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels: ['UE', 'Extra-UE'],
+      datasets: [
+        { label: 'Maschi',  data: [ueM, euM], backgroundColor: '#1B7BBC', borderWidth: 0 },
+        { label: 'Femmine', data: [ueF, euF], backgroundColor: '#D9364F', borderWidth: 0 },
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        x: { stacked: true, ticks: { font: { size: 14 } }, grid: { display: false } },
+        y: { stacked: true, beginAtZero: true, ticks: { font: { size: 13 }, callback: (val) => fmtNum(val) }, grid: { color: 'rgba(0,0,0,.06)' } },
+      },
+      plugins: {
+        legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 14 } } },
+        tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${fmtNum(ctx.parsed.y)}` } },
+      }
+    }
+  });
+}
+
+// CHART 4 — Famiglie per numero componenti (PF3-PF8)
+function _censimentoChartFamiglie(v) {
+  const canvas = document.getElementById('cns-chart-famiglie');
+  if (!canvas) return;
+  const labels = ['1 comp.', '2 comp.', '3 comp.', '4 comp.', '5 comp.', '6+ comp.'];
+  const keys = ['PF3','PF4','PF5','PF6','PF7','PF8'];
+  const data = keys.map(k => (v[k] != null && isFinite(v[k])) ? v[k] : 0);
+  if (data.every(x => x === 0)) {
+    canvas.parentElement.innerHTML = '<p class="censimento-chart-empty">Composizione famiglie non rilevata.</p>';
+    return;
+  }
+  _CENSIMENTO_CHART_REFS.famiglie = new Chart(canvas.getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Famiglie',
+        data,
+        backgroundColor: '#7CB342',
+        borderWidth: 0,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        x: { ticks: { font: { size: 13 } }, grid: { display: false } },
+        y: { beginAtZero: true, ticks: { font: { size: 13 }, callback: (val) => fmtNum(val) }, grid: { color: 'rgba(0,0,0,.06)' } },
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: (ctx) => `${fmtNum(ctx.parsed.y)} famiglie` } },
+      }
+    }
+  });
 }
 
 
@@ -7762,6 +9468,17 @@ function bindTabSwitching() {
         }
       }
 
+      // Lazy-init mappa choropleth Censimento al primo click
+      if (tab.dataset.tab === 'censimento') {
+        if (window.__censimentoData && window.__censimentoData._has_full && !window.__censimentoInited) {
+          const istatParam = new URLSearchParams(window.location.search).get('istat');
+          if (istatParam) {
+            setTimeout(() => initCensimentoMap(istatParam), 0);
+            window.__censimentoInited = true;
+          }
+        }
+      }
+
       // Lazy-init mappa Leaflet tab Sanità al primo click
       if (tab.dataset.tab === 'sanita') {
         if (window.__sanitaData && !window.__sanitaInited) {
@@ -7812,7 +9529,33 @@ function bindTabSwitching() {
         }
       }
 
+      // Lazy-init mappa Leaflet + filtri categoria Beni Culturali MiC ArCo al primo click
+      // Carica i primi 30 luoghi dallo shard base, poi enrichment async dello shard FULL
+      // se _full_shard_available=true (lazy 300ms dopo init mappa).
+      if (tab.dataset.tab === 'beni-culturali') {
+        if (window.__beniCulturaliData && !window.__beniCulturaliInited) {
+          setTimeout(() => {
+            initBeniCulturali(window.__beniCulturaliData);
+            if (window.__beniCulturaliData._full_shard_available) {
+              const istatParam = new URLSearchParams(window.location.search).get('istat');
+              if (istatParam) {
+                setTimeout(() => tryEnrichBeniCulturaliFull(istatParam), 300);
+              }
+            }
+          }, 0);
+          window.__beniCulturaliInited = true;
+        }
+      }
+
       // Lazy-init chart Chart.js ASIA al primo click
+      // Lazy-init mappa Leaflet flussi pendolari al primo click
+      if (tab.dataset.tab === 'pendolarismo') {
+        if (window.__pendolarismoData && !window.__pendolarismoInited) {
+          setTimeout(() => initPendolarismoMap(window.__pendolarismoData), 0);
+          window.__pendolarismoInited = true;
+        }
+      }
+
       if (tab.dataset.tab === 'asia') {
         if (window.__asiaData && !window.__asiaInited) {
           setTimeout(() => initAsia(window.__asiaData), 0);
@@ -8434,7 +10177,7 @@ function initSanitaMap(d) {
   miniInput.addEventListener('input', () => {
     const q = miniInput.value.trim();
     clearTimeout(miniDebounce);
-    if (q.length < 2) { miniClose(); return; }
+    if (q.length < 3) { miniClose(); return; }
     miniDebounce = setTimeout(async () => {
       try {
         const r = await mcpCall('search_comune', { query: q, limit: 8 });
@@ -8542,11 +10285,14 @@ function adaptDashboardToOverview(d) {
       immobili_pa: d.immobili_pa,  // pass-through completo per renderImmobiliPaTab
       sanita_mds: d.sanita_mds,    // pass-through completo per renderSanitaTab
       anncsu: d.anncsu,  // pass-through completo per renderAnncsuTab
+      censimento: d.censimento,  // pass-through completo per renderCensimentoTab
       pun: d.pun,  // pass-through completo per renderPunTab
       agcom_bbmap: d.agcom_bbmap,  // pass-through completo per renderBandaLargaTab
       carburanti: d.carburanti,    // pass-through completo per renderCarburantiTab
       runts: d.runts,    // pass-through completo per renderRuntsTab
       asia: d.asia,      // pass-through completo per renderAsiaTab
+      pendolarismo: d.pendolarismo,  // pass-through completo per renderPendolarismoTab
+      beni_culturali: d.beni_culturali,  // pass-through completo per renderBeniCulturaliTab (25a fonte MiC ArCo)
       // Pass-through aggiuntivi (servono alla Panoramica home per i KPI di sintesi):
       profilo: d.profilo,
       turismo: d.turismo,
@@ -8596,7 +10342,10 @@ function populateCachesFromDashboard(istat, d) {
     }
   }
   if (d.opere) {
-    // Il loader del tab Opere si aspetta lo shard "comune_opere_dettaglio".
+    // Pre-popoliamo la cache del tab Opere con la sezione 'opere' dello shard
+    // A1 unified (comune_dashboard). Il loader loadOpereDettaglio() legge
+    // SOLO dalla cache: il tool comune_opere_dettaglio e' stato deprecato
+    // perche' i dati sono gia' tutti dentro comune_dashboard.opere.
     window.__opereDettaglioCache = window.__opereDettaglioCache || {};
     window.__opereDettaglioCache[istat] = d.opere;
     // __opereData viene usato da renderOpereChart che legge .finanz.
@@ -8701,38 +10450,6 @@ async function setupDownloadButton(istat, dashboard) {
   const btn = document.getElementById('btn-download-zip');
   if (!btn || typeof JSZip === 'undefined') return;
 
-  // [MAINTENANCE 2026-05-15] Download ZIP temporaneamente disabilitato.
-  // Per riattivare: rimuovere questo blocco fino al commento END MAINTENANCE.
-  // Il bottone resta visibile e cliccabile per non rompere il layout, ma
-  // il click mostra solo un messaggio informativo e non genera lo ZIP.
-  btn.addEventListener('click', (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    // Banner inline gentile invece di alert nativo (UX migliore + accessibile)
-    let banner = document.getElementById('download-maintenance-banner');
-    if (!banner) {
-      banner = document.createElement('div');
-      banner.id = 'download-maintenance-banner';
-      banner.setAttribute('role', 'status');
-      banner.setAttribute('aria-live', 'polite');
-      banner.style.cssText = 'position:fixed;top:80px;left:50%;transform:translateX(-50%);' +
-        'background:#fff8e6;border:1px solid #d9a200;border-left:4px solid #d9a200;' +
-        'border-radius:8px;padding:14px 22px;box-shadow:0 4px 14px rgba(0,0,0,0.12);' +
-        'z-index:9999;max-width:520px;font-size:14px;line-height:1.5;color:#3a3a3a;' +
-        'font-family:inherit;';
-      banner.innerHTML = '<strong>Download temporaneamente non disponibile.</strong><br>' +
-        'Il servizio di esportazione ZIP è in manutenzione. ' +
-        'I dati restano consultabili online in tutte le tab. ' +
-        'Per accordi di riuso massivo dei dati aggregati, contattare ' +
-        '<a href="mailto:piersoft2@gmail.com" style="color:#0066CC;">piersoft2@gmail.com</a>.';
-      document.body.appendChild(banner);
-      setTimeout(() => { banner.style.transition = 'opacity .4s'; banner.style.opacity = '0';
-        setTimeout(() => banner.remove(), 400); }, 5500);
-    }
-  });
-  return;
-  // [END MAINTENANCE — il codice originale segue, intoccato] ---------------
-
   btn.addEventListener('click', async () => {
     const originalLabel = btn.querySelector('.label').textContent;
     btn.disabled = true;
@@ -8769,14 +10486,18 @@ CONTENUTO DELLO ZIP
 - METADATI.csv         Legenda campi, fonti, periodi di riferimento
 - LICENSE.txt          Licenza d'uso e attribuzioni
 
-FONTI INTEGRATE (20 dataset, 15 istituzioni)
---------------------------------------------
+FONTI INTEGRATE
+---------------
 - ANAC                              Contratti pubblici (OCDS)
 - BDAP-MOP                          Opere pubbliche dei comuni
 - SIOPE                             Flussi di cassa (per_anno multi-anno)
 - Italia Domani (PNRR)              Progetti del Piano (Sistema ReGiS)
 - ISPRA                             Consumo suolo, IdroGEO, rifiuti, SNPA qualità aria
-- ISTAT                             Demografia, profilo censimento, turismo, incidenti, ASIA UL imprese e addetti
+- ISTAT                             Demografia, profilo censimento, turismo, incidenti,
+                                    ASIA UL imprese e addetti,
+                                    Matrice pendolarismo per lavoro 2021 (Censimento permanente),
+                                    Basi Territoriali 2021 + Variabili censuarie del
+                                    Censimento permanente (119 var per sezione di censimento)
 - MIUR                              Anagrafe scuole statali
 - ACI                               Parco veicolare per classe Euro (LOD)
 - MEF Dipartimento delle Finanze    Redditi IRPEF su base comunale 2020-2024
@@ -8787,139 +10508,38 @@ FONTI INTEGRATE (20 dataset, 15 istituzioni)
 - AGCOM                             Broadband Map (BBmap) — copertura banda larga FTTH/FTTC
 - MIMIT                             Osservatorio Prezzi Carburanti — distributori e prezzi praticati
 - Ministero del Lavoro              RUNTS — Registro Unico Nazionale del Terzo Settore (D.Lgs 117/2017)
+- Ministero della Cultura (MiC)     ArCo — Catalogo nazionale ICCD dei beni culturali immobili tutelati
+                                    (chiese, palazzi, castelli, ville, archeologia, monumenti, parchi storici)
 
 I dati di origine sono pubblicati dalle istituzioni elencate in
 LICENSE.txt e sono disponibili sui rispettivi portali open data.
 L'aggregazione in formato unico (dati-completi.json) è opera di
 Cruscotto Italia.
 
-NOTA SUI CIVICI ANNCSU
-----------------------
-La sezione "anncsu" del JSON contiene fino a 1000 numeri civici di
-esempio (campo "punti"). Per il dataset completo dei civici di
-questo comune (Lecce ~48mila, Roma ~516mila, ecc.), interroga
-l'endpoint:
+NOTE TECNICHE
+-------------
+Per il dettaglio dei campi, delle frequenze di aggiornamento e dei
+caveat per fonte, consultare il file METADATI.csv accluso e la pagina
+/about.html del sito Cruscotto Italia.
 
-  https://cruscotto-italia-mcp.piersoftckan.biz/data/anncsu_full/${istat}.json
+Alcune sezioni dello ZIP hanno cap quantitativi per limitare la
+dimensione del file:
+- anncsu.punti: max 1000 civici di esempio (full set su endpoint
+  REST /data/anncsu_full/<istat>.json)
+- pun.punti, immobili_pa.punti, carburanti.punti: max 500 punti
+- runts.enti: max 5.000 enti (solo Roma è cappata, 6.616 totali)
+- beni_culturali.luoghi: max 30 beni rappresentativi (full set
+  su endpoint REST /data/beni_culturali_full/<istat>.json per i
+  comuni con piu' di 30 beni tutelati)
+- censimento: solo aggregati comune-level + distribuzioni in
+  dati-completi.json. Per i poligoni georeferenziati delle sezioni
+  di censimento + 119 variabili per sezione usa l'endpoint REST
+  /data/censimento_full/<istat>.geojson (30 KB - 3 MB, EPSG:4326).
 
-NOTA SUI PRESIDI SANITARI MIN. SALUTE
--------------------------------------
-Le sezioni "farmacie" e "parafarmacie" includono i campi "lat_raw" e
-"lon_raw" che preservano sempre le coordinate originali dichiarate
-dal Ministero della Salute. Il tasso di errore upstream osservato
-(coord fuori comune dichiarato) è del 5-15%. Per i record con
-coordinate errate o mancanti, "lat" e "lon" sono state ricalcolate
-incrociando l'odonimo+civico con l'archivio ANNCSU. Il campo
-"coord_source" indica la provenienza finale:
-  - "mds":      coordinate originali (dentro centroide comune)
-  - "anncsu":   ricalcolate via ANNCSU (specificare strategia in
-                "coord_strategy": odo_civ_exact / odo_civ_no_esp / odo_only)
-  - "dropped":  coord MdS fuori comune, no match ANNCSU (no marker)
-  - "no_coord": no coord upstream, no match ANNCSU
-
-Gli stabilimenti ospedalieri (anno 2023) non hanno lat/lon nel
-dataset MdS originale e quindi non sono georeferenziati nei punti
-individuali; per la mappa visuale del sito web vengono disposti
-attorno al centroide farmacie del comune con offset radiale.
-
-NOTA SUI PUNTI DI RICARICA PUN
-------------------------------
-La sezione "pun" contiene i punti di ricarica EVSE registrati sulla
-Piattaforma Unica Nazionale (PUN) gestita da GSE per conto del MASE.
-Il campo "kpi" aggrega potenza totale (kW), mix per categoria (Slow/
-Quick/Fast/HPC/Ultra fast), distribuzione AC/DC, conteggio attivi/
-non attivi. Il campo "punti" contiene un campione fino a 500 punti
-con lat, lon, indirizzo, categoria potenza, stato, tipologia
-corrente. La pubblicazione di questi dati avviene ai sensi
-dell'art. 52 c.2 D.Lgs 82/2005 (CAD) come open data di default
-delle Pubbliche Amministrazioni — CC BY 4.0 con attribuzione a
-GSE / Piattaforma Unica Nazionale. Aggiornamento quotidiano
-(~03:00 UTC).
-
-NOTA SULLA COPERTURA BANDA LARGA AGCOM
---------------------------------------
-La sezione "agcom_bbmap" contiene la reportistica delle consistenze
-dei punti raggiunti dalla rete cablata, pubblicata dall'Autorità per
-le Garanzie nelle Comunicazioni (AGCOM) ai sensi dell'art. 22 del
-Codice delle Comunicazioni Elettroniche. Il campo "kpi" include:
-copertura FTTH DESI (metrica UE ufficiale, Digital Economy and Society
-Index), copertura FTTH entro 20m dall'abitazione (metrica stringente
-"fibra effettiva"), confidenza DESI, famiglie residenti e raggiunte
-(totali + entro 20m), celle 20×20m raggiunte da FTTH/FTTC, punti
-dichiarati e geograficamente distinti, indirizzi postali raggiunti.
-Copertura nazionale completa: 7.896 comuni su 7.896 (100%). Dato
-corrente al 31/12/2025 (rilascio AGCOM 10/02/2026). Aggiornamento
-trimestrale. Pubblicato ai sensi dell'art. 52 c.2 D.Lgs 82/2005 (CAD)
-come open data di default delle PA — CC BY 4.0 con attribuzione ad
-AGCOM. Le geometrie dettagliate (polilinee strade FTTH/rame) NON sono
-incluse nel JSON: la mappa di dettaglio è disponibile sul portale
-ufficiale AGCOM (https://geo.agcom.it/agcomapps/BB4/BB4_BBwired_na_app16_4/),
-linkata da Cruscotto Italia via deep-link con centro e zoom calcolati
-in base alla taglia del comune.
-
-NOTA SUI DISTRIBUTORI DI CARBURANTE (MIMIT)
--------------------------------------------
-La sezione "carburanti" contiene l'anagrafica completa dei distributori
-di carburante attivi nel comune e i prezzi correnti comunicati dai
-gestori al MIMIT, pubblicati ai sensi dell'art. 51 della Legge 99/2009.
-Il campo "kpi" aggrega: numero totale impianti, split Stradali vs
-Autostradali, numero pompe bianche, mix bandiere (top 5 + Altre),
-prezzo medio per i 7 carburanti core (Benzina e Gasolio in versione
-self e servito, GPL, Metano, HVO), prezzo minimo nel comune per Benzina
-e Gasolio self, freshness (% di impianti con prezzo aggiornato negli
-ultimi 7 giorni). Il campo "punti" contiene TUTTI gli impianti del
-comune (senza cap) con lat, lon, indirizzo, bandiera, tipo, prezzi
-correnti per i carburanti core e premium proprietari (Shell V-Power,
-Hi-Q Diesel, Supreme Diesel, Blue Diesel) in "prezzi_extra".
-Aggiornamento quotidiano (snapshot "Prezzo alle 8 di mattina"); per
-i comuni piccoli senza distributori la sezione è omessa.
-Licenza IODL 2.0 (attribution-only, compatibile CC BY).
-
-NOTA SUGLI ENTI DEL TERZO SETTORE (RUNTS — MIN. LAVORO)
--------------------------------------------------------
-La sezione "runts" contiene gli enti del Terzo Settore con SEDE LEGALE
-nel comune iscritti al Registro Unico Nazionale del Terzo Settore (RUNTS),
-istituito dal D.Lgs 117/2017 (Codice del Terzo Settore) e attivo dal
-23 novembre 2021 dopo aver assorbito i precedenti registri di
-Volontariato, APS e Onlus. Pubblicato dal Ministero del Lavoro e delle
-Politiche Sociali ai sensi dell'art. 53 del Codice (pubblicità legale).
-
-Il campo "kpi" aggrega: numero totale enti, mix per sezione (ODV
-Organizzazioni di Volontariato, APS Associazioni di Promozione Sociale,
-EF Enti Filantropici, IS Imprese Sociali, SMS Società di Mutuo Soccorso,
-ETS Altri Enti del Terzo Settore), numero e percentuale enti iscritti al
-beneficio 5x1000 (~52% nazionale), numero enti aderenti a una rete
-associativa, distribuzione delle iscrizioni per anno.
-
-Il campo "enti" è cappato a 5.000 record ordinati per data di iscrizione
-DECRESCENTE (i più recenti per primi). I campi sono: cf (codice fiscale),
-rep (id repertorio RUNTS), denom (denominazione), sez (sigla sezione),
-rapp (legale rappresentante), rete (boolean rete associativa), x1000
-(boolean 5x1000), data_iscr (data iscrizione ISO YYYY-MM-DD). Se "enti"
-è troncato, sono presenti i flag _enti_truncated, _enti_total, _enti_cap.
-Solo Roma è cappata (6.616 enti totali). I KPI aggregati nei grafici
-sono calcolati sul totale completo, non sulla lista cappata.
-
-IMPORTANTE: il RUNTS registra la SEDE LEGALE. Un ente con sede legale a
-Lecce che opera in tutta la Puglia compare SOLO nello shard di Lecce.
-Per domande sulla copertura operativa dei servizi, questo dato è solo
-una proxy. Roma in particolare presenta un bias significativo (sede
-legale di ETS nazionali tipo AVIS Nazionale, ANPAS, Banco Alimentare).
-
-Il picco di iscrizioni nel 2022 è dovuto alla TRASMIGRAZIONE dei
-registri preesistenti (~52% del totale nazionale ha data_iscr=2022),
-non a nuove costituzioni. Per trend reali di crescita del Terzo Settore
-guardare il 2023+. L'anno corrente è ovviamente parziale.
-
-Copertura nazionale: 7.547 comuni su 7.918 hanno almeno un ente
-registrato (95,3%); i ~371 comuni residui sono micro-comuni montani.
-Aggiornamento quotidiano (file XLSX bulk YYYYMMDD_iscritti_v1.0.xlsx
-scaricato via PostBack ASP.NET da servizi.lavoro.gov.it/runts/).
-
-Licenza: CC BY 4.0 ex art. 52 c.2 D.Lgs 82/2005 (CAD) - open data di
-default delle PA, in coerenza con le Linee Guida Open Data AgID
-(Determinazione 183/2023). Dato pubblicato ai sensi del D.Lgs 117/2017
-art. 53 (pubblicita' legale RUNTS).
+I dati di origine sono pubblicati dalle istituzioni elencate in
+LICENSE.txt e disponibili sui rispettivi portali open data.
+L'aggregazione in formato unico (dati-completi.json) è opera di
+Cruscotto Italia.
 
 `;
       zip.file('README.txt', readme);
@@ -8977,7 +10597,20 @@ async function init() {
     //   - le 7 cache window.__<X>Cache vengono pre-popolate
     //   - i 5 badge delle pillole vengono aggiornati subito
     //   - i tab loaders trovano cache hit e non chiamano MCP
-    const dashboard = await mcpCall('comune_dashboard', { istat_code: istat });
+    // A1: una chiamata MCP per i dati del comune in parallelo con il
+    // fetch del lookup nomi ISTAT (~195KB cachato dal browser, blocca solo
+    // il primo accesso; le pagine successive lo trovano cached).
+    const [dashboard] = await Promise.all([
+      mcpCall('comune_dashboard', { istat_code: istat }),
+      window.__istatNames ? Promise.resolve(null) : fetch('/istat-names.json')
+        .then(r => r.ok ? r.json() : null)
+        .then(names => { if (names) window.__istatNames = names; })
+        .catch(() => { window.__istatNames = window.__istatNames || {}; }),
+      window.__istatCoords ? Promise.resolve(null) : fetch('/data/istat-coords.json')
+        .then(r => r.ok ? r.json() : null)
+        .then(coords => { if (coords) window.__istatCoords = coords; })
+        .catch(() => { window.__istatCoords = window.__istatCoords || {}; }),
+    ]);
     if (dashboard?.error) {
       throw new Error(dashboard.error);
     }
@@ -9052,6 +10685,348 @@ const RUNTS_SEZIONI = {
          hint: 'L. 3818/1886 (ancora vigente) — mutualismo' },
 };
 
+// ----------------------------------------------------------------------------
+// Tab Pendolarismo - Mappa flussi (Leaflet)
+// ----------------------------------------------------------------------------
+
+function initPendolarismoMap(d) {
+  if (typeof L === 'undefined' || typeof L.canvasFlowmapLayer !== 'function') {
+    console.warn('CanvasFlowmapLayer non caricato, skip mappa pendolarismo');
+    return;
+  }
+  if (!d || !d.kpi) return;
+
+  const mapEl = document.getElementById('pendolarismo-map');
+  if (!mapEl) return;
+
+  const coords = window.__istatCoords || {};
+  const names = window.__istatNames || {};
+  const k = d.kpi;
+  const istatSelf = new URLSearchParams(window.location.search).get('istat');
+  const selfCoord = coords[istatSelf];
+
+  if (!selfCoord) {
+    mapEl.innerHTML = '<div style="padding:24px;text-align:center;color:#5C6F82;">Coordinate del comune non disponibili: mappa non disponibile.</div>';
+    return;
+  }
+
+  const selfName = names[istatSelf] || istatSelf;
+
+  // Costruisco le 2 FeatureCollection (una per uscenti, una per entranti)
+  // Schema FlowmapLayer: ogni Feature ha geometry origine + properties con dest
+  function makeFeatures(items, originIstat, originCoord, originName, kind) {
+    const features = [];
+    items.forEach((it) => {
+      const dc = coords[it.istat];
+      if (!dc) return;
+      const dn = names[it.istat] || it.istat;
+      features.push({
+        type: 'Feature',
+        geometry: { type: 'Point', coordinates: [originCoord[1], originCoord[0]] },  // [lon, lat]
+        properties: {
+          origin_id: originIstat,
+          origin_name: originName,
+          origin_lat: originCoord[0],
+          origin_lon: originCoord[1],
+          destination_id: it.istat,
+          destination_name: dn,
+          destination_lat: dc[0],
+          destination_lon: dc[1],
+          count: it.count,
+          kind: kind,  // 'out' (uscenti) o 'in' (entranti)
+        },
+      });
+    });
+    return { type: 'FeatureCollection', features };
+  }
+
+  const dests = (k.top_destinazioni || []).slice(0, 10);
+  const origs = (k.top_origini || []).slice(0, 10);
+
+  // Per le destinazioni: origine = comune corrente, dest = satellite
+  const fcDest = makeFeatures(dests, istatSelf, selfCoord, selfName, 'out');
+  // Per le origini: la "origine" del flusso è il satellite e la "destinazione" è il comune corrente
+  const fcOrig = { type: 'FeatureCollection', features: [] };
+  fcOrig.features = origs.flatMap((it) => {
+    const dc = coords[it.istat];
+    if (!dc) return [];
+    const dn = names[it.istat] || it.istat;
+    return [{
+      type: 'Feature',
+      geometry: { type: 'Point', coordinates: [dc[1], dc[0]] },
+      properties: {
+        origin_id: it.istat,
+        origin_name: dn,
+        origin_lat: dc[0],
+        origin_lon: dc[1],
+        destination_id: istatSelf,
+        destination_name: selfName,
+        destination_lat: selfCoord[0],
+        destination_lon: selfCoord[1],
+        count: it.count,
+        kind: 'in',
+      },
+    }];
+  });
+
+  // Inizializza mappa
+  const map = L.map(mapEl, {
+    zoomControl: true,
+    scrollWheelZoom: false,
+    attributionControl: true,
+  }).setView(selfCoord, 9);
+  // A11y/UX: scroll-wheel + pinch trackpad abilitati solo dopo click.
+  map.on('focus', () => map.scrollWheelZoom.enable());
+  map.on('blur',  () => map.scrollWheelZoom.disable());
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 18,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors',
+  }).addTo(map);
+
+  const fieldIds = {
+    originUniqueIdField: 'origin_id',
+    originGeometry: { x: 'origin_lon', y: 'origin_lat' },
+    destinationUniqueIdField: 'destination_id',
+    destinationGeometry: { x: 'destination_lon', y: 'destination_lat' },
+  };
+
+  // Layer destinazioni (uscenti, blu)
+  const destLayer = L.canvasFlowmapLayer(fcDest, {
+    originAndDestinationFieldIds: fieldIds,
+    pathDisplayMode: 'all',
+    animationStarted: true,
+    animationEasingFamily: 'Cubic',
+    animationEasingType: 'InOut',
+    animationDuration: 2500,
+    canvasBezierStyle: {
+      type: 'simple',
+      symbol: { strokeStyle: '#0066CC', lineWidth: 1.5, lineCap: 'round', shadowColor: '#0066CC', shadowBlur: 2 },
+    },
+    animatedCanvasBezierStyle: {
+      type: 'simple',
+      symbol: { strokeStyle: '#0066CC', lineWidth: 3, lineCap: 'round', lineDashOffsetSize: 4, shadowColor: '#0066CC', shadowBlur: 2 },
+    },
+    style: function (geoJsonFeature) {
+      return { radius: 5, color: '#0066CC', fillColor: '#0066CC', fillOpacity: 0.85, weight: 1.5 };
+    },
+  });
+
+  // Layer origini (entranti, arancio)
+  const origLayer = L.canvasFlowmapLayer(fcOrig, {
+    originAndDestinationFieldIds: fieldIds,
+    pathDisplayMode: 'all',
+    animationStarted: true,
+    animationEasingFamily: 'Cubic',
+    animationEasingType: 'InOut',
+    animationDuration: 2500,
+    canvasBezierStyle: {
+      type: 'simple',
+      symbol: { strokeStyle: '#E89400', lineWidth: 1.5, lineCap: 'round', shadowColor: '#E89400', shadowBlur: 2 },
+    },
+    animatedCanvasBezierStyle: {
+      type: 'simple',
+      symbol: { strokeStyle: '#E89400', lineWidth: 3, lineCap: 'round', lineDashOffsetSize: 4, shadowColor: '#E89400', shadowBlur: 2 },
+    },
+    style: function (geoJsonFeature) {
+      return { radius: 5, color: '#E89400', fillColor: '#E89400', fillOpacity: 0.85, weight: 1.5 };
+    },
+  });
+
+  destLayer.addTo(map);
+  origLayer.addTo(map);
+
+  // Click sui marker (origin o destination): mostra popup col nome + numero pendolari
+  function handleFlowmapClick(e) {
+    const p = e.layer && e.layer.feature ? e.layer.feature.properties : null;
+    if (!p) {
+      return;
+    }
+    // Distingo il tipo di feature da p.kind (settato in fase di build delle
+    // FeatureCollection): 'out' = marker su comune destinazione (uscenti);
+    //                    'in'  = marker su comune origine (entranti).
+    // BUG fix 2026-05-21: prima si usava e.isOriginFeature che non viene mai
+    // settato da Leaflet → tutti i click entravano nel ramo else con popup
+    // che mostrava i KPI del comune corrente. Ora usiamo p.kind direttamente.
+    let html;
+    if (p.kind === 'out') {
+      // Marker su comune DESTINAZIONE (uscenti da Taranto verso X)
+      html = '<b>' + p.destination_name + '</b><br>' + p.destination_id + '<br>' +
+             p.count.toLocaleString('it-IT') + ' pendolari verso ' + p.destination_name;
+    } else {
+      // Marker su comune ORIGINE (entranti a Taranto da X), p.kind === 'in'
+      html = '<b>' + p.origin_name + '</b><br>' + p.origin_id + '<br>' +
+             p.count.toLocaleString('it-IT') + ' pendolari da ' + p.origin_name;
+    }
+    // Apro popup direttamente sul layer (CircleMarker) cliccato — più affidabile
+    if (e.layer && e.layer.bindPopup) {
+      e.layer.bindPopup(html).openPopup();
+    } else {
+      L.popup({offset: [0, -6]}).setLatLng(e.latlng || e.layer._latlng).setContent(html).openOn(map);
+    }
+  }
+  destLayer.on('click', handleFlowmapClick);
+  origLayer.on('click', handleFlowmapClick);
+
+  // Marker comune origine al centro (cerchio rosso evidenziato sopra tutto)
+  L.circleMarker(selfCoord, {
+    radius: 9, color: '#C9302C', fillColor: '#C9302C', fillOpacity: 0.95, weight: 2.5,
+  }).addTo(map).bindPopup('<b>' + selfName + '</b><br>' + istatSelf + '<br>Saldo netto: <b>' + (k.saldo_netto >= 0 ? '+' : '') + k.saldo_netto.toLocaleString('it-IT') + '</b>');
+
+  // Fit bounds su tutti i marker
+  const allBounds = [selfCoord];
+  fcDest.features.forEach(f => allBounds.push([f.properties.destination_lat, f.properties.destination_lon]));
+  fcOrig.features.forEach(f => allBounds.push([f.properties.origin_lat, f.properties.origin_lon]));
+  if (allBounds.length > 1) {
+    map.fitBounds(L.latLngBounds(allBounds), { padding: [30, 30] });
+  }
+
+  // Toggle layer dai bottoni
+  document.querySelectorAll('#pendolarismo-map-controls .pendolarismo-map-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const which = btn.dataset.toggle;
+      const layer = which === 'dest' ? destLayer : origLayer;
+      const isActive = btn.getAttribute('aria-pressed') === 'true';
+      if (isActive) {
+        map.removeLayer(layer);
+        btn.setAttribute('aria-pressed', 'false');
+        btn.classList.remove('active');
+      } else {
+        map.addLayer(layer);
+        btn.setAttribute('aria-pressed', 'true');
+        btn.classList.add('active');
+      }
+    });
+  });
+}
+
+// ----------------------------------------------------------------------------
+// Tab Pendolarismo - Matrice OD ISTAT 2021 (motivo: lavoro)
+// ----------------------------------------------------------------------------
+
+function renderPendolarismoTab(d) {
+  if (!d || !d.kpi || (d.kpi.uscenti_totali == null && d.kpi.entranti_totali == null)) {
+    return `
+      <div class="tab-pane" id="pane-pendolarismo">
+        <div class="section-title">§ Pendolarismo per lavoro</div>
+        <h2 class="section-h">Dati di pendolarismo <em>non disponibili</em>.</h2>
+        <p class="pendolarismo-tab-muted">La matrice ISTAT 2021 origine-destinazione (motivo: lavoro) non riporta
+        spostamenti rilevati per questo comune. Possibili cause: comune di nuova istituzione
+        non presente nel Censimento permanente 2021, oppure comune con popolazione attiva
+        sotto la soglia di rilevazione.</p>
+        <p class="pendolarismo-tab-muted">Fonte:
+        <a href="https://www.istat.it/it/censimenti/popolazione-e-abitazioni/dati-censimento" target="_blank" rel="noopener">ISTAT &middot; Censimento permanente</a>
+        &middot; matrice spostamenti per lavoro 2021 &middot; Licenza CC BY 3.0 IT.</p>
+      </div>`;
+  }
+  const k = d.kpi;
+  const saldo = k.saldo_netto || 0;
+  const saldoStr = saldo >= 0 ? '+' + fmtNum(saldo) : fmtNum(saldo);
+  const saldoColor = saldo > 0 ? '#0E7C3A' : saldo < 0 ? '#C9302C' : '#5C6F82';
+  const saldoLabel = saldo > 0 ? 'attrattore netto' : saldo < 0 ? 'esportatore netto' : 'in equilibrio';
+  const autoPct = k.auto_contenimento_pct != null ? k.auto_contenimento_pct.toFixed(1) : '—';
+
+  const namesMap = window.__istatNames || {};
+  const istatLabel = (code) => {
+    const nome = namesMap[code];
+    return nome ? `${nome} <span class="muted istat-code-mini">(${code})</span>` : `<span class="istat-code">${code}</span>`;
+  };
+
+  const topDestRows = (k.top_destinazioni || []).slice(0, 10).map((it, i) =>
+    `<tr><td class="rank">${i+1}</td><td>${istatLabel(it.istat)}</td><td class="num">${fmtNum(it.count)}</td></tr>`
+  ).join('');
+
+  const topOrigRows = (k.top_origini || []).slice(0, 10).map((it, i) =>
+    `<tr><td class="rank">${i+1}</td><td>${istatLabel(it.istat)}</td><td class="num">${fmtNum(it.count)}</td></tr>`
+  ).join('');
+
+  return `
+    <div class="tab-pane" id="pane-pendolarismo">
+      <div class="section-title">§ Pendolarismo per lavoro</div>
+      <h2 class="section-h">${saldoStr} pendolari netti: il comune è <em style="color:${saldoColor}">${saldoLabel}</em>.</h2>
+      <p class="section-sub">
+        Matrice origine-destinazione del Censimento permanente ISTAT
+        <strong>2021</strong>, motivo spostamento <strong>lavoro</strong>. Conta gli spostamenti
+        sistematici giornalieri tra comune di residenza e comune di lavoro dichiarati
+        nel censimento. Non include gli spostamenti per motivi di studio (matrice diversa,
+        non pubblicata da ISTAT per il 2021).
+      </p>
+
+      <div class="kpi-cards">
+        <div class="kpi-card">
+          <div class="kpi-card-lab">Uscenti</div>
+          <div class="kpi-card-val">${fmtNum(k.uscenti_totali || 0)}</div>
+          <div class="kpi-card-sub">residenti che lavorano fuori comune</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-card-lab">Entranti</div>
+          <div class="kpi-card-val">${fmtNum(k.entranti_totali || 0)}</div>
+          <div class="kpi-card-sub">lavoratori provenienti da altri comuni</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-card-lab">Saldo netto</div>
+          <div class="kpi-card-val" style="color:${saldoColor}">${saldoStr}</div>
+          <div class="kpi-card-sub">entranti − uscenti</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-card-lab">Auto-contenimento</div>
+          <div class="kpi-card-val">${autoPct}%</div>
+          <div class="kpi-card-sub">residenti che lavorano nel comune stesso</div>
+        </div>
+      </div>
+
+      <div class="pendolarismo-tables-row">
+        <div class="pendolarismo-table-box">
+          <h3 class="section-h-small">Top 10 destinazioni (dove vanno a lavorare)</h3>
+          <p class="pendolarismo-tab-muted">Comuni di destinazione dei pendolari residenti, ordinati per numero di spostamenti giornalieri.
+          ${k.n_destinazioni != null ? 'Destinazioni distinte totali: <strong>' + fmtNum(k.n_destinazioni) + '</strong>.' : ''}</p>
+          <table class="pendolarismo-table">
+            <thead><tr><th scope="col">#</th><th scope="col">Comune</th><th scope="col">Pendolari</th></tr></thead>
+            <tbody>${topDestRows || '<tr><td colspan="3" class="pendolarismo-tab-muted">Nessuna destinazione registrata.</td></tr>'}</tbody>
+          </table>
+        </div>
+        <div class="pendolarismo-table-box">
+          <h3 class="section-h-small">Top 10 origini (da dove vengono)</h3>
+          <p class="pendolarismo-tab-muted">Comuni di origine dei lavoratori che entrano nel comune, ordinati per numero di spostamenti.
+          ${k.n_origini != null ? 'Origini distinte totali: <strong>' + fmtNum(k.n_origini) + '</strong>.' : ''}</p>
+          <table class="pendolarismo-table">
+            <thead><tr><th scope="col">#</th><th scope="col">Comune</th><th scope="col">Pendolari</th></tr></thead>
+            <tbody>${topOrigRows || '<tr><td colspan="3" class="pendolarismo-tab-muted">Nessuna origine registrata.</td></tr>'}</tbody>
+          </table>
+        </div>
+      </div>
+
+      <h3 class="section-h-small">Mappa flussi pendolari</h3>
+      <p class="pendolarismo-tab-muted">
+        Visualizzazione dei flussi pendolari del comune verso le sue top destinazioni
+        (linee blu, in uscita) e dalle sue top origini (linee arancio, in entrata).
+        Lo spessore della linea &egrave; proporzionale al numero di pendolari.
+        Marker rosso = comune corrente.
+      </p>
+      <div id="pendolarismo-map-controls" class="pendolarismo-map-controls">
+        <button type="button" class="pendolarismo-map-btn active" data-toggle="dest" aria-pressed="true">
+          <span class="pendolarismo-legend-dot" style="background:#0066CC"></span>
+          Destinazioni (uscenti)
+        </button>
+        <button type="button" class="pendolarismo-map-btn active" data-toggle="orig" aria-pressed="true">
+          <span class="pendolarismo-legend-dot" style="background:#E89400"></span>
+          Origini (entranti)
+        </button>
+      </div>
+      <div id="pendolarismo-map" class="pendolarismo-map" aria-label="Mappa flussi pendolari del comune"></div>
+
+      <p class="pendolarismo-tab-muted">
+        Fonte:
+        <a href="https://www.istat.it/it/censimenti/popolazione-e-abitazioni/dati-censimento" target="_blank" rel="noopener">ISTAT &middot; Censimento permanente 2021</a>
+        &middot; matrice spostamenti per lavoro &middot; Licenza
+        <a href="https://creativecommons.org/licenses/by/3.0/it/" target="_blank" rel="noopener">CC BY 3.0 IT</a>.
+        I codici ISTAT mostrati a fianco del nome comune sono i ProCom 6-digit.
+        Coordinate da OpenStreetMap (centroide bounding box comune).
+      </p>
+    </div>`;
+}
+
+
 function renderRuntsTab(d) {
   if (!d || !d.kpi || d.kpi.n_totale == null || d.kpi.n_totale === 0) {
     return `
@@ -9072,17 +11047,7 @@ function renderRuntsTab(d) {
   }
   const k = d.kpi;
   // Formato data italiano: "2026-05-18" -> "18 maggio 2026"
-  const MESI_RUNTS = ['gennaio','febbraio','marzo','aprile','maggio','giugno',
-                      'luglio','agosto','settembre','ottobre','novembre','dicembre'];
-  const dataSnap = (() => {
-    const s = d._snapshot_date;
-    if (!s) return '—';
-    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s);
-    if (!m) return s;
-    const mi = parseInt(m[2], 10) - 1;
-    if (mi < 0 || mi > 11) return s;
-    return `${parseInt(m[3], 10)} ${MESI_RUNTS[mi]} ${m[1]}`;
-  })();
+  const dataSnap = d._snapshot_date ? formatDataIT(d._snapshot_date) : '—';
   const totale = k.n_totale;
   const sezioniSorted = Object.entries(k.mix_sezione || {})
     .sort((a, b) => b[1] - a[1]);
@@ -9546,7 +11511,17 @@ function renderAsiaTab(d) {
                 <th id="asia-h-wge250" scope="col">${ASIA_CLASSI.W_GE250.lab}</th>
               </tr>
             </thead>
-            <tbody id="asia-table-tbody"></tbody>
+            <tbody id="asia-table-tbody">
+              <tr>
+                <td headers="asia-h-set"><span class="visually-hidden">In caricamento</span></td>
+                <td headers="asia-h-clgrp asia-h-w09"></td>
+                <td headers="asia-h-clgrp asia-h-w1049"></td>
+                <td headers="asia-h-clgrp asia-h-w50249"></td>
+                <td headers="asia-h-clgrp asia-h-wge250"></td>
+                <td headers="asia-h-totul"></td>
+                <td headers="asia-h-totadd"></td>
+              </tr>
+            </tbody>
           </table>
         </div>
       </details>
