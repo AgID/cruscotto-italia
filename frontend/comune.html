@@ -5320,10 +5320,14 @@ function renderBeniList(luoghi, isPartial) {
     container.innerHTML = '<div class="beni-list-empty">Nessun bene trovato.</div>';
     return;
   }
-  // Ordino per nome (denom alfa) per esplorazione consistente
-  const sorted = luoghi.slice().sort((a, b) =>
-    ((a.denom || '').toUpperCase()).localeCompare((b.denom || '').toUpperCase(), 'it')
-  );
+  // Ordino: prima Cultural-ON (luoghi visitabili con orari/contatti), poi ArCo
+  // (patrimonio architettonico tutelato). Dentro ciascun gruppo, alfa per denom.
+  const fonteRank = (b) => (b.fonte === 'cultural_on' ? 0 : 1);
+  const sorted = luoghi.slice().sort((a, b) => {
+    const fa = fonteRank(a), fb = fonteRank(b);
+    if (fa !== fb) return fa - fb;
+    return ((a.denom || '').toUpperCase()).localeCompare((b.denom || '').toUpperCase(), 'it');
+  });
   container.innerHTML = sorted.map((b, idx) => renderBeniListItem(b, idx)).join('');
   // Bind click handler delegato per accordion. Uso onclick (property) invece di
   // addEventListener cosi' rimpiazza eventuali handler precedenti (al reload FULL
