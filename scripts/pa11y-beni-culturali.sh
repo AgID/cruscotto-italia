@@ -68,7 +68,7 @@ cat > "$CONFIG_FILE" <<EOF
   "includeWarnings": true,
   "hideElements": ".leaflet-tile-container, .leaflet-marker-icon, canvas, .leaflet-zoom-animated, .leaflet-overlay-pane svg, .beni-list-detail-image",
   "chromeLaunchConfig": {
-    "args": ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"]
+    "args": ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--ignore-certificate-errors", "--host-resolver-rules=MAP cruscotto-italia.dati.gov.it 127.0.0.1"]
   },
   "actions": [
     "wait for element [data-tab='beni-culturali'] to be visible",
