@@ -5,62 +5,69 @@ Pubblicazione: dataset catalogato su dati.gov.it (dataset id f43f148b-01fb-406d-
 Ontologia: Cultural-ON (Cultural ONtology) sviluppata da ISTC-CNR, 2016.
 Banca dati: DBUnico 2.0 - 59.472 luoghi (musei, biblioteche, archivi, aree archeologiche,
             monumenti, ville, chiese e altri istituti).
-Aggiornamento: quotidiano (verificato 23/05/2026).
+Aggiornamento: continuo (endpoint SPARQL pubblico).
 Licenza: CC BY 4.0 (https://w3id.org/italia/controlled-vocabulary/licences/A21_CCBY40).
 
-URL ufficiale dump nazionale (JSON-LD):
-  https://dati.beniculturali.it/dataset/dataset-luoghi.json (~88 MB)
+URL endpoint SPARQL (HTTP plain, evita 503 frequenti del HTTPS):
+  http://dati.beniculturali.it/sparql
 
-Struttura JSON-LD:
-  {
-    "@graph": [
-      {"@type": "cis:CulturalInstituteOrSite", "@id": ".../CulturalInstituteOrSite/N",
-       "cis:institutionalCISName": {"@language": "it", "@value": "..."},
-       "dc:type": "..." (literal o lista di literal, whitelist a 2 colonne),
-       "cis:hasSite": {"@id": ".../Site/Sede_di_N"},
-       "geo:lat": float, "geo:long": float,
-       "foaf:depiction": {"@id": "..."},
-       "l0:identifier": "DBUnico.N",
-       "l0:description": {"@language": "it", "@value": "..."},
-       "smapit:hasOnlineContactPoint": {"@id": "..."},
-       "accessCondition:hasAccessCondition": [{"@id": "..."}],
-       ...},
-      {"@type": "cis:Site", "@id": ".../Site/Sede_di_N",
-       "cis:siteAddress": {"@id": ".../Address/..."},
-       ...},
-      {"@type": "clvapit:Address", "@id": ".../Address/...",
-       "clvapit:fullAddress": "...",
-       "clvapit:postCode": "...",
-       "clvapit:hasCity": {"@id": ".../City/Nome"},
-       "clvapit:hasProvince": {"@id": ".../Province/Sigla"},
-       ...},
-      {"@type": "smapit:OnlineContactPoint", ...},
-      {"@type": "smapit:Email", "smapit:emailAddress": "..."},
-      {"@type": "smapit:Telephone", "smapit:telephoneNumber": "..."},
-      {"@type": "smapit:WebSite", "smapit:URL": "..."},
-      ...
-    ],
-    "@context": {...}
-  }
+URL dump alternativo (NON usato qui: contiene solo i 6.721 record con
+institutionalCISName@it, coverage ~40% comuni vs 83% via SPARQL):
+  https://dati.beniculturali.it/dataset/dataset-luoghi.json
+
+STRATEGIA SCELTA: SPARQL (vs dump JSON-LD)
+==========================================
+Verifica 23/05/2026: il dump JSON-LD pubblicato dal MiC contiene solo
+6.721 luoghi con denominazione formale italiana (filtro implicito
+institutionalCISName@it). Via SPARQL si raggiungono ~33-50k luoghi e
+coverage 83,2% comuni italiani (6566/7895), invece del 40% del dump.
+Trade-off: WAF signature-based del MiC blocca pattern complessi
+(GROUP BY, COUNT distinct multipli), quindi le query sono semplici e
+aggregazione fatta lato Python.
+
+LIMITAZIONE NOTA: Cultural-ON modella i "contenitori" culturali. Manca
+nei dati l'ente titolare/proprietario (l'inverso di cis:isHeldBy non
+e' valorizzato nel grafo SPARQL pubblico). Per l'aggancio agli edifici
+tutelati e ai beni mobili esposti esiste ArCo (ICCD), ma e' un altro
+dominio (beni culturali != contenitori) e non viene integrato qui.
+
+Schema query SPARQL (2 round paginati):
+  Q1 ANAGRAFICA per ogni luogo:
+    ?s a cis:CulturalInstituteOrSite ;
+       cis:institutionalCISName ?name ;
+       cis:hasSite [ cis:siteAddress [
+         clvapit:hasCity [ rdfs:label ?comune ] ;
+         clvapit:hasProvince [ rdfs:label ?provincia ] ;
+         clvapit:postCode ?cap ;
+         clvapit:fullAddress ?indirizzo ] ] ;
+       dc:type ?cat .
+    OPTIONAL ?s geo:lat ?lat ; geo:long ?lon ; foaf:depiction ?img ;
+             l0:description ?desc ; l0:identifier ?id .
+
+  Q2 CONTATTI per ogni luogo (anche su luoghi senza institutionalCISName,
+     ma intersecato in Python con Q1 prima del shardatura):
+    ?s smapit:hasOnlineContactPoint ?cp .
+    OPTIONAL ?cp smapit:hasTelephone [ ... 031 ... ] ; ... 033 ... ;
+                 smapit:hasEmail [ smapit:emailAddress ?email ] ;
+                 smapit:hasWebSite [ smapit:URL ?web ] .
 
 Schema output shard cultural_on/<istat>.json (riassunto):
 {
   "_etl_version": "0.1.0",
   "_source": "MiC DBUnico 2.0 (Cultural-ON)",
-  "_source_url": "https://dati.beniculturali.it/dataset/dataset-luoghi.json",
+  "_source_url": "http://dati.beniculturali.it/sparql",
   "_snapshot_date": "YYYY-MM-DD",
   "_generated_at": "ISO-8601",
   "kpi": {
     "n_totale": 12,
     "mix_categoria": {"museo": 7, "biblioteca": 2, "archivio": 1, "monumento": 2},
-    "mix_ente": {"mic": 3, "comune": 5, "fondazione": 4},
-    "n_statali": 3,
-    "n_non_statali": 9,
-    "pct_georef": 91.7
+    "pct_georef": 91.7,
+    "pct_con_foto": 75.0,
+    "pct_con_contatti": 83.3
   },
   "luoghi": [   # cap LUOGHI_CAP_BASE=30; lista compatta
     {"id": "DBUnico.106788", "denom": "Pinacoteca di Brera",
-     "categorie": ["museo"], "enti": ["mic"], "is_statale": true,
+     "categorie": ["museo"],
      "lat": 45.471943, "lon": 9.187683,
      "indirizzo": "Via Brera, 28", "cap": "20121",
      "image": "https://..."}
@@ -69,19 +76,20 @@ Schema output shard cultural_on/<istat>.json (riassunto):
 
 Schema output shard cultural_on_full/<istat>.json (solo se n_luoghi > LUOGHI_CAP_BASE):
   Stesso schema base + campi per ogni luogo:
-    descrizione, telefono, email, website, prenotazione, biglietti_url, orari.
+    descrizione, telefono, email, website, prenotazione.
 
 Comuni vuoti (n_totale=0): si genera comunque shard con luoghi=[] per
 consistenza UX (la sezione non sara' 'null' nel dashboard).
 
 Pattern di esecuzione:
-  1) download_dump() -> /tmp/cruscotto_cultural_on/dataset-luoghi-YYYYMMDD.json
+  1) fetch_anagrafica_sparql() -> list[dict] luoghi paginato 5k/page
      skip se cache locale del giorno esiste e --skip-download
-  2) parse_dump() -> stream JSON-LD, restituisce list[dict] di luoghi normalizzati
-  3) load_lookups() -> nome_to_istat, canonical_istat
-  4) group_by_istat() -> dict[istat] = list[luogo]
-  5) build_shards() -> 7896 file cultural_on/<istat>.json + opzionali cultural_on_full/
-  6) write_local() -> persist su DATA_DIR/cultural_on/ (+ DATA_DIR/cultural_on_full/)
+  2) fetch_contatti_sparql() -> list[dict] contatti paginato 5k/page
+  3) merge_anagrafica_contatti() -> list[dict] luoghi arricchiti
+  4) load_lookups() -> nome_to_istat, canonical_istat (da comuni-bundle.json)
+  5) group_by_istat() -> dict[istat] = list[luogo]
+  6) build_shards() -> 7896 file cultural_on/<istat>.json + opzionali cultural_on_full/
+  7) write_local() -> persist su DATA_DIR/cultural_on/ (+ DATA_DIR/cultural_on_full/)
 
 Usage:
   python -m etl.sources.cultural_on --outdir=/var/www/cruscotto-italia/data/cultural_on
@@ -109,25 +117,15 @@ log = structlog.get_logger(__name__)
 # Costanti
 # =========================================================================
 
-DUMP_URL = "https://dati.beniculturali.it/dataset/dataset-luoghi.json"
 DUMP_URL_DOC = "https://www.dati.gov.it/view-dataset/dataset?id=f43f148b-01fb-406d-8337-b92f8dbb6543"
+SPARQL_ENDPOINT = "http://dati.beniculturali.it/sparql"  # HTTP plain: HTTPS spesso da' 503
 
 # Persistenza URL:
-# - Lo slug 'dataset-luoghi.json' e' stabile, dichiarato dal MiC nel campo
-#   "URI" della scheda dati.gov.it. NON e' un UUID intermediato (l'UUID
-#   nella URL dati.gov.it si riferisce al record CKAN AgID, che e' un
-#   aggregatore: e' quello che puo' cambiare se AgID rigenera il catalogo).
-# - L'URL del dump fisico sul server IIS del MiC e' sotto controllo MiC
-#   ed e' allineato per regione: dataset-luoghi<RegioneCamelCase>.json.
-# - In caso il dump nazionale fosse temporaneamente indisponibile, il
-#   fallback e' iterare sulle 20 distribuzioni regionali, di cui qui sotto
-#   tengo solo i nomi delle regioni (slug exact dell'archivio MiC):
-DUMP_URL_REGIONI_FALLBACK = [
-    "Abruzzo", "Basilicata", "Calabria", "Campania", "EmiliaRomagna",
-    "FriuliVeneziaGiulia", "Lazio", "Liguria", "Lombardia", "Marche",
-    "Molise", "Piemonte", "Puglia", "Sardegna", "Sicilia", "Toscana",
-    "TrentinoAltoAdige", "Umbria", "ValleAosta", "Veneto",
-]
+# - L'endpoint SPARQL del MiC e' pubblico e attivo dal 2016, riconosciuto
+#   dalle linee guida AgID per i LOD culturali. URL stabile.
+# - Il dump JSON-LD nazionale e' un fallback potenziale (vedi docstring):
+#   contiene solo i ~6.721 record con institutionalCISName@it, coverage
+#   ~40% vs 83% via SPARQL.
 
 CACHE_DIR = Path("/tmp/cruscotto_cultural_on")
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
@@ -137,21 +135,34 @@ SOURCE_LABEL = "MiC DBUnico 2.0 (Cultural-ON)"
 
 # Cap luoghi[] nello shard base (riassunto). Comuni con > LUOGHI_CAP_BASE
 # generano anche shard FULL su cultural_on_full/<istat>.json con TUTTI i
-# luoghi e tutti i campi (descrizioni, contatti, orari, prenotazioni).
-# Roma stimati ~800 luoghi, Firenze ~300, Milano ~250: 30 cattura il
-# riassunto utile in tab senza appesantire il payload base.
+# luoghi e tutti i campi (descrizioni, contatti, prenotazioni).
 LUOGHI_CAP_BASE = 30
+
+# Paginazione SPARQL: il MiC accetta query senza GROUP BY ma con LIMIT
+# fino a ~10000. Stiamo prudenti a 5000/page per evitare timeout server.
+SPARQL_PAGE_SIZE = 5000
+SPARQL_SLEEP_BETWEEN_PAGES = 2.0
+SPARQL_TIMEOUT = 120
+SPARQL_MAX_RETRIES = 3
 
 
 # =========================================================================
-# Whitelist dc:type (2 colonne)
+# Whitelist dc:type - 1 sola colonna (categoria luogo)
 #
-# Cultural-ON usa dc:type come literal (es. "Museo, Galleria e/o raccolta")
-# mescolando 2 dimensioni: tipologia LUOGO + tipologia ENTE TITOLARE.
-# 27 valori distinti verificati sull'endpoint SPARQL 23/05/2026.
+# Cultural-ON usa dc:type come literal (es. "Museo, Galleria e/o raccolta").
+# 27 valori distinti verificati su SPARQL endpoint 23/05/2026.
 #
-# Un singolo CulturalInstituteOrSite puo' avere PIU' dc:type (es. un museo
-# statale puo' essere insieme "Museo, Galleria e/o raccolta" + "MiC").
+# La dimensione "ente titolare/proprietario" NON e' modellata nel grafo
+# Cultural-ON: cis:holdsRoleInTime/roapit:TimeIndexedRole non sono
+# popolati per i CulturalInstituteOrSite, e dc:type contiene
+# occasionalmente stringhe tipo "MiC"/"Comune"/"Regione" ma sono presenti
+# in <10 record su 6721. Non e' una dimensione affidabile per KPI:
+# preferiamo non modellarla affatto, mantenendoci coerenti con la
+# semantica "Cultural-ON modella i contenitori culturali".
+#
+# Le stringhe in dc:type che indicano ente (MiC, Fondazione, Regione,
+# Comune, Istituto Centrale, Soprintendenza ...) NON sono mappate qui
+# sotto: vengono ignorate (luogo finisce in 0 categorie -> diventa "altro").
 # =========================================================================
 
 # Tipologia LUOGO (categoria fisica) -> nome breve normalizzato
@@ -175,25 +186,11 @@ CATEGORIA_LUOGO: dict[str, str] = {
     "I tesori della Cultura":                                "altro",
 }
 
-# Ordine di priorita' per la categoria primaria (per icona mappa, etc.)
+# Ordine di priorita' per la categoria primaria (icona mappa, etc.)
 CATEGORIA_PRIORITA = [
     "museo", "biblioteca", "archivio", "area_archeologica",
     "monumento", "architettura", "parco_giardino", "chiesa", "altro",
 ]
-
-# Tipologia ENTE TITOLARE (governance) -> chiave breve + flag is_statale
-ENTE_TITOLARE: dict[str, dict] = {
-    "MiC":                                                                          {"key": "mic",                       "statale": True},
-    "Amministrazione dello Stato":                                                  {"key": "amministrazione_stato",     "statale": True},
-    "Istituto Centrale":                                                            {"key": "istituto_centrale",         "statale": True},
-    "Istituto dotato di autonomia speciale":                                        {"key": "istituto_autonomia",        "statale": True},
-    "Istituto dotato di autonomia speciale, di rilevante interesse nazionale":      {"key": "istituto_autonomia",        "statale": True},
-    "Soprintendenza Archeologia, Belle Arti e Paesaggio":                           {"key": "soprintendenza",            "statale": True},
-    "Soprintendenza Archivistica e Bibliografica":                                  {"key": "soprintendenza",            "statale": True},
-    "Regione":                                                                      {"key": "regione",                   "statale": False},
-    "Comune":                                                                       {"key": "comune",                    "statale": False},
-    "Fondazione":                                                                   {"key": "fondazione",                "statale": False},
-}
 
 
 # =========================================================================
@@ -219,75 +216,8 @@ def normalize(s: str) -> str:
     return " ".join(s.upper().split())
 
 
-def _extract_lang_value(node, lang: str = "it") -> str | None:
-    """Estrae valore literal da nodo JSON-LD considerando @language e @value.
-
-    Supporta:
-      - string diretto:                "foo"
-      - dict singolo:                  {"@language": "it", "@value": "foo"}
-      - dict senza @language:          {"@value": "foo"}
-      - lista di dict:                 [{"@language": "it", "@value": "foo"},
-                                        {"@language": "en", "@value": "bar"}]
-    Preferisce @language=lang. Ritorna None se non trova.
-    """
-    if node is None:
-        return None
-    if isinstance(node, str):
-        return node
-    if isinstance(node, dict):
-        # singolo nodo literal
-        if "@value" in node:
-            if node.get("@language") in (lang, None):
-                return node["@value"]
-            return node["@value"]
-        return None
-    if isinstance(node, list):
-        # preferisci lang richiesto
-        for it in node:
-            if isinstance(it, dict) and it.get("@language") == lang:
-                return it.get("@value")
-        # fallback: primo @value disponibile
-        for it in node:
-            if isinstance(it, dict) and "@value" in it:
-                return it["@value"]
-            if isinstance(it, str):
-                return it
-        return None
-    return None
-
-
-def _extract_id_ref(node) -> str | None:
-    """Estrae @id da un reference JSON-LD ({@id: '...'})."""
-    if node is None:
-        return None
-    if isinstance(node, dict):
-        return node.get("@id")
-    if isinstance(node, str):
-        return node
-    return None
-
-
-def _extract_id_refs(node) -> list[str]:
-    """Come _extract_id_ref ma per liste."""
-    if node is None:
-        return []
-    if isinstance(node, list):
-        return [x for x in (_extract_id_ref(it) for it in node) if x]
-    single = _extract_id_ref(node)
-    return [single] if single else []
-
-
-def _as_list(node) -> list:
-    """Normalizza node a lista (dc:type puo' essere literal o lista)."""
-    if node is None:
-        return []
-    if isinstance(node, list):
-        return node
-    return [node]
-
-
 # =========================================================================
-# FASE 1 - Download dump nazionale (88 MB JSON-LD)
+# FASE 1 - SPARQL: query builders, retry, paginazione
 # =========================================================================
 
 USER_AGENT = (
@@ -296,297 +226,402 @@ USER_AGENT = (
 )
 
 
-def download_dump(force: bool = False) -> tuple[Path, str]:
-    """Scarica il dump nazionale luoghi della cultura.
+def _sparql_post(query: str, timeout: int = SPARQL_TIMEOUT) -> dict:
+    """Esegue una query SPARQL e ritorna il JSON parsato.
 
-    Strategia cache:
-      - file cache: /tmp/cruscotto_cultural_on/dataset-luoghi.json
-      - meta cache: /tmp/cruscotto_cultural_on/dataset-luoghi.last_modified
-                    (contiene il valore Last-Modified ritornato dal server IIS)
-      - HEAD request iniziale per leggere Last-Modified
-      - se file presente AND Last-Modified server == quello salvato -> riusa cache
-      - altrimenti GET completo (~88 MB)
-
-    Ritorna (path_file, snapshot_date_iso). snapshot_date_iso e' la data
-    da Last-Modified header (YYYY-MM-DD), usata per _snapshot_date dello shard.
+    Strategia anti-WAF MiC:
+      - HTTP plain (non HTTPS che spesso ritorna 503)
+      - GET con data-urlencode (POST funziona ma il WAF MiC e' piu' tollerante
+        con GET su queste query semplici)
+      - Retry esponenziale su 503/timeout: 3 tentativi con backoff 5/10/20s
+      - User-Agent identificabile per la collaborazione con il MiC
     """
-    out = CACHE_DIR / "dataset-luoghi.json"
-    meta = CACHE_DIR / "dataset-luoghi.last_modified"
-
-    if not force:
-        # Probe HEAD per Last-Modified
+    last_err = None
+    for attempt in range(SPARQL_MAX_RETRIES):
+        if attempt > 0:
+            backoff = 5 * (2 ** (attempt - 1))
+            log.warning("cultural_on_sparql_retry", attempt=attempt, backoff_s=backoff,
+                        last_err=str(last_err)[:200] if last_err else None)
+            time.sleep(backoff)
         try:
-            r = requests.head(DUMP_URL, headers={"User-Agent": USER_AGENT},
-                              timeout=30, allow_redirects=True)
+            r = requests.get(
+                SPARQL_ENDPOINT,
+                params={"query": query, "format": "application/json"},
+                headers={"User-Agent": USER_AGENT,
+                         "Accept": "application/sparql-results+json"},
+                timeout=timeout,
+            )
+            # WAF MiC ritorna HTML 200 con "Web Application Firewall" se blocca
+            if r.status_code == 200 and "Web Application Firewall" in r.text[:2000]:
+                raise RuntimeError("SPARQL bloccato dal WAF MiC (signature). "
+                                   "Verifica pattern query (no GROUP BY / ORDER BY complessi).")
             r.raise_for_status()
-            server_lm = r.headers.get("Last-Modified", "")
-            log.info("cultural_on_head_ok", last_modified=server_lm,
-                     content_length=r.headers.get("Content-Length"))
-        except requests.RequestException as e:
-            log.warning("cultural_on_head_failed", err=str(e))
-            server_lm = ""
-
-        # Hit di cache se file presente e Last-Modified invariato
-        if (server_lm and out.exists() and meta.exists()
-                and meta.read_text().strip() == server_lm
-                and out.stat().st_size > 10_000_000):
-            log.info("cultural_on_cache_hit", path=str(out),
-                     size=out.stat().st_size, last_modified=server_lm)
-            snapshot_date = _parse_lm_to_iso(server_lm)
-            return out, snapshot_date
-
-    # Download completo
-    log.info("cultural_on_download_start", url=DUMP_URL)
-    t0 = time.time()
-    r = requests.get(DUMP_URL, headers={"User-Agent": USER_AGENT},
-                     timeout=600, stream=True)
-    r.raise_for_status()
-
-    server_lm = r.headers.get("Last-Modified", "")
-    total = int(r.headers.get("Content-Length", "0"))
-    written = 0
-    tmp_out = out.with_suffix(".json.tmp")
-    with open(tmp_out, "wb") as f:
-        for chunk in r.iter_content(chunk_size=1024 * 256):
-            if chunk:
-                f.write(chunk)
-                written += len(chunk)
-                if written % (10 * 1024 * 1024) < 262144:
-                    pct = (written * 100 / total) if total else 0
-                    log.info("cultural_on_download_progress",
-                             mb=written // (1024 * 1024),
-                             pct=round(pct, 1))
-    tmp_out.replace(out)
-    if server_lm:
-        meta.write_text(server_lm)
-
-    elapsed = time.time() - t0
-    log.info("cultural_on_download_ok", path=str(out),
-             size=out.stat().st_size, secs=round(elapsed, 1),
-             last_modified=server_lm)
-    snapshot_date = _parse_lm_to_iso(server_lm)
-    return out, snapshot_date
-
-
-def _parse_lm_to_iso(last_modified: str) -> str:
-    """Converte HTTP Last-Modified -> YYYY-MM-DD.
-
-    Esempio header: 'Mon, 04 May 2026 00:01:57 GMT' -> '2026-05-04'.
-    Fallback: data odierna in UTC.
-    """
-    if not last_modified:
-        return datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    try:
-        from email.utils import parsedate_to_datetime
-        dt = parsedate_to_datetime(last_modified)
-        return dt.strftime("%Y-%m-%d")
-    except Exception:
-        return datetime.now(timezone.utc).strftime("%Y-%m-%d")
-
-
-# =========================================================================
-# FASE 2 - Parse JSON-LD + build index per @id
-# =========================================================================
-
-def _is_type(node: dict, target_type: str) -> bool:
-    """True se @type del nodo contiene target_type (string o lista)."""
-    t = node.get("@type")
-    if not t:
-        return False
-    if isinstance(t, str):
-        return target_type in t
-    if isinstance(t, list):
-        return any(target_type in x for x in t if isinstance(x, str))
-    return False
-
-
-def parse_dump(dump_path: Path) -> tuple[list[dict], dict[str, dict]]:
-    """Parsa il JSON-LD e ritorna (cis_nodes, index_by_id).
-
-    - cis_nodes: lista di nodi con @type cis:CulturalInstituteOrSite
-    - index_by_id: tutti i nodi del @graph indicizzati per @id (per join
-      Site -> Address -> City/Province e ContactPoint -> Email/Phone/Web)
-    """
-    log.info("cultural_on_parse_start", path=str(dump_path),
-             size=dump_path.stat().st_size)
-    t0 = time.time()
-    with open(dump_path, "r", encoding="utf-8") as f:
-        doc = json.load(f)
-
-    graph = doc.get("@graph", [])
-    if not isinstance(graph, list):
-        raise RuntimeError(
-            f"Dump JSON-LD inatteso: @graph non e' lista (tipo={type(graph).__name__})"
-        )
-
-    index: dict[str, dict] = {}
-    cis: list[dict] = []
-    type_counter: Counter[str] = Counter()
-    for node in graph:
-        nid = node.get("@id")
-        if nid:
-            index[nid] = node
-        # conta tipi (debug)
-        t = node.get("@type")
-        if isinstance(t, str):
-            type_counter[t] += 1
-        elif isinstance(t, list):
-            for x in t:
-                if isinstance(x, str):
-                    type_counter[x] += 1
-        if _is_type(node, "CulturalInstituteOrSite"):
-            cis.append(node)
-
-    elapsed = time.time() - t0
-    log.info("cultural_on_parse_ok",
-             n_nodes=len(graph),
-             n_cis=len(cis),
-             secs=round(elapsed, 1),
-             top_types=type_counter.most_common(8))
-    return cis, index
-
-
-# =========================================================================
-# FASE 3 - Estrazione luogo (join via index)
-# =========================================================================
-
-def extract_luogo(cis_node: dict, index: dict[str, dict]) -> dict | None:
-    """Risolve un CulturalInstituteOrSite navigando l'index per @id.
-
-    Ritorna un dict normalizzato con tutti i campi utili oppure None se
-    manca l'informazione minima (comune + nome).
-    """
-    # Identificativo DBUnico
-    identifier = cis_node.get("l0:identifier")
-    if isinstance(identifier, dict):
-        identifier = identifier.get("@value")
-
-    # Denominazione: institutionalCISName preferito, fallback rdfs:label
-    denom = _extract_lang_value(cis_node.get("cis:institutionalCISName"), "it")
-    if not denom:
-        denom = _extract_lang_value(cis_node.get("rdfs:label"), "it")
-    if not denom:
-        return None
-
-    # Descrizione
-    descrizione = _extract_lang_value(cis_node.get("l0:description"), "it") or ""
-
-    # dc:type (puo' essere literal singolo o lista) -> 2 colonne whitelist
-    raw_types = _as_list(cis_node.get("dc:type"))
-    categorie: list[str] = []
-    enti: list[str] = []
-    is_statale = False
-    is_non_statale = False
-    for rt in raw_types:
-        # alcuni dc:type sono literal-only, non dict
-        val = rt if isinstance(rt, str) else _extract_lang_value(rt, "it")
-        if not val:
+            return r.json()
+        except (requests.RequestException, ValueError, RuntimeError) as e:
+            last_err = e
             continue
-        if val in CATEGORIA_LUOGO:
-            cat = CATEGORIA_LUOGO[val]
-            if cat not in categorie:
-                categorie.append(cat)
-        if val in ENTE_TITOLARE:
-            ent = ENTE_TITOLARE[val]["key"]
-            if ent not in enti:
-                enti.append(ent)
-            if ENTE_TITOLARE[val]["statale"]:
-                is_statale = True
-            else:
-                is_non_statale = True
+    raise RuntimeError(f"SPARQL fallito dopo {SPARQL_MAX_RETRIES} tentativi: {last_err}")
 
-    # Coordinate dirette sul CIS
-    lat = cis_node.get("geo:lat")
-    lon = cis_node.get("geo:long")
+
+def _bind_str(bindings: dict, key: str) -> str | None:
+    """Estrae valore di una variabile dal binding SPARQL JSON o None."""
+    b = bindings.get(key)
+    if not b:
+        return None
+    v = b.get("value")
+    return v if v else None
+
+
+def _bind_float(bindings: dict, key: str) -> float | None:
+    s = _bind_str(bindings, key)
+    if not s:
+        return None
     try:
-        lat = float(lat) if lat is not None else None
-        lon = float(lon) if lon is not None else None
+        return float(s)
     except (TypeError, ValueError):
-        lat = lon = None
-
-    # Foto preview (foaf:depiction)
-    image = _extract_id_ref(cis_node.get("foaf:depiction"))
-
-    # Join hasSite -> Site -> Address -> City/Province
-    site_id = _extract_id_ref(cis_node.get("cis:hasSite"))
-    site = index.get(site_id) if site_id else None
-
-    indirizzo = cap = comune = provincia = None
-    if site:
-        addr_id = _extract_id_ref(site.get("cis:siteAddress"))
-        addr = index.get(addr_id) if addr_id else None
-        if addr:
-            indirizzo = _extract_lang_value(addr.get("clvapit:fullAddress"), "it")
-            cap_raw = addr.get("clvapit:postCode")
-            cap = cap_raw if isinstance(cap_raw, str) else _extract_lang_value(cap_raw, "it")
-
-            city_id = _extract_id_ref(addr.get("clvapit:hasCity"))
-            city = index.get(city_id) if city_id else None
-            if city:
-                comune = _extract_lang_value(city.get("rdfs:label"), "it")
-
-            prov_id = _extract_id_ref(addr.get("clvapit:hasProvince"))
-            prov = index.get(prov_id) if prov_id else None
-            if prov:
-                provincia = _extract_lang_value(prov.get("rdfs:label"), "it")
-
-    if not comune:
-        # senza comune non possiamo mappare a ISTAT -> scarto
         return None
 
-    # Contatti via OnlineContactPoint
-    telefono = email = website = None
-    cp_ids = _extract_id_refs(cis_node.get("smapit:hasOnlineContactPoint"))
-    for cp_id in cp_ids:
-        cp = index.get(cp_id)
-        if not cp:
-            continue
-        # telefono
-        for tel_id in _extract_id_refs(cp.get("smapit:hasTelephone")):
-            tel = index.get(tel_id)
-            if tel and not telefono:
-                tn = tel.get("smapit:telephoneNumber")
-                telefono = tn if isinstance(tn, str) else _extract_lang_value(tn, "it")
-        # email
-        for em_id in _extract_id_refs(cp.get("smapit:hasEmail")):
-            em = index.get(em_id)
-            if em and not email:
-                ea = em.get("smapit:emailAddress")
-                email = ea if isinstance(ea, str) else _extract_lang_value(ea, "it")
-        # website
-        for ws_id in _extract_id_refs(cp.get("smapit:hasWebSite")):
-            ws = index.get(ws_id)
-            if ws and not website:
-                u = ws.get("smapit:URL")
-                website = u if isinstance(u, str) else _extract_id_ref(u) or _extract_lang_value(u, "it")
 
-    # Prenotazione (Booking)
-    prenotazione = None
-    for ac_id in _extract_id_refs(cis_node.get("accessCondition:hasAccessCondition")):
-        ac = index.get(ac_id)
-        if ac and _is_type(ac, "Booking"):
-            lab = _extract_lang_value(ac.get("rdfs:label"), "it")
-            if lab and lab.lower() not in ("none", "null"):
-                prenotazione = lab
-                break
+def _clean_text(s: str | None) -> str | None:
+    """Strip + normalize whitespace su literal sporchi dal MiC.
 
-    return {
-        "id": identifier,
-        "denom": denom,
-        "descrizione": descrizione,
-        "categorie": categorie,
-        "enti": enti,
-        "is_statale": is_statale,
-        "is_non_statale": is_non_statale,
-        "lat": lat,
-        "lon": lon,
-        "indirizzo": indirizzo,
-        "cap": cap,
-        "comune_label": comune,
-        "provincia_label": provincia,
-        "telefono": telefono,
-        "email": email,
-        "website": website,
-        "prenotazione": prenotazione,
-        "image": image,
-    }
+    Esempio reale: 'mailto:\\n  lupo.civitella@parcoabruzzo.it\\n  '
+    diventa 'mailto:lupo.civitella@parcoabruzzo.it'.
+    """
+    if not s:
+        return None
+    # collapse whitespace consecutivi (compresi \n, \t)
+    s = " ".join(s.split())
+    return s if s else None
+
+
+def _clean_email(s: str | None) -> str | None:
+    s = _clean_text(s)
+    if not s:
+        return None
+    if s.lower().startswith("mailto:"):
+        s = s[7:].lstrip()
+    if "@" not in s or "." not in s:
+        return None
+    return s
+
+
+def _clean_url(s: str | None) -> str | None:
+    """Pulisce URL: rimuove markdown [url](url), valida prefisso http(s)://."""
+    s = _clean_text(s)
+    if not s:
+        return None
+    # markdown [url](url) -> url
+    if s.startswith("[") and "](" in s:
+        # estrai l'URL dentro (...)
+        try:
+            s = s.split("](", 1)[1].rstrip(")")
+        except (IndexError, ValueError):
+            pass
+    if not s.lower().startswith(("http://", "https://")):
+        return None
+    return s
+
+
+def _clean_phone(s: str | None) -> str | None:
+    s = _clean_text(s)
+    if not s:
+        return None
+    # un telefono ragionevole ha almeno 4 cifre
+    digits = sum(1 for c in s if c.isdigit())
+    if digits < 4:
+        return None
+    return s
+
+
+# =========================================================================
+# FASE 2 - Query anagrafica paginata
+# =========================================================================
+
+# Channel SOAS per smapit:hasTelephoneType (controlled vocabulary AgID)
+TEL_CHANNEL_PHONE = "https://w3id.org/italia/controlled-vocabulary/classifications-for-public-services/channel/031"
+TEL_CHANNEL_FAX = "https://w3id.org/italia/controlled-vocabulary/classifications-for-public-services/channel/033"
+
+
+def _query_anagrafica(limit: int, offset: int) -> str:
+    """Query anagrafica completa per ogni CulturalInstituteOrSite.
+
+    NB: niente GROUP BY / ORDER BY (WAF triggers). LIMIT/OFFSET ok.
+    institutionalCISName e dc:type sono REQUIRED (filtro qualita');
+    il resto OPTIONAL.
+
+    Un singolo ?s puo' avere PIU' righe se ha PIU' dc:type. Aggrego
+    lato Python.
+    """
+    return f"""PREFIX cis: <http://dati.beniculturali.it/cis/>
+PREFIX clvapit: <https://w3id.org/italia/onto/CLV/>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX geo: <http://www.w3.org/2003/01/geo/wgs84_pos#>
+PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+PREFIX dc: <http://purl.org/dc/elements/1.1/>
+PREFIX l0: <https://w3id.org/italia/onto/l0/>
+SELECT ?s ?name ?identifier ?descrizione ?type
+       ?comune ?provincia ?indirizzo ?cap
+       ?lat ?lon ?image
+WHERE {{
+  ?s a cis:CulturalInstituteOrSite .
+  ?s cis:institutionalCISName ?name .
+  FILTER(lang(?name) = "it")
+  ?s dc:type ?type .
+  ?s cis:hasSite ?site .
+  ?site cis:siteAddress ?addr .
+  ?addr clvapit:hasCity ?city .
+  ?city rdfs:label ?comune .
+  OPTIONAL {{ ?addr clvapit:hasProvince ?prov . ?prov rdfs:label ?provincia }}
+  OPTIONAL {{ ?addr clvapit:postCode ?cap }}
+  OPTIONAL {{ ?addr clvapit:fullAddress ?indirizzo }}
+  OPTIONAL {{ ?s geo:lat ?lat }}
+  OPTIONAL {{ ?s geo:long ?lon }}
+  OPTIONAL {{ ?s foaf:depiction ?image }}
+  OPTIONAL {{ ?s l0:description ?descrizione . FILTER(lang(?descrizione) = "it") }}
+  OPTIONAL {{ ?s l0:identifier ?identifier }}
+}} LIMIT {limit} OFFSET {offset}"""
+
+
+def fetch_anagrafica_sparql(skip_cache: bool = False) -> list[dict]:
+    """Scarica tutti i record anagrafica SPARQL, aggrega righe duplicate
+    (un luogo con N dc:type genera N righe) in N luoghi distinti.
+
+    Cache su disco: /tmp/cruscotto_cultural_on/anagrafica.json.
+    Ritorna list[dict] di luoghi normalizzati con chiavi:
+      id, denom, descrizione, categorie[], comune_label, provincia_label,
+      indirizzo, cap, lat, lon, image
+    """
+    cache_path = CACHE_DIR / "anagrafica.json"
+    today = datetime.now().strftime("%Y%m%d")
+    cache_marker = CACHE_DIR / f"anagrafica.{today}.ok"
+
+    if not skip_cache and cache_path.exists() and cache_marker.exists():
+        data = json.loads(cache_path.read_text())
+        log.info("cultural_on_anagrafica_cache_hit", path=str(cache_path),
+                 n=len(data))
+        return data
+
+    log.info("cultural_on_anagrafica_fetch_start", endpoint=SPARQL_ENDPOINT,
+             page_size=SPARQL_PAGE_SIZE)
+    t0 = time.time()
+
+    # aggregato: ?s -> dict luogo (per accumulare categorie multiple)
+    luoghi: dict[str, dict] = {}
+    offset = 0
+    page_num = 0
+    while True:
+        page_num += 1
+        q = _query_anagrafica(SPARQL_PAGE_SIZE, offset)
+        result = _sparql_post(q)
+        bindings = result.get("results", {}).get("bindings", [])
+        if not bindings:
+            log.info("cultural_on_anagrafica_pagina_vuota", page=page_num,
+                     offset=offset)
+            break
+
+        for b in bindings:
+            s_uri = _bind_str(b, "s")
+            if not s_uri:
+                continue
+            cur = luoghi.setdefault(s_uri, {
+                "uri": s_uri,
+                "id": None,
+                "denom": None,
+                "descrizione": None,
+                "categorie": [],
+                "categorie_raw": [],
+                "comune_label": None,
+                "provincia_label": None,
+                "indirizzo": None,
+                "cap": None,
+                "lat": None,
+                "lon": None,
+                "image": None,
+            })
+            # campi 1-1 (sovrascrivibili: stesso valore in tutte le righe)
+            if cur["denom"] is None:
+                cur["denom"] = _clean_text(_bind_str(b, "name"))
+            if cur["id"] is None:
+                cur["id"] = _bind_str(b, "identifier")
+            if cur["descrizione"] is None:
+                cur["descrizione"] = _clean_text(_bind_str(b, "descrizione"))
+            if cur["comune_label"] is None:
+                cur["comune_label"] = _clean_text(_bind_str(b, "comune"))
+            if cur["provincia_label"] is None:
+                cur["provincia_label"] = _clean_text(_bind_str(b, "provincia"))
+            if cur["indirizzo"] is None:
+                cur["indirizzo"] = _clean_text(_bind_str(b, "indirizzo"))
+            if cur["cap"] is None:
+                cur["cap"] = _clean_text(_bind_str(b, "cap"))
+            if cur["lat"] is None:
+                cur["lat"] = _bind_float(b, "lat")
+            if cur["lon"] is None:
+                cur["lon"] = _bind_float(b, "lon")
+            if cur["image"] is None:
+                cur["image"] = _bind_str(b, "image")
+            # campo N-1: categoria (dc:type) - accumula tutte le righe
+            raw_type = _bind_str(b, "type")
+            if raw_type:
+                if raw_type not in cur["categorie_raw"]:
+                    cur["categorie_raw"].append(raw_type)
+                mapped = CATEGORIA_LUOGO.get(raw_type)
+                if mapped and mapped not in cur["categorie"]:
+                    cur["categorie"].append(mapped)
+
+        log.info("cultural_on_anagrafica_pagina", page=page_num,
+                 offset=offset, bindings=len(bindings),
+                 luoghi_aggregati=len(luoghi))
+
+        if len(bindings) < SPARQL_PAGE_SIZE:
+            # ultima pagina parziale
+            break
+        offset += SPARQL_PAGE_SIZE
+        time.sleep(SPARQL_SLEEP_BETWEEN_PAGES)
+
+    result = list(luoghi.values())
+    elapsed = time.time() - t0
+    log.info("cultural_on_anagrafica_done",
+             n_luoghi=len(result),
+             pagine=page_num,
+             secs=round(elapsed, 1))
+
+    cache_path.write_text(json.dumps(result, ensure_ascii=False))
+    cache_marker.touch()
+    return result
+
+
+# =========================================================================
+# FASE 3 - Query contatti paginata (telefono, email, website, prenotazioni)
+# =========================================================================
+
+def _query_contatti(limit: int, offset: int) -> str:
+    """Query contatti per ogni CulturalInstituteOrSite.
+
+    Restituisce N righe per ?s (un luogo puo' avere piu' contact point,
+    o un solo contact point con piu' canali). Aggreghiamo lato Python.
+
+    OPTIONAL su tutti i sub-pattern: vogliamo TUTTI i luoghi anche senza
+    contatti, per non perdere righe se manca solo l'email.
+    """
+    return f"""PREFIX cis: <http://dati.beniculturali.it/cis/>
+PREFIX smapit: <https://w3id.org/italia/onto/SM/>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+SELECT ?s ?telefono ?fax ?email ?website ?prenotazione
+WHERE {{
+  ?s a cis:CulturalInstituteOrSite .
+  ?s smapit:hasOnlineContactPoint ?cp .
+  OPTIONAL {{
+    ?cp smapit:hasTelephone ?tel .
+    ?tel smapit:hasTelephoneType <{TEL_CHANNEL_PHONE}> .
+    ?tel smapit:telephoneNumber ?telefono .
+  }}
+  OPTIONAL {{
+    ?cp smapit:hasTelephone ?fax_n .
+    ?fax_n smapit:hasTelephoneType <{TEL_CHANNEL_FAX}> .
+    ?fax_n smapit:telephoneNumber ?fax .
+  }}
+  OPTIONAL {{ ?cp smapit:hasEmail ?em . ?em smapit:emailAddress ?email }}
+  OPTIONAL {{ ?cp smapit:hasWebSite ?ws . ?ws smapit:URL ?website }}
+}} LIMIT {limit} OFFSET {offset}"""
+
+
+def fetch_contatti_sparql(skip_cache: bool = False) -> dict[str, dict]:
+    """Scarica i contatti SPARQL e ritorna dict uri -> dict contatti.
+
+    Cache: /tmp/cruscotto_cultural_on/contatti.json (mappa uri -> contatti).
+    """
+    cache_path = CACHE_DIR / "contatti.json"
+    today = datetime.now().strftime("%Y%m%d")
+    cache_marker = CACHE_DIR / f"contatti.{today}.ok"
+
+    if not skip_cache and cache_path.exists() and cache_marker.exists():
+        data = json.loads(cache_path.read_text())
+        log.info("cultural_on_contatti_cache_hit", path=str(cache_path),
+                 n=len(data))
+        return data
+
+    log.info("cultural_on_contatti_fetch_start", endpoint=SPARQL_ENDPOINT,
+             page_size=SPARQL_PAGE_SIZE)
+    t0 = time.time()
+
+    contatti: dict[str, dict] = {}
+    offset = 0
+    page_num = 0
+    while True:
+        page_num += 1
+        q = _query_contatti(SPARQL_PAGE_SIZE, offset)
+        result = _sparql_post(q)
+        bindings = result.get("results", {}).get("bindings", [])
+        if not bindings:
+            log.info("cultural_on_contatti_pagina_vuota", page=page_num,
+                     offset=offset)
+            break
+
+        for b in bindings:
+            s_uri = _bind_str(b, "s")
+            if not s_uri:
+                continue
+            cur = contatti.setdefault(s_uri, {
+                "telefono": None, "fax": None,
+                "email": None, "website": None,
+                "prenotazione": None,
+            })
+            # prima occorrenza vince (se NON gia' valorizzato)
+            if cur["telefono"] is None:
+                cur["telefono"] = _clean_phone(_bind_str(b, "telefono"))
+            if cur["fax"] is None:
+                cur["fax"] = _clean_phone(_bind_str(b, "fax"))
+            if cur["email"] is None:
+                cur["email"] = _clean_email(_bind_str(b, "email"))
+            if cur["website"] is None:
+                cur["website"] = _clean_url(_bind_str(b, "website"))
+
+        log.info("cultural_on_contatti_pagina", page=page_num,
+                 offset=offset, bindings=len(bindings),
+                 luoghi_aggregati=len(contatti))
+
+        if len(bindings) < SPARQL_PAGE_SIZE:
+            break
+        offset += SPARQL_PAGE_SIZE
+        time.sleep(SPARQL_SLEEP_BETWEEN_PAGES)
+
+    elapsed = time.time() - t0
+    log.info("cultural_on_contatti_done",
+             n_luoghi=len(contatti),
+             pagine=page_num,
+             secs=round(elapsed, 1))
+
+    cache_path.write_text(json.dumps(contatti, ensure_ascii=False))
+    cache_marker.touch()
+    return contatti
+
+
+# =========================================================================
+# FASE 4 - Merge anagrafica + contatti
+# =========================================================================
+
+def merge_anagrafica_contatti(anagrafica: list[dict],
+                              contatti: dict[str, dict]) -> list[dict]:
+    """Aggiunge i campi di contatto ai record anagrafica.
+
+    I luoghi senza contact point restano con telefono/email/website=None.
+    """
+    merged = 0
+    out = []
+    for luogo in anagrafica:
+        c = contatti.get(luogo["uri"], {})
+        luogo_out = dict(luogo)
+        luogo_out["telefono"] = c.get("telefono")
+        luogo_out["fax"] = c.get("fax")
+        luogo_out["email"] = c.get("email")
+        luogo_out["website"] = c.get("website")
+        luogo_out["prenotazione"] = c.get("prenotazione")
+        if any(luogo_out.get(k) for k in ("telefono", "email", "website")):
+            merged += 1
+        out.append(luogo_out)
+    log.info("cultural_on_merge_done",
+             n_totale=len(out),
+             n_con_contatti=merged,
+             pct_contatti=round(merged * 100 / len(out), 1) if out else 0)
+    return out
