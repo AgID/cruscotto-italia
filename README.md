@@ -35,6 +35,7 @@ Cercando un comune ("Lecce") si ottiene una vista a 360° su:
 - 🏭 **Imprese e addetti** (ISTAT — ASIA UL, serie 2018-2023)
 - 🚌 **Pendolarismo** (ISTAT Censimento permanente 2021 — matrice OD origine/destinazione lavoro)
 - 🗺️ **Censimento sezioni 2021** (ISTAT Basi Territoriali — 756.376 sezioni di censimento con 119 variabili demografiche/abitative per sezione)
+- 🏛️ **Beni culturali** (MiC — ICCD ArCo per beni immobili tutelati: chiese, palazzi, castelli, archeologia, ville, monumenti, soprintendenze; Cultural-ON DBUnico 2.0 per Luoghi della Cultura visitabili: musei, biblioteche, archivi con orari e contatti)
 
 L'elenco completo, con licenze, frequenze di aggiornamento e link diretti
 alle fonti istituzionali, è disponibile nella pagina pubblica `about.html`
@@ -168,7 +169,7 @@ per consentire l'interrogazione dei dati civici da chatbot AI compatibili
 È disponibile una skill Claude che documenta l'uso del connettore
 (inventario dei 6 tool, schema di `comune_dashboard`, pattern operativi
 e caveat per sezione). Versione corrente:
-`https://cruscotto-italia-mcp.dati.gov.it/skills/cruscotto-italia-workflow-v2.1.0.zip`
+`https://cruscotto-italia-mcp.dati.gov.it/skills/cruscotto-italia-workflow-v2.3.0.zip`
 (elenco completo con storici in `docs/skills/README.md`).
 
 ### Esempi di domande supportate
@@ -262,7 +263,7 @@ cruscotto-italia/
 │
 ├── frontend/                 ← single-file HTML (vanilla JS)
 │   ├── index.html
-│   ├── comune.html           ← vista comune-centric, 24 tab
+│   ├── comune.html           ← vista comune-centric, 25 tab
 │   ├── about.html            ← elenco fonti + metodologia
 │   └── vendor/               ← Chart.js, Leaflet, JSZip (SHA-384)
 │
