@@ -5313,15 +5313,17 @@ function renderBeniList(luoghi, isPartial) {
     ((a.denom || '').toUpperCase()).localeCompare((b.denom || '').toUpperCase(), 'it')
   );
   container.innerHTML = sorted.map((b, idx) => renderBeniListItem(b, idx)).join('');
-  // Bind click handler delegato per accordion
-  container.addEventListener('click', (ev) => {
+  // Bind click handler delegato per accordion. Uso onclick (property) invece di
+  // addEventListener cosi' rimpiazza eventuali handler precedenti (al reload FULL
+  // renderBeniList viene richiamata e altrimenti i handler si accumulerebbero).
+  container.onclick = (ev) => {
     const btn = ev.target.closest('.beni-list-row');
-    if (!btn) return;
+    if (!btn || !container.contains(btn)) return;
     const expanded = btn.getAttribute('aria-expanded') === 'true';
     btn.setAttribute('aria-expanded', expanded ? 'false' : 'true');
-    const detail = btn.parentElement.querySelector('.beni-list-detail');
+    const detail = document.getElementById(btn.getAttribute('aria-controls'));
     if (detail) detail.hidden = expanded;
-  }, { once: false });
+  };
 }
 
 function _escapeHtmlBeni(s) {
