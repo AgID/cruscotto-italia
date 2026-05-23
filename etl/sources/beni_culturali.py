@@ -563,34 +563,31 @@ ARCO_IMMOBILE_CLASS = "https://w3id.org/arco/ontology/arco/ImmovableCulturalProp
 
 
 def _query_arco_core(limit: int, offset: int) -> str:
-    """Query CORE: nome + indirizzo (label da parsare) + tipologia (label risolta).
+    """Query CORE: nome + indirizzo (label da parsare) + URI del tipo.
 
-    Restituisce ?s ?name ?typeLabel ?addrLabel.
+    Restituisce ?s ?name ?type ?addrLabel.
 
-    Nota: hasCulturalPropertyType punta a una risorsa, NON a un literal.
-    Per ottenere lo slug umano (chiesa, palazzo, ...) facciamo il join
-    inline con rdfs:label della risorsa tipo. FILTER lang='it' per
-    prendere solo la label italiana e non duplicare con quella inglese.
+    NB: ?type e' l'URI risorsa CulturalPropertyType/<hash>, NON la label.
+    La label viene risolta lato Python via fetch_type_dictionary() che
+    fa 1 sola chiamata SPARQL sull'intero vocabolario controllato
+    (~100-200 tipi, sotto 1s).
 
-    REQUIRED: nome + indirizzo (label). Tipologia OPTIONAL: qualche bene
-    non ha tipo assegnato (es. ICCD non ancora processato).
+    Strategia testata in alternativa (JOIN inline rdfs:label): triplica
+    le righe per bene a causa di multiple lingue/sinonimi nei labels.
 
-    Tempo atteso per LIMIT 2000: ~5-8 secondi (un OPTIONAL piccolo).
+    REQUIRED: nome + indirizzo. Tipologia OPTIONAL.
+    Tempo atteso per LIMIT 2000: ~3-5 secondi.
     """
     return f"""PREFIX arco: <https://w3id.org/arco/ontology/arco/>
 PREFIX arco_loc: <https://w3id.org/arco/ontology/location/>
 PREFIX arco_deno: <https://w3id.org/arco/ontology/denotative-description/>
 PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
-SELECT ?s ?name ?typeLabel ?addrLabel WHERE {{
+SELECT ?s ?name ?type ?addrLabel WHERE {{
   ?s a <{ARCO_IMMOBILE_CLASS}> .
   ?s rdfs:label ?name .
   ?s arco_loc:hasCulturalPropertyAddress ?addr .
   ?addr rdfs:label ?addrLabel .
-  OPTIONAL {{
-    ?s arco_deno:hasCulturalPropertyType ?type .
-    ?type rdfs:label ?typeLabel .
-    FILTER(lang(?typeLabel) = "it")
-  }}
+  OPTIONAL {{ ?s arco_deno:hasCulturalPropertyType ?type }}
 }} LIMIT {limit} OFFSET {offset}"""
 
 
@@ -676,6 +673,55 @@ SELECT ?s ?cis WHERE {{
 }} LIMIT {limit} OFFSET {offset}"""
 
 
+def fetch_type_dictionary(skip_cache: bool = False) -> dict[str, str]:
+    """Scarica il vocabolario controllato CulturalPropertyType -> label IT.
+
+    Una sola chiamata SPARQL: il vocabolario e' piccolo (~100-200 tipi)
+    e cambia raramente. Restituisce dict[uri_completo] -> label_lowercase
+    (es. {".../CulturalPropertyType/513aa116...": "chiesa", ...}).
+
+    Cache: /tmp/cruscotto_cultural_on/type_dict.json (riusata per 24h).
+    """
+    cache_path = CACHE_DIR / "type_dict.json"
+    today = datetime.now().strftime("%Y%m%d")
+    cache_marker = CACHE_DIR / f"type_dict.{today}.ok"
+
+    if not skip_cache and cache_path.exists() and cache_marker.exists():
+        data = json.loads(cache_path.read_text())
+        log.info("beni_culturali_type_dict_cache_hit",
+                 path=str(cache_path), n=len(data))
+        return data
+
+    log.info("beni_culturali_type_dict_fetch_start")
+    t0 = time.time()
+
+    query = """PREFIX arco_deno: <https://w3id.org/arco/ontology/denotative-description/>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+SELECT ?type ?label WHERE {
+  ?type a <https://w3id.org/arco/ontology/denotative-description/CulturalPropertyType> .
+  ?type rdfs:label ?label .
+  FILTER(lang(?label) = "it")
+}"""
+
+    result = _sparql_post(query)
+    bindings = result.get("results", {}).get("bindings", [])
+
+    dictionary: dict[str, str] = {}
+    for b in bindings:
+        uri = _bind_str(b, "type")
+        label = _bind_str(b, "label")
+        if uri and label:
+            dictionary[uri] = label.strip().lower()
+
+    log.info("beni_culturali_type_dict_fetched",
+             n_tipi=len(dictionary),
+             secs=round(time.time() - t0, 1))
+
+    cache_path.write_text(json.dumps(dictionary, ensure_ascii=False))
+    cache_marker.touch()
+    return dictionary
+
+
 def fetch_arco_immobili(skip_cache: bool = False) -> list[dict]:
     """Scarica tutti i beni immobili ArCo in 2 passate (core + dettagli)
     + parsing indirizzo + parsing WKT.
@@ -735,12 +781,12 @@ def fetch_arco_immobili(skip_cache: bool = False) -> list[dict]:
             if cur["denom"] is None:
                 cur["denom"] = _clean_denom(_bind_str(b, "name"))
             if cur["tipo_raw"] is None:
-                # typeLabel arriva gia' come label italiana risolta
-                # (es. "chiesa", "palazzo"). Vecchia versione leggeva ?type
-                # come URI hash MD5 -> serviva risoluzione separata.
-                t_label = _bind_str(b, "typeLabel")
-                if t_label:
-                    cur["tipo_raw"] = t_label.strip().lower()
+                # Salvo l'URI completo della risorsa CulturalPropertyType
+                # (es. https://w3id.org/arco/resource/CulturalPropertyType/HASH).
+                # La label umana verra' risolta dopo via type_dictionary.
+                t_uri = _bind_str(b, "type")
+                if t_uri:
+                    cur["tipo_raw"] = t_uri
             if cur["addr_raw"] is None:
                 lab = _clean_text(_bind_str(b, "addrLabel"))
                 if lab:
@@ -848,6 +894,29 @@ def fetch_arco_immobili(skip_cache: bool = False) -> list[dict]:
 
     log.info("beni_culturali_link_done", n_links=n_links,
              secs=round(time.time() - t2, 1))
+
+    # --- FASE 1D: risoluzione tipo via dictionary controlled vocabulary ---
+    # Sostituisce l'URI hash con la label umana (es. ".../CulturalPropertyType/513aa116..."
+    # diventa "chiesa"). 1 sola chiamata SPARQL totale sul vocabolario.
+    log.info("beni_culturali_type_resolve_start")
+    type_dict = fetch_type_dictionary()
+    n_resolved = 0
+    n_missing = 0
+    for b in beni.values():
+        t = b.get("tipo_raw")
+        if not t:
+            continue
+        label = type_dict.get(t)
+        if label:
+            b["tipo_raw"] = label
+            n_resolved += 1
+        else:
+            # tipo presente ma label non trovata: tieni hash come fallback
+            n_missing += 1
+    log.info("beni_culturali_type_resolve_done",
+             n_resolved=n_resolved,
+             n_missing_in_dict=n_missing,
+             n_dict_entries=len(type_dict))
 
     result = list(beni.values())
     elapsed = time.time() - t0
@@ -1046,21 +1115,30 @@ def group_by_istat(beni: list[dict],
 # =========================================================================
 
 def build_kpi(beni: list[dict]) -> dict:
-    """KPI aggregati per un singolo comune."""
+    """KPI aggregati per un singolo comune.
+
+    Struttura pensata per UI mappa + tab:
+      - n_totale: tutti i beni immobili tutelati MiC in questo comune
+      - n_visitabili: beni con link a Cultural-ON (orari, contatti)
+      - n_con_coordinate / n_senza_coordinate: utile per il messaggio
+        UI "la mappa mostra N di M beni"
+      - mix_categoria: distribuzione per categoria (UI grafico/badge)
+      - pct_con_foto / pct_con_descrizione: indicatori qualita' dati
+    """
     n = len(beni)
     if n == 0:
         return {
             "n_totale": 0,
+            "n_visitabili": 0,
+            "n_con_coordinate": 0,
+            "n_senza_coordinate": 0,
             "mix_categoria": {},
-            "pct_georef": 0.0,
             "pct_con_foto": 0.0,
             "pct_con_descrizione": 0.0,
-            "pct_con_tutela": 0.0,
-            "n_con_cis_link": 0,
         }
 
     mix: dict[str, int] = defaultdict(int)
-    n_geo = n_foto = n_desc = n_tut = n_cis = 0
+    n_geo = n_foto = n_desc = n_visit = 0
     for b in beni:
         cat = _categoria_for(b.get("tipo_raw"))
         mix[cat] += 1
@@ -1070,24 +1148,22 @@ def build_kpi(beni: list[dict]) -> dict:
             n_foto += 1
         if b.get("descrizione"):
             n_desc += 1
-        if b.get("tutela"):
-            n_tut += 1
         if b.get("cis_link"):
-            n_cis += 1
+            n_visit += 1
 
-    # ordina mix per priorità categoria (non per count)
+    # ordina mix per priorita' categoria (icone mappa consistenti)
     mix_sorted = {
         c: mix[c] for c in CATEGORIA_PRIORITA_BENI if c in mix
     }
 
     return {
         "n_totale": n,
+        "n_visitabili": n_visit,
+        "n_con_coordinate": n_geo,
+        "n_senza_coordinate": n - n_geo,
         "mix_categoria": mix_sorted,
-        "pct_georef": round(100.0 * n_geo / n, 1),
         "pct_con_foto": round(100.0 * n_foto / n, 1),
         "pct_con_descrizione": round(100.0 * n_desc / n, 1),
-        "pct_con_tutela": round(100.0 * n_tut / n, 1),
-        "n_con_cis_link": n_cis,
     }
 
 
