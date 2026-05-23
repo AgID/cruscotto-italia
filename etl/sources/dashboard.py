@@ -27,6 +27,7 @@ Sorgenti accorpate:
 - carburanti/<istat>.json        (MIMIT - Osservatorio Prezzi Carburanti, anagrafica impianti + prezzi praticati)
 - runts/<istat>.json             (Min. Lavoro - Registro Unico Nazionale Terzo Settore, enti iscritti)
 - censimento/<istat>.json        (ISTAT Censimento permanente 2021 - KPI sezioni + distribuzioni)
+- beni_culturali/<istat>.json    (MiC ArCo Immobili tutelati - KPI + lista compatta)
 - lookup/anac-aggregato.json     (filtrato per CF)
 - lookup/comuni-bundle.json      (anagrafica)
 
@@ -90,6 +91,7 @@ SHARDS = [
     ("runts",      "runts/{istat}.json"),
     ("asia",       "asia/{istat}.json"),
     ("censimento", "censimento/{istat}.json"),
+    ("beni_culturali", "beni_culturali/{istat}.json"),
 ]
 
 # Shard con path assoluto (legacy, indipendenti da DATA_DIR)
@@ -162,6 +164,7 @@ def compute_kpi_summary(out: dict) -> dict:
     sanita = out.get("sanita_mds") or {}
     asia = out.get("asia") or {}
     pendolarismo = out.get("pendolarismo") or {}
+    beni_culturali = out.get("beni_culturali") or {}
 
     # Popolazione (riferimento per molti pro-capite/per-1000)
     pop = _safe(demo, "popolazione_totale")
@@ -347,6 +350,18 @@ def compute_kpi_summary(out: dict) -> dict:
             "auto_contenimento_pct": _safe(pendolarismo, "kpi", "auto_contenimento_pct"),
             "n_destinazioni": _safe(pendolarismo, "kpi", "n_destinazioni"),
             "n_origini": _safe(pendolarismo, "kpi", "n_origini"),
+        },
+        "beni_culturali_mic": {
+            "n_beni_immobili": _safe(beni_culturali, "kpi", "n_totale"),
+            "n_visitabili": _safe(beni_culturali, "kpi", "n_visitabili"),
+            "n_con_coordinate": _safe(beni_culturali, "kpi", "n_con_coordinate"),
+            "n_senza_coordinate": _safe(beni_culturali, "kpi", "n_senza_coordinate"),
+            "pct_con_foto": _safe(beni_culturali, "kpi", "pct_con_foto"),
+            "pct_con_descrizione": _safe(beni_culturali, "kpi", "pct_con_descrizione"),
+            "beni_per_1000_ab": _per_1000(
+                _safe(beni_culturali, "kpi", "n_totale"), pop
+            ),
+            "snapshot_date": beni_culturali.get("_snapshot_date"),
         },
     }
     return summary
