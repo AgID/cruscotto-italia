@@ -139,10 +139,12 @@ SOURCE_LABEL = "MiC DBUnico 2.0 (Cultural-ON)"
 LUOGHI_CAP_BASE = 30
 
 # Paginazione SPARQL: il MiC accetta query senza GROUP BY ma con LIMIT
-# fino a ~10000. Stiamo prudenti a 5000/page per evitare timeout server.
-SPARQL_PAGE_SIZE = 5000
-SPARQL_SLEEP_BETWEEN_PAGES = 2.0
-SPARQL_TIMEOUT = 120
+# fino a ~10000 in teoria. Empiricamente 5000/page va in timeout sul server.
+# 2000/page sta sotto i 5 secondi per pagina con la query anagrafica
+# completa (15 OPTIONAL).
+SPARQL_PAGE_SIZE = 2000
+SPARQL_SLEEP_BETWEEN_PAGES = 1.5
+SPARQL_TIMEOUT = 90
 SPARQL_MAX_RETRIES = 3
 
 
