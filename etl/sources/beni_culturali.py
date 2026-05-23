@@ -1162,8 +1162,37 @@ CATEGORIA_ARCO: dict[str, str] = {
 
 CATEGORIA_PRIORITA_BENI = [
     "chiesa", "palazzo", "castello", "archeologia",
-    "museo", "monumento", "infrastruttura", "parco_giardino", "altro",
+    "museo", "monumento", "biblioteca", "archivio",
+    "infrastruttura", "parco_giardino", "altro",
 ]
+
+
+# Cultural-ON usa categorie gia' normalizzate (campo 'categorie' del JSON
+# /tmp/cruscotto_cultural_on/cultural_on_raw.json prodotto da
+# `etl/sources/cultural_on.py`). Mappiamo i 9 valori distinti alle 11
+# macro Cruscotto (priorita' sopra).
+#
+# Distribuzione reale Cultural-ON (snapshot 23/05/2026, n=6717):
+#   museo: 4682 (70%)
+#   architettura: 492 (7%)  -> "palazzo" (architettura civile/residenziale)
+#   area_archeologica: 469 (7%) -> "archeologia"
+#   chiesa: 332 (5%)
+#   altro: 238 (3%)
+#   monumento: 190 (3%)
+#   archivio: 153 (2%)
+#   biblioteca: 80 (1%)
+#   parco_giardino: 63 (1%)
+CULTURAL_ON_CATEGORIA_MAP = {
+    "museo":             "museo",
+    "architettura":      "palazzo",
+    "area_archeologica": "archeologia",
+    "chiesa":            "chiesa",
+    "monumento":         "monumento",
+    "archivio":          "archivio",
+    "biblioteca":        "biblioteca",
+    "parco_giardino":    "parco_giardino",
+    "altro":             "altro",
+}
 
 
 def _categoria_for(tipo_raw: str | None) -> str:
@@ -1177,6 +1206,19 @@ def _categoria_for(tipo_raw: str | None) -> str:
     if not tipo_raw:
         return "altro"
     return CATEGORIA_ARCO.get(tipo_raw.lower(), "altro")
+
+
+def _resolve_categoria(b: dict) -> str:
+    """Wrapper unificato per record ArCo + Cultural-ON.
+
+    Cultural-ON ha gia' categorie normalizzate (via CULTURAL_ON_CATEGORIA_MAP
+    in load_cultural_on) salvate in '_categoria_cultural_on'. ArCo passa
+    da _categoria_for() che lookup la whitelist CATEGORIA_ARCO.
+    """
+    co = b.get("_categoria_cultural_on")
+    if co:
+        return co
+    return _categoria_for(b.get("tipo_raw"))
 
 
 # =========================================================================
@@ -1238,6 +1280,120 @@ def load_comuni_soppressi() -> dict[tuple[str, str], str]:
              path=str(SOPPRESSI_CSV_PATH),
              n_entries=len(mapping))
     return mapping
+
+
+# Path cache del file Cultural-ON prodotto da etl/sources/cultural_on.py.
+# Atteso: lista flat di luoghi MiC visitabili (musei, biblioteche, archivi,
+# aree archeologiche, parchi storici, ecc.) con campi:
+#   uri, id, denom, descrizione, categorie[], categorie_raw[],
+#   comune_label, provincia_label (NOME ESTESO, es. "Roma"), indirizzo,
+#   cap, lat, lon, image, telefono, fax, email, website, prenotazione
+CULTURAL_ON_RAW_PATH = Path("/tmp/cruscotto_cultural_on/cultural_on_raw.json")
+
+
+def build_provincia_name_to_sigla(comuni_bundle: dict) -> dict[str, str]:
+    """Costruisce reverse-lookup nome esteso provincia -> sigla 2-char.
+
+    Cultural-ON usa nome esteso ("Roma", "Milano", "Cagliari"); il nostro
+    gazetteer e tutto il resto del codice usano la sigla 2-char.
+    Costruisco la mappa dal bundle anagrafica corrente.
+
+    Casi limite ISTAT:
+      - "Bolzano/Bozen" e "Trento" (province bilingui): nel bundle il
+        campo provincia_nome puo' essere "Bolzano - Bozen" con trattino.
+        Normalizzo via normalize() per renderlo case/accent insensitive.
+      - "Roma" appare sia come comune che come provincia: il dict comune
+        ha campo separato 'provincia_nome' (provincia di appartenenza).
+    """
+    out: dict[str, str] = {}
+    for istat, c in comuni_bundle.items():
+        nome = (c.get("provincia_nome") or "").strip()
+        sigla = (c.get("provincia") or "").strip().upper()
+        if nome and sigla and len(sigla) == 2:
+            out[normalize(nome)] = sigla
+    return out
+
+
+def load_cultural_on(cache_path: Path = None,
+                     prov_name_to_sigla: dict[str, str] | None = None
+                     ) -> list[dict]:
+    """Carica i luoghi Cultural-ON e li converte allo schema record ArCo
+    per poterli accodare alla lista `beni` prima di group_by_istat().
+
+    Schema output (uniforme a fetch_arco_immobili):
+      uri, denom, tipo_raw, addr_raw, sigla_provincia, comune_label,
+      lat, lon, descrizione, image, tutela, soprintendenza, cis_link,
+      _fonte: "cultural_on"
+
+    Note di mapping:
+      - tipo_raw: categoria gia' normalizzata Cultural-ON
+        (museo/architettura/area_archeologica/chiesa/monumento/
+        archivio/biblioteca/parco_giardino/altro). _categoria_for()
+        usa CATEGORIA_ARCO dict che NON contiene questi slug, quindi
+        per Cultural-ON l'algoritmo categoria sara' diverso: il campo
+        b["_categoria_culturalon"] precalcolato vince via CULTURAL_ON_CATEGORIA_MAP.
+      - sigla_provincia: provincia_label nome esteso -> sigla via reverse lookup
+      - cis_link: l'URI stesso (perche' Cultural-ON e' il dataset visitabile)
+      - tutela / soprintendenza: None (non presenti in Cultural-ON)
+    """
+    if cache_path is None:
+        cache_path = CULTURAL_ON_RAW_PATH
+    if not cache_path.exists():
+        log.warning("beni_culturali_cultural_on_missing",
+                    path=str(cache_path),
+                    hint="Esegui prima 'python -m etl.sources.cultural_on'")
+        return []
+
+    raw = json.loads(cache_path.read_text())
+    log.info("beni_culturali_cultural_on_loaded_raw", n=len(raw))
+
+    if prov_name_to_sigla is None:
+        prov_name_to_sigla = {}
+
+    out: list[dict] = []
+    n_no_sigla = 0
+    for r in raw:
+        prov_name = r.get("provincia_label", "")
+        sigla = prov_name_to_sigla.get(normalize(prov_name)) if prov_name else None
+        if not sigla:
+            n_no_sigla += 1
+            # Skippo i record senza sigla (impossibile matchare comune)
+            # ma loggo in modo aggregato. Top province problematiche ammontano
+            # a poche decine, quasi sempre dataset upstream rotto.
+            continue
+        # Categoria Cultural-ON gia' normalizzata: prendo la prima
+        cat_co = (r.get("categorie") or ["altro"])[0]
+        # Mappo direttamente alla macro Cruscotto (no passare per CATEGORIA_ARCO)
+        macro = CULTURAL_ON_CATEGORIA_MAP.get(cat_co, "altro")
+        out.append({
+            "uri": r["uri"],
+            "denom": _clean_text(r.get("denom")),
+            # Hack: salvo direttamente la macro in tipo_raw cosi' _categoria_for()
+            # quando incontra una macro nota ('museo','biblioteca',...) la riconosce
+            # via CATEGORIA_ARCO che e' lookup case-insensitive. In effetti gia'
+            # 'museo' e 'parco_giardino' sono macro, ma 'biblioteca'/'archivio'/
+            # 'archeologia' no. Per essere certi salvo anche un campo dedicato
+            # che build_kpi e _slim usano in priorita'.
+            "tipo_raw": cat_co,
+            "_categoria_cultural_on": macro,
+            "addr_raw": _clean_text(r.get("indirizzo")),
+            "sigla_provincia": sigla,
+            "comune_label": r.get("comune_label"),
+            "lat": r.get("lat"),
+            "lon": r.get("lon"),
+            "descrizione": _clean_text(r.get("descrizione")),
+            "image": _clean_url(r.get("image")) if r.get("image") else None,
+            "tutela": None,
+            "soprintendenza": None,
+            # cis_link: l'URI stesso. Sara' usato dal frontend per linkare
+            # alla scheda Cultural-ON DBUnico 2.0 visitabile.
+            "cis_link": r["uri"],
+            "_fonte": "cultural_on",
+        })
+    log.info("beni_culturali_cultural_on_loaded",
+             n_records=len(out),
+             n_no_sigla=n_no_sigla)
+    return out
 
 
 def load_lookups() -> tuple[
@@ -1411,7 +1567,7 @@ def build_kpi(beni: list[dict]) -> dict:
     mix: dict[str, int] = defaultdict(int)
     n_geo = n_foto = n_desc = n_visit = 0
     for b in beni:
-        cat = _categoria_for(b.get("tipo_raw"))
+        cat = _resolve_categoria(b)
         mix[cat] += 1
         if b.get("lat") is not None and b.get("lon") is not None:
             n_geo += 1
@@ -1419,7 +1575,10 @@ def build_kpi(beni: list[dict]) -> dict:
             n_foto += 1
         if b.get("descrizione"):
             n_desc += 1
-        if b.get("cis_link"):
+        # Visitabile = record proveniente da Cultural-ON (luoghi della cultura
+        # MiC con orari/contatti) OPPURE bene ArCo con cis_link valorizzato
+        # (raro, ~2% dei beni ArCo, link cross-dataset).
+        if b.get("_fonte") == "cultural_on" or b.get("cis_link"):
             n_visit += 1
 
     # ordina mix per priorita' categoria (icone mappa consistenti)
@@ -1447,13 +1606,15 @@ def _slim_bene_base(b: dict) -> dict:
     return {
         "id": b["uri"].rsplit("/", 1)[-1],
         "denom": b.get("denom"),
-        "categoria": _categoria_for(b.get("tipo_raw")),
+        "categoria": _resolve_categoria(b),
         "lat": b.get("lat"),
         "lon": b.get("lon"),
         "indirizzo": b.get("addr_raw"),
         "image": b.get("image"),
         # cis_link presente solo se valorizzato (per UI: link Cultural-ON arricchimento)
         "cis_link": b.get("cis_link"),
+        # _fonte: distingue origine record (per UI badge + UX popup mappa)
+        "fonte": b.get("_fonte") or "arco",
     }
 
 
@@ -1462,7 +1623,7 @@ def _slim_bene_full(b: dict) -> dict:
     return {
         "id": b["uri"].rsplit("/", 1)[-1],
         "denom": b.get("denom"),
-        "categoria": _categoria_for(b.get("tipo_raw")),
+        "categoria": _resolve_categoria(b),
         "tipo_raw": b.get("tipo_raw"),
         "lat": b.get("lat"),
         "lon": b.get("lon"),
@@ -1472,6 +1633,7 @@ def _slim_bene_full(b: dict) -> dict:
         "tutela": b.get("tutela"),
         "soprintendenza": b.get("soprintendenza"),
         "cis_link": b.get("cis_link"),
+        "fonte": b.get("_fonte") or "arco",
     }
 
 
@@ -1649,6 +1811,27 @@ def main() -> int:
     # FASE 4: lookups (sigla, comune) -> istat
     pair_to_istat, canonical_istat, name_to_istats = load_lookups()
     soppressi = load_comuni_soppressi()
+
+    # FASE 4b: Cultural-ON DBUnico 2.0 — luoghi visitabili (musei, biblioteche,
+    # archivi, parchi archeologici, ecc.) MiC. Il file /tmp/cruscotto_cultural_on/
+    # cultural_on_raw.json viene prodotto da etl.sources.cultural_on.
+    # Schema gia' allineato a ArCo nella funzione load_cultural_on().
+    # Se il file non esiste (prima esecuzione), skip silenzioso: ETL ArCo
+    # funziona comunque, solo perdiamo i ~6700 luoghi visitabili.
+    comuni_bundle = local_lookup.load_comuni_bundle() or {}
+    prov_name_to_sigla = build_provincia_name_to_sigla(comuni_bundle)
+    cultural_on = load_cultural_on(prov_name_to_sigla=prov_name_to_sigla)
+    if cultural_on:
+        n_arco = len(beni)
+        # Marca i record ArCo originali con _fonte="arco" (per coerenza
+        # con le 2 fonti nel record build_kpi e _slim_*).
+        for b in beni:
+            b.setdefault("_fonte", "arco")
+        beni.extend(cultural_on)
+        log.info("beni_culturali_merged_cultural_on",
+                 n_arco=n_arco,
+                 n_cultural_on=len(cultural_on),
+                 n_totale=len(beni))
 
     # FASE 5: group by istat (con fallback by-name + by-soppressi)
     grouped, n_unmatched = group_by_istat(
