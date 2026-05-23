@@ -383,8 +383,14 @@ def _query_anagrafica_dettagli(limit: int, offset: int) -> str:
     """Query anagrafica DETTAGLI: tutti i campi OPTIONAL su CIS + Address.
 
     Separata dalla CORE per evitare il cross-product di 15 OPTIONAL che
-    portava in timeout server-side l'endpoint MiC. Tempo medio per
-    pagina 2000: ~5 secondi.
+    portava in timeout server-side l'endpoint MiC.
+
+    IMPORTANTE: deve avere lo STESSO filtro REQUIRED della CORE
+    (institutionalCISName@it) per restituire lo stesso universo di
+    ~6700 ?s, paginazione allineata. Altrimenti SPARQL store risponde
+    sui ~60000 CIS totali e quasi nessun ?s matcha il dizionario CORE.
+
+    Tempo medio per pagina 2000: ~5 secondi.
 
     Restituisce ?s ?identifier ?indirizzo ?cap ?lat ?lon ?image ?descrizione.
     Da joinare con CORE lato Python via ?s.
@@ -396,6 +402,8 @@ PREFIX foaf: <http://xmlns.com/foaf/0.1/>
 PREFIX l0: <https://w3id.org/italia/onto/l0/>
 SELECT ?s ?identifier ?indirizzo ?cap ?lat ?lon ?image ?descrizione WHERE {{
   ?s a cis:CulturalInstituteOrSite .
+  ?s cis:institutionalCISName ?name .
+  FILTER(lang(?name) = "it")
   OPTIONAL {{ ?s l0:identifier ?identifier }}
   OPTIONAL {{ ?s cis:hasSite ?site . ?site cis:siteAddress ?addr .
              OPTIONAL {{ ?addr clvapit:fullAddress ?indirizzo }}
@@ -557,6 +565,11 @@ def _query_contatti(limit: int, offset: int) -> str:
     Restituisce N righe per ?s (un luogo puo' avere piu' contact point,
     o un solo contact point con piu' canali). Aggreghiamo lato Python.
 
+    IMPORTANTE: filtro institutionalCISName@it come la CORE per
+    restringere l'universo dei ?s ai 6717 luoghi della CORE e mantenere
+    paginazione coerente (altrimenti SPARQL store risponde su tutti i
+    60000+ CIS con contact point, pochissimi matchano CORE).
+
     OPTIONAL su tutti i sub-pattern: vogliamo TUTTI i luoghi anche senza
     contatti, per non perdere righe se manca solo l'email.
     """
@@ -566,6 +579,8 @@ PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 SELECT ?s ?telefono ?fax ?email ?website ?prenotazione
 WHERE {{
   ?s a cis:CulturalInstituteOrSite .
+  ?s cis:institutionalCISName ?name .
+  FILTER(lang(?name) = "it")
   ?s smapit:hasOnlineContactPoint ?cp .
   OPTIONAL {{
     ?cp smapit:hasTelephone ?tel .
