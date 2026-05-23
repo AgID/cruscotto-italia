@@ -1831,11 +1831,14 @@ function renderComune(data) {
   window.__asiaInited = false;
   window.__pendolarismoData = k.pendolarismo || null;
   window.__pendolarismoInited = false;
+  window.__beniCulturaliData = k.beni_culturali || null;
+  window.__beniCulturaliInited = false;
   const tabs = [
     { id: 'panoramica', label: 'Panoramica', kpi: '' },
     { id: 'anncsu', label: 'ANNCSU', kpi: k.anncsu?.kpi?.n_strade != null ? fmtNum(k.anncsu.kpi.n_strade) + (k.anncsu.kpi.n_civici != null ? ' / ' + fmtNum(k.anncsu.kpi.n_civici) : '') : '—' },
     { id: 'aria', label: 'Aria', kpi: '<span data-tab-aria-n><span class="tab-spinner"></span></span>' },
     { id: 'banda-larga', label: 'Banda larga', kpi: k.agcom_bbmap?.kpi?.copertura_ftth_desi_pct != null ? Math.round(k.agcom_bbmap.kpi.copertura_ftth_desi_pct) + '%' : '—' },
+    { id: 'beni-culturali', label: 'Beni culturali', kpi: k.beni_culturali?.kpi?.n_totale ? fmtNum(k.beni_culturali.kpi.n_totale) : '—' },
     { id: 'censimento', label: 'Censimento 2021', kpi: k.censimento?.kpi_comune?.n_sezioni != null ? fmtNum(k.censimento.kpi_comune.n_sezioni) : '—' },
     { id: 'contratti', label: 'Contratti ANAC', kpi: fmtNum(k.contratti?.count || 0) },
     { id: 'demografia', label: 'Demografia', kpi: k.popolazione != null ? fmtNum(k.popolazione) : '—' },
@@ -2033,6 +2036,7 @@ function renderComune(data) {
       ${renderCarburantiTab(k.carburanti)}
       ${renderRuntsTab(k.runts)}
       ${renderAsiaTab(k.asia)}
+      ${renderBeniCulturaliTab(k.beni_culturali)}
     </div>
   `;
 }
@@ -4877,6 +4881,339 @@ function initImmobiliPa(d) {
         }
       }
     });
+  }
+}
+
+// ===========================================================================
+// Tab Beni Culturali — MiC ArCo Immovable Cultural Property
+// Single source: dashboard/<istat>.json sezione "beni_culturali" (mensile).
+// Pattern: lazy-load shard FULL (/data/beni_culturali_full/<istat>.json)
+// quando _full_shard_available=true (comuni con >30 beni). Cluster grid-based.
+// Marker color per macro-categoria (9 classi normalizzate da slug ArCo).
+// ===========================================================================
+
+const BENI_CAT_COLORS = {
+  "chiesa":         "#A050BE",  // viola — religioso
+  "palazzo":        "#0066CC",  // blu Italia — edifici signorili
+  "castello":       "#9B2335",  // bordeaux — difensivo
+  "archeologia":    "#E89400",  // arancio — antichita'
+  "museo":          "#D9364F",  // rosso — istituzionale
+  "monumento":      "#5C6F82",  // grigio scuro — commemorativo
+  "infrastruttura": "#8B6F47",  // marrone — opere civili
+  "parco_giardino": "#388E3C",  // verde — natura
+  "altro":          "#9E9E9E"   // grigio neutro
+};
+const BENI_CAT_LABELS = {
+  "chiesa":         "Chiese",
+  "palazzo":        "Palazzi",
+  "castello":       "Castelli",
+  "archeologia":    "Archeologia",
+  "museo":          "Musei",
+  "monumento":      "Monumenti",
+  "infrastruttura": "Infrastrutture",
+  "parco_giardino": "Parchi/Giardini",
+  "altro":          "Altro"
+};
+
+// Ordine canonico per render legenda (priorita' didascalica)
+const BENI_CAT_ORDER = [
+  "chiesa", "palazzo", "castello", "archeologia",
+  "museo", "monumento", "infrastruttura", "parco_giardino", "altro"
+];
+
+const BENI_FULL_BASE = (location.origin + '/data/beni_culturali_full');
+
+function renderBeniCulturaliTab(d) {
+  if (!d || !d.kpi || !d.kpi.n_totale) {
+    return `
+      <div class="tab-pane" id="pane-beni-culturali">
+        <div class="section-title">§ Beni culturali</div>
+        <h2 class="section-h">Nessun bene tutelato MiC <em>in questo comune</em>.</h2>
+        <p class="muted">Il comune non risulta nel catalogo nazionale ICCD del Ministero della Cultura
+        (ontologia ArCo, <em>Immovable Cultural Property</em>) come sede di beni immobili tutelati.
+        Copertura nazionale: 5.420 comuni su 7.895 (68,7%).</p>
+      </div>`;
+  }
+  const k = d.kpi;
+  const luoghi = d.luoghi || [];
+  const totale = k.n_totale;
+  const visibili = luoghi.length;
+  const pctCoord = (totale > 0) ? Math.round((k.n_con_coordinate || 0) * 100 / totale) : 0;
+
+  return `
+    <div class="tab-pane" id="pane-beni-culturali">
+      <div class="section-title">§ Beni culturali</div>
+      <h2 class="section-h">${fmtNum(totale)} ${totale === 1 ? 'bene tutelato' : 'beni tutelati'} dal <em>MiC</em>, catalogo ICCD ArCo.</h2>
+      <p class="muted" style="font-family:var(--mono);font-size:11px;margin-top:-8px;margin-bottom:18px;">
+        Fonte: <a href="https://dati.beniculturali.it/sparql" target="_blank" rel="noopener">MiC ICCD — ArCo Linked Open Data</a>.
+        Licenza CC BY 4.0. Snapshot del ${formatDataIT(d._snapshot_date || '')}.
+      </p>
+
+      <div class="kpi-cards">
+        <div class="kpi-card">
+          <div class="kpi-card-lab">Totale beni</div>
+          <div class="kpi-card-val">${fmtNum(totale)}</div>
+          <div class="kpi-card-sub">immobili tutelati</div>
+        </div>
+        <div class="kpi-card ${k.n_visitabili ? '' : 'tbd'}">
+          <div class="kpi-card-lab">Visitabili</div>
+          <div class="kpi-card-val">${fmtNum(k.n_visitabili || 0)}</div>
+          <div class="kpi-card-sub">con orari/contatti</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-card-lab">Geo-referenziati</div>
+          <div class="kpi-card-val">${pctCoord}%</div>
+          <div class="kpi-card-sub">${fmtNum(k.n_con_coordinate || 0)} di ${fmtNum(totale)} con coordinate</div>
+        </div>
+        <div class="kpi-card ${k.pct_con_foto != null ? '' : 'tbd'}">
+          <div class="kpi-card-lab">Con foto</div>
+          <div class="kpi-card-val">${k.pct_con_foto != null ? k.pct_con_foto.toFixed(1) + '%' : '&mdash;'}</div>
+          <div class="kpi-card-sub">immagine ICCD disponibile</div>
+        </div>
+        <div class="kpi-card ${k.pct_con_descrizione != null ? '' : 'tbd'}">
+          <div class="kpi-card-lab">Con descrizione</div>
+          <div class="kpi-card-val">${k.pct_con_descrizione != null ? k.pct_con_descrizione.toFixed(1) + '%' : '&mdash;'}</div>
+          <div class="kpi-card-sub">scheda testuale presente</div>
+        </div>
+      </div>
+
+      <div class="veicoli-grid">
+        <div>
+          <h3 class="veicoli-col-h">Mappa beni georeferenziati (<span id="beni-map-count">${fmtNum(k.n_con_coordinate || 0)}</span>)</h3>
+          <div id="beni-map-main" class="impa-map" role="region" aria-label="Mappa beni culturali tutelati"></div>
+          <div class="impa-filters" id="beni-filters-main" role="group" aria-label="Filtri categoria">
+            ${renderBeniCulturaliFilters(k.mix_categoria || {})}
+          </div>
+          <div class="veicoli-euro-note" id="beni-load-status">Cluster auto-aggregati &middot; ${visibili} di ${fmtNum(totale)} beni caricati${d._full_shard_available ? ' &middot; <span id="beni-full-loading">caricamento dataset completo&hellip;</span>' : ''}</div>
+        </div>
+        <div>
+          <h3 class="veicoli-col-h">Mix per categoria</h3>
+          <div class="impa-chart-wrap">
+            <canvas id="beni-mix-chart" aria-label="Distribuzione beni culturali per categoria" role="img"></canvas>
+          </div>
+          <div class="veicoli-euro-note">9 macro-categorie ArCo &middot; normalizzazione da slug ICCD</div>
+        </div>
+      </div>
+    </div>`;
+}
+
+// Chip filtri categoria — ordinati per count desc, mostra solo categorie presenti
+function renderBeniCulturaliFilters(mixCategoria) {
+  const entries = Object.entries(mixCategoria || {})
+    .filter(([k, v]) => v > 0)
+    .sort((a, b) => b[1] - a[1]);
+  if (!entries.length) return '';
+  const chips = entries.map(([cat, count]) => {
+    const color = BENI_CAT_COLORS[cat] || '#9E9E9E';
+    const label = BENI_CAT_LABELS[cat] || cat;
+    return `<button type="button" class="impa-chip" data-cat="${cat}" aria-pressed="true">
+      <span class="impa-chip-dot" style="background:${color}" aria-hidden="true"></span>
+      <span class="impa-chip-label">${label}</span>
+      <span class="impa-chip-count">${fmtNum(count)}</span>
+    </button>`;
+  }).join('');
+  return `<button type="button" class="impa-chip impa-chip-all" data-cat="__all__" aria-pressed="true">
+    <span class="impa-chip-label">Tutti</span>
+  </button>${chips}`;
+}
+
+// Inizializza mappa Leaflet con marker per categoria + cluster grid-based
+// + chip filtri + Chart.js mix categoria. Stessa logica di initImmobiliPa
+// ma con luoghi compatti (id/denom/categoria/lat/lon/indirizzo/image/cis_link)
+// e con possibilita' di hot-reload da shard FULL via reloadLuoghi().
+function initBeniCulturali(d) {
+  if (!d || !d.luoghi) return;
+  let luoghi = (d.luoghi || []).filter(p => p.lat != null && p.lon != null);
+  const mapEl = document.getElementById('beni-map-main');
+  if (!mapEl || typeof L === 'undefined') return;
+
+  // ---- 1) Bounding box (con fallback se nessun punto geo)
+  if (!luoghi.length) {
+    mapEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted);font-family:var(--mono);font-size:12px;">Nessun bene geo-referenziato in questo comune.</div>';
+    return;
+  }
+  const lats = luoghi.map(p => p.lat);
+  const lons = luoghi.map(p => p.lon);
+  const bounds = L.latLngBounds([[Math.min(...lats), Math.min(...lons)], [Math.max(...lats), Math.max(...lons)]]);
+
+  // ---- 2) Mappa + tile OSM
+  const map = L.map('beni-map-main', { scrollWheelZoom: false, zoomControl: true }).fitBounds(bounds, { padding: [20, 20] });
+  map.on('focus', () => map.scrollWheelZoom.enable());
+  map.on('blur',  () => map.scrollWheelZoom.disable());
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+  }).addTo(map);
+
+  // ---- 3) Stato filtri
+  let activeCats = new Set(luoghi.map(p => p.categoria || 'altro'));
+
+  // ---- 4) Layer markers + cluster grid-based
+  let markersLayer = L.layerGroup().addTo(map);
+
+  function escapeHtml(s) {
+    if (!s) return '';
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  function makeDot(p) {
+    const cat = p.categoria || 'altro';
+    const color = BENI_CAT_COLORS[cat] || '#9E9E9E';
+    const denomEsc = escapeHtml(p.denom || '');
+    const indEsc = escapeHtml(p.indirizzo || '');
+    const catLabel = BENI_CAT_LABELS[cat] || cat;
+    const imgHtml = p.image ? `<div style="margin:6px 0"><img src="${escapeHtml(p.image)}" alt="${denomEsc}" loading="lazy" style="max-width:200px;max-height:140px;border-radius:4px;display:block" onerror="this.style.display='none'"></div>` : '';
+    const cisHtml = p.cis_link ? `<div style="margin-top:6px;font-size:11px"><a href="${escapeHtml(p.cis_link)}" target="_blank" rel="noopener">Scheda Cultural-ON &rarr;</a></div>` : '';
+    return L.circleMarker([p.lat, p.lon], {
+      radius: 6, fillColor: color, color: '#fff', weight: 1.5, opacity: 1, fillOpacity: 0.85
+    }).bindPopup(`
+      <div style="font-family:var(--ui);font-size:12px;min-width:200px;max-width:240px">
+        <div style="font-weight:600;color:${color};margin-bottom:4px">${catLabel}</div>
+        <div style="font-weight:600;margin-bottom:2px">${denomEsc}</div>
+        ${indEsc ? `<div style="font-size:11px;color:var(--ink-mute);margin-bottom:4px">${indEsc}</div>` : ''}
+        ${imgHtml}
+        ${cisHtml}
+      </div>
+    `);
+  }
+  function makeCluster(lat, lon, count) {
+    const html = `<div style="background:#0066CC;color:#fff;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-family:var(--ui);font-weight:700;font-size:13px;box-shadow:0 2px 4px rgba(0,0,0,0.3);border:2px solid #fff">${count}</div>`;
+    return L.marker([lat, lon], {
+      icon: L.divIcon({ html, className: 'beni-cluster', iconSize: [32, 32], iconAnchor: [16, 16] })
+    });
+  }
+  function redrawClusters() {
+    markersLayer.clearLayers();
+    const z = map.getZoom();
+    const visible = luoghi.filter(p => activeCats.has(p.categoria || 'altro'));
+    if (z >= 14 || visible.length <= 50) {
+      visible.forEach(p => markersLayer.addLayer(makeDot(p)));
+      return;
+    }
+    const cellSize = z < 10 ? 0.05 : z < 12 ? 0.015 : 0.005;
+    const grid = new Map();
+    visible.forEach(p => {
+      const key = `${Math.floor(p.lat / cellSize)}_${Math.floor(p.lon / cellSize)}`;
+      if (!grid.has(key)) grid.set(key, []);
+      grid.get(key).push(p);
+    });
+    grid.forEach(cellPunti => {
+      if (cellPunti.length === 1) {
+        markersLayer.addLayer(makeDot(cellPunti[0]));
+      } else {
+        const avgLat = cellPunti.reduce((s, p) => s + p.lat, 0) / cellPunti.length;
+        const avgLon = cellPunti.reduce((s, p) => s + p.lon, 0) / cellPunti.length;
+        markersLayer.addLayer(makeCluster(avgLat, avgLon, cellPunti.length));
+      }
+    });
+  }
+  redrawClusters();
+  map.on('zoomend moveend', redrawClusters);
+
+  // ---- 5) Chip handlers
+  const filtersEl = document.getElementById('beni-filters-main');
+  if (filtersEl) {
+    filtersEl.addEventListener('click', (ev) => {
+      const btn = ev.target.closest('.impa-chip');
+      if (!btn) return;
+      const cat = btn.dataset.cat;
+      if (cat === '__all__') {
+        activeCats.clear();
+        luoghi.forEach(p => activeCats.add(p.categoria || 'altro'));
+        filtersEl.querySelectorAll('.impa-chip').forEach(b => b.setAttribute('aria-pressed', 'true'));
+      } else {
+        if (activeCats.has(cat)) {
+          activeCats.delete(cat);
+          btn.setAttribute('aria-pressed', 'false');
+        } else {
+          activeCats.add(cat);
+          btn.setAttribute('aria-pressed', 'true');
+        }
+        const allBtn = filtersEl.querySelector('.impa-chip-all');
+        if (allBtn) {
+          const totalCats = new Set(luoghi.map(p => p.categoria || 'altro')).size;
+          allBtn.setAttribute('aria-pressed', activeCats.size === totalCats ? 'true' : 'false');
+        }
+      }
+      redrawClusters();
+    });
+  }
+
+  // ---- 6) Chart.js bar orizzontale Mix categoria (in ordine BENI_CAT_ORDER)
+  const canvas = document.getElementById('beni-mix-chart');
+  if (canvas && window.Chart && d.kpi && d.kpi.mix_categoria) {
+    const mix = d.kpi.mix_categoria;
+    const entries = BENI_CAT_ORDER
+      .filter(cat => mix[cat] > 0)
+      .map(cat => [cat, mix[cat]]);
+    const labels = entries.map(([k]) => BENI_CAT_LABELS[k] || k);
+    const data = entries.map(([, v]) => v);
+    const colors = entries.map(([k]) => BENI_CAT_COLORS[k] || '#9E9E9E');
+    new Chart(canvas.getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [{ data, backgroundColor: colors, borderWidth: 0, barThickness: 'flex', maxBarThickness: 20 }]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { label: (ctx) => `${ctx.parsed.x} ${ctx.parsed.x === 1 ? 'bene' : 'beni'}` } }
+        },
+        scales: {
+          x: { beginAtZero: true, ticks: { font: { family: 'var(--mono)', size: 10 }, callback: (v) => fmtNum(v) } },
+          y: { ticks: { font: { family: 'var(--ui)', size: 11 } } }
+        }
+      }
+    });
+  }
+
+  // Espongo l'istanza per il reload da shard FULL (vedi tryEnrichBeniCulturaliFull)
+  window.__beniCulturaliInstance = {
+    reloadLuoghi(newLuoghi) {
+      luoghi = (newLuoghi || []).filter(p => p.lat != null && p.lon != null);
+      activeCats = new Set(luoghi.map(p => p.categoria || 'altro'));
+      // refit bounds + redraw
+      if (luoghi.length) {
+        const ll = luoghi.map(p => [p.lat, p.lon]);
+        try { map.fitBounds(L.latLngBounds(ll), { padding: [20, 20] }); } catch (e) {}
+      }
+      // aggiorno chip filters mantenendo lo stato click
+      const filtersEl2 = document.getElementById('beni-filters-main');
+      if (filtersEl2) {
+        filtersEl2.querySelectorAll('.impa-chip').forEach(b => b.setAttribute('aria-pressed', 'true'));
+      }
+      redrawClusters();
+      // aggiorno il count nel titolo mappa
+      const countEl = document.getElementById('beni-map-count');
+      if (countEl) countEl.textContent = fmtNum(luoghi.length);
+      const statusEl = document.getElementById('beni-load-status');
+      if (statusEl) statusEl.innerHTML = `Cluster auto-aggregati &middot; ${fmtNum(luoghi.length)} beni geo-referenziati (dataset completo)`;
+    }
+  };
+}
+
+// Enrichment lazy dello shard FULL (per comuni con >30 beni).
+// Endpoint statico nginx: GET /data/beni_culturali_full/<istat>.json
+async function tryEnrichBeniCulturaliFull(istat) {
+  if (!istat || !window.__beniCulturaliInstance) return;
+  try {
+    const url = `${BENI_FULL_BASE}/${istat}.json`;
+    const res = await fetch(url);
+    if (!res.ok) {
+      if (res.status >= 500) console.warn(`Beni culturali full enrich failed: HTTP ${res.status}`);
+      return;
+    }
+    const fullData = await res.json();
+    if (Array.isArray(fullData.luoghi)) {
+      window.__beniCulturaliInstance.reloadLuoghi(fullData.luoghi);
+    }
+  } catch (err) {
+    console.warn(`Beni culturali full enrich error: ${err.message}`);
   }
 }
 
@@ -8970,6 +9307,24 @@ function bindTabSwitching() {
         }
       }
 
+      // Lazy-init mappa Leaflet + filtri categoria Beni Culturali MiC ArCo al primo click
+      // Carica i primi 30 luoghi dallo shard base, poi enrichment async dello shard FULL
+      // se _full_shard_available=true (lazy 300ms dopo init mappa).
+      if (tab.dataset.tab === 'beni-culturali') {
+        if (window.__beniCulturaliData && !window.__beniCulturaliInited) {
+          setTimeout(() => {
+            initBeniCulturali(window.__beniCulturaliData);
+            if (window.__beniCulturaliData._full_shard_available) {
+              const istatParam = new URLSearchParams(window.location.search).get('istat');
+              if (istatParam) {
+                setTimeout(() => tryEnrichBeniCulturaliFull(istatParam), 300);
+              }
+            }
+          }, 0);
+          window.__beniCulturaliInited = true;
+        }
+      }
+
       // Lazy-init chart Chart.js ASIA al primo click
       // Lazy-init mappa Leaflet flussi pendolari al primo click
       if (tab.dataset.tab === 'pendolarismo') {
@@ -9930,6 +10285,8 @@ FONTI INTEGRATE
 - AGCOM                             Broadband Map (BBmap) — copertura banda larga FTTH/FTTC
 - MIMIT                             Osservatorio Prezzi Carburanti — distributori e prezzi praticati
 - Ministero del Lavoro              RUNTS — Registro Unico Nazionale del Terzo Settore (D.Lgs 117/2017)
+- Ministero della Cultura (MiC)     ArCo — Catalogo nazionale ICCD dei beni culturali immobili tutelati
+                                    (chiese, palazzi, castelli, ville, archeologia, monumenti, parchi storici)
 
 I dati di origine sono pubblicati dalle istituzioni elencate in
 LICENSE.txt e sono disponibili sui rispettivi portali open data.
@@ -9948,6 +10305,9 @@ dimensione del file:
   REST /data/anncsu_full/<istat>.json)
 - pun.punti, immobili_pa.punti, carburanti.punti: max 500 punti
 - runts.enti: max 5.000 enti (solo Roma è cappata, 6.616 totali)
+- beni_culturali.luoghi: max 30 beni rappresentativi (full set
+  su endpoint REST /data/beni_culturali_full/<istat>.json per i
+  comuni con piu' di 30 beni tutelati)
 - censimento: solo aggregati comune-level + distribuzioni in
   dati-completi.json. Per i poligoni georeferenziati delle sezioni
   di censimento + 119 variabili per sezione usa l'endpoint REST
