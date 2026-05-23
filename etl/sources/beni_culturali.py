@@ -713,20 +713,36 @@ def fetch_type_dictionary(skip_cache: bool = False) -> dict[str, str]:
     log.info("beni_culturali_type_dict_fetch_start")
     t0 = time.time()
 
-    query = """PREFIX arco_deno: <https://w3id.org/arco/ontology/denotative-description/>
+    # Il server SPARQL applica LIMIT default ~10k-40k. Paginiamo come per
+    # le altre query ArCo. Conteggio totale tipi con label IT: ~104k
+    # (verificato 2026-05-23 via COUNT).
+    PAGE = 5000
+    offset = 0
+    page = 0
+    all_bindings: list[dict] = []
+    while True:
+        page += 1
+        query = f"""PREFIX arco_deno: <https://w3id.org/arco/ontology/denotative-description/>
 PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
-SELECT ?type ?label WHERE {
+SELECT ?type ?label WHERE {{
   ?type a <https://w3id.org/arco/ontology/denotative-description/CulturalPropertyType> .
   ?type rdfs:label ?label .
   FILTER(lang(?label) = "it")
-}"""
-
-    result = _sparql_post(query)
-    bindings = result.get("results", {}).get("bindings", [])
+}} LIMIT {PAGE} OFFSET {offset}"""
+        result = _sparql_post(query)
+        page_bindings = result.get("results", {}).get("bindings", [])
+        all_bindings.extend(page_bindings)
+        log.info("beni_culturali_type_dict_page",
+                 page=page, bindings=len(page_bindings),
+                 offset=offset, total_so_far=len(all_bindings))
+        if len(page_bindings) < PAGE:
+            break
+        offset += PAGE
+        time.sleep(SPARQL_SLEEP_BETWEEN_PAGES)
 
     dictionary: dict[str, str] = {}
     n_full = n_hash = 0
-    for b in bindings:
+    for b in all_bindings:
         uri = _bind_str(b, "type")
         label = _bind_str(b, "label")
         if not uri or not label:
@@ -749,6 +765,8 @@ SELECT ?type ?label WHERE {
              n_tipi=len(dictionary),
              n_full_uri=n_full,
              n_hash_only=n_hash,
+             n_bindings=len(all_bindings),
+             n_pages=page,
              secs=round(time.time() - t0, 1))
 
     cache_path.write_text(json.dumps(dictionary, ensure_ascii=False))
