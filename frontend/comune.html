@@ -5030,6 +5030,23 @@ function initBeniCulturali(d) {
 
   // ---- 1) Bounding box (con fallback se nessun punto geo)
   if (!luoghi.length) {
+    // Se lo shard FULL e' disponibile, NON mostrare "nessun bene" subito:
+    // tryEnrichBeniCulturaliFull() sostituira' la mappa con i dati reali
+    // entro 1-2 secondi. Mostro placeholder neutro.
+    if (d._full_shard_available) {
+      mapEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted);font-family:var(--mono);font-size:12px;">Caricamento dataset completo&hellip;</div>';
+      // Espongo subito un'istanza minimale con reloadLuoghi che inizializza
+      // la mappa al primo arrivo dei dati FULL.
+      window.__beniCulturaliInstance = {
+        reloadLuoghi(newLuoghi) {
+          // Rilancia init con i dati FULL (override d.luoghi)
+          const newD = Object.assign({}, d, { luoghi: newLuoghi });
+          window.__beniCulturaliInstance = null;  // permette re-init
+          initBeniCulturali(newD);
+        }
+      };
+      return;
+    }
     mapEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted);font-family:var(--mono);font-size:12px;">Nessun bene geo-referenziato in questo comune.</div>';
     return;
   }

@@ -1613,13 +1613,16 @@ def _slim_bene_full(b: dict) -> dict:
 
 def _sort_beni(beni: list[dict]) -> list[dict]:
     """Ordina i beni per priorita' di rilevanza UX:
-      1. con foto > senza
-      2. con descrizione > senza
-      3. denominazione alfabetica
+      1. con coordinate > senza (essenziale per la mappa: i primi 30
+         beni nello shard base devono essere quelli mappabili)
+      2. con foto > senza
+      3. con descrizione > senza
+      4. denominazione alfabetica
     """
     return sorted(
         beni,
         key=lambda b: (
+            0 if (b.get("lat") is not None and b.get("lon") is not None) else 1,
             0 if b.get("image") else 1,
             0 if b.get("descrizione") else 1,
             (b.get("denom") or "").upper(),
