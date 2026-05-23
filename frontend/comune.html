@@ -5125,7 +5125,7 @@ function initBeniCulturali(d) {
     const denomEsc = escapeHtml(p.denom || '');
     const indEsc = escapeHtml(p.indirizzo || '');
     const catLabel = BENI_CAT_LABELS[cat] || cat;
-    const imgHtml = p.image ? `<div style="margin:6px 0"><img src="${escapeHtml(p.image)}" alt="${denomEsc}" loading="lazy" style="max-width:200px;max-height:140px;border-radius:4px;display:block" onerror="this.style.display='none'"></div>` : '';
+    const imgHtml = p.image ? `<div style="margin:6px 0"><img src="${escapeHtml(_forceHttpsBeniImg(p.image))}" alt="${denomEsc}" loading="lazy" style="max-width:200px;max-height:140px;border-radius:4px;display:block" onerror="this.style.display='none'"></div>` : '';
     const cisHtml = p.cis_link ? `<div style="margin-top:6px;font-size:11px"><a href="${escapeHtml(p.cis_link)}" target="_blank" rel="noopener">Scheda Cultural-ON &rarr;</a></div>` : '';
     return L.circleMarker([p.lat, p.lon], {
       radius: 6, fillColor: color, color: '#fff', weight: 1.5, opacity: 1, fillOpacity: 0.85
@@ -5332,6 +5332,17 @@ function _escapeHtmlBeni(s) {
     .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
+// Force-HTTPS sui domini MiC noti. Trick puramente cosmetico per evitare
+// Mixed Content quando la pagina e' su HTTPS e l'URL foto sorgente e' http://.
+// Non modifichiamo i dati su disco: tutti i CDN MiC supportano TLS.
+function _forceHttpsBeniImg(u) {
+  if (!u || typeof u !== 'string') return u;
+  if (u.startsWith('http://') && /\.beniculturali\.it(\/|$)/i.test(u)) {
+    return 'https://' + u.slice(7);
+  }
+  return u;
+}
+
 function renderBeniListItem(b, idx) {
   const cat = b.categoria || 'altro';
   const color = BENI_CAT_COLORS[cat] || '#9E9E9E';
@@ -5358,7 +5369,7 @@ function renderBeniListItem(b, idx) {
   `).join('');
   const imageHtml = b.image ? `
     <div class="beni-list-detail-image">
-      <img src="${_escapeHtmlBeni(b.image)}" alt="${denom}" loading="lazy" onerror="this.style.display='none'">
+      <img src="${_escapeHtmlBeni(_forceHttpsBeniImg(b.image))}" alt="${denom}" loading="lazy" onerror="this.style.display='none'">
     </div>` : '';
   const descHtml = b.descrizione ? `<div class="beni-list-detail-desc">${_escapeHtmlBeni(b.descrizione)}</div>` : '';
   return `<div class="beni-list-item" role="listitem">

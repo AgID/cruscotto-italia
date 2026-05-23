@@ -320,13 +320,7 @@ def _clean_email(s: str | None) -> str | None:
 
 
 def _clean_url(s: str | None) -> str | None:
-    """Pulisce URL: rimuove markdown [url](url), valida prefisso http(s)://.
-
-    Per i domini MiC (media.beniculturali.it, www.sigecweb.beniculturali.it,
-    dati.beniculturali.it) forza HTTPS: i CDN supportano TLS e il frontend
-    Cruscotto e' su HTTPS, quindi i browser bloccano Mixed Content per http://
-    e l'immagine non si carica.
-    """
+    """Pulisce URL: rimuove markdown [url](url), valida prefisso http(s)://."""
     s = _clean_text(s)
     if not s:
         return None
@@ -339,11 +333,6 @@ def _clean_url(s: str | None) -> str | None:
             pass
     if not s.lower().startswith(("http://", "https://")):
         return None
-    # Force-HTTPS per host MiC noti (i loro CDN supportano TLS)
-    if s.lower().startswith("http://"):
-        host_lc = s[7:].split("/", 1)[0].lower()
-        if host_lc.endswith(".beniculturali.it") or host_lc == "beniculturali.it":
-            s = "https://" + s[7:]
     return s
 
 
@@ -1011,13 +1000,7 @@ def fetch_arco_immobili(skip_cache: bool = False) -> list[dict]:
                             cur["lon"] = lon
                 else:
                     if cur[field_name] is None:
-                        # campo image: usa _clean_url che force-HTTPS sui domini MiC
-                        # (sigecweb / media.beniculturali) per evitare Mixed Content
-                        # quando il frontend HTTPS prova a caricare img http://
-                        if field_name == "image":
-                            cur[field_name] = _clean_url(raw)
-                        else:
-                            cur[field_name] = _clean_text(raw)
+                        cur[field_name] = _clean_text(raw)
 
             log.info("beni_culturali_dett_pagina", sub=sub_name,
                      page=page_num, offset=offset,
