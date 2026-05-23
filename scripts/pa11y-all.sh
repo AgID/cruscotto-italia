@@ -2,7 +2,7 @@
 # Pa11y master runner: esegue tutti i test mirati WCAG 2.1 AA sulle tab
 # integrate in sequenza, con report aggregato finale.
 #
-# Tab testate (7):
+# Tab testate (10):
 #   1. ANNCSU              - civici e strade (Agenzia Entrate + ISTAT)
 #   2. Banda larga         - copertura FTTH/FTTC (AGCOM Broadband Map)
 #   3. PUN                 - punti di ricarica veicoli elettrici (GSE/MASE)
@@ -10,6 +10,9 @@
 #   5. Carburanti          - distributori e prezzi (MIMIT)
 #   6. Terzo Settore       - enti RUNTS ODV/APS/EF/IS/SMS/ETS (Min. Lavoro)
 #   7. Imprese ASIA        - unita locali e addetti ATECO (ISTAT ASIA UL)
+#   8. Pendolarismo        - matrice OD lavoro 2021 (ISTAT Censimento perm.)
+#   9. Censimento 2021     - Basi Territoriali + 119 vars (ISTAT)
+#  10. Beni culturali      - MiC ArCo + Cultural-ON DBUnico 2.0
 #
 # Ogni script testa 4 comuni rappresentativi (Roma/Milano/Matera/Morterone +
 # eventuali edge case specifici), totale 28+ pagine.
@@ -38,6 +41,7 @@ TESTS=(
   "Imprese ASIA:pa11y-asia.sh"
   "Pendolarismo:pa11y-pendolarismo.sh"
   "Censimento 2021:pa11y-censimento.sh"
+  "Beni culturali:pa11y-beni-culturali.sh"
 )
 
 echo "######################################################################"
