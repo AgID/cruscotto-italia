@@ -449,6 +449,19 @@ header.masthead::after{
   margin-bottom:10px;
   min-height:40px;
 }
+/* Stringhe inline lunghe (es. path file, URL, endpoint API) devono
+   poter andare a capo all'interno della card, altrimenti sforano
+   il box a destra rompendo il layout della griglia (visibile nella
+   card MiC ArCo con /data/beni_culturali_full/<istat>.json). */
+.source-card p code{
+  font-family:var(--mono);
+  font-size:12px;
+  background:var(--paper-2);
+  padding:1px 4px;
+  border-radius:3px;
+  overflow-wrap:anywhere;
+  word-break:break-word;
+}
 .source-card .badge{
   display:inline-block;
   font-family:var(--mono);
