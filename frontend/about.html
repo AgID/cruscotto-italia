@@ -94,11 +94,6 @@ a:hover{text-decoration-thickness:2px}
 .fonti-table tbody td strong{color:var(--ink);font-weight:600;display:block;margin-bottom:2px;font-family:var(--serif);font-size:16px}
 .fonti-table tbody tr:hover{background:var(--paper-2)}
 .fonti-table .freq{font-family:var(--mono);font-size:11px;color:var(--ink-mute);text-transform:uppercase;letter-spacing:.06em;white-space:nowrap}
-.fonti-table .dati-gov{white-space:nowrap;text-align:center;padding-right:4px}
-.fonti-table .badge-dati{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.06em;font-weight:600;padding:4px 8px;border-radius:3px;border:1px solid currentColor;line-height:1}
-.fonti-table .badge-dati::before{content:"";width:8px;height:8px;border-radius:50%;background:currentColor;flex-shrink:0}
-.fonti-table .badge-dati.ok{color:var(--chart-success)}
-.fonti-table .badge-dati.no{color:var(--chart-danger)}
 
 /* ---- Metodologia step ---- */
 .metodo-steps{counter-reset:step;display:grid;grid-template-columns:repeat(2,1fr);gap:24px;margin-top:28px}
@@ -147,8 +142,6 @@ footer .colophon a{color:var(--paper);font-weight:600}
   .fonti-table tbody tr{display:block;border-bottom:1px solid var(--ink);padding:12px 0}
   .fonti-table tbody td{display:block;border:none;padding:4px 0}
   .fonti-table tbody td:first-child{margin-bottom:6px}
-  .fonti-table .dati-gov{text-align:left;padding-top:6px}
-  .fonti-table .dati-gov::before{content:"dati.gov.it · ";font-family:var(--mono);font-size:10px;color:var(--ink-mute);text-transform:uppercase;letter-spacing:.06em}
 }
 @media print{
   body{background:white;color:black}
@@ -253,18 +246,6 @@ footer a:hover { color: #fff !important; }
       li scarica dalle fonti originali, li normalizza, li ricompone per
       codice ISTAT del comune.
     </p>
-    <p>
-      L'ultima colonna indica se il dataset specifico usato da Cruscotto Italia
-      è federato sul <a href="https://www.dati.gov.it/" target="_blank" rel="noopener">Catalogo Nazionale dei Dati Aperti</a>
-      (<code>dati.gov.it</code>), gestito da AgID. Il badge <strong>Sì</strong>
-      conferma che il dataset (o un suo equivalente nazionale autorevole) è
-      presente nel catalogo CKAN; il badge <strong>No</strong> indica che la
-      fonte è pubblicata solo sul proprio portale verticale (es.
-      <code>italiadomani.gov.it</code> per il PNRR, <code>esploradati.istat.it</code>
-      per i dataflow SDMX ISTAT comunali, <code>servizi.lavoro.gov.it</code>
-      per RUNTS), senza armonizzazione DCAT-AP_IT. È esattamente la
-      <em>frammentazione</em> che Cruscotto Italia ricompone.
-    </p>
 
     <table class="fonti-table">
       <thead>
@@ -272,7 +253,6 @@ footer a:hover { color: #fff !important; }
           <th>Fonte</th>
           <th>Dataset</th>
           <th>Frequenza</th>
-          <th title="Presenza del dataset sul Catalogo Nazionale dati.gov.it">dati.gov.it</th>
         </tr>
       </thead>
       <tbody>
@@ -284,7 +264,6 @@ footer a:hover { color: #fff !important; }
             dell'Autorità Nazionale Anticorruzione, dal 2020 in poi.
           </td>
           <td class="freq">mensile</td>
-          <td class="dati-gov"><a href="https://www.dati.gov.it/view-dataset?organization=anac" target="_blank" rel="noopener" class="badge-dati ok" title="Pubblicato come dataset diretto su dati.gov.it (organization ANAC, 70 dataset)">Sì</a></td>
         </tr>
         <tr>
           <td>BDAP-MOP</td>
@@ -294,7 +273,6 @@ footer a:hover { color: #fff !important; }
             Lavori pubblici programmati e in corso.
           </td>
           <td class="freq">trimestrale</td>
-          <td class="dati-gov"><a href="https://www.dati.gov.it/view-dataset?organization=ministero-dell-economia-e-delle-finanze&amp;q=MOP" target="_blank" rel="noopener" class="badge-dati ok" title="Pubblicato come dataset diretto su dati.gov.it (organization MEF, dataset MOP per Regione)">Sì</a></td>
         </tr>
         <tr>
           <td>MEF · RGS</td>
@@ -304,7 +282,6 @@ footer a:hover { color: #fff !important; }
             in cassa di ogni comune, voce per voce.
           </td>
           <td class="freq">annuale</td>
-          <td class="dati-gov"><a href="https://www.dati.gov.it/view-dataset?organization=ministero-dell-economia-e-delle-finanze&amp;q=SIOPE" target="_blank" rel="noopener" class="badge-dati ok" title="Pubblicato come dataset diretto su dati.gov.it (organization MEF, ~780 dataset SIOPE per Regione/anno)">Sì</a></td>
         </tr>
         <tr>
           <td>Italia Domani</td>
@@ -314,7 +291,6 @@ footer a:hover { color: #fff !important; }
             in cui il comune è soggetto attuatore diretto.
           </td>
           <td class="freq">mensile</td>
-          <td class="dati-gov"><span class="badge-dati no" title="NON federato su dati.gov.it: il dump ReGiS nazionale è pubblicato su italiadomani.gov.it (alcune Regioni ripubblicano la loro porzione)">No</span></td>
         </tr>
         <tr>
           <td>ISTAT</td>
@@ -323,7 +299,6 @@ footer a:hover { color: #fff !important; }
             Popolazione residente per età e sesso al 1° gennaio di ogni anno.
           </td>
           <td class="freq">annuale</td>
-          <td class="dati-gov"><span class="badge-dati no" title="ISTAT pubblica come HVD su dati.gov.it solo aggregati nazionali (popolazione, occupazione, prezzi). Il dataflow SDMX comunale POSAS usato da Cruscotto è disponibile solo su esploradati.istat.it, non come dataset CKAN federato">No</span></td>
         </tr>
         <tr>
           <td>ISTAT</td>
@@ -333,7 +308,6 @@ footer a:hover { color: #fff !important; }
             del Censimento permanente della popolazione e delle abitazioni.
           </td>
           <td class="freq">annuale</td>
-          <td class="dati-gov"><span class="badge-dati no" title="Dataflow SDMX ISTAT comunale del Censimento permanente non federato su dati.gov.it. Disponibile solo su esploradati.istat.it">No</span></td>
         </tr>
         <tr>
           <td>ISTAT</td>
@@ -343,7 +317,6 @@ footer a:hover { color: #fff !important; }
             per ogni comune.
           </td>
           <td class="freq">annuale</td>
-          <td class="dati-gov"><span class="badge-dati no" title="Dataflow SDMX ISTAT turismo capacità ricettiva (comunale) non federato come dataset CKAN su dati.gov.it">No</span></td>
         </tr>
         <tr>
           <td>ISTAT</td>
@@ -353,7 +326,6 @@ footer a:hover { color: #fff !important; }
             Dato provinciale, non comunale.
           </td>
           <td class="freq">annuale</td>
-          <td class="dati-gov"><span class="badge-dati no" title="Dataflow SDMX ISTAT turismo flussi provinciali non federato come dataset CKAN su dati.gov.it">No</span></td>
         </tr>
         <tr>
           <td>ISPRA</td>
@@ -364,7 +336,6 @@ footer a:hover { color: #fff !important; }
             (rete monitoraggio SNPA, PM10/PM2.5/NO₂).
           </td>
           <td class="freq">annuale</td>
-          <td class="dati-gov"><a href="https://www.dati.gov.it/view-dataset?organization=ispra" target="_blank" rel="noopener" class="badge-dati ok" title="ISPRA presente come organization (10 dataset HVD), inclusi Consumo di Suolo e indicatori di mitigazione dissesto idrogeologico">Sì</a></td>
         </tr>
         <tr>
           <td>MIUR</td>
@@ -375,7 +346,6 @@ footer a:hover { color: #fff !important; }
             che pubblicano dataset separati.
           </td>
           <td class="freq">annuale</td>
-          <td class="dati-gov"><a href="https://www.dati.gov.it/view-dataset/dataset?id=2d337ecd-4c76-4672-988a-e8c979f33e9d" target="_blank" rel="noopener" class="badge-dati ok" title="Dataset 'Informazioni anagrafiche scuole statali' del Ministero dell'Istruzione e del Merito federato su dati.gov.it">Sì</a></td>
         </tr>
         <tr>
           <td>ISTAT · ACI</td>
@@ -386,7 +356,6 @@ footer a:hover { color: #fff !important; }
             nuove iscrizioni per alimentazione (ACI LOD, 7.847 comuni).
           </td>
           <td class="freq">annuale</td>
-          <td class="dati-gov"><a href="https://www.dati.gov.it/view-dataset?organization=aci" target="_blank" rel="noopener" class="badge-dati ok" title="ACI presente come organization su dati.gov.it (35 dataset). I dataflow SDMX ISTAT veicoli/incidenti restano disponibili solo su esploradati.istat.it">Sì</a></td>
         </tr>
         <tr data-fonte-row="MEF">
           <td>MEF &middot; Dipartimento delle Finanze</td>
@@ -398,7 +367,6 @@ footer a:hover { color: #fff !important; }
             addizionale comunale e imposta netta media.
           </td>
           <td class="freq">annuale</td>
-          <td class="dati-gov"><span class="badge-dati no" title="Le dichiarazioni IRPEF su base comunale del Dipartimento delle Finanze sono pubblicate solo sul portale dipartimentofinanze.it, non federate come dataset CKAN su dati.gov.it">No</span></td>
         </tr>
         <tr data-fonte-row="MEF-DE">
           <td>MEF &middot; Dipartimento dell'Economia</td>
@@ -410,7 +378,6 @@ footer a:hover { color: #fff !important; }
             superfici, vincoli culturali e paesaggistici, uso interno e a terzi.
           </td>
           <td class="freq">annuale</td>
-          <td class="dati-gov"><span class="badge-dati no" title="Il Censimento Beni Immobili Pubblici (Dipartimento del Tesoro / Dipartimento dell'Economia MEF) è pubblicato su dt.mef.gov.it, non federato come dataset CKAN su dati.gov.it">No</span></td>
         </tr>
         <tr data-fonte-row="ANNCSU">
           <td>Agenzia delle Entrate &middot; ISTAT</td>
@@ -423,7 +390,6 @@ footer a:hover { color: #fff !important; }
             1,2 milioni di odonimi, 27,4 milioni di numeri civici.
           </td>
           <td class="freq">mensile</td>
-          <td class="dati-gov"><a href="https://www.dati.gov.it/view-dataset/dataset?id=5c02128c-da83-4601-9fbb-e21031771323" target="_blank" rel="noopener" class="badge-dati ok" title="Dataset HVD 'Stradari ed indirizzari regionali e nazionali da ANNCSU' federato su dati.gov.it (organization GeoDati-RNDT-HVD)">Sì</a></td>
         </tr>
         <tr data-fonte-row="MIN-SALUTE">
           <td>Ministero della Salute</td>
@@ -438,7 +404,6 @@ footer a:hover { color: #fff !important; }
             errate alla fonte.
           </td>
           <td class="freq">giornaliera (farm./parafarm.) &middot; annuale (osp.)</td>
-          <td class="dati-gov"><a href="https://www.dati.gov.it/view-dataset?organization=ministero-della-salute" target="_blank" rel="noopener" class="badge-dati ok" title="Ministero della Salute presente come organization su dati.gov.it (51 dataset), inclusi 'Farmacie' e 'Posti letto per struttura ospedaliera'">Sì</a></td>
         </tr>
         <tr data-fonte-row="GSE-PUN">
           <td>GSE / MASE</td>
@@ -455,7 +420,6 @@ footer a:hover { color: #fff !important; }
             con attribuzione a GSE.
           </td>
           <td class="freq">giornaliera</td>
-          <td class="dati-gov"><span class="badge-dati no" title="La Piattaforma Unica Nazionale GSE/MASE non è federata su dati.gov.it: l'accesso ai dati grezzi avviene tramite CSV firmato S3 sul portale PUN (Cognito guest)">No</span></td>
         </tr>
         <tr data-fonte-row="AGCOM">
           <td>AGCOM</td>
@@ -478,7 +442,6 @@ footer a:hover { color: #fff !important; }
             sulla mappa ufficiale AGCOM via deep-link client-side.
           </td>
           <td class="freq">trimestrale</td>
-          <td class="dati-gov"><span class="badge-dati no" title="AGCOM non è organization su dati.gov.it: la Broadband Map è pubblicata solo sul portale ArcGIS AGCOM, non come dataset CKAN federato">No</span></td>
         </tr>
         <tr data-fonte-row="MIMIT">
           <td>MIMIT</td>
@@ -509,7 +472,6 @@ footer a:hover { color: #fff !important; }
             visibile sulla mappa.
           </td>
           <td class="freq">giornaliera</td>
-          <td class="dati-gov"><span class="badge-dati no" title="MIMIT è organization su dati.gov.it (370 dataset) ma l'Osservatorio Prezzi Carburanti non è federato: il dump CSV bulk quotidiano è pubblicato solo su mimit.gov.it">No</span></td>
         </tr>
         <tr data-fonte-row="MIN-LAVORO-RUNTS">
           <td>Ministero del Lavoro</td>
@@ -537,7 +499,6 @@ footer a:hover { color: #fff !important; }
             D.Lgs&nbsp;117/2017 art.&nbsp;53 (pubblicità legale RUNTS).
           </td>
           <td class="freq">settimanale</td>
-          <td class="dati-gov"><span class="badge-dati no" title="Ministero del Lavoro è organization su dati.gov.it (83 dataset) ma il RUNTS non è federato: lo snapshot bulk XLSX è pubblicato solo su servizi.lavoro.gov.it">No</span></td>
         </tr>
         <tr data-fonte-row="ISTAT-ASIA-UL">
           <td>ISTAT</td>
@@ -565,7 +526,6 @@ footer a:hover { color: #fff !important; }
             annuale ~Q4. Licenza <strong>CC BY 3.0 IT</strong>.
           </td>
           <td class="freq">annuale</td>
-          <td class="dati-gov"><span class="badge-dati no" title="Dataflow SDMX ISTAT 183_1163 ASIA Unità Locali (comune × ATECO × classe addetti) non federato come dataset CKAN su dati.gov.it. Disponibile solo su esploradati.istat.it">No</span></td>
         </tr>
         <tr data-fonte-row="ISTAT-PENDOLARISMO">
           <td>ISTAT</td>
@@ -588,7 +548,6 @@ footer a:hover { color: #fff !important; }
             Licenza <strong>CC BY 3.0 IT</strong>.
           </td>
           <td class="freq">decennale</td>
-          <td class="dati-gov"><span class="badge-dati no" title="Matrice di pendolarismo Censimento permanente 2021 (pubblicata 2/10/2025) non federata come dataset CKAN su dati.gov.it. Solo redistribuzioni regionali storiche">No</span></td>
         </tr>
         <tr data-fonte-row="ISTAT-CENSIMENTO-BT">
           <td>ISTAT</td>
@@ -619,7 +578,6 @@ footer a:hover { color: #fff !important; }
             Licenza <strong>CC BY 3.0 IT</strong>.
           </td>
           <td class="freq">decennale</td>
-          <td class="dati-gov"><span class="badge-dati no" title="Basi Territoriali ISTAT 2021 e 119 variabili censuarie pubblicate solo su esploradati.istat.it (sezioni di censimento). Non federate come dataset CKAN su dati.gov.it">No</span></td>
         </tr>
         <tr data-fonte-row="MIC-ARCO">
           <td>MiC &middot; ICCD</td>
@@ -649,7 +607,6 @@ footer a:hover { color: #fff !important; }
             Licenza <strong>CC BY 4.0</strong>.
           </td>
           <td class="freq">mensile</td>
-          <td class="dati-gov"><a href="https://www.dati.gov.it/view-dataset?organization=ministero-dei-beni-culturali" target="_blank" rel="noopener" class="badge-dati ok" title="Ministero dei Beni Culturali presente come organization su dati.gov.it (213 dataset), inclusi 'Luoghi della cultura' (Cultural-ON / DBUnico 2.0) e 'Dati selezionati e georiferiti dei beni immobili del Catalogo generale dei beni culturali' (ICCD)">Sì</a></td>
         </tr>
       </tbody>
     </table>
