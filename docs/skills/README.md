@@ -11,7 +11,7 @@ l'intent dell'utente.
 
 ## Pacchetto corrente
 
-- **`cruscotto-italia-workflow-v2.2.0.zip`** — workflow del connettore MCP:
+- **`cruscotto-italia-workflow-v2.3.0.zip`** — workflow del connettore MCP:
   inventario dei **6 tool** (incluso `censimento_sezione_search`
   per ranking/lookup sulle 119 variabili censuarie raw a livello di
   sezione di censimento sub-comunale; `comune_kpi` **25 gruppi tematici**;
@@ -29,6 +29,8 @@ l'intent dell'utente.
 ## Pacchetti storici
 
 Le versioni precedenti restano disponibili per audit:
+
+- `cruscotto-italia-workflow-v2.2.0.zip`
 
 - `cruscotto-italia-workflow-v2.1.0.zip` (skill prima della 25a fonte beni_culturali MiC)
 
