@@ -15,7 +15,7 @@ import { searchComune } from "./search_comune.js";
 import { comuneDashboard } from "./comune_dashboard.js";
 import { validateQuery, validateFetchId } from "../lib/validate.js";
 
-const PUBLIC_BASE_URL = "https://cruscotto-italia.piersoftckan.biz";
+const PUBLIC_BASE_URL = "https://cruscotto-italia.dati.gov.it";
 
 interface SearchComuneResult {
   istat_code: string;
