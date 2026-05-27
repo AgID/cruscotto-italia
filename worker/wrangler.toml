@@ -34,8 +34,8 @@ LOG_LEVEL = "info"
 CACHE_TTL_SECONDS = "3600"
 RATE_LIMIT_RPM = "60"
 # Base URL transitorio: R2.dev piersoft pubblico
-# Dopo migrazione VM AgID, verra cambiato in https://cruscotto-italia.dati.gov.it/data
-DATA_BASE_URL = "https://cruscotto-italia.piersoftckan.biz/data"
+# Migrazione VM AgID completata: DATA_BASE_URL punta al dominio istituzionale
+DATA_BASE_URL = "https://cruscotto-italia.dati.gov.it/data"
 
 # Observability
 [observability]
@@ -47,4 +47,4 @@ name = "cruscotto-italia-mcp-prod"
 
 [env.production.vars]
 LOG_LEVEL = "warn"
-DATA_BASE_URL = "https://cruscotto-italia.piersoftckan.biz/data"
+DATA_BASE_URL = "https://cruscotto-italia.dati.gov.it/data"
