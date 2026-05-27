@@ -1190,6 +1190,11 @@ footer a{color:rgba(255,255,255,0.85);text-decoration:none}
 .beni-list-fonte{font-family:var(--font-mono);font-size:10px;padding:2px 6px;border-radius:3px;flex-shrink:0;}
 .beni-list-fonte-arco{background:#e6f0fa;color:#0066CC;}
 .beni-list-fonte-co{background:#fae6f4;color:#6a1b9a;}
+/* Badge High Value Dataset (Regolamento UE 2023/138): dataset designati
+   dalla Commissione Europea come ad alto impatto socio-economico. */
+.badge-hvd{display:inline-block;font-family:var(--font-mono);font-size:10px;font-weight:600;padding:2px 8px;border-radius:3px;background:#fff8d4;color:#7a5b00;border:1px solid #d4ad00;letter-spacing:.03em;text-transform:uppercase;vertical-align:middle;margin-left:6px;}
+.badge-hvd a,a.badge-hvd{color:#7a5b00;text-decoration:none;}
+.badge-hvd a:hover,a.badge-hvd:hover{text-decoration:underline;}
 .beni-list-toggle{font-family:var(--font-mono);font-size:14px;color:var(--ink-mute);width:16px;text-align:center;flex-shrink:0;transition:transform .15s ease;}
 .beni-list-row[aria-expanded="true"] .beni-list-toggle{transform:rotate(90deg);}
 .beni-list-detail{padding:0 14px 14px 14px;border-top:1px solid var(--paper-2);background:var(--bg-soft);font-family:var(--ui);font-size:13px;color:var(--ink);line-height:1.5;}
@@ -7438,6 +7443,7 @@ function renderAnncsuTab(d) {
         Dati conferiti dal Comune all'Archivio Nazionale dei Numeri Civici e
         delle Strade Urbane (ANNCSU), realizzato da Agenzia delle Entrate
         e ISTAT ai sensi del DPCM 12/05/2016. Snapshot: ${snapshot}.
+        <a class="badge-hvd" href="https://eur-lex.europa.eu/legal-content/IT/TXT/?uri=CELEX:32023R0138" target="_blank" rel="noopener" title="High Value Dataset designato dalla Commissione Europea (Regolamento UE 2023/138)">High Value Dataset</a>
       </p>
       <div class="kpi-cards">${cardsHtml}</div>
       ${mapBlock}
