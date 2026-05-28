@@ -7674,7 +7674,15 @@ function initAnncsu(d) {
     // Cluster soglia: a zoom <15 raggruppa, oltre mostra punti singoli
     // (più alta di Immobili PA perché civici sono molto più densi)
     if (z >= 15 || visible.length <= 60) {
-      visible.forEach(p => markersLayer.addLayer(makeMarker(p, false)));
+      // PERF: a zoom alto renderizza SOLO i civici dentro il viewport
+      // visibile (+ margine), non tutti i ~48k del comune. Senza questo
+      // filtro la mappa freeza su comuni grandi (Lecce, Roma...).
+      // Sotto la soglia di clustering (z<15) la lista e' gia' piccola
+      // (<=60) quindi il filtro non serve.
+      const inView = (z >= 15)
+        ? visible.filter(p => map.getBounds().pad(0.2).contains([p.lat, p.lon]))
+        : visible;
+      inView.forEach(p => markersLayer.addLayer(makeMarker(p, false)));
       return;
     }
     // Outlier: sempre visibili come marker singoli (mai clusterizzati)
