@@ -168,7 +168,7 @@ comuni grandi). Per pattern d'uso e esempi vedi la skill MCP Claude
 ### Configurazione su Claude.ai
 
 1. Settings → Connettori → Aggiungi connettore personalizzato
-2. URL: `https://cruscotto-italia-mcp.dati.gov.it/mcp`
+2. URL: `https://cruscotto-italia-mcp.agid.workers.dev/mcp`
 3. Autenticazione: nessuna
 
 ### Skill Claude (opzionale)
