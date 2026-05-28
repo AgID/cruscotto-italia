@@ -138,8 +138,7 @@ Cruscotto Italia espone un server [Model Context Protocol](https://modelcontextp
 per consentire l'interrogazione dei dati civici da chatbot AI compatibili
 (Claude, ChatGPT con wrapper, OpenWebUI, agenti custom).
 
-**Endpoint pubblico** (post 19/05/2026): `https://cruscotto-italia-mcp.dati.gov.it/mcp`
-**Endpoint transitorio** (Worker AgID): `https://cruscotto-italia-mcp.agid.workers.dev/mcp`
+**Endpoint pubblico** (Worker AgID): `https://cruscotto-italia-mcp.agid.workers.dev/mcp`
 
 **Tool esposti** (6):
 
