@@ -7479,11 +7479,16 @@ function renderAnncsuTab(d) {
   return `
     <div class="tab-pane" id="pane-anncsu">
       <div class="section-title">§ Toponomastica</div>
-      <h2 class="section-h">Strade e civici certificati <em>dal Comune</em>.</h2>
+      <h2 class="section-h">Strade, civici e <em>catasto</em>.</h2>
       <p class="muted">
         Dati conferiti dal Comune all'Archivio Nazionale dei Numeri Civici e
         delle Strade Urbane (ANNCSU), realizzato da Agenzia delle Entrate
         e ISTAT ai sensi del DPCM 12/05/2016. Snapshot: ${snapshot}.
+        <a class="badge-hvd" href="https://eur-lex.europa.eu/legal-content/IT/TXT/?uri=CELEX:32023R0138" target="_blank" rel="noopener" title="High Value Dataset designato dalla Commissione Europea (Regolamento UE 2023/138)">High Value Dataset</a>
+        <br>
+        La mappa include anche la <strong>cartografia catastale</strong>
+        (fogli e particelle) pubblicata dall'Agenzia delle Entrate in formato
+        INSPIRE, attivabile dai livelli mappa.
         <a class="badge-hvd" href="https://eur-lex.europa.eu/legal-content/IT/TXT/?uri=CELEX:32023R0138" target="_blank" rel="noopener" title="High Value Dataset designato dalla Commissione Europea (Regolamento UE 2023/138)">High Value Dataset</a>
       </p>
       <div class="kpi-cards">${cardsHtml}</div>
