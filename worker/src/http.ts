@@ -327,6 +327,8 @@ pre code {
 
   <div class="example"><strong>Civici e indirizzi</strong>Quanti civici certificati ANNCSU ci sono in via Roma a Lecce, e con quale metodo di georeferenziazione sono stati rilevati?</div>
 
+  <div class="example"><strong>Catasto</strong>Trovami le coordinate del civico 29 di Via Vittorio Emanuele II a Lecce e il foglio e la particella catastale a cui appartiene.</div>
+
   <div class="example"><strong>Mobilità elettrica</strong>Quanti punti di ricarica attivi ci sono a Milano e qual è la percentuale di colonnine HPC/Ultra fast? Confronta con Roma e Torino.</div>
 
   <h2>Note <em>tecniche</em></h2>
