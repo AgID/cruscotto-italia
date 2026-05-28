@@ -1256,6 +1256,26 @@ footer a{color:rgba(255,255,255,0.85);text-decoration:none}
 .anncsu-legend{display:flex;flex-wrap:wrap;gap:14px;margin:0 0 12px;font-family:var(--mono);font-size:10px;color:var(--ink-mute);text-transform:uppercase;letter-spacing:.05em;}
 .anncsu-legend-item{display:inline-flex;align-items:center;gap:6px;}
 .anncsu-legend-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;border:1.5px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,0.12);color:transparent;}
+.anncsu-catasto-panel{margin:12px 0 14px;padding:12px 16px;background:var(--paper-2,#f7f4ee);border-left:4px solid var(--accent);border-radius:6px;display:flex;flex-wrap:wrap;align-items:center;gap:14px;font-family:var(--sans);}
+.anncsu-catasto-title{font-weight:600;color:var(--ink);font-size:14px;}
+.anncsu-catasto-sub{font-size:11px;color:var(--ink-mute);flex-basis:100%;margin-top:-6px;}
+.anncsu-catasto-civici-na{font-size:11px;color:var(--ink-mute);font-style:italic;font-weight:400;}
+.anncsu-civlabel{background:transparent!important;border:none!important;}
+.anncsu-catasto-layers{display:flex;gap:14px;align-items:center;margin-left:auto;}
+.anncsu-catasto-lbl{display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;color:var(--ink);font-weight:500;}
+.anncsu-catasto-lbl input[type="checkbox"]{width:16px;height:16px;cursor:pointer;accent-color:var(--accent);margin:0;}
+.anncsu-catasto-lbl input[type="checkbox"]:disabled{cursor:not-allowed;opacity:0.4;}
+.anncsu-catasto-sw{display:inline-block;width:14px;height:14px;border:2px solid;border-radius:2px;flex-shrink:0;}
+.anncsu-catasto-sw-civici{border-color:#0066cc;background:rgba(0,102,204,0.15);}
+.anncsu-catasto-sw-map{border-color:#1B5E20;background:rgba(27,94,32,0.10);}
+.anncsu-catasto-sw-ple{border-color:#2E7D32;background:rgba(129,199,132,0.18);border-width:1px;}
+.anncsu-catasto-hint{flex-basis:100%;padding:6px 10px;background:#fff3cd;color:#856404;font-size:12px;border-radius:4px;font-family:var(--mono);}
+.anncsu-catasto-hint[hidden]{display:none;}
+.anncsu-catasto-status{flex-basis:100%;padding:6px 10px;background:#fff8dc;color:#7c5e10;font-size:12px;border-radius:4px;font-family:var(--mono);display:flex;align-items:center;gap:8px;}
+.anncsu-catasto-status[hidden]{display:none;}
+.anncsu-catasto-status::before{content:"";width:11px;height:11px;border:2px solid #d4a800;border-top-color:transparent;border-radius:50%;display:inline-block;animation:anncsu-catasto-spin 0.8s linear infinite;}
+@keyframes anncsu-catasto-spin{to{transform:rotate(360deg);}}
+@media (max-width:720px){.anncsu-catasto-layers{margin-left:0;width:100%;}}
 .anncsu-controls{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;margin:0 0 12px;}
 @media (max-width:720px){.anncsu-controls{grid-template-columns:1fr;}.anncsu-controls input,.anncsu-controls .anncsu-filters,.anncsu-controls .anncsu-search-wrap{width:100%;min-width:0;box-sizing:border-box;}}
 .anncsu-search-wrap{position:relative;}
@@ -1704,6 +1724,7 @@ footer a:hover { color: #fff !important; }
   <script src="/vendor/chart.umd.min.js" integrity="sha384-9nhczxUqK87bcKHh20fSQcTGD4qq5GhayNYSYWqwBkINBhOfQLg/P5HG5lF1urn4" defer></script>
   <link rel="stylesheet" href="/vendor/leaflet.css" integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="anonymous">
   <script src="/vendor/leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin="anonymous" defer></script>
+  <script src="/vendor/pako.min.js" integrity="sha384-rNlaE5fs9dGIjmxWDALQh/RBAaGRYT5ChrzHo6tRfgrZ36iRFAiquP5g41Jsv+0j" crossorigin="anonymous" defer></script>
   <script src="/vendor/tween.umd.js" integrity="sha384-mC3fM+AqoLJ/wejJW/hH8Qttg09iYQYsj9OUXbywLVh2T0N5FRnPWropXNLsVcza" crossorigin="anonymous" defer></script>
   <script src="/vendor/CanvasFlowmapLayer.js" integrity="sha384-OH07Sw2MOqwS9hs60vR2EGdEiCZIbuCqQqY1IkjZNiVEfkFFo5MuFbgMLBVUSLO3" crossorigin="anonymous" defer></script>
   <script src="/vendor/jszip.min.js" integrity="sha384-+mbV2IY1Zk/X1p/nWllGySJSUN8uMs+gUAN10Or95UBH0fpj6GfKgPmgC5EXieXG" defer></script>
@@ -7374,10 +7395,14 @@ function renderAnncsuTab(d) {
     </div>
   `).join('');
 
-  // Sezione mappa: visibile solo se ci sono punti geo-referenziati
+  // Sezione mappa: SEMPRE presente se il comune POTREBBE avere catasto.
+  // La mappa serve sia ai civici ANNCSU sia al catasto AGE (~96% comuni).
+  // Se mancano i civici, il checkbox "Civici" parte disabled (vedi sotto) e
+  // i bounds vengono presi dal catasto in catastoInit(). Se manca anche il
+  // catasto, catastoInit() mostra il proprio messaggio di indisponibilità.
   const punti = Array.isArray(d.punti) ? d.punti : [];
   const hasPunti = punti.length > 0;
-  const mapBlock = hasPunti ? `
+  const mapBlock = `
     <div class="anncsu-map-wrap">
       <h3 class="anncsu-h3">Mappa dei civici geo-referenziati</h3>
       <p class="muted anncsu-map-note">
@@ -7396,16 +7421,31 @@ function renderAnncsuTab(d) {
         <div id="anncsu-filters" class="anncsu-filters" role="group" aria-label="Filtri metodo georef"></div>
       </div>
       <div id="anncsu-legend" class="anncsu-legend" role="group" aria-label="Legenda metodi di geo-referenziazione"></div>
+      <div class="anncsu-catasto-panel">
+        <div class="anncsu-catasto-title">🗺️ Livelli mappa</div>
+        <div class="anncsu-catasto-sub">${hasPunti ? 'Civici ANNCSU + ' : ''}Catasto AGE (© Agenzia delle Entrate, CC-BY 4.0)</div>
+        <div class="anncsu-catasto-layers">
+          <label class="anncsu-catasto-lbl">
+            <input type="checkbox" id="anncsu-civici-chk" ${hasPunti ? 'checked' : 'disabled'} ${hasPunti ? '' : 'title="Il Comune non ha conferito i numeri civici geo-referenziati all\'ANNCSU"'}>
+            <span class="anncsu-catasto-sw anncsu-catasto-sw-civici"></span>
+            Civici${hasPunti ? '' : ' <span class="anncsu-catasto-civici-na">(non conferiti)</span>'}
+          </label>
+          <label class="anncsu-catasto-lbl">
+            <input type="checkbox" id="anncsu-catasto-fogli">
+            <span class="anncsu-catasto-sw anncsu-catasto-sw-map"></span>
+            Fogli
+          </label>
+          <label class="anncsu-catasto-lbl">
+            <input type="checkbox" id="anncsu-catasto-ple">
+            <span class="anncsu-catasto-sw anncsu-catasto-sw-ple"></span>
+            Particelle
+          </label>
+        </div>
+        <div id="anncsu-catasto-hint" class="anncsu-catasto-hint" hidden></div>
+        <div id="anncsu-catasto-status" class="anncsu-catasto-status" hidden></div>
+      </div>
       <div id="anncsu-map" class="anncsu-map" role="region" aria-label="Mappa dei numeri civici"></div>
       <div id="anncsu-search-result" class="anncsu-search-result" role="status" aria-live="polite"></div>
-    </div>
-  ` : `
-    <div class="anncsu-map-wrap">
-      <h3 class="anncsu-h3">Mappa non disponibile</h3>
-      <p class="muted">
-        Il Comune non ha conferito le coordinate geografiche dei propri numeri
-        civici all'ANNCSU. I dati restano consultabili come elenco di strade.
-      </p>
     </div>
   `;
 
@@ -7500,19 +7540,29 @@ function initAnncsu(d) {
   if (!mapEl) return;
 
   const puntiRaw = Array.isArray(d.punti) ? d.punti : [];
-  if (!puntiRaw.length) return;   // gestito già nel render
+  const hasPuntiInit = puntiRaw.length > 0;
 
   // ---- 1) Flag outlier via MAD (let perché ricostruito su enrich full)
-  let punti = anncsuFlagOutliers(puntiRaw);
+  //         Se non ci sono civici (comune senza ANNCSU geo-ref) partiamo
+  //         con array vuoto: la mappa servirà comunque al catasto AGE.
+  let punti = hasPuntiInit ? anncsuFlagOutliers(puntiRaw) : [];
 
   // ---- 2) Mappa con OSM (stessa tile-source di Aria/Immobili PA)
-  const lats = punti.map(p => p.lat);
-  const lons = punti.map(p => p.lon);
-  const bounds = L.latLngBounds(
-    [[Math.min(...lats), Math.min(...lons)], [Math.max(...lats), Math.max(...lons)]]
-  );
-  const map = L.map('anncsu-map', { scrollWheelZoom: false, zoomControl: true })
-    .fitBounds(bounds, { padding: [20, 20] });
+  //         Bounds dai civici se presenti, altrimenti view placeholder
+  //         centrata sull'Italia: catastoInit() farà fitBounds sui fogli.
+  let map;
+  if (hasPuntiInit) {
+    const lats = punti.map(p => p.lat);
+    const lons = punti.map(p => p.lon);
+    const bounds = L.latLngBounds(
+      [[Math.min(...lats), Math.min(...lons)], [Math.max(...lats), Math.max(...lons)]]
+    );
+    map = L.map('anncsu-map', { scrollWheelZoom: false, zoomControl: true })
+      .fitBounds(bounds, { padding: [20, 20] });
+  } else {
+    map = L.map('anncsu-map', { scrollWheelZoom: false, zoomControl: true })
+      .setView([41.9, 12.5], 6);  // placeholder Italia, sovrascritto da catastoInit
+  }
   // A11y/UX: scroll-wheel + pinch trackpad abilitati solo dopo click.
   map.on('focus', () => map.scrollWheelZoom.enable());
   map.on('blur',  () => map.scrollWheelZoom.disable());
@@ -7520,6 +7570,226 @@ function initAnncsu(d) {
     maxZoom: 19,
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
   }).addTo(map);
+
+  // ---- 2.5) Layer Catasto Agenzia delle Entrate (GeoJSON same-origin, pako + canvas)
+  // Architettura adattiva:
+  //   monolitico  : <istat>_ple.geojson.gz <= 20MB → 1 fetch, particelle sempre visibili
+  //   chunking    : altrimenti → fetch per foglio del viewport, solo a zoom >= 15
+  const CATASTO_ZOOM_THRESHOLD = 15;
+  const CATASTO_MONO_MAX_BYTES = 20 * 1024 * 1024;
+  const catastoIstat = new URLSearchParams(window.location.search).get('istat');
+  const catastoChkFogli = document.getElementById('anncsu-catasto-fogli');
+  const catastoChkPle   = document.getElementById('anncsu-catasto-ple');
+  const catastoHintEl   = document.getElementById('anncsu-catasto-hint');
+  const catastoStatusEl = document.getElementById('anncsu-catasto-status');
+  const catastoRenderer = L.canvas({ padding: 0.5 });
+  const CATASTO_STYLE_MAP = { color:'#1B5E20', weight:1.8, opacity:0.95, fillColor:'#1B5E20', fillOpacity:0.10 };
+  const CATASTO_STYLE_PLE = { color:'#2E7D32', weight:0.5, opacity:0.75, fillColor:'#81C784', fillOpacity:0.18 };
+  const catastoState = {
+    mode: null,                 // 'monolitico' | 'chunking' | null
+    mapGj: null,                // GeoJSON fogli (cached)
+    mapLayer: null,             // L.geoJSON fogli sulla mappa
+    fogliIndex: [],             // [{id, bounds}]
+    pleMonoLayer: null,         // L.geoJSON particelle (monolitico)
+    pleChunkLayers: new Map(),  // foglio_id -> L.geoJSON
+    inflight: new Set(),
+    inited: false,
+  };
+
+  function catastoSetHint(html) {
+    if (!catastoHintEl) return;
+    if (!html) { catastoHintEl.hidden = true; catastoHintEl.innerHTML = ''; return; }
+    catastoHintEl.hidden = false; catastoHintEl.innerHTML = html;
+  }
+  function catastoSetStatus(html) {
+    if (!catastoStatusEl) return;
+    if (!html) { catastoStatusEl.hidden = true; catastoStatusEl.innerHTML = ''; return; }
+    catastoStatusEl.hidden = false; catastoStatusEl.innerHTML = html;
+  }
+  async function catastoFetchGz(url) {
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const buf = await resp.arrayBuffer();
+    const text = pako.ungzip(new Uint8Array(buf), { to: 'string' });
+    return JSON.parse(text);
+  }
+  async function catastoProbeMono() {
+    try {
+      const r = await fetch(`/data/catasto_full/${catastoIstat}_ple.geojson.gz`, { method: 'HEAD' });
+      if (!r.ok) return null;
+      const size = parseInt(r.headers.get('content-length') || '0', 10);
+      return (size > 0 && size <= CATASTO_MONO_MAX_BYTES) ? size : null;
+    } catch { return null; }
+  }
+  async function catastoInit() {
+    if (catastoState.inited || !catastoIstat) return;
+    catastoState.inited = true;
+    catastoSetStatus('⏳ Caricamento fogli catastali...');
+    try {
+      catastoState.mapGj = await catastoFetchGz(`/data/catasto_full/${catastoIstat}_map.geojson.gz`);
+    } catch (e) {
+      catastoSetStatus('');
+      catastoSetHint('⚠ Mappa catastale non disponibile per questo comune');
+      // Disabilita le due checkbox
+      if (catastoChkFogli) catastoChkFogli.disabled = true;
+      if (catastoChkPle)   catastoChkPle.disabled = true;
+      return;
+    }
+    // Indice spaziale fogli (per chunking viewport)
+    const dummy = L.geoJSON(catastoState.mapGj);
+    dummy.eachLayer(l => {
+      const f = l.feature;
+      const id = f.properties && f.properties.NATIONALCADASTRALZONINGREFERENCE;
+      if (id) catastoState.fogliIndex.push({ id, bounds: l.getBounds() });
+    });
+    // Se la mappa non ha civici (bounds placeholder Italia), centra sui fogli catastali.
+    if (!hasPuntiInit) {
+      try {
+        const fb = dummy.getBounds();
+        if (fb && fb.isValid()) map.fitBounds(fb, { padding: [20, 20] });
+      } catch (e) { /* noop */ }
+    }
+    // Probe modalità
+    const monoSize = await catastoProbeMono();
+    catastoState.mode = monoSize ? 'monolitico' : 'chunking';
+    catastoSetStatus('');
+    catastoUpdateHint();
+  }
+  function catastoUpdateHint() {
+    if (!catastoState.mode) return;
+    if (!catastoChkPle || !catastoChkPle.checked) { catastoSetHint(''); return; }
+    if (catastoState.mode === 'monolitico') { catastoSetHint(''); return; }
+    const z = map.getZoom();
+    if (z < CATASTO_ZOOM_THRESHOLD) {
+      catastoSetHint(`🔍 Zoom in (livello &geq; ${CATASTO_ZOOM_THRESHOLD}) per caricare le particelle. Zoom corrente: <strong>${z}</strong>`);
+    } else {
+      catastoSetHint('');
+    }
+  }
+  function catastoSyncFogli() {
+    if (!catastoState.mapGj) return;
+    if (catastoChkFogli.checked && !catastoState.mapLayer) {
+      catastoState.mapLayer = L.geoJSON(catastoState.mapGj, {
+        renderer: catastoRenderer, style: CATASTO_STYLE_MAP,
+        onEachFeature: (f, l) => {
+          const id = f.properties && f.properties.NATIONALCADASTRALZONINGREFERENCE;
+          const label = (f.properties && (f.properties.LABEL || id)) || '';
+          if (label) l.bindTooltip(`Foglio ${label}`, { sticky: true });
+          l.on('click', () => {
+            L.popup({ maxWidth: 300 })
+              .setLatLng(l.getBounds().getCenter())
+              .setContent(`<strong>Foglio ${label}</strong><br>ID: <code>${id}</code>`)
+              .openOn(map);
+          });
+        }
+      }).addTo(map);
+    } else if (!catastoChkFogli.checked && catastoState.mapLayer) {
+      map.removeLayer(catastoState.mapLayer);
+      catastoState.mapLayer = null;
+    }
+  }
+  async function catastoSyncPle() {
+    if (!catastoIstat || !catastoState.mode) return;
+    if (!catastoChkPle.checked) {
+      // OFF: rimuovi tutto
+      if (catastoState.pleMonoLayer && map.hasLayer(catastoState.pleMonoLayer)) map.removeLayer(catastoState.pleMonoLayer);
+      for (const [, l] of catastoState.pleChunkLayers) if (map.hasLayer(l)) map.removeLayer(l);
+      catastoSetHint('');
+      return;
+    }
+    // ON
+    if (catastoState.mode === 'monolitico') {
+      if (catastoState.pleMonoLayer) {
+        if (!map.hasLayer(catastoState.pleMonoLayer)) catastoState.pleMonoLayer.addTo(map);
+        return;
+      }
+      catastoSetStatus('⏳ Caricamento particelle catastali...');
+      try {
+        const gj = await catastoFetchGz(`/data/catasto_full/${catastoIstat}_ple.geojson.gz`);
+        catastoState.pleMonoLayer = L.geoJSON(gj, {
+          renderer: catastoRenderer, style: CATASTO_STYLE_PLE,
+          onEachFeature: (f, l) => {
+            const lbl = (f.properties && f.properties.LABEL) || '';
+            const ref = (f.properties && f.properties.NATIONALCADASTRALREFERENCE) || '';
+            if (lbl) l.bindTooltip(`Part. ${lbl}`, { sticky: true });
+            l.on('click', () => {
+              L.popup({ maxWidth: 300 })
+                .setLatLng(l.getBounds().getCenter())
+                .setContent(`<strong>Particella ${lbl}</strong><br>Rif. catastale: <code>${ref}</code>`)
+                .openOn(map);
+            });
+          }
+        }).addTo(map);
+        catastoSetStatus('');
+      } catch (e) {
+        catastoSetStatus('⚠ Errore caricamento particelle: ' + e.message);
+      }
+      return;
+    }
+    // CHUNKING
+    for (const [, l] of catastoState.pleChunkLayers) if (!map.hasLayer(l)) l.addTo(map);
+    catastoUpdateHint();
+    catastoCheckViewport();
+  }
+  async function catastoCheckViewport() {
+    if (!catastoIstat || catastoState.mode !== 'chunking') return;
+    if (!catastoChkPle || !catastoChkPle.checked) return;
+    const zoom = map.getZoom();
+    if (zoom < CATASTO_ZOOM_THRESHOLD) { catastoUpdateHint(); return; }
+    const viewBounds = map.getBounds();
+    const toLoad = catastoState.fogliIndex
+      .filter(f => viewBounds.intersects(f.bounds)
+        && !catastoState.pleChunkLayers.has(f.id)
+        && !catastoState.inflight.has(f.id))
+      .map(f => f.id);
+    if (!toLoad.length) { catastoSetHint(''); return; }
+    for (const id of toLoad) catastoState.inflight.add(id);
+    catastoSetStatus(`⏳ Caricamento ${toLoad.length} fogli particelle nel viewport...`);
+    let okCount = 0;
+    await Promise.all(toLoad.map(async (fid) => {
+      try {
+        const gj = await catastoFetchGz(`/data/catasto_full/${catastoIstat}_ple/${fid}.geojson.gz`);
+        const layer = L.geoJSON(gj, {
+          renderer: catastoRenderer, style: CATASTO_STYLE_PLE,
+          onEachFeature: (f, l) => {
+            const lbl = (f.properties && f.properties.LABEL) || '';
+            const ref = (f.properties && f.properties.NATIONALCADASTRALREFERENCE) || '';
+            if (lbl) l.bindTooltip(`Part. ${lbl}`, { sticky: true });
+            l.on('click', () => {
+              L.popup({ maxWidth: 300 })
+                .setLatLng(l.getBounds().getCenter())
+                .setContent(`<strong>Particella ${lbl}</strong><br>Rif. catastale: <code>${ref}</code>`)
+                .openOn(map);
+            });
+          }
+        });
+        if (catastoChkPle.checked) layer.addTo(map);
+        catastoState.pleChunkLayers.set(fid, layer);
+        okCount++;
+      } catch (e) {
+        // silenzioso, foglio singolo può mancare
+      } finally {
+        catastoState.inflight.delete(fid);
+      }
+    }));
+    catastoSetStatus('');
+    catastoUpdateHint();
+  }
+  // Eventi
+  map.on('moveend zoomend', catastoCheckViewport);
+  map.on('zoomend', catastoUpdateHint);
+  if (catastoChkFogli) {
+    catastoChkFogli.addEventListener('change', () => {
+      if (!catastoState.inited) catastoInit().then(() => catastoSyncFogli());
+      else catastoSyncFogli();
+    });
+  }
+  if (catastoChkPle) {
+    catastoChkPle.addEventListener('change', () => {
+      if (!catastoState.inited) catastoInit().then(() => catastoSyncPle());
+      else catastoSyncPle();
+    });
+  }
 
   // ---- 3) Renderizza legenda dinamica con conteggi
   const legendEl = document.getElementById('anncsu-legend');
@@ -7548,6 +7818,20 @@ function initAnncsu(d) {
 
   // ---- 4) Layer markers + redraw cluster grid-based
   let markersLayer = L.layerGroup().addTo(map);
+
+  // ---- 4.5) Toggle Civici: permette di nascondere i marker civici quando
+  // si vuole vedere solo il catasto (utile su comuni grandi per evitare lag).
+  // Lo stato dei filtri/legenda/elenco resta consultabile anche con layer off.
+  const civiciChk = document.getElementById('anncsu-civici-chk');
+  if (civiciChk) {
+    civiciChk.addEventListener('change', (e) => {
+      if (e.target.checked) {
+        if (!map.hasLayer(markersLayer)) markersLayer.addTo(map);
+      } else {
+        if (map.hasLayer(markersLayer)) map.removeLayer(markersLayer);
+      }
+    });
+  }
 
   function makeDot(p, highlight) {
     if (highlight) {
@@ -7631,11 +7915,6 @@ function initAnncsu(d) {
   // listener searchEl.input). Highlighted sempre come marker singoli.
   let searchHighlightSet = new Set();
 
-  // Sceglie label (zoom massimo) o pin in base allo zoom corrente.
-  function makeMarker(p, highlight) {
-    return (map.getZoom() >= ANNCSU_LABEL_ZOOM) ? makeLabel(p, highlight) : makeDot(p, highlight);
-  }
-
   function redrawClusters() {
     markersLayer.clearLayers();
     const z = map.getZoom();
@@ -7707,6 +7986,11 @@ function initAnncsu(d) {
         markersLayer.addLayer(makeCluster(avgLat, avgLon, cellPunti.length));
       }
     });
+  }
+
+  // Sceglie label (zoom massimo) o pin in base allo zoom corrente.
+  function makeMarker(p, highlight) {
+    return (map.getZoom() >= ANNCSU_LABEL_ZOOM) ? makeLabel(p, highlight) : makeDot(p, highlight);
   }
 
   // ---- 5) Stato filtri (Set di metodi attivi + outlier visibile)
@@ -10556,6 +10840,8 @@ FONTI INTEGRATE
 - Ministero del Lavoro              RUNTS — Registro Unico Nazionale del Terzo Settore (D.Lgs 117/2017)
 - Ministero della Cultura (MiC)     ArCo — Catalogo nazionale ICCD dei beni culturali immobili tutelati
                                     (chiese, palazzi, castelli, ville, archeologia, monumenti, parchi storici)
+- Agenzia delle Entrate             Cartografia catastale INSPIRE — fogli e particelle
+                                    (CC-BY 4.0, copertura 19 regioni esclusa Provincia Autonoma TN/BZ)
 
 I dati di origine sono pubblicati dalle istituzioni elencate in
 LICENSE.txt e sono disponibili sui rispettivi portali open data.
@@ -10581,7 +10867,47 @@ dimensione del file:
   dati-completi.json. Per i poligoni georeferenziati delle sezioni
   di censimento + 119 variabili per sezione usa l'endpoint REST
   /data/censimento_full/<istat>.geojson (30 KB - 3 MB, EPSG:4326).
+- catasto AGE: NON incluso nello ZIP (dataset pesante, 0.5-67 MB per
+  comune). Disponibile solo via endpoint REST GeoJSON (vedi sezione
+  ESEMPI ACCESSO REST qui sotto).
 
+ESEMPI ACCESSO REST
+-------------------
+Tutti gli endpoint REST sono same-origin (stesso dominio del sito).
+Base URL: ${window.location.origin}
+
+# ANNCSU - tutti i numeri civici geo-referenziati del comune (JSON)
+curl -s ${window.location.origin}/data/anncsu_full/${istat}.json
+
+# Catasto - fogli del comune (GeoJSON gzippato, EPSG:4326)
+curl -s ${window.location.origin}/data/catasto_full/${istat}_map.geojson.gz | gunzip
+
+# Catasto - particelle del comune, file unico (se <= 20 MB)
+curl -s ${window.location.origin}/data/catasto_full/${istat}_ple.geojson.gz | gunzip
+
+# Catasto - particelle di UN SINGOLO foglio (sempre disponibile)
+# Schema: <ISTAT>_ple/<BELFIORE>_<FFFF00>.geojson.gz
+# dove BELFIORE = codice catastale comune (${anag.codice_catastale || 'es. H501'}),
+# FFFF00 = numero foglio a 4 cifre zero-pad + '00' (foglio 129 -> 012900)
+curl -s ${window.location.origin}/data/catasto_full/${istat}_ple/${anag.codice_catastale || 'XXXX'}_012900.geojson.gz | gunzip
+
+# Esempio Python: estrai una singola particella per riferimento catastale
+#
+#   import urllib.request, gzip, json
+#   istat = '${istat}'
+#   belfiore = '${anag.codice_catastale || 'XXXX'}'
+#   foglio = '012900'   # foglio 129
+#   particella = '455'
+#   url = f'${window.location.origin}/data/catasto_full/{istat}_ple/{belfiore}_{foglio}.geojson.gz'
+#   with urllib.request.urlopen(url) as r:
+#       gj = json.loads(gzip.decompress(r.read()))
+#   ref = f'{belfiore}_{foglio}.{particella}'
+#   match = [f for f in gj['features']
+#            if f['properties']['NATIONALCADASTRALREFERENCE'] == ref]
+#   print(match[0]['geometry'] if match else 'non trovata')
+#
+# Riferimento particella nelle properties:
+#   NATIONALCADASTRALREFERENCE = <BELFIORE>_<FFFF00>.<numero_particella>
 I dati di origine sono pubblicati dalle istituzioni elencate in
 LICENSE.txt e disponibili sui rispettivi portali open data.
 L'aggregazione in formato unico (dati-completi.json) è opera di
