@@ -608,6 +608,36 @@ footer a:hover { color: #fff !important; }
           </td>
           <td class="freq">mensile</td>
         </tr>
+        <tr data-fonte-row="CATASTO-AGE">
+          <td>Agenzia delle Entrate</td>
+          <td>
+            <strong>Catasto &mdash; Cartografia catastale INSPIRE</strong>
+            Cartografia catastale pubblicata dall'Agenzia delle Entrate
+            in formato <strong>INSPIRE</strong> (Infrastructure for Spatial
+            Information in Europe), conforme alla Direttiva 2007/2/CE.
+            Comprende i <strong>fogli</strong> catastali (CadastralZoning)
+            e le <strong>particelle</strong> (CadastralParcel)
+            georeferenziate in coordinate WGS84 (EPSG:4326), accorpate
+            per comune. Visualizzabili come layer attivabile sulla mappa
+            dei numeri civici, accanto ai civici ANNCSU. Per ogni
+            particella: riferimento catastale nazionale
+            (NATIONALCADASTRALREFERENCE), etichetta, geometria poligonale.
+            Copertura <strong>19 regioni</strong> (esclusa la Provincia
+            Autonoma di Trento e Bolzano, il cui catasto e' gestito
+            localmente dalle Province Autonome). I dati sono accessibili
+            via endpoint REST GeoJSON gzippato:
+            <code>/data/catasto_full/&lt;istat&gt;_map.geojson.gz</code>
+            per i fogli e
+            <code>/data/catasto_full/&lt;istat&gt;_ple.geojson.gz</code>
+            per le particelle (oppure split per singolo foglio per i
+            comuni piu' grandi). Per dimensioni, il catasto non e' incluso
+            nello ZIP di download del comune ma resta sempre disponibile
+            via REST. Aggiornamento <strong>semestrale</strong>.
+            Licenza <strong>CC-BY 4.0</strong>.
+          </td>
+          <td class="freq">semestrale</td>
+          <td class="dati-gov"><a href="https://www.dati.gov.it/view-dataset?organization=agenzia-delle-entrate" target="_blank" rel="noopener" class="badge-dati ok" title="Agenzia delle Entrate pubblica la cartografia catastale in formato INSPIRE; il bulk download per regione e' disponibile dal portale cartografico AGE (wfs.cartografia.agenziaentrate.gov.it)">Sì</a></td>
+        </tr>
       </tbody>
     </table>
 
@@ -865,6 +895,15 @@ footer a:hover { color: #fff !important; }
           avanzamento dei lavori pubblici.
         </div>
         <div class="aggiorna-when">marzo · giugno · settembre · dicembre</div>
+      </div>
+      <div class="aggiorna-row">
+        <div class="aggiorna-cadence">Semestrale</div>
+        <div class="aggiorna-what">
+          <strong>Catasto (Agenzia delle Entrate)</strong> — cartografia
+          catastale INSPIRE: fogli e particelle georeferenziati,
+          visualizzati come layer sulla mappa dei numeri civici.
+        </div>
+        <div class="aggiorna-when">~febbraio · ~agosto</div>
       </div>
       <div class="aggiorna-row">
         <div class="aggiorna-cadence">Annuale</div>
