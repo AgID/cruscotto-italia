@@ -6,7 +6,6 @@
 > Model Context Protocol per agenti AI.
 
 [![Deploy Worker](https://github.com/AgID/cruscotto-italia/actions/workflows/deploy-worker.yml/badge.svg)](https://github.com/AgID/cruscotto-italia/actions/workflows/deploy-worker.yml)
-[![CI lint & test](https://github.com/AgID/cruscotto-italia/actions/workflows/ci.yml/badge.svg)](https://github.com/AgID/cruscotto-italia/actions/workflows/ci.yml)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](LICENSE)
 
 ---
