@@ -36,6 +36,7 @@ Cercando un comune ("Lecce") si ottiene una vista a 360° su:
 - 🚌 **Pendolarismo** (ISTAT Censimento permanente 2021 — matrice OD origine/destinazione lavoro)
 - 🗺️ **Censimento sezioni 2021** (ISTAT Basi Territoriali — 756.376 sezioni di censimento con 119 variabili demografiche/abitative per sezione)
 - 🏛️ **Beni culturali** (MiC — ICCD ArCo per beni immobili tutelati: chiese, palazzi, castelli, archeologia, ville, monumenti, soprintendenze; Cultural-ON DBUnico 2.0 per Luoghi della Cultura visitabili: musei, biblioteche, archivi con orari e contatti)
+- 🗺️ **Cartografia catastale** (Agenzia delle Entrate — Catasto Terreni INSPIRE: particelle e fogli di mappa per 19 regioni italiane, dataset bulk semestrale CC BY 4.0)
 
 L'elenco completo, con licenze, frequenze di aggiornamento e link diretti
 alle fonti istituzionali, è disponibile nella pagina pubblica `about.html`
@@ -69,8 +70,8 @@ Amministrazione, AgID).
                   │  VM AgID (FastWeb)                     │
                   │  - nginx serve /var/www/.../data/*     │
                   │  - cron /etc/cron.d/cruscotto-etl      │
-                  │  - 17 ETL Python (daily/weekly/monthly │
-                  │    /annual)                            │
+                  │  - 19 ETL Python (daily/weekly/monthly │
+                  │    /annual/semestrale)                 │
                   │  - pull_artifact.py (daily 07:30 UTC)  │
                   │    scarica i 3 ETL ISTAT da Actions    │
                   └────────────┬───────────────────────────┘
@@ -86,8 +87,8 @@ Amministrazione, AgID).
    │  PNRR · MEF · ISPRA     │         │  istat_profilo · ASIA    │
    │  MIUR · ACI · ANNCSU    │         │  · pendolarismo)         │
    │  Salute · MIMIT · GSE   │         │                          │
-   │  AGCOM · Lavoro         │         │  Output: artifact ZIP    │
-   │                         │         │  scaricato dalla VM via  │
+   │  AGCOM · Lavoro · MiC   │         │  Output: artifact ZIP    │
+   │  AdE Catasto INSPIRE    │         │  scaricato dalla VM via  │
    │                         │         │  GitHub API + pull_artifact.py │
    └─────────────────────────┘         └──────────────────────────┘
 ```
@@ -102,8 +103,9 @@ Dettagli architetturali completi: [`DESIGN.md`](DESIGN.md) ·
 | **Daily** (08:00 UTC) | PUN punti ricarica, MIMIT carburanti, dashboard rebuild | cron VM AgID | automatico |
 | **Daily Pull-Artifact** (07:30 UTC) | scarica artifact dei 3 ETL ISTAT da GitHub Actions | cron VM AgID | automatico |
 | **Weekly** (lunedì 04:00 UTC) | ANAC OCDS, PNRR, sanità MdS, RUNTS, dashboard | cron VM AgID | automatico |
-| **Monthly** (5° del mese 04:00 UTC) | anagrafica, BDAP-MOP, SIOPE, ANNCSU, AGCOM banda larga | cron VM AgID | automatico |
+| **Monthly** (5° del mese 04:00 UTC) | anagrafica, BDAP-MOP, SIOPE, ANNCSU, AGCOM banda larga, beni culturali (ArCo + Cultural-ON) | cron VM AgID | automatico |
 | **Annual** (1 feb / 1 apr / 1 lug, 04:00 UTC) | demografia POSAS, profilo Censimento, turismo, territorio, scuole, veicoli, redditi IRPEF, immobili PA | cron VM AgID | automatico |
+| **Semestrale** (1 marzo / 1 settembre, 03:00 UTC) | cartografia catastale AGE (particelle + fogli, 19 regioni) | cron VM AgID | automatico |
 | **Decennale** (manuale, prossimo 2031) | censimento Basi Territoriali (sezioni + 119 vars) | run manuale `python -m etl.sources.censimento` su VM | `workflow_dispatch` |
 | **ISTAT refresh** (manuale) | istat_profilo, asia, pendolarismo | GitHub Actions `ubuntu-latest` | `workflow_dispatch` |
 
@@ -146,15 +148,21 @@ per consentire l'interrogazione dei dati civici da chatbot AI compatibili
 - `comune_kpi` — KPI sintetici di un comune (~620 token, primo tool da
   chiamare per query puntuali e confronti)
 - `comune_dashboard` — vista unificata: una sola chiamata restituisce le
-  25 sezioni del comune (anagrafica, demografia, contratti, opere
+  sezioni del comune (anagrafica, demografia, contratti, opere
   pubbliche BDAP-MOP con dettaglio progetti CUP, ANNCSU, sanità,
-  banda larga, ecc.)
+  banda larga, beni culturali, ecc.)
 - `anncsu_civico_search` — query puntuali sui numeri civici certificati
   con filtri server-side (odonimo, civico)
 - `censimento_sezione_search` — ranking o lookup sulle 119 variabili
   censuarie raw del Censimento Permanente 2021 a livello di singola
   sezione di censimento sub-comunale (modalità lookup con `sez_id` o
   ranking con `var_name` ± `denominator_var` per percentuali)
+
+La **cartografia catastale** (particelle e fogli AGE) è invece esposta
+come REST sul percorso `/data/catasto_full/<istat>_map.geojson.gz` e
+`/data/catasto_full/<istat>_ple.geojson.gz` (o split per foglio nei
+comuni grandi). Per pattern d'uso e esempi vedi la skill MCP Claude
+(sezione catasto) e il README dello ZIP `/data/<istat>.zip`.
 
 **Rate limit**: 60 richieste/minuto per IP.
 
@@ -168,8 +176,8 @@ per consentire l'interrogazione dei dati civici da chatbot AI compatibili
 
 È disponibile una skill Claude che documenta l'uso del connettore
 (inventario dei 6 tool, schema di `comune_dashboard`, pattern operativi
-e caveat per sezione). Versione corrente:
-`https://cruscotto-italia-mcp.dati.gov.it/skills/cruscotto-italia-workflow-v2.3.0.zip`
+e caveat per sezione, accesso REST alla cartografia catastale). Versione
+corrente: `https://cruscotto-italia-mcp.dati.gov.it/skills/cruscotto-italia-workflow-v2.4.0.zip`
 (elenco completo con storici in `docs/skills/README.md`).
 
 ### Esempi di domande supportate
@@ -184,12 +192,17 @@ e caveat per sezione). Versione corrente:
 - "Quanto costa il gasolio self a Lecce rispetto alla media nazionale?"
 - "Quanti enti del Terzo Settore (ODV/APS) ha Matera? Quanti iscritti al 5x1000?"
 - "Quanti pendolari escono ogni giorno da Bergamo verso Milano?"
+- "Quante chiese tutelate ICCD ArCo ci sono a Lecce?"
 
 ### Limiti noti
 
 - Tool ottimizzati per query **per-comune**, non per aggregati cross-comune
   (es. "top 10 PNRR per regione" richiede N chiamate).
 - Il MCP è in sola lettura: nessun side-effect, nessuna scrittura.
+- La cartografia catastale (particelle/fogli) NON è esposta via MCP ma
+  via REST diretta: i tool MCP non leggono le geometrie catastali, il
+  frontend e gli agenti la consumano direttamente dal percorso
+  `/data/catasto_full/`.
 
 ---
 
@@ -255,7 +268,7 @@ cruscotto-italia/
 │   ├── src/
 │   │   ├── index.ts
 │   │   ├── mcp.ts            ← JSON-RPC MCP transport
-│   │   ├── http.ts           ← landing page + endpoint /data/anncsu_full/
+│   │   ├── http.ts           ← landing page + endpoint /data/anncsu_full/ + /data/catasto_full/
 │   │   ├── tools/            ← un file per tool MCP
 │   │   └── lib/              ← duckdb, ratelimit, data_fetch helpers
 │   ├── wrangler.toml
@@ -263,14 +276,14 @@ cruscotto-italia/
 │
 ├── frontend/                 ← single-file HTML (vanilla JS)
 │   ├── index.html
-│   ├── comune.html           ← vista comune-centric, 25 tab
+│   ├── comune.html           ← vista comune-centric, 22 tab
 │   ├── about.html            ← elenco fonti + metodologia
-│   └── vendor/               ← Chart.js, Leaflet, JSZip (SHA-384)
+│   └── vendor/               ← Chart.js, Leaflet, JSZip, pako (SHA-384)
 │
 ├── etl/                      ← Python ETL pipeline
 │   ├── requirements.txt
 │   ├── pyproject.toml        ← ruff + mypy + pytest config
-│   ├── sources/              ← un modulo per fonte (18 ETL VM + 3 ETL ISTAT su Actions)
+│   ├── sources/              ← un modulo per fonte (19 ETL VM + 3 ETL ISTAT su Actions)
 │   │   ├── anagrafica.py        ← spina dorsale ISTAT comuni + IPA
 │   │   ├── anac.py              ← contratti pubblici (OCDS)
 │   │   ├── bdap.py              ← BDAP-MOP opere pubbliche
@@ -294,6 +307,9 @@ cruscotto-italia/
 │   │   ├── asia.py              ← ISTAT ASIA UL imprese *via Actions*
 │   │   ├── pendolarismo.py      ← ISTAT matrice OD *via Actions*
 │   │   ├── censimento.py        ← ISTAT Basi Territoriali 2021 (119 vars/sezione)
+│   │   ├── beni_culturali.py    ← MiC ICCD ArCo (beni immobili tutelati)
+│   │   ├── cultural_on.py       ← MiC Cultural-ON DBUnico 2.0 (Luoghi della Cultura)
+│   │   ├── catasto_age.py       ← AdE Catasto Terreni INSPIRE (particelle + fogli)
 │   │   └── dashboard.py         ← aggregator unified shard (A1)
 │   └── lib/
 │       ├── local_lookup.py   ← utility lookup local-first
@@ -353,7 +369,8 @@ Le derivate devono restare aperte.
 I **dati** delle fonti sono pubblicati sotto le rispettive licenze:
 
 - **CC BY 4.0** — la maggior parte delle fonti (ANAC, ISTAT moderni,
-  MIUR, ACI, ISPRA, MEF DE Patrimonio, Italia Domani PNRR)
+  MIUR, ACI, ISPRA, MEF DE Patrimonio, Italia Domani PNRR, MiC ArCo,
+  MiC Cultural-ON, AdE Catasto INSPIRE)
 - **CC BY 3.0 IT** — MEF Federalismo Fiscale, alcuni dataset ISTAT storici
 - **IODL 2.0** — BDAP-MOP, BDAP-SIOPE, Ministero della Salute, MIMIT
 - **CC BY 4.0 ex art. 52 c.2 D.Lgs 82/2005 (CAD)** — dati delle PA
@@ -373,9 +390,10 @@ e nella pagina pubblica `about.html` con link diretti alle fonti.
 
 ## Conformità
 
-- **Accessibilità WCAG 2.1 AA**: 17 criteri verificati con Pa11y +
-  Axe-Core su tutte le pagine pubbliche. Dichiarazione di accessibilità
-  pubblicata in `accessibilita.html`.
+- **Accessibilità WCAG 2.1 AA**: criteri verificati con Pa11y +
+  Axe-Core su tutte le pagine pubbliche, inclusa la cartografia
+  catastale (script `scripts/pa11y-catasto.sh`). Dichiarazione di
+  accessibilità pubblicata in `accessibilita.html`.
 - **Sicurezza**: HTTPS forzato, HSTS preload-ready, CSP restrictive,
   security headers completi (X-Frame-Options, X-Content-Type-Options,
   Referrer-Policy, Permissions-Policy), `server_tokens off` su nginx,
