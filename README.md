@@ -414,8 +414,5 @@ Pattern di commit: [Conventional Commits](https://www.conventionalcommits.org/).
 ## Crediti
 
 Progettato e sviluppato da **Francesco Piero Paolicelli (Piersoft)**,
-[@piersoft](https://github.com/piersoft) · [piersoft.it](https://piersoft.it).
+[@piersoft](https://github.com/piersoft) per AgID - Agenzia per l'Italia Digitale.
 
-Il repository di sviluppo personale è `github.com/piersoft/cruscotto-italia`;
-questo repository (`github.com/AgID/cruscotto-italia`) è il mirror
-istituzionale di produzione per il deploy su `dati.gov.it`.
