@@ -10,6 +10,7 @@
 
 import type { Env } from "./index.js";
 import { tools, type ToolName } from "./tools/index.js";
+import { tryConsume } from "./lib/ratelimit.js";
 
 interface JsonRpcRequest {
   jsonrpc: "2.0";
@@ -27,6 +28,16 @@ interface JsonRpcResponse {
 
 const SUPPORTED_PROTOCOL_VERSIONS = ["2025-06-18", "2025-03-26", "2024-11-05"];
 const DEFAULT_PROTOCOL_VERSION = "2025-06-18";
+
+// CERT-AgID-VA-02 #2: costo per tool (token consumati dal rate limiter).
+const TOOL_COST: Record<string, number> = {
+  comune_dashboard: 10,
+  mcp_info: 10,
+  anncsu_civico_search: 5,
+  censimento_sezione_search: 3,
+  search: 5,
+  fetch: 5,
+};
 
 function negotiateProtocolVersion(requested: unknown): string {
   if (typeof requested === "string" && SUPPORTED_PROTOCOL_VERSIONS.includes(requested)) {
@@ -88,6 +99,14 @@ export async function handleMcp(
       }
       const tool = tools[params.name];
       const args = (params.arguments ?? {}) as Record<string, unknown>;
+      const cost = TOOL_COST[params.name] ?? 1;
+      if (cost > 1 && !(await tryConsume(req, env, cost - 1))) {
+        return rpcError(
+          body.id ?? null,
+          -32000,
+          `rate_limited: tool '${params.name}' (costo ${cost}) supera il limite per minuto`
+        );
+      }
       try {
         const result = await tool.handler(args, env);
         _ctx.waitUntil(trackToolCall(req, env, params.name, args, "ok"));
@@ -119,7 +138,7 @@ export async function handleMcp(
         _ctx.waitUntil(trackToolCall(req, env, params.name, args, trackStatus));
         if (isValidationError) {
           // Codice -32602 = Invalid params (JSON-RPC standard)
-          return rpcError(body.id ?? null, -32602, `Invalid params: ${errMsg}`);
+          return rpcError(body.id ?? null, -32602, `Invalid params: ${errMsg.slice(0, 300)}`);
         }
         return rpcError(body.id ?? null, -32000, `Tool error: ${errMsg}`);
       }

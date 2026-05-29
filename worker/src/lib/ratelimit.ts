@@ -45,3 +45,37 @@ export async function rateLimit(req: Request, env: Env): Promise<Response | null
 
   return null;
 }
+
+// ===== CERT-AgID-VA-02 #2: cost-weighted rate limiting =====
+
+export function clientIp(req: Request): string {
+  return (
+    req.headers.get("CF-Connecting-IP") ||
+    req.headers.get("X-Forwarded-For")?.split(",")[0]?.trim() ||
+    "unknown"
+  );
+}
+
+/** Consuma `units` token dal limiter nativo. true se tutti disponibili. Fail-open. */
+export async function tryConsume(req: Request, env: Env, units: number): Promise<boolean> {
+  if (units <= 0) return true;
+  const ip = clientIp(req);
+  try {
+    const results = await Promise.all(
+      Array.from({ length: units }, () => env.MCP_RATE_LIMITER.limit({ key: ip }))
+    );
+    return results.every((r) => r.success);
+  } catch (err) {
+    console.error("Rate limiter (tryConsume) error:", err);
+    return true;
+  }
+}
+
+/** Risposta HTTP 429 standard (stessa forma di rateLimit()). */
+export function http429(env: Env): Response {
+  const limit = parseInt(env.RATE_LIMIT_RPM ?? "60", 10);
+  return new Response(
+    JSON.stringify({ error: "rate_limited", message: `Limit ${limit}/min exceeded`, retry_after_seconds: 60 }),
+    { status: 429, headers: { "Content-Type": "application/json", "Retry-After": "60", "X-RateLimit-Limit": String(limit), "X-RateLimit-Remaining": "0" } }
+  );
+}

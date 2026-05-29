@@ -13,7 +13,7 @@
 
 import { handleMcp } from "./mcp.js";
 import { handleHealth, handleInfo, handleAdmin, handleDataAnncsuFull, handleDataSkill } from "./http.js";
-import { rateLimit } from "./lib/ratelimit.js";
+import { rateLimit, tryConsume, http429 } from "./lib/ratelimit.js";
 
 export interface Env {
   DATA_BASE_URL: string;
@@ -67,6 +67,8 @@ export default {
       // Solo questo path è esposto, non l'intero bucket.
       const annFullMatch = url.pathname.match(/^\/data\/anncsu_full\/(\d{6})\.json$/);
       if (annFullMatch && req.method === "GET") {
+        // CERT-AgID-VA-02 #2: passthrough pesante (shard fino a ~50MB) -> costo 10
+        if (!(await tryConsume(req, env, 9))) return http429(env);
         return handleDataAnncsuFull(annFullMatch[1], env);
       }
       // Skills (file di documentazione zippati, R2 prefix 'skills/'):
