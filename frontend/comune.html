@@ -2348,13 +2348,13 @@ async function loadDemografia(istat) {
   try {
     const data = await mcpCall('comune_demografia', { istat_code: istat });
     if (data.error) {
-      container.innerHTML = `<div class="placeholder"><strong>Dati non disponibili</strong>${data.error}</div>`;
+      container.innerHTML = `<div class="placeholder"><strong>Dati non disponibili</strong>${escapeHtmlMsg(data.error)}</div>`;
       return;
     }
     window.__demografiaCache[istat] = data;
     renderDemografiaContent(container, data);
   } catch (err) {
-    container.innerHTML = `<div class="placeholder"><strong>Errore di rete</strong>${err.message}</div>`;
+    container.innerHTML = `<div class="placeholder"><strong>Errore di rete</strong>${escapeHtmlMsg(err.message)}</div>`;
   }
 }
 
@@ -2521,7 +2521,7 @@ async function loadProfilo(istat) {
   try {
     const data = await mcpCall('comune_profilo', { istat_code: istat });
     if (data.error) {
-      container.innerHTML = `<div class="placeholder"><strong>Dati non disponibili</strong>${data.error}</div>`;
+      container.innerHTML = `<div class="placeholder"><strong>Dati non disponibili</strong>${escapeHtmlMsg(data.error)}</div>`;
       const span = document.querySelector('[data-tab-profilo-pct]');
       if (span) span.textContent = '—';
       return;
@@ -2530,7 +2530,7 @@ async function loadProfilo(istat) {
     renderProfiloContent(container, data);
     updateProfiloTabBadge(data);
   } catch (err) {
-    container.innerHTML = `<div class="placeholder"><strong>Errore di rete</strong>${err.message}</div>`;
+    container.innerHTML = `<div class="placeholder"><strong>Errore di rete</strong>${escapeHtmlMsg(err.message)}</div>`;
     const span = document.querySelector('[data-tab-profilo-pct]');
     if (span) span.textContent = '—';
   }
@@ -2799,7 +2799,7 @@ async function loadTurismo(istat) {
   try {
     const data = await mcpCall('comune_turismo', { istat_code: istat });
     if (data.error) {
-      container.innerHTML = `<div class="placeholder"><strong>Dati non disponibili</strong>${data.error}</div>`;
+      container.innerHTML = `<div class="placeholder"><strong>Dati non disponibili</strong>${escapeHtmlMsg(data.error)}</div>`;
       const span = document.querySelector('[data-tab-turismo-idx]');
       if (span) span.textContent = '—';
       return;
@@ -2808,7 +2808,7 @@ async function loadTurismo(istat) {
     renderTurismoContent(container, data);
     updateTurismoTabBadge(data);
   } catch (err) {
-    container.innerHTML = `<div class="placeholder"><strong>Errore di rete</strong>${err.message}</div>`;
+    container.innerHTML = `<div class="placeholder"><strong>Errore di rete</strong>${escapeHtmlMsg(err.message)}</div>`;
     const span = document.querySelector('[data-tab-turismo-idx]');
     if (span) span.textContent = '—';
   }
@@ -3089,7 +3089,7 @@ async function loadPnrr(istat) {
     renderPnrrContent(container, data);
     updatePnrrTabBadge(data);
   } catch (err) {
-    container.innerHTML = `<div class="placeholder"><strong>Errore di rete</strong>${err.message}</div>`;
+    container.innerHTML = `<div class="placeholder"><strong>Errore di rete</strong>${escapeHtmlMsg(err.message)}</div>`;
     const span = document.querySelector('[data-tab-pnrr-count]');
     if (span) span.textContent = '—';
   }
@@ -3342,7 +3342,7 @@ async function loadTerritorio(istat) {
 
     renderTerritorioContent(data);
   } catch (err) {
-    container.innerHTML = `<div class="terr-empty" role="alert">Errore nel caricamento: ${err.message || err}</div>`;
+    container.innerHTML = `<div class="terr-empty" role="alert">Errore nel caricamento: ${escapeHtmlMsg(err.message || err)}</div>`;
   }
 }
 
@@ -5374,6 +5374,9 @@ function _escapeHtmlBeni(s) {
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
     .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
+
+// XSS hardening (CERT-AgID-VA-02 #1): escape stringhe d'errore riflesse dal server
+function escapeHtmlMsg(s){ return _escapeHtmlBeni(s); }
 
 // Force-HTTPS sui domini MiC noti. Trick puramente cosmetico per evitare
 // Mixed Content quando la pagina e' su HTTPS e l'URL foto sorgente e' http://.
@@ -10519,7 +10522,7 @@ function initSanitaMap(d) {
         miniRender(r.results || []);
       } catch (err) {
         console.error('mini-search error:', err);
-        miniBox.innerHTML = `<div class="mini-suggestion" style="color:var(--accent);cursor:default">⚠️ ${err.message}</div>`;
+        miniBox.innerHTML = `<div class="mini-suggestion" style="color:var(--accent);cursor:default">⚠️ ${escapeHtmlMsg(err.message)}</div>`;
         miniBox.classList.add('open');
         miniInput.setAttribute('aria-expanded', 'true');
       }
@@ -11004,7 +11007,7 @@ async function init() {
         <div class="comune-eyebrow">Errore</div>
         <h1 class="comune-title"><em>Servizio</em> non raggiungibile.</h1>
         <p style="font-family:var(--mono);color:var(--accent);margin-top:16px;font-size:13px">
-          ${err.message}
+          ${escapeHtmlMsg(err.message)}
         </p>
         <p style="margin-top:24px"><a href="/">← Torna alla home</a></p>
       </div></section>`;
