@@ -5008,7 +5008,7 @@ function renderBeniCulturaliTab(d) {
   return `
     <div class="tab-pane" id="pane-beni-culturali">
       <div class="section-title">§ Beni culturali</div>
-      <h2 class="section-h">${fmtNum(k.n_arco || totale)} ${(k.n_arco || totale) === 1 ? 'bene tutelato' : 'beni tutelati'} dal <em>MiC</em>, catalogo ICCD ArCo${k.n_cultural_on ? ` + ${fmtNum(k.n_cultural_on)} ${k.n_cultural_on === 1 ? 'Luogo della Cultura' : 'Luoghi della Cultura'} (Cultural-ON)` : ''}.</h2>
+      <h2 class="section-h">${fmtNum(k.n_arco || totale)} ${(k.n_arco || totale) === 1 ? 'bene tutelato' : 'beni tutelati'} dal <em>MiC</em> (ArCo)${k.n_cultural_on ? ` + ${fmtNum(k.n_cultural_on)} ${k.n_cultural_on === 1 ? 'Luogo della Cultura' : 'Luoghi della Cultura'} (Cultural-ON)` : ''}.</h2>
       <p class="muted" style="font-family:var(--mono);font-size:11px;margin-top:-8px;margin-bottom:18px;">
         Fonti: <a href="https://dati.beniculturali.it/sparql" target="_blank" rel="noopener">MiC ICCD — ArCo</a>
         + <a href="https://dati.cultura.gov.it/lod/cultural-on/" target="_blank" rel="noopener">Cultural-ON DBUnico 2.0</a>.
