@@ -1900,7 +1900,7 @@ function renderComune(data) {
   window.__beniCulturaliInited = false;
   const tabs = [
     { id: 'panoramica', label: 'Panoramica', kpi: '' },
-    { id: 'anncsu', label: 'ANNCSU', kpi: k.anncsu?.kpi?.n_strade != null ? fmtNum(k.anncsu.kpi.n_strade) + (k.anncsu.kpi.n_civici != null ? ' / ' + fmtNum(k.anncsu.kpi.n_civici) : '') : '—' },
+    { id: 'anncsu', label: 'ANNCSU e Catasto', kpi: k.anncsu?.kpi?.n_strade != null ? fmtNum(k.anncsu.kpi.n_strade) + (k.anncsu.kpi.n_civici != null ? ' / ' + fmtNum(k.anncsu.kpi.n_civici) : '') : '—' },
     { id: 'aria', label: 'Aria', kpi: '<span data-tab-aria-n><span class="tab-spinner"></span></span>' },
     { id: 'banda-larga', label: 'Banda larga', kpi: k.agcom_bbmap?.kpi?.copertura_ftth_desi_pct != null ? Math.round(k.agcom_bbmap.kpi.copertura_ftth_desi_pct) + '%' : '—' },
     { id: 'beni-culturali', label: 'Beni culturali', kpi: k.beni_culturali?.kpi?.n_totale ? fmtNum(k.beni_culturali.kpi.n_totale) : '—' },
