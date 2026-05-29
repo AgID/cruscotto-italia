@@ -10969,6 +10969,17 @@ async function init() {
       </div></section>`;
     return;
   }
+  if (!/^\d{6}$/.test(istat)) {
+    document.getElementById('comune-content').innerHTML = `
+      <section class="comune-hero"><div class="wrap">
+        <div class="comune-eyebrow">Codice non valido</div>
+        <h1 class="comune-title">Codice <em>comune</em> non valido.</h1>
+        <p style="margin-top:24px;font-family:var(--serif);font-size:18px">
+          Il codice ISTAT deve essere di 6 cifre. Torna alla <a href="/">home</a> per cercare un comune.
+        </p>
+      </div></section>`;
+    return;
+  }
   try {
     // A1: una sola chiamata MCP carica TUTTI i dati per tutti i tab.
     // Lo shard dashboard contiene anagrafica + 7 sezioni + bdap_kpi + anac,
@@ -11002,12 +11013,13 @@ async function init() {
     bindScuoleFilters();
     setupDownloadButton(istat, dashboard);
   } catch (err) {
+    console.error('init() comune_dashboard:', err);
     document.getElementById('comune-content').innerHTML = `
       <section class="comune-hero"><div class="wrap">
         <div class="comune-eyebrow">Errore</div>
         <h1 class="comune-title"><em>Servizio</em> non raggiungibile.</h1>
-        <p style="font-family:var(--mono);color:var(--accent);margin-top:16px;font-size:13px">
-          ${escapeHtmlMsg(err.message)}
+        <p style="margin-top:16px;font-family:var(--serif);font-size:18px">
+          Si è verificato un problema nel caricamento dei dati del comune. Riprova più tardi o torna alla <a href="/">home</a>.
         </p>
         <p style="margin-top:24px"><a href="/">← Torna alla home</a></p>
       </div></section>`;
