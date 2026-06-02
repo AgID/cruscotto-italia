@@ -1149,7 +1149,7 @@ input.addEventListener('input', () => {
       renderSuggestions(r.results || []);
     } catch (err) {
       console.error('search error:', err);
-      suggBox.innerHTML = `<div class="suggestion" style="color:var(--accent);cursor:default">⚠️ Servizio non raggiungibile: ${err.message}</div>`;
+      suggBox.innerHTML = `<div class="suggestion" style="color:var(--accent);cursor:default">⚠️ Servizio temporaneamente non raggiungibile. Riprova tra poco.</div>`;
       suggBox.classList.add('open');
       input.setAttribute('aria-expanded', 'true');
     }
