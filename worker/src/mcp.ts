@@ -39,6 +39,15 @@ const TOOL_COST: Record<string, number> = {
   fetch: 5,
 };
 
+const SERVER_INSTRUCTIONS = `MCP Cruscotto Italia — dati aperti dei 7.918 comuni. Tool: search_comune (nome→ISTAT), comune_kpi, comune_dashboard (25 sezioni), anncsu_civico_search (civici georeferenziati).
+
+GEOCODING CATASTALE (indirizzo → foglio/particella): il catasto NON è un tool; i dati sono file statici da elaborare lato client (point-in-polygon), mai lato server. Procedura:
+1) search_comune per l'ISTAT;
+2) anncsu_civico_search per le coordinate del civico (lon, lat);
+3) scarica le particelle: GET https://cruscotto-italia.dati.gov.it/data/catasto_full/<ISTAT>_ple.geojson.gz (gzip; Roma è split per foglio, senza monolitico);
+4) trova la particella che CONTIENE il punto (ray-casting) e leggi NATIONALCADASTRALREFERENCE (es. G273_0025D0.2365 → BELFIORE G273, foglio 0025D0, particella 2365). Non comporre il codice foglio a mano: leggilo dalla feature.
+Gli endpoint /data/ hanno CORS aperto (Access-Control-Allow-Origin: *): scaricabili anche da browser.`;
+
 function negotiateProtocolVersion(requested: unknown): string {
   if (typeof requested === "string" && SUPPORTED_PROTOCOL_VERSIONS.includes(requested)) {
     return requested;
@@ -73,7 +82,8 @@ export async function handleMcp(
       return rpcOk(body.id, {
         protocolVersion: negotiatedVersion,
         capabilities: { tools: {} },
-        serverInfo: { name: "cruscotto-italia-mcp", version: "0.15.0" },
+        serverInfo: { name: "cruscotto-italia-mcp", version: "0.15.1" },
+        instructions: SERVER_INSTRUCTIONS,
       });
     }
 
