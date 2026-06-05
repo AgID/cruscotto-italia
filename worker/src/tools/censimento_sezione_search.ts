@@ -159,7 +159,7 @@ export const censimentoSezioneSearch: ToolDefinition = {
       sez_id: {
         type: "string",
         description:
-          "ID univoco nazionale della sezione di censimento (SEZ21_ID, 1-12 cifre). Se valorizzato attiva la modalita' LOOKUP: ritorna 1 sola sezione con le 119 vars complete. Mutualmente esclusivo con var_name.",
+          "ID univoco nazionale della sezione di censimento (SEZ21_ID, 1-12 cifre). Se valorizzato attiva la modalita' LOOKUP: ritorna 1 sola sezione con le 119 vars complete. Mutualmente esclusivo con var_name. Usa solo SEZ21_ID reali ottenuti da un RANKING (questo stesso tool senza sez_id) o da comune_dashboard.censimento; non comporlo a mano dall'ISTAT.",
       },
       var_name: {
         type: "string",
