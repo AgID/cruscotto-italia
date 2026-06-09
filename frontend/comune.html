@@ -1236,7 +1236,8 @@ footer a{color:rgba(255,255,255,0.85);text-decoration:none}
 .kpi-card, .anncsu-kpi{padding:14px 16px;background:var(--paper-2);border:1px solid var(--ink-mute);border-left:3px solid var(--accent);}
 .kpi-card-lab, .anncsu-kpi-lab{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:var(--ink-mute);margin-bottom:6px;}
 .kpi-card-val, .anncsu-kpi-val{font-family:var(--serif);font-size:28px;color:var(--ink);font-weight:400;line-height:1;font-variation-settings:'opsz' 60;}
-.kpi-card-unit, .anncsu-kpi-unit{font-family:var(--mono);font-size:11px;color:var(--ink-mute);text-transform:uppercase;letter-spacing:.06em;margin-left:8px;font-weight:400;}
+.kpi-card-unit, .anncsu-kpi-unit{font-family:var(--mono);font-size:11px;color:var(--ink-mute);letter-spacing:.06em;margin-left:8px;font-weight:400;}
+.anncsu-kpi-unit{text-transform:uppercase;}
 .kpi-card-sub{font-family:var(--mono);font-size:10px;color:var(--ink-mute);text-transform:uppercase;letter-spacing:.06em;margin-top:8px;line-height:1.4;}
 .kpi-card.tbd .kpi-card-val{font-style:italic;color:var(--ink-mute);}
 /* KPI cliccabili in Panoramica: scroll alla tab corrispondente.
@@ -10002,6 +10003,7 @@ function renderAriaContent(data) {
       ${renderAriaKpiCard('pm25', u.pm25)}
       ${renderAriaKpiCard('no2',  u.no2)}
     </div>
+    <p class="aria-trend-note">Come leggere le card: «Legge 40» e «OMS 15» indicano le soglie sulla media annua (in μg/m³), rispettivamente il limite di legge (D.Lgs. 155/2010) e la linea guida OMS 2021; «2/9 oltre» significa che 2 stazioni su 9 superano quella soglia. La fascia prevalente è l'intervallo di concentrazione in cui ricade la maggioranza delle stazioni del comune.</p>
 
     ${trend.anni && trend.anni.length ? `
       <h3 class="aria-h3">Trend decennale (media annua per stazione del comune)</h3>
