@@ -221,11 +221,12 @@ code {
 
   <div class="status-box">
     <div class="label">Stato di conformità</div>
-    <div class="value">Pienamente conforme</div>
+    <div class="value">Parzialmente conforme</div>
     <p style="margin-top:var(--sp-3); margin-bottom:0; font-size:var(--fs-sm); color: var(--ink-soft);">
       I siti web <strong>Cruscotto Italia</strong> e <strong>SIMBA chatbot</strong>
-      sono <strong>pienamente conformi</strong> ai requisiti previsti dall'allegato A
-      della norma <strong>UNI CEI EN 301 549</strong> e ai criteri WCAG 2.1 livello AA.
+      sono <strong>parzialmente conformi</strong> ai requisiti previsti dall'allegato A
+      della norma <strong>UNI CEI EN 301 549</strong> e ai criteri WCAG 2.1 livello AA,
+      in ragione dei casi di non conformità elencati di seguito.
     </p>
   </div>
 
@@ -380,20 +381,24 @@ code {
 
   <h2>Contenuti non accessibili</h2>
 
+  <h3>Non conformità con i requisiti della norma UNI CEI EN 301 549</h3>
+  <ul>
+    <li>Le <strong>mappe interattive</strong> realizzate con Leaflet espongono ruolo <code>region</code> ed etichetta accessibile, ma l'interazione cartografica completa (zoom, pan, click su marker) può presentare limitazioni con tecnologie assistive (criterio WCAG 2.1 SC 2.1.1 — Tastiera, parzialmente soddisfatto limitatamente al componente cartografico).</li>
+    <li>I <strong>grafici</strong> realizzati con Chart.js sono renderizzati su <code>&lt;canvas&gt;</code>, formato bitmap intrinsecamente non accessibile alle tecnologie assistive (criterio WCAG 2.1 SC 1.1.1 — Contenuto non testuale, parzialmente soddisfatto limitatamente alle visualizzazioni grafiche). Come misura di mitigazione è stata fornita un'etichetta testuale (<code>aria-label</code>) descrittiva per ciascun grafico; per accedere ai dati numerici è possibile consultare il <a href="https://cruscotto-italia-mcp.agid.workers.dev/mcp" target="_blank" rel="noopener">server MCP</a> che espone i dati in formato JSON-RPC.</li>
+  </ul>
+
   <h3>Onere sproporzionato</h3>
   <p>Nessun contenuto è stato escluso dalla conformità con motivazione di onere sproporzionato.</p>
 
   <h3>Contenuti non rientranti nell'ambito della normativa applicabile</h3>
   <ul>
     <li>I <strong>dati di origine</strong> federati provengono da soggetti terzi (ISTAT, ANAC, MEF, MIUR, ISPRA, ACI, ecc.) e mantengono la struttura di pubblicazione originaria di ciascun ente. Eventuali criticità di accessibilità nei dataset di origine non rientrano nella responsabilità del soggetto erogatore di Cruscotto Italia.</li>
-    <li>Le <strong>mappe interattive</strong> realizzate con Leaflet espongono ruolo <code>region</code> ed etichetta accessibile, ma l'interazione cartografica completa (zoom, pan, click su marker) potrebbe presentare limitazioni con tecnologie assistive.</li>
-    <li>I <strong>grafici</strong> realizzati con Chart.js sono renderizzati su <code>&lt;canvas&gt;</code>, formato bitmap intrinsecamente non accessibile alle tecnologie assistive. È stata fornita un'etichetta testuale (<code>aria-label</code>) descrittiva per ciascun grafico; per accedere ai dati numerici è possibile consultare il <a href="https://cruscotto-italia-mcp.agid.workers.dev/mcp" target="_blank" rel="noopener">server MCP</a> che espone i dati in formato JSON-RPC.</li>
   </ul>
 
   <h3>Limitazioni degli strumenti di test automatico</h3>
   <p>Lo strumento di verifica <strong>axe-core 4.11</strong> (motore di Pa11y) presenta alcune limitazioni note nel calcolo automatico del rapporto di contrasto colore per elementi con posizionamento <code>position: fixed</code>. In particolare, sul banner informativo della privacy (componente <code>#privacy-banner</code>) lo strumento segnala automaticamente l'elemento come <em>"needsFurtherReview"</em> (richiede verifica manuale) anziche' come violazione certa.</p>
 
-  <p>Il banner privacy è stato verificato <strong>manualmente conforme</strong> al criterio WCAG 2.1 SC 1.4.3 (Contrasto Minimo, livello AA):</p>
+  <p>Il banner privacy è stato sottoposto a <strong>verifica manuale</strong> ed è risultato conforme al criterio WCAG 2.1 SC 1.4.3 (Contrasto Minimo, livello AA):</p>
   <ul>
     <li>Colore del testo: <code>#FFFFFF</code> (bianco)</li>
     <li>Colore di sfondo: <code>#17324D</code> (navy istituzionale)</li>
@@ -408,7 +413,7 @@ code {
     <li>Rapporto di contrasto calcolato: <strong>14.85:1</strong> — supera la soglia AAA (7:1) e ampiamente la soglia AA (4.5:1)</li>
   </ul>
 
-  <p>Si segnala inoltre che il framework axe-core, in modalità automatica, evidenzia anche 30+ avvertimenti (<em>warning</em>, non <em>error</em>) del tipo "background color can not be determined" su elementi con posizionamento assoluto/fisso. Questi avvertimenti sono <strong>limitazioni del rilevamento automatico</strong>, non violazioni di conformità: il contrasto degli elementi indicati è stato verificato manualmente conforme. Riferimento tecnico: <a href="https://github.com/dequelabs/axe-core/issues" target="_blank" rel="noopener noreferrer">issue tracker axe-core su dequelabs/axe-core</a>.</p>
+  <p>Si segnala inoltre che il framework axe-core, in modalità automatica, evidenzia anche 30+ avvertimenti (<em>warning</em>, non <em>error</em>) del tipo "background color can not be determined" su elementi con posizionamento assoluto/fisso. Questi avvertimenti sono <strong>limitazioni del rilevamento automatico</strong>, non violazioni di conformità: il contrasto degli elementi indicati è stato verificato manualmente ed è risultato conforme. Riferimento tecnico: <a href="https://github.com/dequelabs/axe-core/issues" target="_blank" rel="noopener noreferrer">issue tracker axe-core su dequelabs/axe-core</a>.</p>
 
     <h2>Redazione della dichiarazione</h2>
 
@@ -424,7 +429,7 @@ code {
       </tr>
       <tr>
         <th>Ultima revisione della dichiarazione</th>
-        <td>2026-05-11</td>
+        <td>2026-06-10</td>
       </tr>
       <tr>
         <th>Metodologia di redazione</th>
