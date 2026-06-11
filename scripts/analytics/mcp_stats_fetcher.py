@@ -292,7 +292,8 @@ def fetch_ae_counters(account_id: str, token: str, dataset: str,
       term : blob1='search_comune'   -> analytics-term:DAY:slug
     SUM(_sample_interval * double1) compensa l'eventuale sampling AE.
     """
-    win = f"WHERE timestamp > NOW() - INTERVAL '{int(days)}' DAY"
+    win = (f"WHERE timestamp > NOW() - INTERVAL '{int(days)}' DAY"
+           " AND blob1 <> 'test_tool'")  # esclude datapoint di test manuali
 
     main_kv = {}
     for r in ae_sql(account_id, token, f"""
