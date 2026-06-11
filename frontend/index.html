@@ -1135,7 +1135,27 @@ function closeSuggestions() {
   activeIndex = -1;
 }
 
+function trackSelection(istatCode) {
+  // Analytics: il termine viene loggato SOLO a selezione avvenuta (il worker
+  // ignora i type-ahead del browser senza questo header). Fire-and-forget,
+  // keepalive=true per sopravvivere alla navigazione verso comune.html.
+  try {
+    const el = suggBox.querySelector(`.suggestion[data-istat="${istatCode}"] .suggestion-name`);
+    const nome = el ? el.textContent.trim().slice(0, 50) : '';
+    if (nome.length < 3) return; // vincolo pattern query (3-50 char)
+    fetch(MCP_ENDPOINT, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', 'X-Search-Selected': '1'},
+      keepalive: true,
+      body: JSON.stringify({
+        jsonrpc: '2.0', id: Date.now(), method: 'tools/call',
+        params: { name: 'search_comune', arguments: { query: nome, limit: 1 } }
+      })
+    }).catch(() => {});
+  } catch (_) { /* mai bloccare la navigazione */ }
+}
 function navigateToComune(istatCode) {
+  trackSelection(istatCode);
   window.location.href = `/comune.html?istat=${istatCode}`;
 }
 

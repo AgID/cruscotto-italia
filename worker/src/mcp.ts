@@ -194,7 +194,11 @@ async function trackToolCall(
     const istat = typeof istatRaw === "string" && /^\d{6}$/.test(istatRaw) ? istatRaw : "_";
 
     let term = "";
-    if (toolName === "search_comune") {
+    // Termine loggato solo a selezione avvenuta per il browser (header dal
+    // frontend al click sulla suggestion): evita i prefissi del type-ahead.
+    // I client MCP (claude/chatgpt/curl/...) non "cliccano": loggano alla chiamata.
+    const selected = req.headers.get("x-search-selected") === "1";
+    if (toolName === "search_comune" && (client !== "browser" || selected)) {
       const termRaw = (args.nome ?? args.q ?? args.query ?? "") as string;
       if (typeof termRaw === "string" && termRaw.length > 0) {
         const slug = termRaw.toLowerCase()
