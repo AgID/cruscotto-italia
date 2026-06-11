@@ -163,14 +163,14 @@ export async function handleMcp(
 }
 
 /**
- * Analytics tracking via KV counter — privacy AgID-compliant.
+ * Analytics tracking via Cloudflare Analytics Engine — privacy AgID-compliant.
  *
- * Schema chiavi:
- *   analytics:YYYY-MM-DD:<tool>:<istat>:<client>           — counter per tool call
- *   analytics-err:YYYY-MM-DD:<tool>:<client>               — counter errori (solo se status=error)
- *   analytics-term:YYYY-MM-DD:<term-slug>                  — termine cercato (solo search_comune)
- *
- * Nessun IP, nessun UA grezzo. TTL 35 giorni.
+ * Datapoint: blobs = [toolName, istat, client, status, term]
+ *   - term valorizzato solo per search_comune (slug normalizzato, max 40 char)
+ * Nessun IP, nessun UA grezzo: dati anonimi non personali (la retention 7gg
+ * della privacy policy si applica ai soli dati di navigazione con identificativi;
+ * AE conserva ~90gg, gestito da Cloudflare, append-only).
+ * Migrato da KV l'11/06/2026: le PUT KV saturavano il free tier (1000/giorno).
  */
 async function trackToolCall(
   req: Request,
@@ -190,55 +190,27 @@ async function trackToolCall(
     else if (ua.includes("curl") || ua.includes("wget")) client = "curl";
     else if (ua.includes("mozilla")) client = "browser";
 
-    const day = new Date().toISOString().slice(0, 10);
-    const ttl = 60 * 60 * 24 * 35; // 35 giorni
+    const istatRaw = (args.istat ?? args.codice_istat ?? args.istat_code ?? "") as string;
+    const istat = typeof istatRaw === "string" && /^\d{6}$/.test(istatRaw) ? istatRaw : "_";
 
-    // 1) Counter principale (solo successi, mantiene retrocompatibilità con fetcher)
-    if (status === "ok") {
-      const istatRaw = (args.istat ?? args.codice_istat ?? args.istat_code ?? "") as string;
-      const istat = typeof istatRaw === "string" && /^\d{6}$/.test(istatRaw) ? istatRaw : "_";
-      const key = `analytics:${day}:${toolName}:${istat}:${client}`;
-      const current = await env.CACHE.get(key);
-      const next = (current ? parseInt(current, 10) : 0) + 1;
-      await env.CACHE.put(key, String(next), { expirationTtl: ttl });
-    }
-
-    // 2) Counter errori (solo errori applicativi)
-    if (status === "error") {
-      const errKey = `analytics-err:${day}:${toolName}:${client}`;
-      const current = await env.CACHE.get(errKey);
-      const next = (current ? parseInt(current, 10) : 0) + 1;
-      await env.CACHE.put(errKey, String(next), { expirationTtl: ttl });
-    }
-
-    // 2b) Counter validazione fallita (CERT-AgID raccomandazione 4: monitoraggio).
-    // Separato da errori applicativi per consentire alert su anomalie input
-    // (possibili tentativi SSRF, path traversal, injection).
-    if (status === "validation_error") {
-      const errKey = `analytics-validation-err:${day}:${toolName}:${client}`;
-      const current = await env.CACHE.get(errKey);
-      const next = (current ? parseInt(current, 10) : 0) + 1;
-      await env.CACHE.put(errKey, String(next), { expirationTtl: ttl });
-    }
-
-    // 3) Termini di ricerca (solo per search_comune, qualsiasi status)
+    let term = "";
     if (toolName === "search_comune") {
       const termRaw = (args.nome ?? args.q ?? args.query ?? "") as string;
       if (typeof termRaw === "string" && termRaw.length > 0) {
-        // Slug: lowercase, alpha-only, max 40 char (per non gonfiare cardinalità KV)
         const slug = termRaw.toLowerCase()
-          .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // strip accenti
+          .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
           .replace(/[^a-z0-9]+/g, "-")
           .replace(/^-+|-+$/g, "")
           .slice(0, 40);
-        if (slug.length >= 2) {
-          const termKey = `analytics-term:${day}:${slug}`;
-          const current = await env.CACHE.get(termKey);
-          const next = (current ? parseInt(current, 10) : 0) + 1;
-          await env.CACHE.put(termKey, String(next), { expirationTtl: ttl });
-        }
+        if (slug.length >= 2) term = slug;
       }
     }
+
+    env.MCP_ANALYTICS.writeDataPoint({
+      blobs: [toolName, istat, client, status, term],
+      doubles: [1],
+      indexes: [toolName],
+    });
   } catch {
     // Non-bloccante: errori silenziosi
   }

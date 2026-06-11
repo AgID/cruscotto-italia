@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Cruscotto Italia — Fetcher analytics MCP da Cloudflare KV.
+Cruscotto Italia — Fetcher analytics MCP da Cloudflare Analytics Engine.
 
 Pesca i contatori scritti dal Worker MCP nel KV namespace CACHE
 (chiavi `analytics:YYYY-MM-DD:<tool>:<istat>:<client>`) e produce
@@ -12,8 +12,8 @@ Conformità privacy AgID:
 
 Variabili d'ambiente richieste:
   CF_ACCOUNT_ID    Account ID Cloudflare (visibile nel dashboard)
-  CF_KV_NAMESPACE  KV namespace ID (per CACHE: 9251e463afc3406b83f81e555a6e12b7)
-  CF_API_TOKEN     Token con permesso "Workers KV Storage:Read"
+  CF_AE_DATASET    Dataset Analytics Engine (default: cruscotto_mcp_analytics)
+  CF_API_TOKEN     Token con permesso "Account Analytics:Read"
 
 Uso:
   python3 mcp_stats_fetcher.py --out /var/www/cruscotto-stats \\
@@ -272,6 +272,56 @@ def fetch_prefix(account_id: str, namespace_id: str, token: str,
     return get_bulk_values(account_id, namespace_id, token, keys)
 
 
+def ae_sql(account_id: str, token: str, sql: str) -> list[dict]:
+    """POST SQL sull'endpoint Analytics Engine, ritorna le righe (data)."""
+    url = f"{CF_API_BASE}/accounts/{account_id}/analytics_engine/sql"
+    req = Request(url, data=sql.encode("utf-8"), method="POST",
+                  headers={"Authorization": f"Bearer {token}"})
+    with urlopen(req, timeout=60) as resp:
+        payload = json.loads(resp.read().decode("utf-8"))
+    return payload.get("data", [])
+
+
+def fetch_ae_counters(account_id: str, token: str, dataset: str,
+                      days: int) -> tuple[dict, dict, dict]:
+    """Ricostruisce da AE i 3 dizionari {chiave_KV: conteggio} del vecchio KV.
+
+    Mapping (blobs del writeDataPoint: [tool, istat, client, status, term]):
+      main : blob4='ok'              -> analytics:DAY:tool:istat:client
+      err  : blob4='error'           -> analytics-err:DAY:tool:client
+      term : blob1='search_comune'   -> analytics-term:DAY:slug
+    SUM(_sample_interval * double1) compensa l'eventuale sampling AE.
+    """
+    win = f"WHERE timestamp > NOW() - INTERVAL '{int(days)}' DAY"
+
+    main_kv = {}
+    for r in ae_sql(account_id, token, f"""
+        SELECT toDate(timestamp) AS day, blob1 AS tool, blob2 AS istat,
+               blob3 AS client, SUM(_sample_interval * double1) AS n
+        FROM {dataset} {win} AND blob4 = 'ok'
+        GROUP BY day, tool, istat, client FORMAT JSON"""):
+        main_kv[f"analytics:{r['day']}:{r['tool']}:{r['istat']}:{r['client']}"] = str(int(float(r["n"])))
+
+    err_kv = {}
+    for r in ae_sql(account_id, token, f"""
+        SELECT toDate(timestamp) AS day, blob1 AS tool, blob3 AS client,
+               SUM(_sample_interval * double1) AS n
+        FROM {dataset} {win} AND blob4 = 'error'
+        GROUP BY day, tool, client FORMAT JSON"""):
+        err_kv[f"analytics-err:{r['day']}:{r['tool']}:{r['client']}"] = str(int(float(r["n"])))
+
+    term_kv = {}
+    for r in ae_sql(account_id, token, f"""
+        SELECT toDate(timestamp) AS day, blob5 AS term,
+               SUM(_sample_interval * double1) AS n
+        FROM {dataset} {win} AND blob1 = 'search_comune' AND blob5 <> ''
+        GROUP BY day, term FORMAT JSON"""):
+        term_kv[f"analytics-term:{r['day']}:{r['term']}"] = str(int(float(r["n"])))
+
+    return main_kv, err_kv, term_kv
+
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--out", required=True,
@@ -283,12 +333,11 @@ def main() -> int:
     args = ap.parse_args()
 
     account_id = os.environ.get("CF_ACCOUNT_ID")
-    namespace_id = os.environ.get("CF_KV_NAMESPACE")
     token = os.environ.get("CF_API_TOKEN")
+    dataset = os.environ.get("CF_AE_DATASET", "cruscotto_mcp_analytics")
 
     missing = [k for k, v in (
         ("CF_ACCOUNT_ID", account_id),
-        ("CF_KV_NAMESPACE", namespace_id),
         ("CF_API_TOKEN", token),
     ) if not v]
     if missing:
@@ -306,17 +355,9 @@ def main() -> int:
             istat_names = json.loads(p.read_text(encoding="utf-8"))
 
     try:
-        print(f"→ Fetch prefix 'analytics:' (counter principali)...")
-        main_kv = fetch_prefix(account_id, namespace_id, token, "analytics:")
-        print(f"  ✓ {len(main_kv):,} keys")
-
-        print(f"→ Fetch prefix 'analytics-err:' (errori)...")
-        err_kv = fetch_prefix(account_id, namespace_id, token, "analytics-err:")
-        print(f"  ✓ {len(err_kv):,} keys")
-
-        print(f"→ Fetch prefix 'analytics-term:' (termini ricerca)...")
-        term_kv = fetch_prefix(account_id, namespace_id, token, "analytics-term:")
-        print(f"  ✓ {len(term_kv):,} keys")
+        print(f"→ Query Analytics Engine '{dataset}' (window {args.days}gg)...")
+        main_kv, err_kv, term_kv = fetch_ae_counters(account_id, token, dataset, args.days)
+        print(f"  ✓ main: {len(main_kv):,} — err: {len(err_kv):,} — term: {len(term_kv):,} chiavi")
     except (HTTPError, URLError, RuntimeError) as e:
         print(f"✗ Errore fetch: {e}", file=sys.stderr)
         return 1

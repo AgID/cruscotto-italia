@@ -18,6 +18,11 @@ preview_urls = false
 # (Public Development URL R2.dev).
 
 # KV CACHE (analytics + query cache)
+# Analytics Engine: telemetria MCP anonima (migrazione da KV, 11/06/2026)
+[[analytics_engine_datasets]]
+binding = "MCP_ANALYTICS"
+dataset = "cruscotto_mcp_analytics"
+
 [[kv_namespaces]]
 binding = "CACHE"
 id = "25da2df609974316a22cdcb71f92228e"

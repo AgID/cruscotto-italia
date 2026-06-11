@@ -18,6 +18,7 @@ import { rateLimit, tryConsume, http429 } from "./lib/ratelimit.js";
 export interface Env {
   DATA_BASE_URL: string;
   CACHE: KVNamespace;
+  MCP_ANALYTICS: AnalyticsEngineDataset;
   MCP_RATE_LIMITER: RateLimit;
   LOG_LEVEL: string;
   CACHE_TTL_SECONDS: string;
