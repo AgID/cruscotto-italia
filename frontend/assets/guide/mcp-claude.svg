@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="880" height="1190" viewBox="0 0 880 1190" role="img" aria-label="Come collegare il server MCP di Cruscotto Italia a Claude in sei passaggi">
+  <defs>
+    <style>
+      .sans { font-family: 'Titillium Web', -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; }
+      .mono { font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, monospace; }
+      .eyebrow { font-size: 13px; font-weight: 700; letter-spacing: 2.5px; fill: #455A72; }
+      .h1 { font-size: 34px; font-weight: 700; fill: #17324d; }
+      .step-num { font-size: 17px; font-weight: 700; fill: #FFFFFF; }
+      .step-title { font-size: 19px; font-weight: 700; fill: #17324d; }
+      .step-desc { font-size: 15px; font-weight: 400; fill: #455A72; }
+      .url { font-size: 14.5px; font-weight: 500; fill: #004C99; }
+      .chip-txt { font-size: 15px; font-weight: 700; fill: #FFFFFF; letter-spacing: 0.3px; }
+      .foot-title { font-size: 18px; font-weight: 700; fill: #17324d; }
+      .prompt { font-size: 14px; font-weight: 600; fill: #004C99; }
+      .note { font-size: 13.5px; fill: #455A72; }
+      .site { font-size: 13px; font-weight: 600; fill: #455A72; letter-spacing: 0.5px; }
+    </style>
+  </defs>
+  <rect width="880" height="1190" fill="#FFFFFF"/>
+  <text x="48" y="62" class="sans eyebrow">CRUSCOTTO ITALIA · SERVER MCP</text>
+  <text x="48" y="104" class="sans h1">Collega Cruscotto Italia a Claude</text>
+  <rect x="48"  y="124" width="30" height="4" rx="2" fill="#008055"/>
+  <rect x="82"  y="124" width="30" height="4" rx="2" fill="#E3E7EB"/>
+  <rect x="116" y="124" width="30" height="4" rx="2" fill="#CC334D"/>
+  <rect x="722" y="44" width="110" height="38" rx="19" fill="#D97757"/>
+  <circle cx="746" cy="63" r="9" fill="none" stroke="#FFFFFF" stroke-width="2.4"/>
+  <text x="764" y="69" class="sans chip-txt">Claude</text>
+  <line x1="76" y1="216" x2="76" y2="814" stroke="#E3E7EB" stroke-width="2"/>
+  <rect x="112" y="170" width="720" height="92" rx="10" fill="#FAFBFC" stroke="#E3E7EB"/>
+  <circle cx="76" cy="216" r="19" fill="#0066CC"/>
+  <text x="76" y="222" text-anchor="middle" class="sans step-num">1</text>
+  <text x="140" y="206" class="sans step-title">Apri le Impostazioni</text>
+  <text x="140" y="234" class="sans step-desc">Clicca sulle tue iniziali in basso a sinistra e scegli la voce «Impostazioni».</text>
+  <rect x="112" y="278" width="720" height="92" rx="10" fill="#FAFBFC" stroke="#E3E7EB"/>
+  <circle cx="76" cy="324" r="19" fill="#0066CC"/>
+  <text x="76" y="330" text-anchor="middle" class="sans step-num">2</text>
+  <text x="140" y="314" class="sans step-title">Vai alla sezione «Connettori»</text>
+  <text x="140" y="342" class="sans step-desc">Nel menu delle impostazioni seleziona la voce «Connettori».</text>
+  <rect x="112" y="386" width="720" height="92" rx="10" fill="#FAFBFC" stroke="#E3E7EB"/>
+  <circle cx="76" cy="432" r="19" fill="#0066CC"/>
+  <text x="76" y="438" text-anchor="middle" class="sans step-num">3</text>
+  <text x="140" y="422" class="sans step-title">Aggiungi un connettore personalizzato</text>
+  <text x="140" y="450" class="sans step-desc">Clicca sul pulsante «Aggiungi connettore personalizzato».</text>
+  <rect x="112" y="494" width="720" height="150" rx="10" fill="#FAFBFC" stroke="#E3E7EB"/>
+  <circle cx="76" cy="540" r="19" fill="#0066CC"/>
+  <text x="76" y="546" text-anchor="middle" class="sans step-num">4</text>
+  <text x="140" y="530" class="sans step-title">Compila la scheda</text>
+  <text x="140" y="558" class="sans step-desc">Nome: «Cruscotto Italia». Nel campo «URL del server MCP remoto» incolla:</text>
+  <rect x="140" y="576" width="664" height="44" rx="8" fill="#E6F1FB" stroke="#0066CC" stroke-opacity="0.35"/>
+  <text x="162" y="603" class="mono url">https://cruscotto-italia-mcp.agid.workers.dev/mcp</text>
+  <rect x="112" y="660" width="720" height="92" rx="10" fill="#FAFBFC" stroke="#E3E7EB"/>
+  <circle cx="76" cy="706" r="19" fill="#0066CC"/>
+  <text x="76" y="712" text-anchor="middle" class="sans step-num">5</text>
+  <text x="140" y="696" class="sans step-title">Conferma con «Aggiungi»</text>
+  <text x="140" y="724" class="sans step-desc">Non serve alcuna autenticazione: lascia vuote le impostazioni avanzate e conferma.</text>
+  <rect x="112" y="768" width="720" height="92" rx="10" fill="#FAFBFC" stroke="#E3E7EB"/>
+  <circle cx="76" cy="814" r="19" fill="#008055"/>
+  <text x="76" y="820" text-anchor="middle" class="sans step-num">6</text>
+  <text x="140" y="804" class="sans step-title">Attivalo in chat</text>
+  <text x="140" y="832" class="sans step-desc">Nella chat apri il menu  +  →  «Connettori» e attiva «Cruscotto Italia».</text>
+  <rect x="48" y="896" width="784" height="200" rx="12" fill="#E6F1FB"/>
+  <text x="80" y="938" class="sans foot-title">Come usarlo in chat</text>
+  <rect x="80" y="956" width="720" height="48" rx="24" fill="#FFFFFF" stroke="#0066CC" stroke-opacity="0.4"/>
+  <text x="106" y="985" class="sans prompt">«Usa connettore MCP Cruscotto Italia. Trovami le zone di fragilità sociale a Lecce»</text>
+  <text x="80" y="1034" class="sans note">Nomina sempre il connettore nel prompt: senza, Claude non sempre lo usa in automatico.</text>
+  <text x="80" y="1060" class="sans note">Disponibile anche con il piano gratuito di Claude (1 connettore personalizzato per account).</text>
+  <line x1="48" y1="1128" x2="832" y2="1128" stroke="#E3E7EB"/>
+  <text x="48" y="1158" class="sans site">cruscotto-italia.dati.gov.it</text>
+  <text x="832" y="1158" text-anchor="end" class="sans site">Progetto open data · AgID</text>
+</svg>

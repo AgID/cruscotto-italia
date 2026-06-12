@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="880" height="800" viewBox="0 0 880 800" role="img" aria-label="Come caricare la skill Cruscotto Italia in Claude in tre passaggi">
+  <defs>
+    <style>
+      .sans { font-family: 'Titillium Web', -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; }
+      .mono { font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, monospace; }
+      .eyebrow { font-size: 13px; font-weight: 700; letter-spacing: 2.5px; fill: #455A72; }
+      .h1 { font-size: 34px; font-weight: 700; fill: #17324d; }
+      .step-num { font-size: 17px; font-weight: 700; fill: #FFFFFF; }
+      .step-title { font-size: 19px; font-weight: 700; fill: #17324d; }
+      .step-desc { font-size: 15px; font-weight: 400; fill: #455A72; }
+      .url { font-size: 14.5px; font-weight: 500; fill: #004C99; }
+      .chip-txt { font-size: 15px; font-weight: 700; fill: #FFFFFF; letter-spacing: 0.3px; }
+      .foot-title { font-size: 18px; font-weight: 700; fill: #17324d; }
+      .prompt { font-size: 14px; font-weight: 600; fill: #004C99; }
+      .note { font-size: 13.5px; fill: #455A72; }
+      .site { font-size: 13px; font-weight: 600; fill: #455A72; letter-spacing: 0.5px; }
+    </style>
+  </defs>
+  <rect width="880" height="800" fill="#FFFFFF"/>
+  <text x="48" y="62" class="sans eyebrow">CRUSCOTTO ITALIA · SKILL</text>
+  <text x="48" y="104" class="sans h1">Carica la Skill in Claude</text>
+  <rect x="48"  y="124" width="30" height="4" rx="2" fill="#008055"/>
+  <rect x="82"  y="124" width="30" height="4" rx="2" fill="#E3E7EB"/>
+  <rect x="116" y="124" width="30" height="4" rx="2" fill="#CC334D"/>
+  <rect x="722" y="44" width="110" height="38" rx="19" fill="#D97757"/>
+  <circle cx="746" cy="63" r="9" fill="none" stroke="#FFFFFF" stroke-width="2.4"/>
+  <text x="764" y="69" class="sans chip-txt">Claude</text>
+  <line x1="76" y1="216" x2="76" y2="452" stroke="#E3E7EB" stroke-width="2"/>
+  <rect x="112" y="170" width="720" height="92" rx="10" fill="#FAFBFC" stroke="#E3E7EB"/>
+  <circle cx="76" cy="216" r="19" fill="#0066CC"/>
+  <text x="76" y="222" text-anchor="middle" class="sans step-num">1</text>
+  <text x="140" y="206" class="sans step-title">Scarica il file della skill</text>
+  <text x="140" y="234" class="sans step-desc">Scarica il file ZIP della skill dalla pagina «About» di Cruscotto Italia.</text>
+  <rect x="112" y="278" width="720" height="112" rx="10" fill="#FAFBFC" stroke="#E3E7EB"/>
+  <circle cx="76" cy="334" r="19" fill="#0066CC"/>
+  <text x="76" y="340" text-anchor="middle" class="sans step-num">2</text>
+  <text x="140" y="314" class="sans step-title">Caricala nelle Impostazioni</text>
+  <text x="140" y="342" class="sans step-desc">Vai in Impostazioni → «Skill», clicca il pulsante «+» e carica il file ZIP.</text>
+  <text x="140" y="366" class="sans step-desc">Richiede «Esecuzione codice e creazione file» attiva tra le Funzionalità.</text>
+  <rect x="112" y="406" width="720" height="92" rx="10" fill="#FAFBFC" stroke="#E3E7EB"/>
+  <circle cx="76" cy="452" r="19" fill="#008055"/>
+  <text x="76" y="458" text-anchor="middle" class="sans step-num">3</text>
+  <text x="140" y="442" class="sans step-title">Attiva la skill nell'elenco</text>
+  <text x="140" y="470" class="sans step-desc">Claude la userà da solo quando chiederai dati sui comuni italiani.</text>
+  <rect x="48" y="530" width="784" height="170" rx="12" fill="#E6F1FB"/>
+  <text x="80" y="572" class="sans foot-title">A cosa serve la skill</text>
+  <text x="80" y="604" class="sans note">Documenta l'inventario dei tool MCP, lo schema delle sezioni dati e i pattern operativi suggeriti.</text>
+  <text x="80" y="630" class="sans note">Risultato: risposte più precise e meno chiamate di prova. Richiede il connettore MCP già attivo.</text>
+  <text x="80" y="668" class="sans note">La skill viene aggiornata a ogni nuova fonte dati: ricarica il file ZIP per avere l'ultima versione.</text>
+  <line x1="48" y1="736" x2="832" y2="736" stroke="#E3E7EB"/>
+  <text x="48" y="766" class="sans site">cruscotto-italia.dati.gov.it</text>
+  <text x="832" y="766" text-anchor="end" class="sans site">Progetto open data · AgID</text>
+</svg>
