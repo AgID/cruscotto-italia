@@ -9724,6 +9724,9 @@ function bindTabSwitching() {
       tab.classList.add('active');
       tab.setAttribute('aria-selected', 'true');
       document.getElementById('pane-' + tab.dataset.tab)?.classList.add('active');
+      // aggiorna l'hash URL per rendere la tab condivisibile (senza scroll né voce in cronologia)
+      // aggiorna solo l'hash; il browser mantiene la query ?istat nella posizione corretta
+      try { history.replaceState(null, '', window.location.pathname + window.location.search + '#' + tab.dataset.tab); } catch(e) {}
 
       // Lazy-load tab Demografia
       if (tab.dataset.tab === 'demografia') {
@@ -9947,6 +9950,18 @@ function bindTabSwitching() {
       }
     });
   });
+  // ---- Apertura diretta su una tab via hash URL (#territorio, #beni_culturali, ...) ----
+  // Rende condivisibile il link a una tab specifica. Simula il click (riusa il lazy-load).
+  (function activateTabFromHash() {
+    const h = (window.location.hash || '').replace(/^#/, '').trim();
+    if (!h) return;
+    const btn = document.querySelector('.tab[data-tab="' + h + '"]');
+    if (btn) {
+      btn.click();
+      const tabsBar = document.querySelector('.tabs-bar');
+      if (tabsBar) tabsBar.scrollIntoView({ behavior: 'auto', block: 'start' });
+    }
+  })();
 }
 // ===========================================================================
 // Tab Aria - ISPRA SNPA Qualità dell'aria (PM10, PM2.5, NO2)
