@@ -143,7 +143,8 @@ export async function handleMcp(
           errMsg.includes("must be an integer") ||
           errMsg.includes("must be in range") ||
           errMsg.includes("must be a 6-digit") ||
-          errMsg.includes("contains forbidden sequence");
+          errMsg.includes("contains forbidden sequence") ||
+          errMsg.includes("is required");
         const trackStatus = isValidationError ? "validation_error" : "error";
         _ctx.waitUntil(trackToolCall(req, env, params.name, args, trackStatus));
         if (isValidationError) {
