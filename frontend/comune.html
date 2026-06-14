@@ -10960,6 +10960,148 @@ Cruscotto Italia.
       ]);
       zip.file('LICENSE.txt', licenseText);
       zip.file('METADATI.csv', '\ufeff' + metadatiText.replaceAll('{{SITE_URL}}', window.location.origin));
+      // 5. CSV per-sezione (strategia B + split nodi profondi) + TXT per dati campionati
+      try {
+        const ORIGIN = window.location.origin;
+        // nodi campionati/non-nel-json -> NON CSV, ma TXT con link al completo esposto
+        // I nodi con 'tot' sono campionati SOLO se nel JSON la lista e' piu' corta del totale (valutato per-comune).
+        // 'tot' = percorso del KPI col totale reale; se assente -> sempre campionato (dettaglio non nel JSON).
+        const CAMPIONATI = {
+          'anncsu.punti':        { file: 'anncsu',         tot: ['kpi','n_civici'],  url: `/data/anncsu_full/${istat}.json`,            desc: 'tutti i civici e le strade (ANNCSU - Agenzia delle Entrate + ISTAT)' },
+          'immobili_pa.punti':   { file: 'immobili_pa',    tot: ['kpi','n_totale'],  url: `/data/immobili_pa/${istat}.json`,            desc: 'tutti gli immobili pubblici (MEF - Beni Immobili Pubblici)' },
+          'beni_culturali.luoghi':{ file: 'beni_culturali', tot: ['kpi','n_totale'], url: `/data/beni_culturali_full/${istat}.json`,    desc: 'tutti i beni culturali catalogati (MiC)' },
+          'asia.ateco_dettaglio':{ file: 'asia_ateco',     url: `/data/asia/${istat}.json`,                   desc: 'il dettaglio completo per settore ATECO e classe dimensionale (ISTAT ASIA)' },
+        };
+        // ritorna true se il nodo va trattato come campionato per QUESTO comune
+        const isCampionato = (nodoKey) => {
+          const info = CAMPIONATI[nodoKey]; if (!info) return false;
+          if (!info.tot) return true;  // dettaglio mai nel JSON -> sempre .txt
+          const [sz, ky] = nodoKey.split('.');
+          const arr = dashboard[sz] && dashboard[sz][ky];
+          let tot = dashboard[sz]; for (const t of info.tot) tot = tot && tot[t];
+          if (!Array.isArray(arr) || typeof tot !== 'number') return false;
+          return arr.length < tot;  // troncato solo se piu' corto del totale
+        };
+        // dataset di dettaglio non presenti nel JSON -> TXT dedicati
+        const EXTRA_TXT = {
+          'catasto':    { url: `/data/catasto_full/${istat}_ple.geojson.gz`, desc: 'le particelle catastali complete in formato GeoJSON compresso (Agenzia delle Entrate)' },
+          'censimento_sezioni': { url: `/data/censimento_full/${istat}.geojson`, desc: 'le geometrie e le 119 variabili di tutte le sezioni di censimento (ISTAT 2021)' },
+        };
+
+        const csvEscape = (v) => {
+          if (v === null || v === undefined) return '';
+          let str = (typeof v === 'object') ? JSON.stringify(v) : String(v);
+          if (/[",\n\r]/.test(str)) str = '"' + str.replace(/"/g, '""') + '"';
+          return str;
+        };
+        const rowsToCsv = (rows) => {
+          const cols = [];
+          for (const r of rows) for (const c of Object.keys(r)) if (!cols.includes(c)) cols.push(c);
+          const out = [cols.map(csvEscape).join(',')];
+          for (const r of rows) out.push(cols.map(c => csvEscape(r[c])).join(','));
+          return '\ufeff' + out.join('\r\n');  // BOM UTF-8 per Excel
+        };
+        const flattenRecord = (rec, prefix) => {
+          const out = {};
+          for (const [k, val] of Object.entries(rec)) {
+            const key = (prefix || '') + k;
+            if (val && typeof val === 'object' && !Array.isArray(val)) Object.assign(out, flattenRecord(val, key + '.'));
+            else if (Array.isArray(val)) out[key] = JSON.stringify(val);
+            else out[key] = val;
+          }
+          return out;
+        };
+        const depth = (v) => (v && typeof v === 'object' && !Array.isArray(v) && Object.keys(v).length)
+          ? 1 + Math.max(0, ...Object.values(v).map(depth)) : 0;
+        const isListOfObjs = (v) => Array.isArray(v) && v.length && v.every(x => x && typeof x === 'object' && !Array.isArray(x));
+        const longRows = (node, keyNames) => {
+          const rows = [];
+          const walk = (d, keys) => {
+            if (d && typeof d === 'object' && !Array.isArray(d)) {
+              const vals = Object.values(d);
+              if (vals.length && vals.every(x => !(x && typeof x === 'object' && !Array.isArray(x)))) {
+                const row = {};
+                keys.forEach((kv, i) => row[keyNames[i] || ('liv' + (i+1))] = kv);
+                for (const [k, v] of Object.entries(d)) row[k] = (v && typeof v === 'object') ? JSON.stringify(v) : v;
+                rows.push(row);
+              } else for (const [k, v] of Object.entries(d)) walk(v, keys.concat(k));
+            } else {
+              const row = {};
+              keys.forEach((kv, i) => row[keyNames[i] || ('liv' + (i+1))] = kv);
+              row.valore = d; rows.push(row);
+            }
+          };
+          walk(node, []);
+          return rows;
+        };
+
+        const csvFiles = [];  // {name, content}
+        const emitNode = (sez, key, v) => {
+          const base = key ? `${sez}_${key}` : sez;
+          if (isCampionato(`${sez}.${key}`)) return;  // skip solo se davvero troncato per questo comune
+          if (isListOfObjs(v)) csvFiles.push({ name: `${base}.csv`, rows: v.map(x => flattenRecord(x, '')) });
+          else if (Array.isArray(v)) csvFiles.push({ name: `${base}.csv`, rows: v.map(x => ({ [key || 'valore']: x })) });
+          else if (v && typeof v === 'object') {
+            const vals = Object.values(v);
+            const isDod = vals.length && vals.every(x => x && typeof x === 'object' && !Array.isArray(x));
+            if (isDod && depth(v) >= 3) {
+              for (const [ck, cv] of Object.entries(v)) {
+                if (depth(cv) >= 2) csvFiles.push({ name: `${base}_${ck}.csv`, rows: longRows(cv, ['liv1','liv2','liv3']) });
+                else if (cv && typeof cv === 'object') csvFiles.push({ name: `${base}_${ck}.csv`, rows: Object.entries(cv).map(([k2,v2]) => (v2 && typeof v2==='object') ? {chiave:k2, ...flattenRecord(v2,'')} : {chiave:k2, valore:v2}) });
+              }
+            } else if (isDod) {
+              csvFiles.push({ name: `${base}.csv`, rows: Object.entries(v).map(([ck, cv]) => ({ chiave: ck, ...flattenRecord(cv, '') })) });
+            } else {
+              csvFiles.push({ name: `${base}.csv`, rows: Object.entries(v).map(([k, x]) => ({ chiave: k, valore: (x && typeof x === 'object') ? JSON.stringify(x) : x })) });
+            }
+          }
+        };
+
+        for (const [sez, node] of Object.entries(dashboard)) {
+          if (sez.startsWith('_')) continue;
+          if (sez === 'kpi_summary' && node && typeof node === 'object') {
+            const rows = [];
+            for (const [s, m] of Object.entries(node)) if (m && typeof m === 'object')
+              for (const [mm, val] of Object.entries(m)) rows.push({ sezione: s, metrica: mm, valore: (val && typeof val==='object') ? JSON.stringify(val) : val });
+            if (rows.length) csvFiles.push({ name: 'kpi_summary.csv', rows });
+            continue;
+          }
+          if (node && typeof node === 'object' && !Array.isArray(node)) {
+            const scal = {};
+            for (const [k, v] of Object.entries(node)) {
+              if (k.startsWith('_')) continue;
+              if (v && typeof v === 'object') emitNode(sez, k, v);
+              else scal[k] = v;
+            }
+            if (Object.keys(scal).length) csvFiles.unshift({ name: `${sez}_sintesi.csv`, rows: Object.entries(scal).map(([k,v]) => ({ chiave: k, valore: v })) });
+          } else if (isListOfObjs(node)) {
+            csvFiles.push({ name: `${sez}.csv`, rows: node.map(x => flattenRecord(x, '')) });
+          }
+        }
+
+        // scrivo i CSV in sottocartella csv/
+        for (const cf of csvFiles) {
+          if (cf.rows && cf.rows.length) zip.file(`csv/${cf.name}`, rowsToCsv(cf.rows));
+        }
+
+        // TXT per i dati campionati / di dettaglio
+        const txtLines = [];
+        const mkTxt = (titolo, desc, url) =>
+          `CRUSCOTTO ITALIA - Dati di dettaglio\n` +
+          `====================================\n\n` +
+          `${titolo}\n\n` +
+          `Questo dato non e' incluso nei CSV perche' nell'archivio dati-completi.json\n` +
+          `e' presente solo un estratto. Il dato COMPLETO contiene ${desc}.\n\n` +
+          `SCARICA IL FILE COMPLETO:\n${ORIGIN}${url}\n\n` +
+          `Il file e' liberamente scaricabile (licenza CC-BY 4.0, vedi LICENSE.txt).\n`;
+        for (const [nodo, info] of Object.entries(CAMPIONATI)) {
+          if (isCampionato(nodo)) zip.file(`dati-dettaglio/${info.file}_COME_SCARICARE.txt`, mkTxt(nodo, info.desc, info.url));
+        }
+        for (const [nome, info] of Object.entries(EXTRA_TXT)) {
+          zip.file(`dati-dettaglio/${nome}_COME_SCARICARE.txt`, mkTxt(nome, info.desc, info.url));
+        }
+      } catch (e) { console.error('Generazione CSV/TXT fallita:', e); }
+
       // Genera ZIP e scarica
       const blob = await zip.generateAsync({
         type: 'blob',
