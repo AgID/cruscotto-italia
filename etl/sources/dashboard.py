@@ -76,6 +76,7 @@ SHARDS = [
     ("turismo",    "turismo/{istat}.json"),
     ("pnrr",       "pnrr/{istat}.json"),
     ("territorio", "territorio/{istat}.json"),
+    ("classificazione_sismica", "classificazione_sismica/{istat}.json"),
     ("opere",      "bdap/dettaglio/{istat}.json"),
     ("siope",      "siope/{istat}.json"),
     ("scuole",     "scuole/{istat}.json"),
@@ -422,6 +423,18 @@ def build_dashboard_for_comune(istat: str,
         missing.append("bdap_kpi")
         out["bdap_kpi"] = None
 
+    # Classificazione sismica DPC: sotto-blocco di Territorio (merge in fase di esposizione).
+    # Non resta chiave top-level: si annida in out["territorio"] per non creare una tab a parte.
+    cs = out.pop("classificazione_sismica", None)
+    if cs:
+        terr = out.get("territorio")
+        if not isinstance(terr, dict):
+            terr = {}
+            out["territorio"] = terr
+        terr["classificazione_sismica"] = {
+            "zona_sismica": cs.get("zona_sismica"),
+            "zona_principale": cs.get("zona_principale"),
+        }
     # KPI summary leggero (~2.5KB) per tool comune_kpi MCP.
     # Computato DOPO che tutte le sezioni sono state popolate.
     out["kpi_summary"] = compute_kpi_summary(out)

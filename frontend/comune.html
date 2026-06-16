@@ -944,6 +944,26 @@ footer a{color:rgba(255,255,255,0.85);text-decoration:none}
 .terr-mappa-card{background:var(--paper-2);padding:18px;font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:18px;}
 .terr-mappa-card a{color:var(--accent);}
 .terr-empty{font-family:var(--serif);font-style:italic;color:var(--ink-mute);padding:24px 0;text-align:center;}
+.terr-sismica{padding:36px 0;border-bottom:1px solid var(--paper-2);}
+.terr-sismica-main{display:flex;align-items:center;gap:20px;flex-wrap:wrap;margin:14px 0 22px;}
+.terr-sismica-zone{display:flex;align-items:baseline;gap:10px;padding:14px 22px;background:var(--paper-2);border-left:4px solid var(--ink-mute);}
+.terr-sismica-zone.zona-1{border-left-color:var(--chart-danger);}
+.terr-sismica-zone.zona-2{border-left-color:var(--chart-warning);}
+.terr-sismica-zone.zona-3{border-left-color:var(--gold);}
+.terr-sismica-zone.zona-4{border-left-color:var(--accent-2);}
+.terr-sismica-znum{font-family:var(--serif);font-size:46px;font-weight:600;line-height:1;color:var(--ink);}
+.terr-sismica-zlab{font-family:var(--mono);font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-soft);}
+.terr-sismica-desc{font-family:var(--serif);font-style:italic;font-size:15px;line-height:1.5;color:var(--ink-soft);max-width:420px;}
+.terr-sismica-legend{display:grid;grid-template-columns:repeat(2,minmax(220px,1fr));gap:8px 28px;max-width:680px;}
+.terr-sismica-leg-item{display:flex;align-items:center;gap:9px;font-family:var(--mono);font-size:11px;color:var(--ink-mute);}
+.terr-sismica-leg-item.is-active{color:var(--ink);font-weight:600;}
+.terr-sismica-dot{width:12px;height:12px;flex:none;border-radius:2px;background:var(--ink-mute);}
+.terr-sismica-dot.zona-1{background:var(--chart-danger);}
+.terr-sismica-dot.zona-2{background:var(--chart-warning);}
+.terr-sismica-dot.zona-3{background:var(--gold);}
+.terr-sismica-dot.zona-4{background:var(--accent-2);}
+.terr-sismica-note{font-family:var(--mono);font-size:10px;line-height:1.5;color:var(--ink-mute);margin-top:14px;}
+.terr-sismica-note a{color:var(--accent);}
 /* Tab Aria - ISPRA SNPA qualità dell'aria */
 .aria-meta{display:flex;flex-wrap:wrap;gap:18px;padding:14px 18px;background:var(--paper-2);border-left:3px solid var(--accent-2);margin:0 0 28px;}
 .aria-meta-item{font-family:var(--mono);font-size:12px;color:var(--ink-soft);}
@@ -3405,9 +3425,11 @@ function renderTerritorioContent(data) {
   const rischioHtml = rischio ? renderRischioSection(rischio) : '';
   const rifiutiHtml = rifiuti ? renderRifiutiSection(rifiuti) : '';
   const mappaHtml = geo ? renderMappaSection(geo, data.denominazione) : '';
+  const sismicaHtml = renderSismicaSection(data.classificazione_sismica);
 
   container.innerHTML = `
     ${kpiHtml}
+    ${sismicaHtml}
     ${suoloHtml}
     ${rischioHtml}
     ${rifiutiHtml}
@@ -3419,6 +3441,40 @@ function renderTerritorioContent(data) {
       Licenza: CC-BY 4.0.
     </p>
   `;
+}
+
+function renderSismicaSection(cs) {
+  if (!cs || cs.zona_principale == null) return '';
+  const ZONE = {
+    1: { ag: '0,25 &lt; ag &le; 0,35 g', desc: 'Alta pericolosità: forti terremoti probabili.' },
+    2: { ag: '0,15 &lt; ag &le; 0,25 g', desc: 'Forti terremoti possibili.' },
+    3: { ag: '0,05 &lt; ag &le; 0,15 g', desc: 'Forti terremoti meno probabili rispetto a zona 1 e 2.' },
+    4: { ag: 'ag &le; 0,05 g', desc: 'Pericolosità più bassa.' }
+  };
+  const z = cs.zona_principale;
+  const meta = ZONE[z] || { ag: '', desc: '' };
+  const sub = cs.zona_sismica;
+  const subLabel = (sub && String(sub) !== String(z)) ? (' \u00b7 sottozona ' + sub) : '';
+  const legend = [1, 2, 3, 4].map(function (n) {
+    return '<div class="terr-sismica-leg-item' + (n === z ? ' is-active' : '') + '">' +
+      '<span class="terr-sismica-dot zona-' + n + '"></span>' +
+      '<span>Zona ' + n + ': ' + ZONE[n].ag + '</span></div>';
+  }).join('');
+  return '<div class="terr-sismica">' +
+    '<div class="terr-section-title">Classificazione sismica</div>' +
+    '<div class="terr-sismica-main">' +
+      '<div class="terr-sismica-zone zona-' + z + '">' +
+        '<span class="terr-sismica-znum">' + z + '</span>' +
+        '<span class="terr-sismica-zlab">Zona' + subLabel + '</span>' +
+      '</div>' +
+      '<div class="terr-sismica-desc">' + meta.desc + '</div>' +
+    '</div>' +
+    '<div class="terr-sismica-legend">' + legend + '</div>' +
+    '<div class="terr-sismica-note">' +
+      'Classificazione amministrativa per comune (zone 1-4, OPCM 3519/06). ' +
+      'Fonte: <a href="https://rischi.protezionecivile.gov.it/it/sismico/attivita/classificazione-sismica/" target="_blank" rel="noopener">Dipartimento Protezione Civile</a> \u00b7 CC-BY 4.0.' +
+    '</div>' +
+  '</div>';
 }
 
 function renderSuoloSection(suolo, geo) {

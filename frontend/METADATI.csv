@@ -67,6 +67,8 @@ territorio,suolo.stock_2024,Stock consumo suolo ultimo anno (ha e %),dict,ISPRA 
 territorio,suolo.serie_storica,Serie storica annuale consumo suolo,lista,ISPRA SNPA,serie storica,https://www.isprambiente.gov.it,CC BY 4.0
 territorio,rischio_idrogeologico.alluvioni,Aree e popolazione esposte ad alluvioni P1/P2/P3,dict,ISPRA IdroGEO,v5.0 (2020),https://idrogeo.isprambiente.it,CC BY 4.0
 territorio,rischio_idrogeologico.frane,Aree e popolazione esposte a frane P1/P2/P3/P4,dict,ISPRA IdroGEO,v5.0 (2020),https://idrogeo.isprambiente.it,CC BY 4.0
+territorio,classificazione_sismica.zona_principale,Zona sismica principale del comune (1 alta pericolosità fino a 4 bassa pericolosità),codice 1-4,Dipartimento Protezione Civile,annuale,https://rischi.protezionecivile.gov.it/it/sismico/attivita/classificazione-sismica/,CC BY 4.0
+territorio,classificazione_sismica.zona_sismica,Zona sismica con eventuale sottozona regionale (es. 3S 2A 1b),testo,Dipartimento Protezione Civile,annuale,https://rischi.protezionecivile.gov.it/it/sismico/attivita/classificazione-sismica/,CC BY 4.0
 territorio,rifiuti.ultimo,"Dato rifiuti urbani ultimo anno (RU, RD, kg/ab)",dict,ISPRA Catasto Rifiuti,annuale,https://www.catasto-rifiuti.isprambiente.it,CC BY 4.0
 territorio,rifiuti.serie_storica,Serie storica annuale rifiuti urbani,lista,ISPRA Catasto Rifiuti,serie storica,https://www.catasto-rifiuti.isprambiente.it,CC BY 4.0
 territorio,geo.ar_kmq,Area kmq dato cartografico OSM,kmq,OpenStreetMap,corrente,https://www.openstreetmap.org,ODbL

@@ -9,7 +9,7 @@ import type { ToolDefinition } from "./index.js";
 
 export const mcpInfo: ToolDefinition = {
   description:
-    "Returns server metadata, version, and data freshness for each integrated source (ANAC, BDAP-MOP, SIOPE, Italia Domani PNRR, ISTAT, ISPRA, MIUR, ACI, MEF Federalismo Fiscale, MEF Patrimonio Immobiliare PA, Agenzia delle Entrate/ISTAT ANNCSU, Ministero della Salute Open Data, GSE/MASE Piattaforma Unica Nazionale punti di ricarica, AGCOM Broadband Map, MIMIT Osservatorio Prezzi Carburanti, Ministero del Lavoro Registro Unico Nazionale Terzo Settore RUNTS, ISTAT Archivio Statistico Imprese Attive ASIA UL, ISTAT Matrice Pendolarismo 2021, ISTAT Basi Territoriali + Variabili Censuarie 2021).",
+    "Returns server metadata, version, and data freshness for each integrated source (ANAC, BDAP-MOP, SIOPE, Italia Domani PNRR, ISTAT, ISPRA, Protezione Civile (classificazione sismica), MIUR, ACI, MEF Federalismo Fiscale, MEF Patrimonio Immobiliare PA, Agenzia delle Entrate/ISTAT ANNCSU, Ministero della Salute Open Data, GSE/MASE Piattaforma Unica Nazionale punti di ricarica, AGCOM Broadband Map, MIMIT Osservatorio Prezzi Carburanti, Ministero del Lavoro Registro Unico Nazionale Terzo Settore RUNTS, ISTAT Archivio Statistico Imprese Attive ASIA UL, ISTAT Matrice Pendolarismo 2021, ISTAT Basi Territoriali + Variabili Censuarie 2021).",
   inputSchema: {
     type: "object",
     properties: {},
@@ -29,8 +29,8 @@ export const mcpInfo: ToolDefinition = {
       service: "cruscotto-italia-mcp",
       version: "0.17.1",
       protocol: "MCP 2024-11-05",
-      datasets: 25,
-      institutions: 16,
+      datasets: 26,
+      institutions: 17,
       municipalities: 7918,
       sources: {
         anac: {
@@ -67,6 +67,13 @@ export const mcpInfo: ToolDefinition = {
             "rischio idrogeologico (IdroGEO)",
             "rifiuti urbani (Catasto Rifiuti)",
             "qualità dell'aria (rete SNPA - PM10, PM2.5, NO2)",
+          ],
+        },
+        protezione_civile: {
+          canonical: "https://rischi.protezionecivile.gov.it/it/sismico/attivita/classificazione-sismica/",
+          license: "CC-BY 4.0",
+          datasets: [
+            "classificazione sismica dei comuni (zone 1-4, recepimenti regionali ex OPCM 3519/2006)",
           ],
         },
         miur: {

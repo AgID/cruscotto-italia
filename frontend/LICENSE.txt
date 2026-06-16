@@ -15,7 +15,7 @@ In caso di riutilizzo, citare come segue:
    Agenzia delle Entrate, Ministero della Salute, GSE / Piattaforma
    Unica Nazionale, AGCOM Broadband Map, MIMIT Osservatorio Prezzi
    Carburanti, Ministero del Lavoro (RUNTS), Ministero della Cultura
-   (ICCD ArCo + Cultural-ON DBUnico 2.0)."
+   (ICCD ArCo + Cultural-ON DBUnico 2.0), Dipartimento della Protezione Civile (classificazione sismica)."
 
 FONTI ORIGINARIE E LORO LICENZE
 -------------------------------
@@ -75,6 +75,9 @@ FONTI ORIGINARIE E LORO LICENZE
   DBUnico 2.0 per Luoghi della Cultura visitabili:
   musei, biblioteche, archivi con orari e
   contatti) .......................................... CC BY 4.0
+- Dipartimento della Protezione Civile (Classificazione
+  sismica dei comuni, zone 1-4 ex OPCM 3519/06,
+  recepimenti regionali consolidati) ................. CC BY 4.0
 - OpenStreetMap (cartografia) ........................ ODbL
 
 Per il dettaglio dei dataset e degli URL originari delle fonti,
