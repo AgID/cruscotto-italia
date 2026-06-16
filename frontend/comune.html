@@ -1901,6 +1901,7 @@ function renderComune(data) {
   window.__bandaLargaData = k.agcom_bbmap || null;
   window.__bandaLargaInited = false;
   window.__carburantiData = k.carburanti || null;
+  window.__carburantiExtent = k.territorio?.geo?.extent || null;
   window.__carburantiInited = false;
   window.__carburantiNazionale = null;        // fetch lazy alla prima apertura tab
   window.__carburantiRegione = a.regione || null;
@@ -6147,7 +6148,29 @@ function renderCarburantiFiltersFuel(punti) {
 // initCarburanti: mappa Leaflet + cluster grid + filtri brand+fuel + chart confronto
 async function initCarburanti(d, regione) {
   if (!d || !d.punti) return;
-  const punti = d.punti || [];
+  let punti = d.punti || [];
+  // Filtro geografico bbox: nasconde i distributori fuori dal confine comunale.
+  // Alcuni record MIMIT hanno comune/CAP errati a monte (es. Parabita CAP 38035
+  // finito in Lecce via resolve_istat): il solo segnale affidabile resta la posizione.
+  // extent OSM shape: [[lon_min, lat_min], [lon_max, lat_max]].
+  {
+    const ext = window.__carburantiExtent;
+    if (Array.isArray(ext) && ext.length === 2
+        && Array.isArray(ext[0]) && Array.isArray(ext[1])) {
+      const lonMin = ext[0][0], latMin = ext[0][1];
+      const lonMax = ext[1][0], latMax = ext[1][1];
+      if ([lonMin, latMin, lonMax, latMax].every(v => typeof v === 'number')) {
+        const before = punti.length;
+        punti = punti.filter(p =>
+          typeof p.lat === 'number' && typeof p.lon === 'number' &&
+          p.lat >= latMin && p.lat <= latMax &&
+          p.lon >= lonMin && p.lon <= lonMax);
+        if (punti.length !== before) {
+          console.info('[carburanti] bbox: nascosti ' + (before - punti.length) + ' fuori comune (' + before + '->' + punti.length + ')');
+        }
+      }
+    }
+  }
   const mapEl = document.getElementById('carburanti-map-main');
   if (!mapEl || typeof L === 'undefined') return;
 
