@@ -1823,6 +1823,12 @@ const CENSIMENTO_FULL_BASE = (location.origin + '/data/censimento_full');
 const PROFILO_YEAR = 2024;
 
 async function mcpCall(toolName, args) {
+  // local-first: comune_dashboard letto dallo shard statico (sovranita' AgID)
+  if (toolName === 'comune_dashboard') {
+    const r = await fetch(`/data/dashboard/${args.istat_code}.json`);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    return r.json();
+  }
   const res = await fetch(MCP_ENDPOINT, {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
