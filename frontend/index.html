@@ -1122,6 +1122,35 @@ async function mcpCall(toolName, args) {
   return JSON.parse(data.result.content[0].text);
 }
 
+// local-first: indice comuni client-side (sovranita AgID) - replica search_comune del worker
+let __comuniIndexPromise = null;
+async function ensureComuniIndex() {
+  if (window.__comuniIndex) return window.__comuniIndex;
+  if (!__comuniIndexPromise) {
+    __comuniIndexPromise = fetch('/data/lookup/comuni-index.json')
+      .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
+      .then(idx => (window.__comuniIndex = Array.isArray(idx) ? idx : []))
+      .catch(err => { __comuniIndexPromise = null; throw err; });
+  }
+  return __comuniIndexPromise;
+}
+function searchComuneLocal(query, limit = 8) {
+  const q = String(query || '').toLowerCase();
+  if (q.length < 3) return [];
+  const idx = window.__comuniIndex || [];
+  const prefix = [], substring = [];
+  for (const e of idx) {
+    const lower = e.n.toLowerCase();
+    if (lower.startsWith(q)) prefix.push(e);
+    else if (lower.includes(q)) substring.push(e);
+    if (prefix.length >= limit) break;
+  }
+  return [...prefix, ...substring].slice(0, limit).map(e => ({
+    istat_code: e.i, denominazione: e.n, provincia: e.p, regione: e.r,
+    codice_ipa: e.ipa, codice_fiscale: e.cf
+  }));
+}
+
 // ===========================================================================
 // Search comune autocomplete
 // ===========================================================================
@@ -1156,27 +1185,8 @@ function closeSuggestions() {
   activeIndex = -1;
 }
 
-function trackSelection(istatCode) {
-  // Analytics: il termine viene loggato SOLO a selezione avvenuta (il worker
-  // ignora i type-ahead del browser senza questo header). Fire-and-forget,
-  // keepalive=true per sopravvivere alla navigazione verso comune.html.
-  try {
-    const el = suggBox.querySelector(`.suggestion[data-istat="${istatCode}"] .suggestion-name`);
-    const nome = el ? el.textContent.trim().slice(0, 50) : '';
-    if (nome.length < 3) return; // vincolo pattern query (3-50 char)
-    fetch(MCP_ENDPOINT, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json', 'X-Search-Selected': '1'},
-      keepalive: true,
-      body: JSON.stringify({
-        jsonrpc: '2.0', id: Date.now(), method: 'tools/call',
-        params: { name: 'search_comune', arguments: { query: nome, limit: 1 } }
-      })
-    }).catch(() => {});
-  } catch (_) { /* mai bloccare la navigazione */ }
-}
 function navigateToComune(istatCode) {
-  trackSelection(istatCode);
+  // local-first: nessuna telemetria al worker; top-comuni dai log nginx
   window.location.href = `/comune.html?istat=${istatCode}`;
 }
 
@@ -1186,8 +1196,8 @@ input.addEventListener('input', () => {
   if (q.length < 3) { closeSuggestions(); return; }
   debounceTimer = setTimeout(async () => {
     try {
-      const r = await mcpCall('search_comune', { query: q, limit: 8 });
-      renderSuggestions(r.results || []);
+      await ensureComuniIndex();
+      renderSuggestions(searchComuneLocal(q, 8));
     } catch (err) {
       console.error('search error:', err);
       suggBox.innerHTML = `<div class="suggestion" style="color:var(--accent);cursor:default">⚠️ Servizio temporaneamente non raggiungibile. Riprova tra poco.</div>`;

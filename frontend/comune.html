@@ -1844,6 +1844,35 @@ async function mcpCall(toolName, args) {
   return JSON.parse(data.result.content[0].text);
 }
 
+// local-first: indice comuni client-side (sovranita AgID) - replica search_comune del worker
+let __comuniIndexPromise = null;
+async function ensureComuniIndex() {
+  if (window.__comuniIndex) return window.__comuniIndex;
+  if (!__comuniIndexPromise) {
+    __comuniIndexPromise = fetch('/data/lookup/comuni-index.json')
+      .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
+      .then(idx => (window.__comuniIndex = Array.isArray(idx) ? idx : []))
+      .catch(err => { __comuniIndexPromise = null; throw err; });
+  }
+  return __comuniIndexPromise;
+}
+function searchComuneLocal(query, limit = 8) {
+  const q = String(query || '').toLowerCase();
+  if (q.length < 3) return [];
+  const idx = window.__comuniIndex || [];
+  const prefix = [], substring = [];
+  for (const e of idx) {
+    const lower = e.n.toLowerCase();
+    if (lower.startsWith(q)) prefix.push(e);
+    else if (lower.includes(q)) substring.push(e);
+    if (prefix.length >= limit) break;
+  }
+  return [...prefix, ...substring].slice(0, limit).map(e => ({
+    istat_code: e.i, denominazione: e.n, provincia: e.p, regione: e.r,
+    codice_ipa: e.ipa, codice_fiscale: e.cf
+  }));
+}
+
 function fmtNum(n) {
   if (n === null || n === undefined) return '—';
   return Number(n).toLocaleString('it-IT');
@@ -10633,8 +10662,8 @@ function initSanitaMap(d) {
     if (q.length < 3) { miniClose(); return; }
     miniDebounce = setTimeout(async () => {
       try {
-        const r = await mcpCall('search_comune', { query: q, limit: 8 });
-        miniRender(r.results || []);
+        await ensureComuniIndex();
+        miniRender(searchComuneLocal(q, 8));
       } catch (err) {
         console.error('mini-search error:', err);
         miniBox.innerHTML = `<div class="mini-suggestion" style="color:var(--accent);cursor:default">⚠️ ${escapeHtmlMsg(err.message)}</div>`;
