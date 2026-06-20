@@ -44,6 +44,7 @@ em, h1 em, h2 em, h3 em, .brand em, .section-h em {
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth}
+#accesso-mcp{scroll-margin-top:24px}
 body{
   background:var(--paper);
   color:var(--ink);
@@ -816,7 +817,7 @@ footer a:hover { color: #fff !important; }
       </div>
 
       <div class="metodo-step">
-        <h3>5. Accesso</h3>
+        <h3 id="accesso-mcp">5. Accesso</h3>
         <p>
           I dati ricomposti sono accessibili in tre modi diversi, ognuno
           adatto a un uso diverso.
@@ -1196,5 +1197,12 @@ footer a:hover { color: #fff !important; }
   </div>
 </footer>
 
+<script>
+(function(){
+  if(!location.hash) return;
+  function jump(){var el=document.querySelector(location.hash); if(el) el.scrollIntoView({block:"start"});}
+  window.addEventListener("load", function(){ setTimeout(jump, 60); });
+})();
+</script>
 </body>
 </html>
