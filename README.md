@@ -175,7 +175,7 @@ comuni grandi). Per pattern d'uso e esempi vedi la skill MCP Claude
 È disponibile una skill Claude che documenta l'uso del connettore
 (inventario dei 6 tool, schema di `comune_dashboard`, pattern operativi
 e caveat per sezione, accesso REST alla cartografia catastale). Versione
-corrente: `https://cruscotto-italia-mcp.dati.gov.it/skills/cruscotto-italia-workflow-v2.4.0.zip`
+corrente: `https://cruscotto-italia-mcp.dati.gov.it/skills/cruscotto-italia-workflow-v2.4.4.zip`
 (elenco completo con storici in `docs/skills/README.md`).
 
 ### Esempi di domande supportate

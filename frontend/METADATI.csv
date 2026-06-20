@@ -163,6 +163,7 @@ anac,first_award_date,Data prima aggiudicazione nel periodo,data,ANAC,ultimi 12 
 anac,last_award_date,Data ultima aggiudicazione nel periodo,data,ANAC,ultimi 12 mesi,https://dati.anticorruzione.it,CC BY 4.0
 anac,distinct_cpv,Numero codici CPV distinti (categorie merceologiche),numero,ANAC,ultimi 12 mesi,https://dati.anticorruzione.it,CC BY 4.0
 anac,top_cpv,"Top 5 CPV per importo (code, desc, count, importo)",lista,ANAC,ultimi 12 mesi,https://dati.anticorruzione.it,CC BY 4.0
+anac,cpv,"Tutte le categorie CPV ordinate per importo (code, desc, count, importo)",lista,ANAC,ultimi 12 mesi,https://dati.anticorruzione.it,CC BY 4.0
 bdap_kpi,totale.count,Numero totale opere BDAP (storico complessivo),numero,BDAP MOP,cumulato storico,https://bdap-opendata.rgs.mef.gov.it,IODL 2.0
 bdap_kpi,totale.costo_lavori_eff,Costo effettivo lavori totale (euro),euro,BDAP MOP,cumulato,https://bdap-opendata.rgs.mef.gov.it,IODL 2.0
 bdap_kpi,totale.finanz_statali,Finanziamenti statali totali (euro),euro,BDAP MOP,cumulato,https://bdap-opendata.rgs.mef.gov.it,IODL 2.0

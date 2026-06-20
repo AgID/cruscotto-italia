@@ -179,6 +179,23 @@ def aggregate_anac(parquet_paths: list[Path], output_dir: Path) -> Path:
             "importo": float(r[4]) if r[4] else 0.0,
         })
 
+    # Tutte le CPV per buyer (no QUALIFY) per tabella filtrabile FE
+    all_cpv_rows = con.execute("""
+        SELECT buyer_cf, cpv_code, cpv_desc, COUNT(*) AS n, SUM(award_amount) AS importo
+        FROM all_awards
+        WHERE cpv_code IS NOT NULL AND buyer_cf IS NOT NULL
+        GROUP BY buyer_cf, cpv_code, cpv_desc
+        ORDER BY buyer_cf, importo DESC
+    """).fetchall()
+    all_cpv: dict[str, list] = {}
+    for r in all_cpv_rows:
+        all_cpv.setdefault(r[0], []).append({
+            "code": r[1],
+            "desc": r[2][:120] if r[2] else None,
+            "count": r[3],
+            "importo": float(r[4]) if r[4] else 0.0,
+        })
+
     # Costruzione map finale
     aggregato: dict[str, dict] = {}
     for r in rows:
@@ -191,6 +208,7 @@ def aggregate_anac(parquet_paths: list[Path], output_dir: Path) -> Path:
             "last_award_date": r[5],
             "distinct_cpv": r[6],
             "top_cpv": top_cpv.get(cf, []),
+            "cpv": all_cpv.get(cf, []),
         }
 
     out_path.write_text(

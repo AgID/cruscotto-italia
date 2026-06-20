@@ -788,6 +788,22 @@ footer a{color:rgba(255,255,255,0.85);text-decoration:none}
 .cpv-meta{display:flex;gap:14px;justify-content:flex-end;font-family:var(--mono);font-size:13px;}
 .cpv-n{color:var(--ink);font-weight:600;}
 .cpv-eur{color:var(--ink-mute);}
+.cpvt-block{margin:32px 0 56px;}
+.cpvt-search{font-family:var(--sans);font-size:14px;padding:9px 12px;border:1px solid var(--ink-mute);background:var(--paper);color:var(--ink);outline:none;width:100%;box-sizing:border-box;margin:0 0 14px;}
+.cpvt-search:focus{border-color:var(--accent);}
+.cpvt-head,.cpvt-row{display:grid;grid-template-columns:130px 1fr 90px 150px;gap:14px;align-items:center;padding:11px 8px;}
+.cpvt-head{border-bottom:2px solid var(--ink);font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-mute);}
+.cpvt-th{cursor:pointer;user-select:none;}
+.cpvt-th.num{text-align:right;}
+.cpvt-th:hover,.cpvt-th.active{color:var(--accent);}
+.cpvt-row{border-bottom:1px dotted var(--ink-mute);font-size:13px;}
+.cpvt-row:hover{background:var(--paper-2);}
+.cpvt-code{font-family:var(--mono);font-size:11px;color:var(--accent);font-weight:600;letter-spacing:.04em;}
+.cpvt-desc{font-family:var(--serif);color:var(--ink);line-height:1.3;}
+.cpvt-count{font-family:var(--mono);text-align:right;color:var(--ink);}
+.cpvt-imp{font-family:var(--mono);text-align:right;color:var(--ink);font-weight:600;}
+.cpvt-empty{padding:24px 8px;font-family:var(--serif);font-style:italic;color:var(--ink-mute);}
+@media(max-width:640px){.cpvt-head{display:none;}.cpvt-row{grid-template-columns:1fr auto;gap:4px 12px;}.cpvt-code{grid-column:1;}.cpvt-imp{grid-column:2;grid-row:1;}.cpvt-desc{grid-column:1/-1;}.cpvt-count{grid-column:1/-1;text-align:left;}}
 
 /* ---- Tab Demografia ---- */
 .demo-grid{display:grid;grid-template-columns:1fr 1.2fr;gap:32px;margin-top:24px;}
@@ -3112,6 +3128,37 @@ function renderFlussiSection(fl) {
 // ----------------------------------------------------------------------------
 
 window.__pnrrCache = window.__pnrrCache || {};
+window.__cpvSort = { key: 'importo', dir: -1 };
+function cpvtFilter(){
+  const q = (document.getElementById('cpvt-search')?.value || '').toLowerCase().trim();
+  const rows = document.querySelectorAll('#cpvt-list .cpvt-row');
+  let vis = 0;
+  rows.forEach(r => {
+    const hit = !q || (r.dataset.desc||'').includes(q) || (r.dataset.code||'').includes(q);
+    r.style.display = hit ? '' : 'none';
+    if (hit) vis++;
+  });
+  const empty = document.getElementById('cpvt-empty');
+  if (empty) empty.style.display = vis ? 'none' : '';
+}
+function cpvtSort(key){
+  const st = window.__cpvSort;
+  if (st.key === key) { st.dir = -st.dir; } else { st.key = key; st.dir = (key === 'desc' || key === 'code') ? 1 : -1; }
+  const list = document.getElementById('cpvt-list');
+  if (!list) return;
+  const num = (key === 'count' || key === 'importo');
+  const rows = Array.from(list.querySelectorAll('.cpvt-row'));
+  rows.sort((a,b) => {
+    let va = a.dataset[key]||'', vb = b.dataset[key]||'';
+    if (num) return (Number(va) - Number(vb)) * st.dir;
+    return String(va).localeCompare(String(vb)) * st.dir;
+  });
+  rows.forEach(r => list.appendChild(r));
+  const ths = document.querySelectorAll('#pane-contratti .cpvt-head .cpvt-th');
+  ths.forEach(t => t.classList.remove('active'));
+  const idx = {code:0, desc:1, count:2, importo:3}[key];
+  if (ths[idx]) ths[idx].classList.add('active');
+}
 window.__pnrrFilters = window.__pnrrFilters || { search: '', missione: 'all', stato: 'all' };
 
 function renderPnrrTabSkeleton() {
@@ -4156,6 +4203,30 @@ function renderContrattiTab(contratti) {
         <h3 class="col-h">Top categorie merceologiche (CPV)</h3>
         <div class="settori-list">${cpvHtml}</div>
       </div>
+
+      ${(c.cpv && c.cpv.length) ? `
+      <div class="cpvt-block">
+        <h3 class="col-h">Tutte le categorie merceologiche (${fmtNum(c.cpv.length)})</h3>
+        <input type="search" class="cpvt-search" id="cpvt-search" aria-label="Cerca tra le categorie merceologiche per descrizione o codice CPV" placeholder="Cerca per descrizione o codice CPV\u2026" oninput="cpvtFilter()">
+        <div class="cpvt-head">
+          <div class="cpvt-th" onclick="cpvtSort('code')">Codice</div>
+          <div class="cpvt-th" onclick="cpvtSort('desc')">Descrizione</div>
+          <div class="cpvt-th num" onclick="cpvtSort('count')">Contratti</div>
+          <div class="cpvt-th num active" onclick="cpvtSort('importo')">Importo \u20ac</div>
+        </div>
+        <div id="cpvt-list">
+          ${c.cpv.map(x => `
+            <div class="cpvt-row" data-code="${(x.code||'').toLowerCase()}" data-desc="${(x.desc||'').toLowerCase().replace(/"/g,'&quot;')}" data-count="${x.count||0}" data-importo="${Math.round(x.importo||0)}">
+              <div class="cpvt-code">${x.code||''}</div>
+              <div class="cpvt-desc">${x.desc||'(descrizione non disponibile)'}</div>
+              <div class="cpvt-count">${fmtNum(x.count||0)}</div>
+              <div class="cpvt-imp">\u20ac${fmtNum(Math.round(x.importo||0))}</div>
+            </div>
+          `).join('')}
+        </div>
+        <div class="cpvt-empty" id="cpvt-empty" style="display:none">Nessuna categoria corrisponde alla ricerca.</div>
+      </div>
+      ` : ''}
 
       <div class="tab-footer">
         <strong>Fonte</strong>: <a href="https://dati.anticorruzione.it/" target="_blank" rel="noopener">ANAC</a>
@@ -10737,6 +10808,7 @@ function adaptDashboardToOverview(d) {
         first_award_date:  anac.first_award_date,
         last_award_date:   anac.last_award_date,
         top_cpv:           anac.top_cpv,
+        cpv:               anac.cpv || [],
         buyer_name:        anac.buyer_name,
       } : null,
       opere: bk ? {
