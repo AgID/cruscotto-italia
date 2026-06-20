@@ -7683,8 +7683,8 @@ function renderAnncsuTab(d) {
       <div class="section-title">§ Toponomastica</div>
       <h2 class="section-h">Strade, civici e <em>catasto</em>.</h2>
       <p class="muted">
-        Dati conferiti dal Comune all'Archivio Nazionale dei Numeri Civici e
-        delle Strade Urbane (ANNCSU), realizzato da Agenzia delle Entrate
+        Dati conferiti dal Comune all'<a href="https://anncsu.open.agenziaentrate.gov.it/" target="_blank" rel="noopener">Archivio Nazionale dei Numeri Civici e
+        delle Strade Urbane (ANNCSU)</a>, realizzato da Agenzia delle Entrate
         e ISTAT ai sensi del DPCM 12/05/2016. Snapshot: ${snapshot}.
         <a class="badge-hvd" href="https://eur-lex.europa.eu/legal-content/IT/TXT/?uri=CELEX:32023R0138" target="_blank" rel="noopener" title="High Value Dataset designato dalla Commissione Europea (Regolamento UE 2023/138)">High Value Dataset</a>
         <br>
@@ -8689,8 +8689,8 @@ function renderCensimentoTab(d) {
       <div class="section-title">§ Censimento ISTAT 2021</div>
       <h2 class="section-h">Basi territoriali e variabili <em>censuarie</em>.</h2>
       <p class="muted">
-        Fonte: ISTAT, Censimento permanente 2021 — Basi Territoriali + Variabili
-        censuarie per sezione di censimento. Licenza CC-BY 3.0 IT.
+        Fonte: <a href="https://www.istat.it/notizia/basi-territoriali-e-variabili-censuarie/" target="_blank" rel="noopener">ISTAT — Basi Territoriali e Variabili censuarie 2021</a>
+        (Censimento permanente, per sezione di censimento). Licenza CC-BY 3.0 IT.
         Copertura 100% comuni inclusi TN/BZ. Aggiornamento decennale + revisioni.
       </p>
       <div class="kpi-cards">${cardsHtml}</div>
@@ -9569,6 +9569,10 @@ function renderVeicoliTab(v) {
         </div>
       </div>
       ` : ''}
+      <div class="tab-footer">
+        <strong>Fonti</strong>: <a href="https://lod.aci.it/" target="_blank" rel="noopener">ACI Open Data (LOD)</a> — parco circolante e nuove iscrizioni (CC-BY 4.0);
+        <a href="https://esploradati.istat.it/" target="_blank" rel="noopener">ISTAT</a> — incidenti stradali con lesioni (dataset 41_983, CC-BY 3.0 IT).
+      </div>
     </div>`;
 }
 
