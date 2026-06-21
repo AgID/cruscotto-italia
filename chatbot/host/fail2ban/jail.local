@@ -1,0 +1,27 @@
+[DEFAULT]
+ignoreip = 127.0.0.1/8 ::1 <IP_AMMINISTRATORE>
+bantime  = 1h
+findtime = 10m
+maxretry = 5
+banaction = nftables-multiport
+banaction_allports = nftables-allports
+
+[sshd]
+enabled = true
+backend = auto
+
+[nginx-http-auth]
+enabled  = true
+backend  = auto
+logpath  = /var/log/nginx/cruscotto-italia.error.log
+           /var/log/nginx/chatbot.error.log
+           /var/log/nginx/error.log
+maxretry = 10
+
+[cruscotto-nginx-limit]
+enabled  = true
+backend  = auto
+filter   = cruscotto-nginx-limit
+logpath  = /var/log/nginx/cruscotto-italia.error.log
+maxretry = 15
+findtime = 5m

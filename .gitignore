@@ -96,3 +96,7 @@ data/lookup/
 data/raw/
 data/manifest.json
 data/istat-coords.json
+
+# Eccezioni chatbot Cruscotto (componente self-hosted in chatbot/)
+!chatbot/cruscotto-chat-lab/comuni-soppressi.csv
+!chatbot/security/red-team/payloads_*.jsonl

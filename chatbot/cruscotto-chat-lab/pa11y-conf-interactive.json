@@ -1,0 +1,12 @@
+{
+  "chromeLaunchConfig": {
+    "args": ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"]
+  },
+  "timeout": 120000,
+  "actions": [
+    "set field #q to quante chiese ci sono a Lecce",
+    "click element #send",
+    "wait for element .msg.bot .bubble to be visible",
+    "wait for element .typing to be hidden"
+  ]
+}

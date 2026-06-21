@@ -1,0 +1,18 @@
+# Drop-in systemd: attiva la PoW anti-flood del chatbot su /api/chat.
+# Protegge la GPU da flood anonimo: utile col servizio pubblico (senza
+# auth_basic). Sotto auth_basic e' opzionale.
+#
+# Installazione su VM (il secret NON va versionato, resta solo sulla VM):
+#   sudo install -d /etc/systemd/system/cruscotto-chat-lab-v2.service.d
+#   sudo cp pow.conf.example /etc/systemd/system/cruscotto-chat-lab-v2.service.d/pow.conf
+#   sudo sed -i "s|__GENERA_SECRET__|$(openssl rand -hex 32)|" /etc/systemd/system/cruscotto-chat-lab-v2.service.d/pow.conf
+#   sudo systemctl daemon-reload && sudo systemctl restart cruscotto-chat-lab-v2
+#   curl -s http://127.0.0.1:3011/api/pow   # atteso: {"enabled":true,...}
+#
+# DIFFICULTY=4 -> ~0.5s su Chrome/V8. Non alzare senza test su Safari/Firefox
+# (SHA-256 JS puro, piu' lento su altri motori). Richiede worker-src
+# 'self' blob: nella CSP della location /chatbot/.
+[Service]
+Environment=CHAT_POW_ENABLED=1
+Environment=CHAT_POW_DIFFICULTY=4
+Environment=CHAT_POW_SECRET=__GENERA_SECRET__
