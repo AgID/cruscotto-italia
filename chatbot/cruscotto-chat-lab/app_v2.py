@@ -1296,9 +1296,9 @@ async def chat(req: Request):
                 except ValueError:
                     pass
         return StreamingResponse(gen(), media_type="text/event-stream")
+    if req.headers.get("x-real-ip"):  # contratto legacy domanda solo da localhost (test/debug); via proxy si usa messages con PoW. Blocco prima della chiamata LLM: no amplificazione, no bypass PoW.
+        return {"risposta": "Endpoint non disponibile su questo contratto.", "valido": False}
     out = await pipeline(str(body.get("domanda", "")), lang=("en" if str(body.get("lang","")).lower().startswith("en") else "it"))
-    if req.headers.get("x-real-ip"):  # via proxy: niente internals (intento, dati_motore, motivi)
-        return {"risposta": out.get("risposta"), "valido": out.get("valido"), "fonte_risposta": out.get("fonte_risposta"), "intento": out.get("intento"), "intenti": out.get("intenti")}
     return out  # debug completo solo da localhost diretto
 
 @app.get("/")
