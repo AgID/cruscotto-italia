@@ -1770,6 +1770,13 @@ footer a:hover { color: #fff !important; }
 @media (prefers-reduced-motion: reduce){
   .runts-filter-chip,.runts-search-input,.runts-page-btn{transition:none;}
 }
+
+.chart-data-table{margin:8px 0 20px;font-size:13px;clear:both;}
+.chart-data-table summary{cursor:pointer;color:var(--ink-mute,#5c6f82);padding:6px 0;}
+.chart-data-table table{width:100%;border-collapse:collapse;margin-top:8px;}
+.chart-data-table caption{text-align:left;font-weight:600;padding:4px 0;}
+.chart-data-table th,.chart-data-table td{border:1px solid var(--line,#e3e7eb);padding:4px 8px;text-align:right;}
+.chart-data-table th[scope="row"],.chart-data-table caption{text-align:left;}
 </style>
   <script src="/vendor/chart.umd.min.js" integrity="sha384-9nhczxUqK87bcKHh20fSQcTGD4qq5GhayNYSYWqwBkINBhOfQLg/P5HG5lF1urn4" defer></script>
   <link rel="stylesheet" href="/vendor/leaflet.css" integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="anonymous">
@@ -9901,6 +9908,36 @@ function renderOpereChart(finanz) {
   });
 }
 
+function addChartDataTables() {
+  if (!window.Chart || !Chart.getChart) return;
+  document.querySelectorAll('canvas[role="img"]:not([data-table])').forEach(cv => {
+    const chart = Chart.getChart(cv);
+    if (!chart) return;
+    cv.setAttribute('data-table', '1');
+    const labels = chart.data.labels || [];
+    const ds = chart.data.datasets || [];
+    if (!labels.length || !ds.length) return;
+    const name = cv.getAttribute('aria-label') || 'Dati del grafico';
+    let html = '<table><caption>' + name + '</caption><thead><tr><th scope="col">Voce</th>';
+    ds.forEach(d => { html += '<th scope="col">' + (d.label || 'Valore') + '</th>'; });
+    html += '</tr></thead><tbody>';
+    labels.forEach((lab, i) => {
+      html += '<tr><th scope="row">' + lab + '</th>';
+      ds.forEach(d => {
+        const v = d.data[i];
+        html += '<td>' + (v == null ? '\u2014' : (typeof v === 'number' ? v.toLocaleString('it-IT') : v)) + '</td>';
+      });
+      html += '</tr>';
+    });
+    html += '</tbody></table>';
+    const det = document.createElement('details');
+    det.className = 'chart-data-table';
+    det.innerHTML = '<summary>Mostra dati in tabella</summary>' + html;
+    const box = (cv.parentElement && cv.parentElement.parentElement) || cv.parentElement;
+    if (box) box.appendChild(det); else cv.insertAdjacentElement('afterend', det);
+  });
+}
+
 function enhanceTabsA11y() {
   const tablist = document.querySelector('.tabs[role="tablist"]');
   if (!tablist) return;
@@ -9968,6 +10005,7 @@ function bindTabSwitching() {
       // aggiorna l'hash URL per rendere la tab condivisibile (senza scroll né voce in cronologia)
       // aggiorna solo l'hash; il browser mantiene la query ?istat nella posizione corretta
       try { history.replaceState(null, '', window.location.pathname + window.location.search + '#' + tab.dataset.tab); } catch(e) {}
+      setTimeout(addChartDataTables, 600);
 
       // Lazy-load tab Demografia
       if (tab.dataset.tab === 'demografia') {
