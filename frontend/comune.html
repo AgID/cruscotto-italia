@@ -1814,7 +1814,7 @@ footer a:hover { color: #fff !important; }
   <div class="wrap">
     <span>Cruscotto Italia · v2026.05.07.1</span>
     <span><a href="/">← Torna alla home</a></span>
-    <span><a href="/accessibilita.html">Accessibilità</a></span>
+    <span><a href="https://form.agid.gov.it/agid/Cruscotto_Italia/dichiarazione">Dichiarazione accessibilità</a></span>
   </div>
 </footer>
 
@@ -2560,7 +2560,7 @@ function renderPiramideEta(piramide) {
   }).join('');
 
   return `
-    <svg class="piramide-svg" viewBox="0 0 ${2*W + LABEL_W} ${totalH + 30}" preserveAspectRatio="xMidYMin meet">
+    <svg class="piramide-svg" viewBox="0 0 ${2*W + LABEL_W} ${totalH + 30}" preserveAspectRatio="xMidYMin meet" aria-hidden="true" focusable="false">
       <text x="${W - 10}" y="14" text-anchor="end" font-family="var(--mono)" font-size="11" font-weight="600" fill="#3a6ea5">MASCHI</text>
       <text x="${W + LABEL_W + 10}" y="14" text-anchor="start" font-family="var(--mono)" font-size="11" font-weight="600" fill="#5C6F82">FEMMINE</text>
       <g transform="translate(0, 22)">${bars}</g>
@@ -4036,7 +4036,7 @@ function renderSpeseRow(v, idx, totale, anno) {
       </div>
       <div class="spesa-detail" style="display:none">
         <div class="spesa-mesi-label">Speso per mese ${anno} <span class="mesi-note">(differenza tra cumulati)</span></div>
-        <svg class="spesa-sparkline" viewBox="0 0 600 80" preserveAspectRatio="none">
+        <svg class="spesa-sparkline" viewBox="0 0 600 80" preserveAspectRatio="none" aria-hidden="true" focusable="false">
           ${renderSparkline(v.mensili)}
         </svg>
         <div class="spesa-mesi-grid">
@@ -9228,19 +9228,19 @@ function _censimentoRenderSectionDetail(feature) {
     <div class="censimento-charts-grid">
       <div class="censimento-chart-card">
         <h4 class="censimento-chart-title">Piramide età (maschi vs femmine)</h4>
-        <div class="censimento-chart-wrap"><canvas id="cns-chart-eta" aria-label="Piramide età per fascia 5 anni"></canvas></div>
+        <div class="censimento-chart-wrap"><canvas id="cns-chart-eta" aria-label="Piramide età per fascia 5 anni" role="img"></canvas></div>
       </div>
       <div class="censimento-chart-card">
         <h4 class="censimento-chart-title">Titolo di studio (pop. 9+)</h4>
-        <div class="censimento-chart-wrap"><canvas id="cns-chart-titolo" aria-label="Distribuzione titolo di studio"></canvas></div>
+        <div class="censimento-chart-wrap"><canvas id="cns-chart-titolo" aria-label="Distribuzione titolo di studio" role="img"></canvas></div>
       </div>
       <div class="censimento-chart-card">
         <h4 class="censimento-chart-title">Stranieri: UE vs Extra-UE</h4>
-        <div class="censimento-chart-wrap"><canvas id="cns-chart-stranieri" aria-label="Stranieri UE ed Extra-UE per sesso"></canvas></div>
+        <div class="censimento-chart-wrap"><canvas id="cns-chart-stranieri" aria-label="Stranieri UE ed Extra-UE per sesso" role="img"></canvas></div>
       </div>
       <div class="censimento-chart-card">
         <h4 class="censimento-chart-title">Famiglie per numero componenti</h4>
-        <div class="censimento-chart-wrap"><canvas id="cns-chart-famiglie" aria-label="Distribuzione famiglie per numero di componenti"></canvas></div>
+        <div class="censimento-chart-wrap"><canvas id="cns-chart-famiglie" aria-label="Distribuzione famiglie per numero di componenti" role="img"></canvas></div>
       </div>
     </div>
   `;
@@ -9288,7 +9288,7 @@ function _censimentoRenderVarsTable(v) {
           <span class="cns-var-family-count">${total} ${total === 1 ? 'voce' : 'voci'}</span>
         </summary>
         <div class="cns-var-table-wrap">
-          <table class="cns-var-table">
+          <table class="cns-var-table"><caption style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;">Variabili censuarie per famiglia di indicatori</caption>
             <caption class="visually-hidden">${fam.label}: ${total} variabili del Censimento permanente 2021</caption>
             <thead>
               <tr>
@@ -9901,6 +9901,40 @@ function renderOpereChart(finanz) {
   });
 }
 
+function enhanceTabsA11y() {
+  const tablist = document.querySelector('.tabs[role="tablist"]');
+  if (!tablist) return;
+  tablist.setAttribute('aria-label', 'Categorie di dati del comune');
+  const tabs = Array.from(tablist.querySelectorAll('.tab[role="tab"]'));
+  tabs.forEach((tab) => {
+    const id = tab.dataset.tab;
+    if (!id) return;
+    if (!tab.id) tab.id = 'tab-' + id;
+    const pane = document.getElementById('pane-' + id);
+    if (pane) {
+      tab.setAttribute('aria-controls', pane.id);
+      pane.setAttribute('role', 'tabpanel');
+      pane.setAttribute('aria-labelledby', tab.id);
+      if (!pane.hasAttribute('tabindex')) pane.setAttribute('tabindex', '0');
+    }
+    tab.setAttribute('tabindex', tab.getAttribute('aria-selected') === 'true' ? '0' : '-1');
+  });
+  tablist.addEventListener('keydown', (e) => {
+    const list = Array.from(tablist.querySelectorAll('.tab[role="tab"]'));
+    const i = list.indexOf(document.activeElement);
+    if (i < 0) return;
+    let n = null;
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') n = (i + 1) % list.length;
+    else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') n = (i - 1 + list.length) % list.length;
+    else if (e.key === 'Home') n = 0;
+    else if (e.key === 'End') n = list.length - 1;
+    if (n === null) return;
+    e.preventDefault();
+    list[n].focus();
+    list[n].click();
+  });
+}
+
 function bindTabSwitching() {
   // ---- Tab switching ----
   document.querySelectorAll('.tab').forEach(tab => {
@@ -9908,10 +9942,12 @@ function bindTabSwitching() {
       document.querySelectorAll('.tab').forEach(t => {
         t.classList.remove('active');
         t.setAttribute('aria-selected', 'false');
+        t.setAttribute('tabindex', '-1');
       });
       document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
       tab.classList.add('active');
       tab.setAttribute('aria-selected', 'true');
+      tab.setAttribute('tabindex', '0');
       document.getElementById('pane-' + tab.dataset.tab)?.classList.add('active');
       // aggiorna l'hash URL per rendere la tab condivisibile (senza scroll né voce in cronologia)
       // aggiorna solo l'hash; il browser mantiene la query ?istat nella posizione corretta
@@ -10226,7 +10262,7 @@ function renderAriaContent(data) {
       <h3 class="aria-h3">Trend decennale (media annua per stazione del comune)</h3>
       <p class="aria-trend-note">Le concentrazioni sono in μg/m³ (media annua).</p>
       <div class="aria-chart-wrap">
-        <canvas id="aria-trend-chart" aria-label="Trend decennale PM10, PM2.5 e NO2"></canvas>
+        <canvas id="aria-trend-chart" aria-label="Trend decennale PM10, PM2.5 e NO2" role="img"></canvas>
       </div>
     ` : ''}
 
@@ -10334,7 +10370,7 @@ function renderAriaStazioneAccordion(s, idx) {
         <span class="aria-staz-acc-range">${anni[0].anno}–${anni[anni.length-1].anno}</span>
       </summary>
       <div class="aria-staz-acc-body">
-        <table class="aria-yearly-table">
+        <table class="aria-yearly-table"><caption style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;">Concentrazioni annuali PM10, PM2.5 e NO₂</caption>
           <thead><tr><th>Anno</th><th>PM10</th><th>PM2.5</th><th>NO₂</th></tr></thead>
           <tbody>${rows}</tbody>
         </table>
@@ -11372,6 +11408,7 @@ async function init() {
     updateTabBadgesFromDashboard(dashboard);
     setupTabsScrollHint();
     bindTabSwitching();
+    enhanceTabsA11y();
     bindScuoleFilters();
     setupDownloadButton(istat, dashboard);
   } catch (err) {
@@ -11734,7 +11771,7 @@ function renderPendolarismoTab(d) {
           <h3 class="section-h-small">Top 10 destinazioni (dove vanno a lavorare)</h3>
           <p class="pendolarismo-tab-muted">Comuni di destinazione dei pendolari residenti, ordinati per numero di spostamenti giornalieri.
           ${k.n_destinazioni != null ? 'Destinazioni distinte totali: <strong>' + fmtNum(k.n_destinazioni) + '</strong>.' : ''}</p>
-          <table class="pendolarismo-table">
+          <table class="pendolarismo-table"><caption style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;">Top 10 comuni di destinazione dei pendolari</caption>
             <thead><tr><th scope="col">#</th><th scope="col">Comune</th><th scope="col">Pendolari</th></tr></thead>
             <tbody>${topDestRows || '<tr><td colspan="3" class="pendolarismo-tab-muted">Nessuna destinazione registrata.</td></tr>'}</tbody>
           </table>
@@ -11743,7 +11780,7 @@ function renderPendolarismoTab(d) {
           <h3 class="section-h-small">Top 10 origini (da dove vengono)</h3>
           <p class="pendolarismo-tab-muted">Comuni di origine dei lavoratori che entrano nel comune, ordinati per numero di spostamenti.
           ${k.n_origini != null ? 'Origini distinte totali: <strong>' + fmtNum(k.n_origini) + '</strong>.' : ''}</p>
-          <table class="pendolarismo-table">
+          <table class="pendolarismo-table"><caption style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;">Top 10 comuni di origine dei pendolari</caption>
             <thead><tr><th scope="col">#</th><th scope="col">Comune</th><th scope="col">Pendolari</th></tr></thead>
             <tbody>${topOrigRows || '<tr><td colspan="3" class="pendolarismo-tab-muted">Nessuna origine registrata.</td></tr>'}</tbody>
           </table>
@@ -11849,7 +11886,7 @@ function renderRuntsTab(d) {
         <div class="runts-chart-box">
           <h3 class="runts-chart-title">Mix per sezione</h3>
           <div class="runts-chart-container">
-            <canvas id="runts-chart-sezione" aria-label="Distribuzione enti per sezione RUNTS"></canvas>
+            <canvas id="runts-chart-sezione" aria-label="Distribuzione enti per sezione RUNTS" role="img"></canvas>
           </div>
           <p class="muted runts-chart-legend">
             <span style="color:${RUNTS_SEZIONI.ODV.color}">●</span> ODV: ${RUNTS_SEZIONI.ODV.full} ·
@@ -11863,7 +11900,7 @@ function renderRuntsTab(d) {
         <div class="runts-chart-box">
           <h3 class="runts-chart-title">Iscrizioni per anno</h3>
           <div class="runts-chart-container">
-            <canvas id="runts-chart-iscrizioni" aria-label="Iscrizioni RUNTS per anno"></canvas>
+            <canvas id="runts-chart-iscrizioni" aria-label="Iscrizioni RUNTS per anno" role="img"></canvas>
           </div>
           <p class="muted runts-chart-legend">
             Il picco 2022 deriva dalla <strong>trasmigrazione</strong> dei registri preesistenti
@@ -11899,7 +11936,7 @@ function renderRuntsTab(d) {
         </div>
       </div>
       <div class="runts-table-wrap">
-        <table class="runts-table" id="runts-table">
+        <table class="runts-table" id="runts-table"><caption style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;">Enti del Terzo Settore iscritti al RUNTS</caption>
           <thead>
             <tr>
               <th scope="col">Denominazione</th>
@@ -12210,7 +12247,7 @@ function renderAsiaTab(d) {
         <div class="asia-chart-box asia-chart-wide">
           <h3 class="asia-chart-title">Top 10 settori ATECO per unità locali (${year})</h3>
           <div class="asia-chart-container asia-chart-tall">
-            <canvas id="asia-chart-settori" aria-label="Top 10 settori ATECO per numero unità locali"></canvas>
+            <canvas id="asia-chart-settori" aria-label="Top 10 settori ATECO per numero unità locali" role="img"></canvas>
           </div>
           <p class="muted asia-chart-legend">
             Top settore: <strong>${top1Lab}</strong> · ${fmtNum(top1Ul)} UL (${top1Pct}% del totale).
@@ -12220,7 +12257,7 @@ function renderAsiaTab(d) {
         <div class="asia-chart-box">
           <h3 class="asia-chart-title">Mix dimensionale (${year})</h3>
           <div class="asia-chart-container">
-            <canvas id="asia-chart-classi" aria-label="Mix UL per classe dimensionale"></canvas>
+            <canvas id="asia-chart-classi" aria-label="Mix UL per classe dimensionale" role="img"></canvas>
           </div>
           <p class="muted asia-chart-legend">
             <span class="asia-legend-dot" style="background:${ASIA_CLASSI.W0_9.color}" aria-hidden="true"></span>${ASIA_CLASSI.W0_9.lab} ·
@@ -12234,7 +12271,7 @@ function renderAsiaTab(d) {
       <div class="asia-chart-box">
         <h3 class="asia-chart-title">Serie storica unità locali e addetti</h3>
         <div class="asia-chart-container">
-          <canvas id="asia-chart-serie" aria-label="Serie storica unità locali e addetti per anno"></canvas>
+          <canvas id="asia-chart-serie" aria-label="Serie storica unità locali e addetti per anno" role="img"></canvas>
         </div>
         <p class="muted asia-chart-legend">
           <span class="asia-legend-dot" style="background:#0066CC" aria-hidden="true"></span>Unità locali (asse sinistro) ·
@@ -12250,7 +12287,7 @@ function renderAsiaTab(d) {
           Le righe sono ordinate per numero di UL totali decrescente.
         </p>
         <div class="asia-table-wrap">
-          <table class="asia-table" id="asia-table-dettaglio">
+          <table class="asia-table" id="asia-table-dettaglio"><caption style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;">Unità locali e addetti per settore ATECO</caption>
             <thead>
               <tr>
                 <th id="asia-h-set" rowspan="2" scope="col">Settore ATECO</th>
