@@ -9933,6 +9933,22 @@ function enhanceTabsA11y() {
     list[n].focus();
     list[n].click();
   });
+
+  // a11y mappe: marca i container Leaflet e impedisce focus-trap (WCAG 2.1.1)
+  const markMaps = () => {
+    document.querySelectorAll('.leaflet-container:not([data-a11y])').forEach(el => {
+      el.setAttribute('data-a11y', '1');
+      el.setAttribute('role', 'application');
+      if (!el.getAttribute('aria-label')) el.setAttribute('aria-label', 'Mappa interattiva. I dati corrispondenti sono disponibili nelle tabelle ed elenchi della stessa sezione.');
+    });
+    // togli i marker dalla tab-order: l'alternativa accessibile sono tabelle/elenchi
+    document.querySelectorAll('.leaflet-marker-icon[tabindex], .leaflet-interactive[tabindex]').forEach(m => m.setAttribute('tabindex', '-1'));
+  };
+  markMaps();
+  if (!window.__mapsA11yObs) {
+    window.__mapsA11yObs = new MutationObserver(() => markMaps());
+    window.__mapsA11yObs.observe(document.body, { childList: true, subtree: true });
+  }
 }
 
 function bindTabSwitching() {
