@@ -1441,6 +1441,52 @@ def load_lookups() -> tuple[
 # FASE 5 - Group by ISTAT
 # =========================================================================
 
+_PREFISSI_INDIRIZZO_ARCO = (
+    "via", "viale", "v.le", "piazza", "piazzale", "p.zza", "largo", "strada",
+    "str.", "vicolo", "vicinale", "corso", "c.so", "salita", "traversa",
+    "lungo", "calle", "riva", "galleria", "rampa", "stradone", "loc.",
+    "localita", "localit\u00e0", "frazione", "fraz.", "contrada", "c.da",
+    "piaggia",
+)
+
+
+def _is_indirizzo_arco(tok):
+    """True se il token e' un indirizzo (via/piazza/civico/CAP), non un comune."""
+    if not tok:
+        return True
+    t = tok.strip().lower()
+    if not t:
+        return True
+    if t[0].isdigit():
+        return True
+    for pref in _PREFISSI_INDIRIZZO_ARCO:
+        if t == pref or t.startswith(pref + " "):
+            return True
+    return False
+
+
+def _arco_secondo_comune(addr_raw, sigla):
+    """Ultimo token NON-indirizzo dopo il primo token successivo alla sigla
+    (X = nome provincia nei formati a 4+ campi). None se assente.
+    "ITALIA, Umbria, PG, Perugia, Spello, Via Giulia" -> "Spello"."""
+    if not addr_raw or not sigla:
+        return None
+    t = addr_raw.replace(" - ", ", ").replace(" \u2013 ", ", ")
+    parts = [p.strip() for p in t.split(",")]
+    while parts and parts[0].upper() in ("EUROPA", "ITALIA"):
+        parts.pop(0)
+    sig = sigla.upper()
+    for i, p in enumerate(parts[:4]):
+        if len(p) == 2 and p.upper() == sig:
+            y = None
+            for q in parts[i + 2:]:
+                if _is_indirizzo_arco(q):
+                    break
+                y = q.strip()
+            return y or None
+    return None
+
+
 def group_by_istat(beni: list[dict],
                    pair_to_istat: dict[tuple[str, str], str],
                    name_to_istats: dict[str, list[str]] | None = None,
@@ -1448,23 +1494,17 @@ def group_by_istat(beni: list[dict],
                    ) -> tuple[dict[str, list[dict]], int]:
     """Raggruppa beni ArCo per ISTAT del comune.
 
-    Strategia di match (3 step in cascata):
-      1. PRIMARIO: (sigla_provincia, normalize(comune_label)) -> istat6
-         risolve i ~91% dei beni la cui sigla ArCo e' corrente.
-      2. FALLBACK by-name (se name_to_istats fornito): se (1) fallisce,
-         cerca solo per nome comune ignorando la sigla. Risolve casi in
-         cui ArCo conserva sigla provincia storica (AP per comuni oggi FM
-         dopo riforma 2009; CA per comuni Sud Sardegna dopo 2016) ma il
-         nome comune esiste ancora ed e' UNIVOCO nel gazetteer corrente.
-         Se il nome e' ambiguo (omonimo, lista len > 1) NON risolve
-         automaticamente per evitare match scorretti.
-      3. FALLBACK by-soppressi (se soppressi fornito): se (1) e (2)
-         falliscono, cerca (sigla_old, comune_old_norm) nel mapping
-         storico ISTAT comuni soppressi. Risolve fusioni amministrative
-         dove il comune originario non esiste piu' (es. Pievebovigliana
-         -> Valfornace 2017, Zibello -> Polesine Zibello 2016).
-
-    Ritorna (dict istat -> list beni, n_unmatched).
+    Per ogni bene si considerano DUE candidati comune in ordine:
+      Y = _arco_secondo_comune(addr_raw): token piu' interno dopo il nome
+          provincia (per i comuni non capoluogo e' il comune reale, es.
+          "PG, Perugia, Spello, Via" -> Spello);
+      X = comune_label (primo token dopo la sigla; per i formati a 4+ campi
+          e' il NOME PROVINCIA, per gli altri il comune).
+    Y viene preferito SOLO se da' un match valido in anagrafica; altrimenti
+    si ripiega su X. Cosi' "VE, Venezia, Dorsoduro, Calle" -> Venezia
+    (Dorsoduro non e' comune valido). Su ciascun candidato si applica la
+    cascata: (1) (sigla, comune) -> istat6; (2) by-name univoco (sigla
+    obsoleta); (3) comuni soppressi (fusioni). Ritorna (dict, n_unmatched).
     """
     grouped: dict[str, list[dict]] = defaultdict(list)
     unmatched: dict[tuple[str, str], int] = defaultdict(int)
@@ -1472,7 +1512,6 @@ def group_by_istat(beni: list[dict],
     n_resolved_by_name = 0
     n_ambiguous_skipped = 0
     n_resolved_by_soppressi = 0
-
     for b in beni:
         sigla = b.get("sigla_provincia")
         comune = b.get("comune_label")
@@ -1480,47 +1519,51 @@ def group_by_istat(beni: list[dict],
             n_unmatched += 1
             continue
         comune_norm = normalize(comune)
-        key = (sigla, comune_norm)
-        istat = pair_to_istat.get(key)
-
-        if not istat and name_to_istats is not None:
-            # Fallback 2: cerca per solo nome (ignora sigla obsoleta)
-            candidates = name_to_istats.get(comune_norm, [])
-            if len(candidates) == 1:
-                istat = candidates[0]
-                n_resolved_by_name += 1
-            elif len(candidates) > 1:
-                # omonimo: non risolvere ambiguo, resta unmatched
-                n_ambiguous_skipped += 1
-
-        if not istat and soppressi is not None:
-            # Fallback 3: lookup storico ISTAT comuni soppressi
-            istat = soppressi.get(key)
+        cands = []
+        y = _arco_secondo_comune(b.get("addr_raw"), sigla)
+        if y:
+            yn = normalize(y)
+            if yn and yn != comune_norm:
+                cands.append(yn)
+        cands.append(comune_norm)
+        istat = None
+        for cn in cands:
+            istat = pair_to_istat.get((sigla, cn))
             if istat:
-                n_resolved_by_soppressi += 1
-
+                break
+        if not istat and name_to_istats is not None:
+            for cn in cands:
+                candidates = name_to_istats.get(cn, [])
+                if len(candidates) == 1:
+                    istat = candidates[0]
+                    n_resolved_by_name += 1
+                    break
+                elif len(candidates) > 1:
+                    n_ambiguous_skipped += 1
+        if not istat and soppressi is not None:
+            for cn in cands:
+                istat = soppressi.get((sigla, cn))
+                if istat:
+                    n_resolved_by_soppressi += 1
+                    break
         if not istat:
-            unmatched[key] += 1
+            unmatched[(sigla, comune_norm)] += 1
             n_unmatched += 1
             continue
         grouped[istat].append(b)
-
     if n_resolved_by_name or n_ambiguous_skipped:
         log.info("beni_culturali_fallback_byname",
                  n_resolved_by_name=n_resolved_by_name,
                  n_ambiguous_skipped=n_ambiguous_skipped)
-
     if n_resolved_by_soppressi:
         log.info("beni_culturali_fallback_soppressi",
                  n_resolved=n_resolved_by_soppressi)
-
     if unmatched:
         top = sorted(unmatched.items(), key=lambda x: -x[1])[:20]
         log.warning("beni_culturali_unmatched",
                     n_distinct=len(unmatched),
                     n_records=n_unmatched,
                     top=[(f"{s}/{c}", n) for (s, c), n in top])
-
     return dict(grouped), n_unmatched
 
 
