@@ -599,6 +599,19 @@ a:hover{color:var(--accent)}
 }
 
 /* Dettaglio presidio selezionato */
+.sanita-presidi-list-wrap{margin-top:16px;}
+.sanita-presidi-list-head{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-mute);margin:0 0 8px;}
+.sanita-presidi-list{max-height:340px;overflow-y:auto;border:1px solid var(--line);border-radius:8px;background:#fff;}
+.sanita-presidi-list-empty{padding:16px;text-align:center;color:var(--ink-mute);font-size:13px;}
+.sanita-presidi-row{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:10px 12px;border:none;border-bottom:1px solid var(--line);background:transparent;cursor:pointer;font-family:var(--ui);transition:background .1s ease;}
+.sanita-presidi-row:last-child{border-bottom:none;}
+.sanita-presidi-row:hover{background:#f4f7f9;}
+.sanita-presidi-row:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;}
+.sanita-presidi-row-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+.sanita-presidi-row-body{min-width:0;flex:1;}
+.sanita-presidi-row-name{display:block;font-size:13px;font-weight:600;color:var(--ink);line-height:1.3;}
+.sanita-presidi-row-meta{display:block;font-size:11px;color:var(--ink-mute);line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.sanita-presidi-row-nogeo{flex-shrink:0;font-size:10px;color:#A66300;font-family:var(--mono);}
 .sanita-search-result{margin-top:18px;}
 .sanita-presidio-card{
   border:1px solid var(--ink-mute);
@@ -7218,6 +7231,10 @@ function renderSanitaSearchBlock(d) {
                aria-controls="sanita-search-autocomplete">
         <ul id="sanita-search-autocomplete" class="sanita-search-autocomplete" role="listbox" hidden></ul>
       </div>
+      <div class="sanita-presidi-list-wrap">
+        <p class="sanita-presidi-list-head" id="sanita-presidi-list-head"></p>
+        <div id="sanita-presidi-list" class="sanita-presidi-list"></div>
+      </div>
       <div id="sanita-search-result" class="sanita-search-result"></div>
     </div>
   `;
@@ -7314,6 +7331,60 @@ function initSanitaSearch(d) {
   const farms = (d?.farmacie?.punti || []).map(p => ({ ...p, _kind: 'farmacia' }));
   const parafarm = (d?.parafarmacie?.punti || []).map(p => ({ ...p, _kind: 'parafarmacia' }));
   const allPresidi = [...farms, ...parafarm];
+
+  // Elenco sfogliabile sotto il form: mostra tutti i presidi, filtrabile in
+  // sincrono col campo di ricerca, ogni voce -> selectPresidio (stesso dettaglio).
+  const listEl = document.getElementById('sanita-presidi-list');
+  const listHeadEl = document.getElementById('sanita-presidi-list-head');
+  const _presidiOrdinati = allPresidi
+    .map((p, idx) => ({ p, idx }))
+    .sort((a, b) => {
+      if (a.p._kind !== b.p._kind) return a.p._kind === 'farmacia' ? -1 : 1;
+      return (a.p.nome || '').localeCompare(b.p.nome || '', 'it');
+    });
+
+  function renderList(q) {
+    if (!listEl) return;
+    const ql = (q || '').trim().toLowerCase();
+    const rows = _presidiOrdinati.filter(({ p }) => {
+      if (ql.length < 1) return true;
+      return (p.nome || '').toLowerCase().includes(ql)
+          || (p.indirizzo || '').toLowerCase().includes(ql);
+    });
+    if (listHeadEl) {
+      listHeadEl.textContent = ql.length
+        ? rows.length + ' risultati su ' + allPresidi.length + ' presidi'
+        : allPresidi.length + ' presidi nel comune';
+    }
+    if (rows.length === 0) {
+      listEl.innerHTML = '<div class="sanita-presidi-list-empty">Nessun presidio corrisponde alla ricerca.</div>';
+      return;
+    }
+    listEl.innerHTML = rows.map(({ p, idx }) => {
+      const isFarm = p._kind === 'farmacia';
+      const dot = isFarm ? '#2E7D32' : '#EF6C00';
+      const kind = isFarm ? ('Farmacia · ' + (p.tipo || 'Ordinaria')) : 'Parafarmacia';
+      const addr = p.indirizzo ? p.indirizzo.replace(/</g,'&lt;') : '';
+      const noGeo = (p.lat == null || p.lon == null) ? '<span class="sanita-presidi-row-nogeo" title="Non visibile sulla mappa per coordinate inaffidabili">no mappa</span>' : '';
+      return '<button type="button" class="sanita-presidi-row" data-idx="' + idx + '">'
+        + '<span class="sanita-presidi-row-dot" style="background:' + dot + '"></span>'
+        + '<span class="sanita-presidi-row-body">'
+        + '<span class="sanita-presidi-row-name">' + (p.nome || '\u2014').replace(/</g,'&lt;') + '</span>'
+        + '<span class="sanita-presidi-row-meta">' + kind + (addr ? ' · ' + addr : '') + '</span>'
+        + '</span>' + noGeo + '</button>';
+    }).join('');
+  }
+
+  if (listEl) {
+    listEl.addEventListener('click', (ev) => {
+      const row = ev.target.closest('button[data-idx]');
+      if (!row) return;
+      const idx = parseInt(row.dataset.idx, 10);
+      selectPresidio(idx);
+      const rEl = document.getElementById('sanita-search-result');
+      if (rEl) rEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    });
+  }
 
   let suppressAutocomplete = false;
   let acActive = -1;
@@ -7457,6 +7528,12 @@ function initSanitaSearch(d) {
     });
     renderAutocomplete(matches);
   });
+
+  // Filtro sincrono dell'elenco ad ogni digitazione (anche < 3 char).
+  inputEl.addEventListener('input', () => renderList(inputEl.value));
+
+  // Popola l'elenco completo all'avvio.
+  renderList('');
 }
 
 // ===========================================================================
