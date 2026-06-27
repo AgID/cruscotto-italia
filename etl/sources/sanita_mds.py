@@ -677,10 +677,74 @@ class _AnncsuGeocoder:
         return {"lat": lat, "lon": lon, "strategy": "odo_only"}
 
 
+class _PipChecker:
+    """Point-in-polygon su GeoJSON sezioni censimento per verificare
+    se una coordinata cade dentro il territorio comunale.
+    Usa ray-casting stdlib (nessuna dipendenza esterna).
+    """
+
+    def __init__(self, censimento_full_dir: Path):
+        self._dir = censimento_full_dir
+        self._cache: dict[str, list] = {}
+
+    def _carica_sezioni(self, istat: str) -> list:
+        if istat in self._cache:
+            return self._cache[istat]
+        path = self._dir / f"{istat}.geojson"
+        if not path.exists():
+            self._cache[istat] = []
+            return []
+        try:
+            import json as _json
+            fc = _json.loads(path.read_text(encoding="utf-8"))
+            feats = fc.get("features", [])
+            self._cache[istat] = feats
+            return feats
+        except Exception:
+            self._cache[istat] = []
+            return []
+
+    @staticmethod
+    def _pip(pt: tuple, ring: list) -> bool:
+        x, y = pt
+        inside = False
+        n = len(ring)
+        j = n - 1
+        for i in range(n):
+            xi, yi = ring[i]
+            xj, yj = ring[j]
+            if ((yi > y) != (yj > y)) and (
+                x < (xj - xi) * (y - yi) / (yj - yi) + xi
+            ):
+                inside = not inside
+            j = i
+        return inside
+
+    def _in_feature(self, pt: tuple, geom: dict) -> bool:
+        if geom["type"] == "MultiPolygon":
+            polys = geom["coordinates"]
+        else:
+            polys = [geom["coordinates"]]
+        for poly in polys:
+            outer = poly[0]
+            holes = poly[1:]
+            if self._pip(pt, outer) and not any(self._pip(pt, h) for h in holes):
+                return True
+        return False
+
+    def fuori_comune(self, istat: str, lon: float, lat: float) -> bool:
+        """Ritorna True se (lon, lat) NON cade in nessuna sezione del comune."""
+        feats = self._carica_sezioni(istat)
+        if not feats:
+            return False  # GeoJSON mancante: non flaggare
+        return not any(self._in_feature((lon, lat), f["geometry"]) for f in feats)
+
+
 def _clean_and_geocode_coords(
     istat: str,
     punti: list[dict],
     geocoder: _AnncsuGeocoder | None = None,
+    pip_checker: "_PipChecker | None" = None,
 ) -> tuple[list[dict], dict]:
     """Pulisce e arricchisce le coordinate dei punti MdS.
 
@@ -754,6 +818,8 @@ def _clean_and_geocode_coords(
             if not is_outlier:
                 # Coord MdS valide e dentro soglia
                 new_p["coord_source"] = "mds"
+                if pip_checker is not None and pip_checker.fuori_comune(istat, raw_lon, raw_lat):
+                    new_p["coord_fuori_comune"] = True
                 stats["mds"] += 1
                 out.append(new_p)
                 continue
@@ -924,12 +990,13 @@ def _build_farmacie_section(
     istat: str,
     punti: list[dict],
     geocoder: _AnncsuGeocoder | None = None,
+    pip_checker: "_PipChecker | None" = None,
 ) -> dict:
     """KPI + punti per farmacie. Tiene tutti i punti (no sampling).
 
     Pulisce e arricchisce coord via _clean_and_geocode_coords.
     """
-    punti, cstats = _clean_and_geocode_coords(istat, punti, geocoder)
+    punti, cstats = _clean_and_geocode_coords(istat, punti, geocoder, pip_checker)
     n_tot = len(punti)
     n_geo = sum(1 for p in punti if p["lat"] is not None and p["lon"] is not None)
     n_outlier_bbox = sum(
@@ -963,9 +1030,10 @@ def _build_parafarmacie_section(
     istat: str,
     punti: list[dict],
     geocoder: _AnncsuGeocoder | None = None,
+    pip_checker: "_PipChecker | None" = None,
 ) -> dict:
     """KPI + punti per parafarmacie. Pre-filtro+geocoding come per farmacie."""
-    punti, cstats = _clean_and_geocode_coords(istat, punti, geocoder)
+    punti, cstats = _clean_and_geocode_coords(istat, punti, geocoder, pip_checker)
     n_tot = len(punti)
     n_geo = sum(1 for p in punti if p["lat"] is not None and p["lon"] is not None)
     n_outlier_bbox = sum(
@@ -1034,6 +1102,7 @@ def build_shards(
     ospedali_by_istat: dict[str, dict],
     discovery: dict,
     geocoder: _AnncsuGeocoder | None = None,
+    pip_checker: "_PipChecker | None" = None,
 ) -> dict[str, dict]:
     """Costruisce shard per ogni comune che ha almeno una sezione popolata."""
     all_istats = (
@@ -1103,8 +1172,8 @@ def build_shards(
             "comune":         anag.get("comune"),
             "provincia":      anag.get("provincia"),
             "regione":        anag.get("regione"),
-            "farmacie":       _build_farmacie_section(istat, f_punti, geocoder) if f_punti else None,
-            "parafarmacie":   _build_parafarmacie_section(istat, pf_punti, geocoder) if pf_punti else None,
+            "farmacie":       _build_farmacie_section(istat, f_punti, geocoder, pip_checker) if f_punti else None,
+            "parafarmacie":   _build_parafarmacie_section(istat, pf_punti, geocoder, pip_checker) if pf_punti else None,
             "ospedali":       _build_ospedali_section(osp_blob["stabilimenti"])
                               if osp_blob else None,
         }
@@ -1213,6 +1282,10 @@ def main() -> int:
     parser.add_argument("--anncsu-dir", default=None,
                         help="Directory con shard anncsu_full/<istat>.json per geocoding. "
                              "Default: DATA_DIR/anncsu_full/")
+    parser.add_argument("--censimento-full-dir", default=None,
+                        help="Directory con shard censimento_full/<istat>.geojson per "
+                             "point-in-polygon (flag coord_fuori_comune). "
+                             "Default: DATA_DIR/censimento_full/")
     args = parser.parse_args()
 
     output_dir = Path(args.outdir)
@@ -1260,7 +1333,16 @@ def main() -> int:
                             note="ANNCSU geocoding skipped, only centroid filter active. "
                                  "Esegui 'python -m etl.sources.anncsu --full-shards' prima.")
 
-        shards = build_shards(farmacie, parafarm, ospedali, discovery, geocoder)
+        pip_checker = None
+        censimento_dir = (Path(args.censimento_full_dir) if args.censimento_full_dir
+                          else local_lookup.get_data_dir() / "censimento_full")
+        if censimento_dir.exists():
+            pip_checker = _PipChecker(censimento_dir)
+            log.info("sanita_mds_pip_checker_enabled", source=str(censimento_dir))
+        else:
+            log.warning("sanita_mds_pip_checker_no_dir", path=str(censimento_dir),
+                        note="Point-in-polygon skipped, coord_fuori_comune non calcolato.")
+        shards = build_shards(farmacie, parafarm, ospedali, discovery, geocoder, pip_checker)
 
         # 5. Write local
         n_written = write_local(shards, output_dir)

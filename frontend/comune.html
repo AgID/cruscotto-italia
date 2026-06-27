@@ -654,6 +654,8 @@ a:hover{color:var(--accent)}
   white-space:nowrap;
 }
 .sanita-presidio-dl dd{margin:0;color:var(--ink);line-height:1.5;}
+.sanita-fuori-comune-warn{padding:10px 14px;margin:0 0 14px;border-left:3px solid var(--gold);background:var(--paper-2);font-family:var(--serif);font-size:13px;color:var(--ink-soft);font-style:italic;line-height:1.5;}
+.sanita-fuori-comune-warn strong{font-style:normal;color:var(--ink);font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.08em;display:block;margin-bottom:4px;}
 .sanita-presidio-dl dd code{
   font-family:var(--mono);
   font-size:12px;
@@ -7284,6 +7286,7 @@ function renderSanitaPresidioDetail(presidio) {
         <div class="sanita-presidio-name">${(presidio.nome || '—').replace(/</g,'&lt;')}</div>
         <div class="sanita-presidio-cat">${catLabel}</div>
       </div>
+      ${presidio.coord_fuori_comune ? '<div class="sanita-fuori-comune-warn"><strong>⚠ Posizione probabilmente errata</strong>Le coordinate del Ministero della Salute collocano questo presidio fuori dal confine comunale. Il dato anagrafico resta valido.</div>' : ''}
 
       <dl class="sanita-presidio-dl">
         <dt>Indirizzo</dt>
