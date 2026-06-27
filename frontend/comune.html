@@ -5752,6 +5752,11 @@ function renderPunTab(d) {
           <div class="kpi-card-val">${fmtNum(k.n_ac || 0)}</div>
           <div class="kpi-card-sub">corrente alternata</div>
         </div>
+        <div class="kpi-card ${(k.n_ricarica_rapida || 0) > 0 ? '' : 'tbd'}">
+          <div class="kpi-card-lab">Ricarica rapida</div>
+          <div class="kpi-card-val">${fmtNum(k.n_ricarica_rapida || 0)}</div>
+          <div class="kpi-card-sub">DC ≥ 50 kW</div>
+        </div>
       </div>
 
       <div class="veicoli-grid">
@@ -5777,9 +5782,34 @@ function renderPunTab(d) {
         </div>
       </div>
 
+      ${(() => {
+        const conn = k.mix_connettori || {};
+        const connKeys = Object.keys(conn).sort((a,b) => conn[b]-conn[a]);
+        const connRows = connKeys.map(s =>
+          `<tr><td style="font-family:var(--mono);font-size:12px;padding:4px 8px 4px 0">${s}</td><td style="text-align:right;padding:4px 0">${fmtNum(conn[s])}</td></tr>`
+        ).join('');
+        const cpoList = (k.cpo_list || []);
+        const cpoHtml = cpoList.length
+          ? cpoList.map(c => `<span style="display:inline-block;background:var(--paper-2);border:1px solid var(--border);border-radius:4px;font-size:12px;font-family:var(--mono);padding:3px 8px;margin:3px 4px 3px 0">${c}</span>`).join('')
+          : '<span class="muted">—</span>';
+        return connKeys.length || cpoList.length ? `
+      <div class="veicoli-grid" style="margin-top:18px;">
+        ${connKeys.length ? `<div>
+          <h3 class="veicoli-col-h">Standard connettori</h3>
+          <table style="width:100%;border-collapse:collapse;">
+            <tbody>${connRows}</tbody>
+          </table>
+        </div>` : '<div></div>'}
+        ${cpoList.length ? `<div>
+          <h3 class="veicoli-col-h">Operatori di ricarica (CPO)</h3>
+          <div style="line-height:2">${cpoHtml}</div>
+        </div>` : ''}
+      </div>` : '';
+      })()}
+
       <p class="muted" style="font-family:var(--mono);font-size:11px;margin-top:18px;">
         Fonte: <a href="https://www.piattaformaunicanazionale.it/idr" target="_blank" rel="noopener">Piattaforma Unica Nazionale (GSE / Ministero dell'Ambiente)</a>.
-        Licenza CC BY 4.0 ex art. 52 c.2 D.Lgs 82/2005 (CAD) — open by default.
+        Licenza CC BY 4.0 ex art. 52 c.2 D.Lgs 82/2025 (CAD) — open by default.
       </p>
     </div>`;
 }
@@ -6808,11 +6838,12 @@ function initPun(d) {
         <div style="font-weight:600;color:${color};margin-bottom:4px">
           ${cat} &middot; ${attivo ? 'Attivo' : 'Non attivo'}
         </div>
+        ${p.cpo ? `<div style="font-weight:600;margin-bottom:2px">${p.cpo}</div>` : ''}
         ${p.indirizzo ? `<div><b>Indirizzo:</b> ${p.indirizzo}${p.cap ? ' (' + p.cap + ')' : ''}</div>` : ''}
         ${p.potenza_w != null ? `<div><b>Potenza:</b> ${(p.potenza_w / 1000).toFixed(1)} kW</div>` : ''}
-        ${p.corrente ? `<div><b>Corrente:</b> ${p.corrente}</div>` : ''}
+        ${p.corrente ? `<div><b>Corrente:</b> ${p.corrente}${p.standard_connettore ? ' · ' + p.standard_connettore : ''}</div>` : ''}
+        ${p.open_24h7 ? `<div style="color:var(--ink-mute);font-size:11px">Aperto 24/7</div>` : ''}
         ${p.tipo_parcheggio ? `<div><b>Parcheggio:</b> ${p.tipo_parcheggio}</div>` : ''}
-        ${p.restrizioni ? `<div style="color:var(--mute);margin-top:4px;font-size:11px"><b>Restrizioni:</b> ${p.restrizioni}</div>` : ''}
         ${p.id_evse ? `<div style="font-family:var(--mono);font-size:10px;color:var(--mute);margin-top:6px">ID EVSE: ${p.id_evse}</div>` : ''}
       </div>
     `;
