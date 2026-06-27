@@ -27,3 +27,4 @@ pyproj>=3.6.0
 structlog>=24.1.0
 
 # Dev / test (install with: pip install -r requirements.txt -r requirements-dev.txt)
+requests-aws4auth
