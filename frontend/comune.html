@@ -654,7 +654,7 @@ a:hover{color:var(--accent)}
   white-space:nowrap;
 }
 .sanita-presidio-dl dd{margin:0;color:var(--ink);line-height:1.5;}
-.sanita-fuori-comune-warn{padding:10px 14px;margin:0 0 14px;border-left:3px solid var(--gold);background:var(--paper-2);font-family:var(--serif);font-size:13px;color:var(--ink-soft);font-style:italic;line-height:1.5;}
+.sanita-fuori-comune-warn{padding:10px 14px;margin:0 0 14px;border-left:3px solid var(--chart-bad);background:#fff5f5;font-family:var(--serif);font-size:13px;color:var(--ink-soft);font-style:italic;line-height:1.5;}
 .sanita-fuori-comune-warn strong{font-style:normal;color:var(--ink);font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.08em;display:block;margin-bottom:4px;}
 .sanita-presidio-dl dd code{
   font-family:var(--mono);
@@ -7258,7 +7258,7 @@ function _buildSanitaPopupHtml(p) {
 function _sanitaCoordBadge(coord_source, coord_strategy) {
   // Mappa coord_source -> {label, color, icon, descr}
   const MAP = {
-    'mds':      { label: 'Coordinate Ministero della Salute',     color: '#2E7D32', icon: '✓', descr: 'Coordinate originali del Ministero della Salute (dentro il perimetro del comune).' },
+    'mds':      { label: 'Coordinate Ministero della Salute',     color: '#2E7D32', icon: '✓', descr: 'Coordinate originali del Ministero della Salute.' },
     'anncsu':   { label: 'Ricalcolate via ANNCSU',     color: '#0066CC', icon: '↻', descr: "Coordinate originali del Ministero della Salute erano errate o assenti; ricalcolate via incrocio con l'Archivio Nazionale dei Numeri Civici e delle Strade Urbane (ANNCSU - Agenzia delle Entrate)." },
     'duplicate':{ label: 'Coordinate non affidabili',       color: '#A66300', icon: '⚠', descr: "Le coordinate del Ministero della Salute sono condivise da 3 o piu' presidi dello stesso comune (centroide finto del comune): non affidabili. Marker non mostrato sulla mappa." },
     'dropped':  { label: 'Coordinate fuori comune',     color: '#CC334D', icon: '⚠', descr: 'Le coordinate del Ministero della Salute puntavano fuori dal comune dichiarato; nessun match trovato in ANNCSU. Marker non mostrato.' },
