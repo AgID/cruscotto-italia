@@ -5763,6 +5763,11 @@ function renderPunTab(d) {
         <div>
           <h3 class="veicoli-col-h">Mappa (${fmtNum((d.punti || []).length)} punti)</h3>
           <div id="pun-map-main" class="impa-map" role="region" aria-label="Mappa punti di ricarica veicoli elettrici"></div>
+          <div id="pun-cpo-wrap" style="display:none;margin-bottom:10px">
+            <select id="pun-cpo-filter" style="width:100%;padding:7px 10px;border:2px solid var(--accent);border-radius:6px;font-family:var(--mono);font-size:12px;background:var(--paper);color:var(--ink);font-weight:500">
+              <option value="">Tutti gli operatori (CPO)</option>
+            </select>
+          </div>
           <div class="impa-filters" id="pun-filters-main" role="group" aria-label="Filtri categoria potenza e stato">
             ${renderPunFilters(k.mix_potenza || {})}
           </div>
@@ -6798,8 +6803,9 @@ function initPun(d) {
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
   }).addTo(map);
 
-  // ---- 3) Stato filtri: Set di categorie potenza attive
+  // ---- 3) Stato filtri: Set di categorie potenza attive + CPO attivo
   const activeCats = new Set(PUN_CAT_ORDER.filter(c => punti.some(p => p.potenza_categoria === c)));
+  let activeCpo = null; // null = tutti
 
   // ---- 4) Layer markers e redraw cluster grid-based
   const markersLayer = L.layerGroup().addTo(map);
@@ -6861,7 +6867,10 @@ function initPun(d) {
   function redrawClusters() {
     markersLayer.clearLayers();
     const z = map.getZoom();
-    const visible = punti.filter(p => activeCats.has(p.potenza_categoria || 'Slow'));
+    const visible = punti.filter(p =>
+      activeCats.has(p.potenza_categoria || 'Slow') &&
+      (activeCpo === null || p.cpo === activeCpo)
+    );
     if (z >= 14 || visible.length <= 50) {
       visible.forEach(p => markersLayer.addLayer(makeDot(p)));
       return;
@@ -6915,7 +6924,24 @@ function initPun(d) {
     });
   }
 
-  // ---- 6) Doughnut Chart.js mix categoria di potenza
+  // ---- 6) Select filtro CPO
+  const cpoList = [...new Set(punti.map(p => p.cpo).filter(Boolean))].sort();
+  const cpoFilterEl = document.getElementById('pun-cpo-filter');
+  if (cpoFilterEl && cpoList.length > 1) {
+    cpoList.forEach(cpo => {
+      const opt = document.createElement('option');
+      opt.value = cpo;
+      opt.textContent = cpo;
+      cpoFilterEl.appendChild(opt);
+    });
+    cpoFilterEl.addEventListener('change', () => {
+      activeCpo = cpoFilterEl.value || null;
+      redrawClusters();
+    });
+    document.getElementById('pun-cpo-wrap').style.display = '';
+  }
+
+  // ---- 7) Doughnut Chart.js mix categoria di potenza
   const canvas = document.getElementById('pun-mix-chart');
   if (canvas && window.Chart && d.kpi && d.kpi.mix_potenza) {
     const entries = PUN_CAT_ORDER
