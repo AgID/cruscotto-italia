@@ -6804,6 +6804,7 @@ function initPun(d) {
     });
     const popupHtml = `
       <div style="font-family:var(--ui);font-size:12px;min-width:200px">
+        ${p.coord_fuori_comune ? '<div style="background:#fff5f5;border-left:3px solid #c62828;padding:6px 8px;margin-bottom:6px;font-size:11px;color:#c62828;font-weight:600">⚠ Posizione probabilmente errata (fuori dal confine comunale)</div>' : ''}
         <div style="font-weight:600;color:${color};margin-bottom:4px">
           ${cat} &middot; ${attivo ? 'Attivo' : 'Non attivo'}
         </div>

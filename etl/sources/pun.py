@@ -298,8 +298,70 @@ def _to_int(v) -> int | None:
         return None
 
 
+class _PipChecker:
+    """Point-in-polygon su GeoJSON sezioni censimento per verificare
+    se una coordinata cade dentro il territorio comunale.
+    Usa ray-casting stdlib (nessuna dipendenza esterna).
+    """
+
+    def __init__(self, censimento_full_dir):
+        self._dir = censimento_full_dir
+        self._cache = {}
+
+    def _carica_sezioni(self, istat):
+        if istat in self._cache:
+            return self._cache[istat]
+        path = self._dir / f"{istat}.geojson"
+        if not path.exists():
+            self._cache[istat] = []
+            return []
+        try:
+            import json as _json
+            fc = _json.loads(path.read_text(encoding="utf-8"))
+            feats = fc.get("features", [])
+            self._cache[istat] = feats
+            return feats
+        except Exception:
+            self._cache[istat] = []
+            return []
+
+    @staticmethod
+    def _pip(pt, ring):
+        x, y = pt
+        inside = False
+        n = len(ring)
+        j = n - 1
+        for i in range(n):
+            xi, yi = ring[i]
+            xj, yj = ring[j]
+            if ((yi > y) != (yj > y)) and (
+                x < (xj - xi) * (y - yi) / (yj - yi) + xi
+            ):
+                inside = not inside
+            j = i
+        return inside
+
+    def _in_feature(self, pt, geom):
+        if geom["type"] == "MultiPolygon":
+            polys = geom["coordinates"]
+        else:
+            polys = [geom["coordinates"]]
+        for poly in polys:
+            outer = poly[0]
+            holes = poly[1:]
+            if self._pip(pt, outer) and not any(self._pip(pt, h) for h in holes):
+                return True
+        return False
+
+    def fuori_comune(self, istat, lon, lat):
+        """Ritorna True se (lon, lat) NON cade in nessuna sezione del comune."""
+        feats = self._carica_sezioni(istat)
+        if not feats:
+            return False
+        return not any(self._in_feature((lon, lat), f["geometry"]) for f in feats)
+
 def build_shards(rows: list[dict], by_np: dict, by_name: dict,
-                 last_modified: datetime) -> dict[str, dict]:
+                 last_modified: datetime, pip_checker=None) -> dict[str, dict]:
     """Aggrega righe PdR per ISTAT con KPI per comune."""
     shards: dict[str, dict] = {}
     stats = Counter()
@@ -349,6 +411,7 @@ def build_shards(rows: list[dict], by_np: dict, by_name: dict,
             "restrizioni": _clean(r["Restrizioni parcheggio"]),
             "servizi_vicini": _clean(r["Servizi nelle vicinanze"]),
             "orario": _clean(r["Orario d'apertura"]),
+            **({"coord_fuori_comune": True} if pip_checker and pip_checker.fuori_comune(istat, round(lon, 6), round(lat, 6)) else {}),
         })
 
     # KPI per shard
@@ -470,6 +533,10 @@ def main() -> int:
                         help="Forza esecuzione anche se LastModified non è cambiato + riscrittura totale")
     parser.add_argument("--no-cache", action="store_true",
                         help="Forza ridownload del CSV ISTAT comuni")
+    parser.add_argument("--censimento-full-dir", default=None,
+                        help="Directory con shard censimento_full/<istat>.geojson per "
+                             "point-in-polygon (flag coord_fuori_comune). "
+                             "Default: /var/www/cruscotto-italia/data/censimento_full/")
     args = parser.parse_args()
 
     log.info("etl_pun_start", version=ETL_VERSION, outdir=str(args.outdir))
@@ -498,7 +565,15 @@ def main() -> int:
     by_np, by_name = build_istat_index(istat_csv)
 
     # Build shards
-    shards = build_shards(rows, by_np, by_name, last_modified)
+    pip_checker = None
+    from pathlib import Path as _Path
+    censimento_dir = _Path(args.censimento_full_dir) if args.censimento_full_dir else _Path("/var/www/cruscotto-italia/data/censimento_full")
+    if censimento_dir.exists():
+        pip_checker = _PipChecker(censimento_dir)
+        log.info("pun_pip_checker_enabled", source=str(censimento_dir))
+    else:
+        log.warning("pun_pip_checker_no_dir", path=str(censimento_dir))
+    shards = build_shards(rows, by_np, by_name, last_modified, pip_checker)
 
     # Sample log (alcuni comuni notevoli)
     for sample in ["058091", "015146", "077014", "075035", "097055"]:
