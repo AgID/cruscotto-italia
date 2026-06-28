@@ -93,6 +93,7 @@ SHARDS = [
     ("asia",       "asia/{istat}.json"),
     ("censimento", "censimento/{istat}.json"),
     ("beni_culturali", "beni_culturali/{istat}.json"),
+    ("meteo",          "meteo/{istat}.json"),
 ]
 
 # Shard con path assoluto (legacy, indipendenti da DATA_DIR)
@@ -166,6 +167,7 @@ def compute_kpi_summary(out: dict) -> dict:
     asia = out.get("asia") or {}
     pendolarismo = out.get("pendolarismo") or {}
     beni_culturali = out.get("beni_culturali") or {}
+    meteo = out.get("meteo") or {}
 
     # Popolazione (riferimento per molti pro-capite/per-1000)
     pop = _safe(demo, "popolazione_totale")
@@ -363,6 +365,22 @@ def compute_kpi_summary(out: dict) -> dict:
                 _safe(beni_culturali, "kpi", "n_totale"), pop
             ),
             "snapshot_date": beni_culturali.get("_snapshot_date"),
+        },
+        "meteo_italiameteo": {
+            "t2m_c":              meteo.get("t2m_c"),
+            "t2m_max24h_c":       meteo.get("t2m_max24h_c"),
+            "t2m_min24h_c":       meteo.get("t2m_min24h_c"),
+            "prec_24h_mm":        meteo.get("prec_24h_mm"),
+            "umidita_pct":        meteo.get("umidita_pct"),
+            "vento_kmh":          meteo.get("vento_kmh"),
+            "vento_dir_deg":      meteo.get("vento_dir_deg"),
+            "raffica_max24h_kmh": meteo.get("raffica_max24h_kmh"),
+            "nuvolosita_pct":     meteo.get("nuvolosita_pct"),
+            "neve_cm":            meteo.get("neve_cm"),
+            "ww":                 meteo.get("ww"),
+            "ww_desc":            meteo.get("ww_desc"),
+            "run_utc":            meteo.get("run_utc"),
+            "valid_time_utc":     meteo.get("valid_time_utc"),
         },
     }
     return summary

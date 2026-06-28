@@ -996,6 +996,13 @@ footer a{color:rgba(255,255,255,0.85);text-decoration:none}
 .terr-sismica-note{font-family:var(--mono);font-size:10px;line-height:1.5;color:var(--ink-mute);margin-top:14px;}
 .terr-sismica-note a{color:var(--accent);}
 /* Tab Aria - ISPRA SNPA qualità dell'aria */
+/* Tab Meteo e Aria - ItaliaMeteo ICON-2I */
+.meteo-section{margin-bottom:36px;}
+.meteo-ww{font-family:var(--serif);font-size:22px;font-weight:500;color:var(--ink);margin:0 0 20px;font-style:italic;}
+.meteo-kpi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:0 0 28px;}
+@media (max-width:960px){.meteo-kpi-grid{grid-template-columns:repeat(2,1fr);}}
+@media (max-width:540px){.meteo-kpi-grid{grid-template-columns:1fr;}}
+.meteo-divider{border:none;border-top:1px solid var(--paper-2);margin:32px 0 28px;}
 .aria-meta{display:flex;flex-wrap:wrap;gap:18px;padding:14px 18px;background:var(--paper-2);border-left:3px solid var(--accent-2);margin:0 0 28px;}
 .aria-meta-item{font-family:var(--mono);font-size:12px;color:var(--ink-soft);}
 .aria-meta-item b{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-mute);font-weight:normal;margin-bottom:2px;}
@@ -2009,7 +2016,7 @@ function renderComune(data) {
   const tabs = [
     { id: 'panoramica', label: 'Panoramica', kpi: '' },
     { id: 'anncsu', label: 'ANNCSU e Catasto', kpi: k.anncsu?.kpi?.n_strade != null ? fmtNum(k.anncsu.kpi.n_strade) + (k.anncsu.kpi.n_civici != null ? ' / ' + fmtNum(k.anncsu.kpi.n_civici) : '') : '—' },
-    { id: 'aria', label: 'Aria', kpi: '<span data-tab-aria-n><span class="tab-spinner"></span></span>' },
+    { id: 'aria', label: 'Meteo e Aria', kpi: k.meteo_italiameteo?.t2m_c != null ? Math.round(k.meteo_italiameteo.t2m_c) + '°C' : '<span data-tab-aria-n><span class="tab-spinner"></span></span>' },
     { id: 'banda-larga', label: 'Banda larga', kpi: k.agcom_bbmap?.kpi?.copertura_ftth_desi_pct != null ? Math.round(k.agcom_bbmap.kpi.copertura_ftth_desi_pct) + '%' : '—' },
     { id: 'beni-culturali', label: 'Beni culturali', kpi: k.beni_culturali?.kpi?.n_totale ? fmtNum(k.beni_culturali.kpi.n_totale) : '—' },
     { id: 'censimento', label: 'Censimento 2021', kpi: k.censimento?.kpi_comune?.n_sezioni != null ? fmtNum(k.censimento.kpi_comune.n_sezioni) : '—' },
@@ -2074,10 +2081,10 @@ function renderComune(data) {
             <div class="kpi-card-sub">${k.anncsu?.kpi?.n_civici != null ? 'strade · ' + fmtNum(k.anncsu.kpi.n_civici) + ' civici' : 'strade certificate'}</div>
           </div>
 
-          <div class="kpi-card ${k.aria?.ultimo_anno?.no2?.media != null ? '' : 'tbd'}" data-go-tab="aria" tabindex="0" role="button" aria-label="Vai alla tab Aria">
-            <div class="kpi-card-lab">Aria</div>
-            <div class="kpi-card-val">${k.aria?.ultimo_anno?.no2?.media != null ? k.aria.ultimo_anno.no2.media : '—'}<span class="kpi-card-unit">${k.aria?.ultimo_anno?.no2?.media != null ? 'μg/m³ NO₂' : ''}</span></div>
-            <div class="kpi-card-sub">${k.aria?.n_stazioni != null ? k.aria.n_stazioni + ' stazione' + (k.aria.n_stazioni === 1 ? '' : 'i') : 'nessuna stazione ISPRA-SNPA'}</div>
+          <div class="kpi-card ${k.meteo_italiameteo?.t2m_c != null || k.aria?.ultimo_anno?.no2?.media != null ? '' : 'tbd'}" data-go-tab="aria" tabindex="0" role="button" aria-label="Vai alla tab Meteo e Aria">
+            <div class="kpi-card-lab">Meteo e Aria</div>
+            <div class="kpi-card-val">${k.meteo_italiameteo?.t2m_c != null ? k.meteo_italiameteo.t2m_c + ' °C' : k.aria?.ultimo_anno?.no2?.media != null ? k.aria.ultimo_anno.no2.media : '—'}<span class="kpi-card-unit">${k.meteo_italiameteo?.t2m_c != null ? '' : k.aria?.ultimo_anno?.no2?.media != null ? 'μg/m³ NO₂' : ''}</span></div>
+            <div class="kpi-card-sub">${k.meteo_italiameteo?.ww_desc || (k.aria?.n_stazioni != null ? k.aria.n_stazioni + ' st. ISPRA' : 'nessuna stazione ISPRA-SNPA')}</div>
           </div>
 
           <div class="kpi-card ${k.contratti?.count != null ? '' : 'tbd'}" data-go-tab="contratti" tabindex="0" role="button" aria-label="Vai alla tab Contratti">
@@ -10394,12 +10401,8 @@ const ARIA_LIMITS = {
 function renderAriaTabSkeleton() {
   return `
     <div class="tab-pane" id="pane-aria">
-      <div class="section-title">§ aria</div>
-      <h2 class="section-h">Qualità dell'<em>aria</em>.</h2>
-      <p class="section-sub">
-        Stazioni di monitoraggio ISPRA-SNPA del comune: media annua di PM10, PM2.5 e NO₂,
-        superamenti dei limiti di legge e linee guida OMS, trend decennale.
-      </p>
+      <div class="section-title">§ meteo e aria</div>
+      <h2 class="section-h">Meteo e qualità dell'<em>aria</em>.</h2>
       <div data-aria-content>
         <div class="loading-block" role="status" aria-live="polite"><span class="tab-spinner" aria-hidden="true"></span> Caricamento…</div>
       </div>
@@ -10414,12 +10417,68 @@ function loadAria(istat) {
   renderAriaContent(data);
 }
 
+function _meteoWindDir(deg) {
+  const dirs = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSO','SO','OSO','O','ONO','NO','NNO'];
+  return deg != null ? dirs[Math.round(deg / 22.5) % 16] : '—';
+}
+function renderMeteoSection(m) {
+  if (!m) return '';
+  const runStr = m.run_utc ? m.run_utc.replace(/(\d{4})(\d{2})(\d{2})(\d{2})/,'$1-$2-$3 $4 UTC') : '—';
+  const vtStr  = m.valid_time_utc ? m.valid_time_utc.replace('T',' ').replace('Z',' UTC') : '—';
+  return `
+    <div class="meteo-section">
+      <p class="muted">
+        Previsioni del modello numerico <a href="https://meteohub.agenziaitaliameteo.it/" target="_blank" rel="noopener">ItaliaMeteo ICON-2I</a>
+        (Agenzia Nazionale per la Meteorologia e Climatologia), griglia 2.2&nbsp;km, copertura Italia.
+        Aggiornamento 2&nbsp;volte al giorno (corse 00 e 12&nbsp;UTC). Licenza CC&nbsp;BY&nbsp;4.0.
+        <a class="badge-hvd" href="https://eur-lex.europa.eu/legal-content/IT/TXT/?uri=CELEX:32023R0138" target="_blank" rel="noopener" title="High Value Dataset - Regolamento UE 2023/138">High Value Dataset</a>
+      </p>
+      <div class="aria-meta">
+        <span class="aria-meta-item"><b>Modello inizializzato</b> ${runStr}</span>
+        <span class="aria-meta-item"><b>Previsione valida alle</b> ${vtStr}</span>
+      </div>
+      <div class="meteo-ww">${m.ww_desc || '—'}</div>
+      <div class="meteo-kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-card-lab">Temperatura</div>
+          <div class="kpi-card-val">${m.t2m_c != null ? m.t2m_c : '—'}<span class="kpi-card-unit">${m.t2m_c != null ? ' °C' : ''}</span></div>
+          <div class="kpi-card-sub">Min ${m.t2m_min24h_c ?? '—'} · Max ${m.t2m_max24h_c ?? '—'} °C (24h)</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-card-lab">Precipitazioni (24h)</div>
+          <div class="kpi-card-val">${m.prec_24h_mm != null ? m.prec_24h_mm : '—'}<span class="kpi-card-unit">${m.prec_24h_mm != null ? ' mm' : ''}</span></div>
+          <div class="kpi-card-sub">cumulata prossime 24h</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-card-lab">Umidità relativa</div>
+          <div class="kpi-card-val">${m.umidita_pct != null ? m.umidita_pct : '—'}<span class="kpi-card-unit">${m.umidita_pct != null ? ' %' : ''}</span></div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-card-lab">Vento (10m)</div>
+          <div class="kpi-card-val">${m.vento_kmh != null ? m.vento_kmh : '—'}<span class="kpi-card-unit">${m.vento_kmh != null ? ' km/h' : ''}</span></div>
+          <div class="kpi-card-sub">Dir. ${_meteoWindDir(m.vento_dir_deg)} · Raffica max ${m.raffica_max24h_kmh ?? '—'} km/h</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-card-lab">Nuvolosità</div>
+          <div class="kpi-card-val">${m.nuvolosita_pct != null ? m.nuvolosita_pct : '—'}<span class="kpi-card-unit">${m.nuvolosita_pct != null ? ' %' : ''}</span></div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-card-lab">Neve al suolo</div>
+          <div class="kpi-card-val">${m.neve_cm != null ? m.neve_cm : '—'}<span class="kpi-card-unit">${m.neve_cm != null ? ' cm' : ''}</span></div>
+        </div>
+      </div>
+      <hr class="meteo-divider">
+      <h3 class="aria-h3">Qualità dell'aria — ISPRA SNPA</h3>
+    </div>
+  `;
+}
 function renderAriaContent(data) {
   const container = document.querySelector('[data-aria-content]');
   if (!container) return;
+  const meteoHtml = renderMeteoSection(window.__meteoData || null);
 
   if (!data || !data.n_stazioni || data.n_stazioni === 0) {
-    container.innerHTML = `
+    container.innerHTML = meteoHtml + `
       <div class="aria-empty">
         <p><strong>Nessuna stazione di monitoraggio ISPRA in questo comune.</strong></p>
         <p>Solo circa 600 comuni italiani ospitano stazioni della rete SNPA per la qualità dell'aria.
@@ -10436,7 +10495,7 @@ function renderAriaContent(data) {
   const badge = document.querySelector('[data-tab-aria-n]');
   if (badge) badge.textContent = data.n_stazioni;
 
-  container.innerHTML = `
+  container.innerHTML = meteoHtml + `
     <div class="aria-meta">
       <span class="aria-meta-item"><b>Anno dati</b> ${data._anno_dati || u.anno || '—'}</span>
       <span class="aria-meta-item"><b>Stazioni</b> ${data.n_stazioni}</span>
@@ -11085,6 +11144,7 @@ function adaptDashboardToOverview(d) {
       pnrr: d.pnrr,
       territorio: d.territorio,
       aria: d.aria,
+      meteo_italiameteo: d.kpi_summary?.meteo_italiameteo || null,
     },
   };
 }
@@ -11127,6 +11187,7 @@ function populateCachesFromDashboard(istat, d) {
       if (span) span.textContent = '0';
     }
   }
+  window.__meteoData = d.kpi_summary?.meteo_italiameteo || null;
   if (d.opere) {
     // Pre-popoliamo la cache del tab Opere con la sezione 'opere' dello shard
     // A1 unified (comune_dashboard). Il loader loadOpereDettaglio() legge
