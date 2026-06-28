@@ -29,7 +29,7 @@ export const mcpInfo: ToolDefinition = {
       service: "cruscotto-italia-mcp",
       version: "0.17.1",
       protocol: "MCP 2024-11-05",
-      datasets: 26,
+      datasets: 27,
       institutions: 17,
       municipalities: 7918,
       sources: {
@@ -160,6 +160,13 @@ export const mcpInfo: ToolDefinition = {
           license: "CC-BY 4.0",
           datasets: [
             "Ministero della Cultura (MiC) - unione di due dataset Linked Open Data complementari: ICCD/ArCo (Architecture of Knowledge) + Cultural-ON DBUnico 2.0. (1) ArCo: catalogo nazionale dei beni culturali immobili tutelati pubblicato dall'Istituto Centrale per il Catalogo e la Documentazione (ICCD) come LOD via endpoint SPARQL: 113.817 beni nazionali (chiese, palazzi, castelli, ville, aree archeologiche, monumenti, edifici di culto, parchi e giardini storici). Per ogni bene: denominazione (rdfs:label), tipologia granulare (centinaia di slug ArCo CulturalPropertyType), indirizzo civico, sigla provincia, coordinate WKT POINT, foto (foaf:depiction), descrizione testuale, soprintendenza di tutela (hasHeritageProtectionAgency), eventuale link al record Cultural-ON. (2) Cultural-ON DBUnico 2.0: dataset dei Luoghi della Cultura visitabili: 6.603 record di musei, biblioteche, archivi, aree archeologiche con orari di apertura, contatti (telefono, email, sito web), prenotazione e scheda online. Le due fonti sono unificate con normalizzazione in 11 macro-categorie (chiesa, palazzo, castello, archeologia, museo, biblioteca, archivio, monumento, infrastruttura, parco_giardino, altro) e campo 'fonte' (arco|cultural_on) per distinguerle. KPI per comune: n_totale, n_arco, n_cultural_on, n_visitabili (subset con cis_link o fonte=cultural_on), n_con_coordinate, mix_categoria, pct_con_foto, pct_con_descrizione, beni_per_1000_ab. Copertura 6088/7896 comuni (77,1%). Lista compatta nello shard base (cap 30), lista completa in /data/beni_culturali_full/<istat>.json per comuni grandi. Aggiornamento mensile via SPARQL paginato (dati.beniculturali.it + dati.cultura.gov.it).",
+          ],
+        },
+        italiameteo: {
+          canonical: "https://meteohub.agenziaitaliameteo.it/",
+          license: "CC-BY 4.0 - HVD Meteorologici (Regolamento UE 2023/138)",
+          datasets: [
+            "ItaliaMeteo ICON-2I - previsioni numeriche su griglia 2.2km: temperatura 2m, precipitazioni totali, umidita' relativa, vento 10m (U/V), raffica massima, copertura nuvolosa, altezza neve, codice meteo WMO. 73 step orari (0-72h), corse 00 e 12 UTC. Copertura 7.895/7.895 comuni (100%). Aggiornamento bi-giornaliero (03:30 e 14:30 UTC). Agenzia Nazionale per la Meteorologia e Climatologia (ItaliaMeteo) + Cineca.",
           ],
         },
       },
