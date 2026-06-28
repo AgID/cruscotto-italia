@@ -6,6 +6,7 @@ Licenza: CC BY 4.0 | HVD Meteorologici (Reg. EU 2023/138)
 Cron: 2x/giorno 03:30 e 15:30 CEST (corse 00 UTC e 12 UTC)
 """
 import cfgrib, numpy as np, json, os, time, tempfile, urllib.request
+import glob
 from datetime import datetime, timezone
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from html.parser import HTMLParser
@@ -66,7 +67,13 @@ def download_grib(run, varname):
     data = ds[key].values.copy()
     meta = {'lats': ds.latitude.values, 'lons': ds.longitude.values,
             'valid_times': ds['valid_time'].values, 'units': ds[key].attrs.get('units','?')}
+    ds.close()
     os.unlink(tmp)
+    for _idx in glob.glob(tmp + ".*.idx"):
+        try:
+            os.unlink(_idx)
+        except OSError:
+            pass
     print(f"  ✓ {varname:12s} ({data.nbytes/1024/1024:.0f}MB) units={meta['units']}", flush=True)
     return varname, data, meta
 
