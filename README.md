@@ -36,6 +36,7 @@ Cercando un comune ("Lecce") si ottiene una vista a 360° su:
 - 🗺️ **Censimento sezioni 2021** (ISTAT Basi Territoriali — 756.376 sezioni di censimento con 119 variabili demografiche/abitative per sezione)
 - 🏛️ **Beni culturali** (MiC — ICCD ArCo per beni immobili tutelati: chiese, palazzi, castelli, archeologia, ville, monumenti, soprintendenze; Cultural-ON DBUnico 2.0 per Luoghi della Cultura visitabili: musei, biblioteche, archivi con orari e contatti)
 - 🗺️ **Cartografia catastale** (Agenzia delle Entrate — Catasto Terreni INSPIRE: particelle e fogli di mappa per 19 regioni italiane, dataset bulk semestrale CC BY 4.0)
+- 🌤️ **Previsioni meteorologiche** (ItaliaMeteo — ICON-2I, griglia 2,2 km: temperatura, precipitazioni, vento, neve, nuvolosità, 73 step orari 0–72h, aggiornamento bi-giornaliero, CC BY 4.0 HVD Meteorologici)
 
 L'elenco completo, con licenze, frequenze di aggiornamento e link diretti
 alle fonti istituzionali, è disponibile nella pagina pubblica `about.html`
@@ -99,6 +100,7 @@ Dettagli architetturali completi: [`DESIGN.md`](DESIGN.md) ·
 
 | Cadenza | Fonti | Esecuzione | Trigger |
 |---|---|---|---|
+| **Bi-giornaliero** (03:30 e 14:30 UTC) | ItaliaMeteo ICON-2I previsioni meteo (corse 00 e 12 UTC) | cron VM AgID | automatico |
 | **Daily** (08:00 UTC) | PUN punti ricarica, MIMIT carburanti, dashboard rebuild | cron VM AgID | automatico |
 | **Daily Pull-Artifact** (07:30 UTC) | scarica artifact dei 3 ETL ISTAT da GitHub Actions | cron VM AgID | automatico |
 | **Weekly** (lunedì 04:00 UTC) | ANAC OCDS, PNRR, sanità MdS, RUNTS, dashboard | cron VM AgID | automatico |
