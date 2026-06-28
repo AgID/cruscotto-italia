@@ -42,6 +42,7 @@ TESTS=(
   "Pendolarismo:pa11y-pendolarismo.sh"
   "Censimento 2021:pa11y-censimento.sh"
   "Beni culturali:pa11y-beni-culturali.sh"
+  "Meteo e Aria:pa11y-aria.sh"
 )
 
 echo "######################################################################"
