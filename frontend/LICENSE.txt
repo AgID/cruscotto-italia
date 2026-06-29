@@ -78,6 +78,20 @@ FONTI ORIGINARIE E LORO LICENZE
 - Dipartimento della Protezione Civile (Classificazione
   sismica dei comuni, zone 1-4 ex OPCM 3519/06,
   recepimenti regionali consolidati) ................. CC BY 4.0
+- ItaliaMeteo / Agenzia Nazionale per la Meteorologia
+  e Climatologia (previsioni ICON-2I: temperatura,
+  precipitazioni, vento, neve, nuvolosita', codice
+  meteo WMO — 73 step orari 0-72h, corse 00 e 12 UTC,
+  copertura nazionale 7.895 comuni) ................... CC BY 4.0
+                                                       HVD Meteorologici
+- CNR-IRPI (Panza, Muto, Rossi, Alvioli, Iovine,
+  Marchesini) — HR-DTM 5m (Zenodo record 18872933,
+  DOI 10.5281/zenodo.18872933): modello digitale del
+  terreno ad alta risoluzione 5m, EPSG:6875, copertura
+  nazionale. Elaborazione morfologica (pendenze,
+  esposizione, geomorfologia r.geomorphon, irraggiamento
+  solare r.sun) in ambiente GRASS GIS headless.
+  Dato statico (one-shot). ............................ CC BY 4.0
 - OpenStreetMap (cartografia) ........................ ODbL
 
 Per il dettaglio dei dataset e degli URL originari delle fonti,

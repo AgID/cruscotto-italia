@@ -657,6 +657,33 @@ footer a:hover { color: #fff !important; }
           </td>
           <td class="freq">semestrale</td>
         </tr>
+        <tr data-fonte-row="CNR-IRPI-DTM">
+          <td>CNR-IRPI</td>
+          <td>
+            <strong>Morfologia del territorio &mdash; HR-DTM 5 m</strong>
+            Modello digitale del terreno ad alta risoluzione (5&nbsp;m) prodotto dal
+            Consiglio Nazionale delle Ricerche &mdash; Istituto di Ricerca per la
+            Protezione Idrogeologica (Panza, Muto, Rossi, Alvioli, Iovine, Marchesini).
+            Dataset <strong>HRDTM5m</strong> pubblicato su Zenodo
+            (DOI&nbsp;<a href="https://doi.org/10.5281/zenodo.18872933" target="_blank" rel="noopener">10.5281/zenodo.18872933</a>),
+            griglia 5&nbsp;m in EPSG:6875 (RDN2008), copertura nazionale completa.
+            Per ogni comune: elevazione (min/max/media), pendenza media e distribuzione
+            per classi, esposizione prevalente (rosa dei venti), TRI, geomorfologia
+            (10 forme del terreno via <em>r.geomorphon</em>), irraggiamento solare
+            stimato (<em>r.sun</em>, 4 giorni stagionali a 20&nbsp;m). Elaborazione con
+            GRASS GIS (<em>r.slope.aspect</em>, <em>r.geomorphon</em>, <em>r.sun</em>)
+            in ambiente headless. Copertura in progressivo aggiornamento:
+            <strong>~7.895 comuni</strong>. Produzione one-shot (dato statico).
+            Licenza <strong>CC BY 4.0</strong>.
+            Elaborazione headless con
+            <a href="https://github.com/pigreco/qgis_headless_wsl2" target="_blank" rel="noopener">qgis_headless_wsl2</a>
+            di <strong>Salvatore Fiandaca</strong>.
+            Metodi, layer e KPI ispirati a
+            <a href="https://palermohub.opendatasicilia.it/palermo_dtm5m.html" target="_blank" rel="noopener">PalermoHub DTM 5m</a>
+            di <strong>Giovan Battista Vitrano</strong>.
+          </td>
+          <td class="freq">one-shot<br>(statico)</td>
+        </tr>
         <tr data-fonte-row="ITALIAMETEO">
           <td>ItaliaMeteo &middot; Cineca</td>
           <td>
@@ -1108,6 +1135,18 @@ footer a:hover { color: #fff !important; }
         <div class="aggiorna-when">decennale (ultimo: 2021, pubblicato 2/10/2025)</div>
       </div>
     </div>
+
+      <div class="aggiorna-row">
+        <div class="aggiorna-cadence">One-shot</div>
+        <div class="aggiorna-what">
+          <strong>CNR-IRPI &mdash; Morfologia del territorio (HR-DTM 5&nbsp;m)</strong>
+          Analisi morfologica (elevazione, pendenze, esposizione, TRI, geomorfologia,
+          irraggiamento solare) elaborata una tantum dal modello digitale del terreno
+          nazionale a 5&nbsp;m. Dato statico: nessun aggiornamento previsto, salvo
+          rilascio di una nuova versione del DTM da parte del CNR-IRPI.
+        </div>
+        <div class="aggiorna-when">statico</div>
+      </div>
 
     <div class="aggiorna-warning">
       <strong>Avvertenza</strong>

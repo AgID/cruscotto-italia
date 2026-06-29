@@ -995,6 +995,19 @@ footer a{color:rgba(255,255,255,0.85);text-decoration:none}
 .terr-sismica-dot.zona-4{background:var(--accent-2);}
 .terr-sismica-note{font-family:var(--mono);font-size:10px;line-height:1.5;color:var(--ink-mute);margin-top:14px;}
 .terr-sismica-note a{color:var(--accent);}
+.terr-morfo{padding:36px 0;border-bottom:1px solid var(--paper-2);}
+.terr-morfo h3{font-family:var(--serif);font-size:22px;font-weight:600;color:var(--ink);margin:0 0 4px;}
+.terr-morfo-sub{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-soft);margin:0 0 6px;}
+.terr-morfo-credit{font-family:var(--mono);font-size:10px;color:var(--ink-mute);margin:0 0 18px;}
+.terr-morfo-credit a{color:var(--accent);}
+.terr-morfo-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin:0 0 22px;}
+.terr-morfo-kpi{padding:14px 16px;background:var(--paper-2);border-left:3px solid var(--gold);}
+.terr-morfo-kpi .lab{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-soft);}
+.terr-morfo-kpi .val{font-family:var(--serif);font-size:26px;font-weight:600;color:var(--ink);line-height:1.1;margin-top:4px;}
+.terr-morfo-kpi .sub{font-family:var(--mono);font-size:10px;color:var(--ink-mute);margin-top:2px;}
+.terr-morfo-map{height:480px;border:1px solid var(--paper-2);margin:0 0 8px;background:var(--paper-2);}
+.terr-morfo-note{font-family:var(--mono);font-size:10px;line-height:1.5;color:var(--ink-mute);margin-top:14px;}
+.terr-morfo-note a{color:var(--accent);}
 /* Tab Aria - ISPRA SNPA qualità dell'aria */
 /* Tab Meteo e Aria - ItaliaMeteo ICON-2I */
 .meteo-section{margin-bottom:36px;}
@@ -1803,6 +1816,8 @@ footer a:hover { color: #fff !important; }
   <script src="/vendor/chart.umd.min.js" integrity="sha384-9nhczxUqK87bcKHh20fSQcTGD4qq5GhayNYSYWqwBkINBhOfQLg/P5HG5lF1urn4" defer></script>
   <link rel="stylesheet" href="/vendor/leaflet.css" integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="anonymous">
   <script src="/vendor/leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin="anonymous" defer></script>
+  <link rel="stylesheet" href="/vendor/maplibre-gl.css">
+  <script src="/vendor/maplibre-gl.js" defer></script>
   <script src="/vendor/pako.min.js" integrity="sha384-rNlaE5fs9dGIjmxWDALQh/RBAaGRYT5ChrzHo6tRfgrZ36iRFAiquP5g41Jsv+0j" crossorigin="anonymous" defer></script>
   <script src="/vendor/tween.umd.js" integrity="sha384-mC3fM+AqoLJ/wejJW/hH8Qttg09iYQYsj9OUXbywLVh2T0N5FRnPWropXNLsVcza" crossorigin="anonymous" defer></script>
   <script src="/vendor/CanvasFlowmapLayer.js" integrity="sha384-OH07Sw2MOqwS9hs60vR2EGdEiCZIbuCqQqY1IkjZNiVEfkFFo5MuFbgMLBVUSLO3" crossorigin="anonymous" defer></script>
@@ -3537,10 +3552,12 @@ function renderTerritorioContent(data) {
   const rifiutiHtml = rifiuti ? renderRifiutiSection(rifiuti) : '';
   const mappaHtml = geo ? renderMappaSection(geo, data.denominazione) : '';
   const sismicaHtml = renderSismicaSection(data.classificazione_sismica);
+  const morfoHtml = '<div class="terr-morfo" data-morfo-slot hidden></div>';
 
   container.innerHTML = `
     ${kpiHtml}
     ${sismicaHtml}
+    ${morfoHtml}
     ${suoloHtml}
     ${rischioHtml}
     ${rifiutiHtml}
@@ -3552,6 +3569,220 @@ function renderTerritorioContent(data) {
       Licenza: CC-BY 4.0.
     </p>
   `;
+  hydrateMorfologia(data.istat_code);
+}
+
+async function hydrateMorfologia(istat){
+  if(!istat) return;
+  const slot=document.querySelector('[data-morfo-slot]');
+  if(!slot) return;
+  const base='/data/morfologia/'+istat;
+  let s,b;
+  try{
+    const rs=await fetch(base+'/'+istat+'_stats.json',{cache:'force-cache'});
+    if(!rs.ok) return;
+    s=await rs.json();
+    const rb=await fetch(base+'/bounds.json',{cache:'force-cache'});
+    if(!rb.ok) return;
+    b=await rb.json();
+  }catch(e){return;}
+
+  const card=(lab,val,sub)=>`<div class="terr-morfo-kpi"><div class="lab">${lab}</div><div class="val">${val}</div><div class="sub">${sub}</div></div>`;
+  const kpis=[
+    card('Quota',s.elev_min+'–'+s.elev_max+' m','media '+s.elev_mean+' m'),
+    card('Pendenza media',s.slope_mean+'°',s.slope_gt15_pct+'% oltre 15°'),
+    card('Esposizione',s.aspect_dom,s.aspect_dom_pct+'% del territorio'),
+    card('Versanti',s.geo_versanti+'%','forma di rilievo prevalente'),
+    card('Irraggiamento',fmtNum(s.solar_mean,0),'kWh/m²·anno (stima)')
+  ].join('');
+
+  const dirs=['N','NE','E','SE','S','SO','O','NO'];
+  const dist=s.aspect_dist||{};
+  const maxPct=Math.max(...dirs.map(d=>dist[d]||0))||1;
+  const roseItems=dirs.map(d=>{
+    const pct=dist[d]||0;
+    const h=Math.round(4+pct/maxPct*38);
+    const col=(d===s.aspect_dom)?'#f08a24':'#0066CC';
+    return '<div style="display:flex;flex-direction:column;align-items:center;gap:2px">'
+      +'<div style="width:14px;height:'+h+'px;border-radius:3px 3px 0 0;background:'+col+';opacity:0.85"></div>'
+      +'<div style="font-size:9px;color:var(--ink-mute,#6b7280)">'+d+'</div>'
+      +'</div>';
+  }).join('');
+
+  const geo=s.geomorph||{};
+  const geoColors={'Versante':'#78be6e','Conca':'#78c8d2','Cresta':'#eb9632','Dosso':'#f0eb78','Pianoro':'#c8c8c3','Cima':'#c82828','Spalla':'#ebc878','Piede':'#96b4d2','Valle':'#3c6ec8','Depressione':'#6e3ca0'};
+  const geoKeys=Object.keys(geo).filter(k=>geo[k]>0).sort((a,b2)=>geo[b2]-geo[a]).slice(0,5);
+  const geoRows=geoKeys.map(k=>'<div style="display:flex;align-items:center;gap:8px;margin:4px 0">'
+    +'<div style="width:10px;height:10px;border-radius:2px;background:'+(geoColors[k]||'#aaa')+';flex-shrink:0"></div>'
+    +'<div style="font-size:12px;flex:1">'+k+'</div>'
+    +'<div style="font-size:12px;font-weight:700;color:#0066CC">'+geo[k]+'%</div>'
+    +'<div style="width:80px;height:7px;background:var(--line,#e5e7eb);border-radius:4px">'
+    +'<div style="width:'+geo[k]+'%;height:100%;background:'+(geoColors[k]||'#aaa')+';border-radius:4px"></div>'
+    +'</div></div>'
+  ).join('');
+
+  const mapId='morfo-map-'+istat;
+  slot.innerHTML=`
+    <h3>Morfologia del territorio</h3>
+    <p class="terr-morfo-sub">Analisi del rilievo dal modello digitale del terreno · DTM 5 m</p>
+    <p class="terr-morfo-credit">Fonte dati: <a href="https://zenodo.org/records/18872933" target="_blank" rel="noopener">HR-DTM 5 m — High Resolution Digital Terrain Model</a> · CNR-IRPI · CC-BY 4.0</p>
+    <div class="terr-morfo-kpis">${kpis}</div>
+    <div style="display:flex;gap:18px;margin:14px 0;flex-wrap:wrap">
+      <div style="flex:1;min-width:160px">
+        <div style="font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--ink-mute,#6b7280);margin-bottom:8px">Esposizione</div>
+        <div style="display:flex;align-items:flex-end;gap:4px;height:52px">${roseItems}</div>
+      </div>
+      <div style="flex:2;min-width:200px">
+        <div style="font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--ink-mute,#6b7280);margin-bottom:8px">Geomorfologia</div>
+        ${geoRows}
+      </div>
+    </div>
+    <div style="position:relative;width:100%;height:420px;border-radius:12px;overflow:hidden" id="${mapId}"></div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;align-items:center">
+      <button onclick="morfoToggle3D('${mapId}')" id="morfo-btn-3d-${mapId}" style="padding:6px 14px;border:1px solid var(--line,#e5e7eb);border-radius:6px;background:#0066CC;color:#fff;cursor:pointer;font-size:14px;font-weight:600">3D ▼</button>
+      <button onclick="morfoNord('${mapId}')" style="padding:4px 10px;border:1px solid var(--line,#e5e7eb);border-radius:6px;background:var(--paper,#fff);cursor:pointer;font-size:14px;font-weight:500;padding:6px 14px">↑ Nord</button>
+      <button onclick="morfoExag('${mapId}',-0.3)" style="padding:4px 10px;border:1px solid var(--line,#e5e7eb);border-radius:6px;background:var(--paper,#fff);cursor:pointer;font-size:14px;font-weight:500;padding:6px 14px">Inclina −</button>
+      <button onclick="morfoExag('${mapId}',+0.3)" style="padding:4px 10px;border:1px solid var(--line,#e5e7eb);border-radius:6px;background:var(--paper,#fff);cursor:pointer;font-size:14px;font-weight:500;padding:6px 14px">Inclina +</button>
+      <button onclick="morfoReset('${mapId}')" style="padding:4px 10px;border:1px solid var(--line,#e5e7eb);border-radius:6px;background:var(--paper,#fff);cursor:pointer;font-size:14px;font-weight:500;padding:6px 14px">Reset</button>
+      <span style="width:1px;height:18px;background:var(--line,#e5e7eb);display:inline-block;margin:0 2px"></span>
+      <button data-morfo-tex="elevazione" onclick="window._morfoMap&&window._morfoMap['${mapId}']&&window._morfoMap['${mapId}'].setTex('elevazione')" style="padding:4px 10px;border:1px solid var(--line,#e5e7eb);border-radius:6px;background:#0066CC;color:#fff;cursor:pointer;font-size:14px;font-weight:500;padding:6px 14px">Quota</button>
+      <button data-morfo-tex="pendenze" onclick="window._morfoMap&&window._morfoMap['${mapId}']&&window._morfoMap['${mapId}'].setTex('pendenze')" style="padding:4px 10px;border:1px solid var(--line,#e5e7eb);border-radius:6px;background:var(--paper,#fff);cursor:pointer;font-size:14px;font-weight:500;padding:6px 14px">Pendenze</button>
+      <button data-morfo-tex="geomorfologia" onclick="window._morfoMap&&window._morfoMap['${mapId}']&&window._morfoMap['${mapId}'].setTex('geomorfologia')" style="padding:4px 10px;border:1px solid var(--line,#e5e7eb);border-radius:6px;background:var(--paper,#fff);cursor:pointer;font-size:14px;font-weight:500;padding:6px 14px">Geomorf.</button>
+      <button data-morfo-tex="solar" onclick="window._morfoMap&&window._morfoMap['${mapId}']&&window._morfoMap['${mapId}'].setTex('solar')" style="padding:4px 10px;border:1px solid var(--line,#e5e7eb);border-radius:6px;background:var(--paper,#fff);cursor:pointer;font-size:14px;font-weight:500;padding:6px 14px">Solare</button>
+    </div>
+    <div id="morfo-legend-${mapId}" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;font-size:12px;align-items:center"></div>
+    <p class="terr-morfo-note" style="margin-top:8px">
+      Pendenza, esposizione e geomorfologia elaborate con GRASS GIS a 5 m; irraggiamento solare stimato da 4 giorni stagionali a 20 m.
+      Metodologia completa e attribuzioni nella pagina <a href="/about.html#morfologia">Il progetto</a>.
+    </p>`;
+  slot.hidden=false;
+
+  if(typeof maplibregl==='undefined') return;
+  const terrainUrl=base+'/terrain.png';
+  const cx=b.cx, cy=b.cy;
+  const sw=[b.west,b.south], ne=[b.east,b.north];
+  let _exag=1.5, _pitch=50;
+
+  const map=new maplibregl.Map({
+    container:mapId,
+    style:{version:8,sources:{},layers:[{id:'bg',type:'background',paint:{'background-color':'#1a2a3a'}}]},
+    center:[cx,cy], zoom:10, pitch:_pitch, bearing:-15,
+    attributionControl:false
+  });
+
+  const coords=[[b.west,b.north],[b.east,b.north],[b.east,b.south],[b.west,b.south]];
+  const texLayers=['elevazione','pendenze','geomorfologia','solar'];
+  let _curTex='elevazione';
+
+  map.on('load',async()=>{
+    // hillshade CPU da terrain-RGB terrarium
+    const img=await new Promise((res,rej)=>{const i=new Image();i.crossOrigin='anonymous';i.onload=()=>res(i);i.onerror=rej;i.src=terrainUrl;});
+    const cvs=document.createElement('canvas');
+    cvs.width=img.naturalWidth;cvs.height=img.naturalHeight;
+    const ctx=cvs.getContext('2d');ctx.drawImage(img,0,0);
+    const px=ctx.getImageData(0,0,cvs.width,cvs.height).data;
+    const W=cvs.width,H=cvs.height;
+    function elev(x,y){const i=(Math.max(0,Math.min(H-1,y))*W+Math.max(0,Math.min(W-1,x)))*4;return px[i]*256+px[i+1]+px[i+2]/256-32768;}
+    const hs=new Uint8ClampedArray(W*H*4);
+    const sun=[Math.cos(0.8)*Math.cos(2.1),Math.cos(0.8)*Math.sin(2.1),Math.sin(0.8)];
+    for(let y=0;y<H;y++) for(let x=0;x<W;x++){
+      const dzdx=(elev(x+1,y)-elev(x-1,y))/(2*5);
+      const dzdy=(elev(x,y+1)-elev(x,y-1))/(2*5);
+      const nx=-dzdx,ny=-dzdy,nz=1;
+      const len=Math.sqrt(nx*nx+ny*ny+nz*nz)||1;
+      const dot=Math.max(0,(nx*sun[0]+ny*sun[1]+nz*sun[2])/len);
+      const v=Math.round(40+dot*215);
+      const i=(y*W+x)*4;hs[i]=v;hs[i+1]=v;hs[i+2]=v;hs[i+3]=220;
+    }
+    const hsCvs=document.createElement('canvas');hsCvs.width=W;hsCvs.height=H;
+    hsCvs.getContext('2d').putImageData(new ImageData(hs,W,H),0,0);
+    map.addSource('hs-src',{type:'image',url:hsCvs.toDataURL(),coordinates:coords});
+    map.addLayer({id:'hs-layer',type:'raster',source:'hs-src',paint:{'raster-opacity':0.5}});
+    // texture colorate per layer
+    for(const t of texLayers){
+      map.addSource('tex-'+t,{type:'image',url:base+'/tex/'+t+'.png',coordinates:coords});
+      map.addLayer({id:'tex-layer-'+t,type:'raster',source:'tex-'+t,
+        paint:{'raster-opacity':t===_curTex?0.72:0,'raster-resampling':'linear'}});
+    }
+    map.fitBounds([sw,ne],{padding:20,duration:0});
+    // legenda iniziale
+    const _LEG={
+      elevazione:[['#78bec8','≤0 m'],['#5aaa78','0–50'],['#6ebe5a','50–100'],['#a0d25a','100–200'],['#d2e15a','200–300'],['#ebdc50','300–400'],['#f0b446','400–500'],['#eb8c37','500–600'],['#c85a28','600–800'],['#3c2823','>800 m']],
+      pendenze:[['#28783c','0–2°'],['#78b446','2–5°'],['#c8d250','5–10°'],['#f0c846','10–15°'],['#eb9637','15–25°'],['#d25a2d','25–35°'],['#aa2828','>35°']],
+      geomorfologia:[['#c8c8c3','Pianoro'],['#c82828','Cima'],['#eb9632','Cresta'],['#ebc878','Spalla'],['#f0eb78','Dosso'],['#78be6e','Versante'],['#78c8d2','Conca'],['#96b4d2','Piede'],['#3c6ec8','Valle'],['#6e3ca0','Depr.']],
+      solar:[['#28145a','<1200'],['#781e78','1200–1500'],['#be375a','1500–1800'],['#e66e32','1800–2000'],['#f5aa32','2000–2250'],['#fae178','>2250 kWh/m²']]
+    };
+    const _leg=document.getElementById('morfo-legend-'+mapId);
+    if(_leg) _leg.innerHTML=(_LEG[_curTex]||[]).map(([col,lab])=>
+      '<div style="display:flex;align-items:center;gap:3px">'
+      +'<div style="width:12px;height:12px;border-radius:2px;background:'+col+';flex-shrink:0"></div>'
+      +'<span style="color:var(--ink-mute,#6b7280)">'+lab+'</span>'
+      +'</div>'
+    ).join('');
+  });
+
+  window._morfoMap=window._morfoMap||{};
+  window._morfoMap[mapId]={map,
+    get exag(){return _exag;},set exag(v){_exag=v;},
+    get pitch(){return _pitch;},set pitch(v){_pitch=v;},
+    setTex(t){
+      if(!texLayers.includes(t)) return;
+      _curTex=t;
+      for(const l of texLayers){
+        if(map.getLayer('tex-layer-'+l)) map.setPaintProperty('tex-layer-'+l,'raster-opacity',l===t?0.72:0);
+      }
+      // aggiorna bottoni layer
+      document.querySelectorAll('[data-morfo-tex]').forEach(b=>{
+        b.style.background=b.dataset.morfoTex===t?'#0066CC':'var(--paper,#fff)';
+        b.style.color=b.dataset.morfoTex===t?'#fff':'inherit';
+      });
+      // aggiorna legenda
+      const LEG={
+        elevazione:[['#78bec8','≤0 m'],['#5aaa78','0–50'],['#6ebe5a','50–100'],['#a0d25a','100–200'],['#d2e15a','200–300'],['#ebdc50','300–400'],['#f0b446','400–500'],['#eb8c37','500–600'],['#c85a28','600–800'],['#3c2823','>800 m']],
+        pendenze:[['#28783c','0–2°'],['#78b446','2–5°'],['#c8d250','5–10°'],['#f0c846','10–15°'],['#eb9637','15–25°'],['#d25a2d','25–35°'],['#aa2828','>35°']],
+        geomorfologia:[['#c8c8c3','Pianoro'],['#c82828','Cima'],['#eb9632','Cresta'],['#ebc878','Spalla'],['#f0eb78','Dosso'],['#78be6e','Versante'],['#78c8d2','Conca'],['#96b4d2','Piede'],['#3c6ec8','Valle'],['#6e3ca0','Depr.']],
+        solar:[['#28145a','<1200'],['#781e78','1200–1500'],['#be375a','1500–1800'],['#e66e32','1800–2000'],['#f5aa32','2000–2250'],['#fae178','>2250 kWh/m²']]
+      };
+      const items=LEG[t]||[];
+      const leg=document.getElementById('morfo-legend-'+mapId);
+      if(leg) leg.innerHTML=items.map(([col,lab])=>
+        '<div style="display:flex;align-items:center;gap:3px">'
+        +'<div style="width:12px;height:12px;border-radius:2px;background:'+col+';flex-shrink:0"></div>'
+        +'<span style="color:var(--ink-mute,#6b7280)">'+lab+'</span>'
+        +'</div>'
+      ).join('');
+    }
+  };
+
+
+}
+
+function morfoToggle3D(mapId){
+  const inst=window._morfoMap&&window._morfoMap[mapId];
+  if(!inst) return;
+  inst.pitch=inst.pitch>5?0:50;
+  inst.map.jumpTo({pitch:inst.pitch});
+  const btn=document.getElementById('morfo-btn-3d-'+mapId);
+  if(btn) btn.textContent=inst.pitch>5?'3D ▼':'2D ▶';
+}
+function morfoNord(mapId){
+  const inst=window._morfoMap&&window._morfoMap[mapId];
+  if(!inst) return;
+  inst.map.jumpTo({bearing:0});
+}
+function morfoExag(mapId,delta){
+  const inst=window._morfoMap&&window._morfoMap[mapId];
+  if(!inst) return;
+  inst.pitch=Math.max(0,Math.min(75,inst.pitch+delta*30));
+  inst.map.jumpTo({pitch:inst.pitch});
+  const btn=document.getElementById('morfo-btn-3d-'+mapId);
+  if(btn) btn.textContent=inst.pitch>5?'3D ▼':'2D ▶';
+}
+function morfoReset(mapId){
+  const inst=window._morfoMap&&window._morfoMap[mapId];
+  if(!inst) return;
+  inst.pitch=50;
+  inst.map.jumpTo({pitch:50,bearing:-15});
 }
 
 function renderSismicaSection(cs) {
@@ -11362,6 +11593,11 @@ FONTI INTEGRATE
 - ItaliaMeteo / Cineca              Previsioni ICON-2I — temperatura, precipitazioni, vento,
                                     neve, nuvolosita’, codice meteo WMO (73 step orari 0–72h,
                                     aggiornamento bi-giornaliero, CC BY 4.0 HVD Meteorologici)
+- CNR-IRPI                          Morfologia del territorio da HR-DTM 5m (Zenodo
+                                    10.5281/zenodo.18872933, CC BY 4.0): elevazione,
+                                    pendenze, esposizione, TRI, geomorfologia (r.geomorphon),
+                                    irraggiamento solare (r.sun). Elaborazione GRASS GIS
+                                    headless. Dato statico (one-shot).
 
 I dati di origine sono pubblicati dalle istituzioni elencate in
 LICENSE.txt e sono disponibili sui rispettivi portali open data.
@@ -11434,6 +11670,17 @@ L'aggregazione in formato unico (dati-completi.json) è opera di
 Cruscotto Italia.
 
 `;
+      // morfologia: includi stats se disponibile
+      try {
+        const [mStats, mBounds] = await Promise.all([
+          fetch(`/data/morfologia/${istat}/${istat}_stats.json`).then(r => r.ok ? r.json() : null),
+          fetch(`/data/morfologia/${istat}/bounds.json`).then(r => r.ok ? r.json() : null)
+        ]);
+        if (mStats) {
+          dashboard.morfologia = { stats: mStats, bounds: mBounds };
+          zip.file('morfologia-stats.json', JSON.stringify(mStats, null, 2));
+        }
+      } catch(e) { /* morfologia non disponibile */ }
       zip.file('README.txt', readme);
       // 3-4. LICENSE.txt + METADATI.csv (file statici da frontend/)
       const [licenseText, metadatiText] = await Promise.all([

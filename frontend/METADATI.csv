@@ -437,3 +437,40 @@ beni_culturali,kpi.mix_categoria,"Distribuzione dei beni nelle 11 macro-categori
 beni_culturali,kpi.pct_con_foto,"Percentuale di beni con foto. Per ArCo: predicato foaf:depiction (URL immagine ICCD). Per Cultural-ON: campo image DBUnico 2.0.",percentuale,MiC ICCD + Cultural-ON,mensile,https://dati.beniculturali.it/sparql,CC BY 4.0
 beni_culturali,kpi.pct_con_descrizione,"Percentuale di beni con descrizione testuale. Per ArCo: predicato dc:description (scheda storica-artistica catalografica ICCD). Per Cultural-ON: campo descrizione DBUnico 2.0.",percentuale,MiC ICCD + Cultural-ON,mensile,https://dati.beniculturali.it/sparql,CC BY 4.0
 beni_culturali,luoghi[],"Lista dei beni del comune. Ogni elemento: id, denom, categoria (1 di 11 macro), fonte ('arco' o 'cultural_on'), lat, lon, indirizzo, image (URL foto), descrizione, tutela, soprintendenza (solo ArCo), cis_link (URL scheda Cultural-ON), telefono/email/website/prenotazione (solo Cultural-ON). Cap 30 nello shard base; lista completa in /data/beni_culturali_full/<istat>.json per comuni con piu' di 30 beni.",array,Cruscotto Italia,mensile,{{SITE_URL}},CC BY 4.0
+meteo_italiameteo,temperatura_2m,Temperatura dell'aria a 2 metri dal suolo in gradi Celsius per ogni step orario (0-72h),gradi C,ItaliaMeteo / Cineca,bi-giornaliera,https://meteohub.agenziaitaliameteo.it/,CC BY 4.0
+meteo_italiameteo,precipitazioni_totali,Precipitazioni totali accumulate in mm per ogni step orario (0-72h),mm,ItaliaMeteo / Cineca,bi-giornaliera,https://meteohub.agenziaitaliameteo.it/,CC BY 4.0
+meteo_italiameteo,vento_u_10m,Componente U (est-ovest) del vento a 10 metri in m/s per ogni step orario,m/s,ItaliaMeteo / Cineca,bi-giornaliera,https://meteohub.agenziaitaliameteo.it/,CC BY 4.0
+meteo_italiameteo,vento_v_10m,Componente V (nord-sud) del vento a 10 metri in m/s per ogni step orario,m/s,ItaliaMeteo / Cineca,bi-giornaliera,https://meteohub.agenziaitaliameteo.it/,CC BY 4.0
+meteo_italiameteo,raffica_max,Raffica di vento massima in m/s per ogni step orario,m/s,ItaliaMeteo / Cineca,bi-giornaliera,https://meteohub.agenziaitaliameteo.it/,CC BY 4.0
+meteo_italiameteo,copertura_nuvolosa,Copertura nuvolosa totale in percentuale (0-100%) per ogni step orario,%,ItaliaMeteo / Cineca,bi-giornaliera,https://meteohub.agenziaitaliameteo.it/,CC BY 4.0
+meteo_italiameteo,altezza_neve,Altezza del manto nevoso in metri per ogni step orario,m,ItaliaMeteo / Cineca,bi-giornaliera,https://meteohub.agenziaitaliameteo.it/,CC BY 4.0
+meteo_italiameteo,codice_meteo_wmo,Codice WMO del simbolo meteo per ogni step orario (0=sereno 1=poco nuvoloso ... 99=temporale),codice,ItaliaMeteo / Cineca,bi-giornaliera,https://meteohub.agenziaitaliameteo.it/,CC BY 4.0
+meteo_italiameteo,umidita_relativa,Umidita' relativa dell'aria in percentuale per ogni step orario,%,ItaliaMeteo / Cineca,bi-giornaliera,https://meteohub.agenziaitaliameteo.it/,CC BY 4.0
+morfologia,stats.istat,Codice ISTAT del comune,codice,CNR-IRPI,one-shot,https://doi.org/10.5281/zenodo.18872933,CC BY 4.0
+morfologia,stats.area_km2,Superficie del comune in km2 calcolata dal DTM 5m,km2,CNR-IRPI,one-shot,https://doi.org/10.5281/zenodo.18872933,CC BY 4.0
+morfologia,stats.elev_min,Quota minima del comune in metri sul livello del mare (DTM 5m),m,CNR-IRPI,one-shot,https://doi.org/10.5281/zenodo.18872933,CC BY 4.0
+morfologia,stats.elev_max,Quota massima del comune in metri sul livello del mare (DTM 5m),m,CNR-IRPI,one-shot,https://doi.org/10.5281/zenodo.18872933,CC BY 4.0
+morfologia,stats.elev_mean,Quota media del comune in metri sul livello del mare (DTM 5m),m,CNR-IRPI,one-shot,https://doi.org/10.5281/zenodo.18872933,CC BY 4.0
+morfologia,stats.slope_mean,Pendenza media del territorio comunale in gradi (r.slope.aspect Horn 3x3),gradi,CNR-IRPI,one-shot,https://doi.org/10.5281/zenodo.18872933,CC BY 4.0
+morfologia,stats.slope_max,Pendenza massima in gradi,gradi,CNR-IRPI,one-shot,https://doi.org/10.5281/zenodo.18872933,CC BY 4.0
+morfologia,stats.slope_gt15_pct,Percentuale di superficie con pendenza superiore a 15 gradi,%,CNR-IRPI,one-shot,https://doi.org/10.5281/zenodo.18872933,CC BY 4.0
+morfologia,stats.slope_gt35_pct,Percentuale di superficie con pendenza superiore a 35 gradi,%,CNR-IRPI,one-shot,https://doi.org/10.5281/zenodo.18872933,CC BY 4.0
+morfologia,stats.aspect_dom,Esposizione prevalente del territorio (N/NE/E/SE/S/SO/O/NO),direzione,CNR-IRPI,one-shot,https://doi.org/10.5281/zenodo.18872933,CC BY 4.0
+morfologia,stats.aspect_dom_pct,Percentuale di superficie con esposizione prevalente,%,CNR-IRPI,one-shot,https://doi.org/10.5281/zenodo.18872933,CC BY 4.0
+morfologia,stats.aspect_dist,Distribuzione percentuale dell'esposizione per le 8 direzioni cardinali (dict),dict,CNR-IRPI,one-shot,https://doi.org/10.5281/zenodo.18872933,CC BY 4.0
+morfologia,stats.tri_mean,Terrain Ruggedness Index medio (indice di rugosita' del terreno),indice,CNR-IRPI,one-shot,https://doi.org/10.5281/zenodo.18872933,CC BY 4.0
+morfologia,stats.tri_max,Terrain Ruggedness Index massimo,indice,CNR-IRPI,one-shot,https://doi.org/10.5281/zenodo.18872933,CC BY 4.0
+morfologia,stats.geomorph,Distribuzione percentuale delle 10 forme del terreno r.geomorphon (Pianoro/Cima/Cresta/Spalla/Dosso/Versante/Conca/Piede/Valle/Depressione),dict,CNR-IRPI,one-shot,https://doi.org/10.5281/zenodo.18872933,CC BY 4.0
+morfologia,stats.geo_versanti,Percentuale di superficie classificata come Versante (r.geomorphon),%,CNR-IRPI,one-shot,https://doi.org/10.5281/zenodo.18872933,CC BY 4.0
+morfologia,stats.geo_creste,Percentuale di superficie classificata come Cresta + Cima + Spalla + Dosso,%,CNR-IRPI,one-shot,https://doi.org/10.5281/zenodo.18872933,CC BY 4.0
+morfologia,stats.geo_impluvi,Percentuale di superficie classificata come Conca + Piede + Valle,%,CNR-IRPI,one-shot,https://doi.org/10.5281/zenodo.18872933,CC BY 4.0
+morfologia,stats.geo_pianori,Percentuale di superficie classificata come Pianoro,%,CNR-IRPI,one-shot,https://doi.org/10.5281/zenodo.18872933,CC BY 4.0
+morfologia,stats.solar_mean,"Irraggiamento solare medio stimato in kWh/m2/anno (r.sun GRASS GIS, 4 giorni stagionali a 20m di risoluzione)",kWh/m2/anno,CNR-IRPI,one-shot,https://doi.org/10.5281/zenodo.18872933,CC BY 4.0
+morfologia,stats.solar_min,Irraggiamento solare minimo in kWh/m2/anno (zone in ombra),kWh/m2/anno,CNR-IRPI,one-shot,https://doi.org/10.5281/zenodo.18872933,CC BY 4.0
+morfologia,stats.solar_max,Irraggiamento solare massimo in kWh/m2/anno (zone piu' esposte),kWh/m2/anno,CNR-IRPI,one-shot,https://doi.org/10.5281/zenodo.18872933,CC BY 4.0
+morfologia,bounds.west,Longitudine ovest del bounding box del comune (EPSG:4326),gradi decimali,CNR-IRPI,one-shot,https://doi.org/10.5281/zenodo.18872933,CC BY 4.0
+morfologia,bounds.east,Longitudine est del bounding box del comune (EPSG:4326),gradi decimali,CNR-IRPI,one-shot,https://doi.org/10.5281/zenodo.18872933,CC BY 4.0
+morfologia,bounds.south,Latitudine sud del bounding box del comune (EPSG:4326),gradi decimali,CNR-IRPI,one-shot,https://doi.org/10.5281/zenodo.18872933,CC BY 4.0
+morfologia,bounds.north,Latitudine nord del bounding box del comune (EPSG:4326),gradi decimali,CNR-IRPI,one-shot,https://doi.org/10.5281/zenodo.18872933,CC BY 4.0
+morfologia,bounds.cx,Longitudine del centroide del comune (EPSG:4326),gradi decimali,CNR-IRPI,one-shot,https://doi.org/10.5281/zenodo.18872933,CC BY 4.0
+morfologia,bounds.cy,Latitudine del centroide del comune (EPSG:4326),gradi decimali,CNR-IRPI,one-shot,https://doi.org/10.5281/zenodo.18872933,CC BY 4.0
