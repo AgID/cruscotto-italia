@@ -199,6 +199,7 @@ a:hover{color:var(--accent)}
 /* Tabs: vedi base.css (grid layout) */
 /* Tab content */
 .tab-pane{display:none;padding:48px 0;background:#fff}
+#pane-aria .aria-h3,#pane-aria .aria-leg-item{background:#fff;}
 .tab-pane.active{display:block;background:#fff}
 .section-title{
   font-family:var(--serif);
@@ -1034,9 +1035,9 @@ footer a{color:rgba(255,255,255,0.85);text-decoration:none}
 .aria-kpi-limits{display:flex;flex-direction:column;gap:4px;margin-top:14px;padding-top:12px;border-top:1px solid var(--paper);}
 .aria-lim{font-family:var(--mono);font-size:11px;color:var(--ink-soft);}
 .aria-lim-hit{color:var(--accent);font-weight:600;}
-.aria-lim-warn{color:var(--gold);font-weight:600;}
+.aria-lim-warn{color:#7A4A00;font-weight:600;}
 .aria-kpi-fascia{font-family:var(--mono);font-size:10px;color:var(--ink-mute);margin-top:8px;font-style:italic;}
-.aria-h3{font-family:var(--serif);font-size:22px;font-weight:600;color:var(--ink);margin:32px 0 6px;}
+.aria-h3{font-family:var(--serif);font-size:22px;font-weight:600;color:#17324d;margin:32px 0 6px;}
 .aria-trend-note{font-family:var(--serif);font-size:13px;font-style:italic;color:var(--ink-mute);margin:0 0 16px;}
 .aria-chart-wrap{position:relative;height:340px;background:var(--paper-2);padding:18px;margin-bottom:24px;}
 @media (max-width:720px){.aria-chart-wrap{height:260px;padding:10px;}}
@@ -1051,10 +1052,11 @@ footer a{color:rgba(255,255,255,0.85);text-decoration:none}
 #pendolarismo-map .leaflet-top,#pendolarismo-map .leaflet-bottom{z-index:1000 !important;}
 #pendolarismo-map .leaflet-control-zoom{display:block !important;visibility:visible !important;opacity:1 !important;}
 #aria-map .leaflet-popup-pane{z-index:2 !important;}
+#aria-map .leaflet-control-attribution,#aria-map .leaflet-control-attribution a,#aria-map .leaflet-control-attribution a svg,#aria-map .leaflet-control-zoom a,#aria-map .leaflet-control-zoom a span{color:#17324d !important;background:#ffffff !important;}#aria-map .leaflet-control-attribution a[href="https://leafletjs.com"]{color:#17324d !important;}
 @media (max-width:720px){#aria-map{height:280px;}}
 .aria-map-legend{display:flex;flex-wrap:wrap;gap:18px;padding:10px 14px;background:var(--paper-2);font-family:var(--mono);font-size:11px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.08em;border-top:1px solid var(--paper);}
-.aria-leg-item{display:inline-flex;align-items:center;gap:6px;}
-.aria-leg-dot{display:inline-block;width:10px;height:10px;border-radius:50%;border:1.5px solid var(--paper);}
+.aria-leg-item{display:inline-flex;align-items:center;gap:6px;color:#17324d;}
+.aria-leg-dot{display:inline-block;width:10px;height:10px;border-radius:50%;border:1.5px solid var(--paper);font-size:0;}
 .aria-pin{display:flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.4);}
 .leaflet-popup-content-wrapper{border-radius:2px;background:var(--paper);box-shadow:0 2px 8px rgba(0,0,0,.18);}
 .leaflet-popup-content{margin:12px 14px;font-family:var(--serif);font-size:13px;color:var(--ink-soft);line-height:1.45;}
@@ -10753,10 +10755,10 @@ function renderAriaContent(data) {
       <div class="aria-map-wrap">
         <div id="aria-map" role="region" aria-label="Mappa stazioni di monitoraggio"></div>
         <div class="aria-map-legend">
-          <span class="aria-leg-item"><span class="aria-leg-dot" style="background:#3a7a4f"></span>Fondo</span>
-          <span class="aria-leg-item"><span class="aria-leg-dot" style="background:var(--accent)"></span>Traffico</span>
-          <span class="aria-leg-item"><span class="aria-leg-dot" style="background:var(--gold)"></span>Industriale</span>
-          <span class="aria-leg-item"><span class="aria-leg-dot" style="background:var(--ink-mute)"></span>Altro</span>
+          <span class="aria-leg-item"><span class="aria-leg-dot" style="background:#3a7a4f" aria-hidden="true"></span><span>Fondo</span></span>
+          <span class="aria-leg-item"><span class="aria-leg-dot" style="background:var(--accent)" aria-hidden="true"></span><span>Traffico</span></span>
+          <span class="aria-leg-item"><span class="aria-leg-dot" style="background:var(--gold)" aria-hidden="true"></span><span>Industriale</span></span>
+          <span class="aria-leg-item"><span class="aria-leg-dot" style="background:var(--ink-mute)" aria-hidden="true"></span><span>Altro</span></span>
         </div>
       </div>
     ` : ''}
@@ -10902,15 +10904,16 @@ function ariaPinColor(tipo) {
   return ARIA_PIN_COLORS[(tipo || '').toUpperCase()] || '#6a6259';
 }
 
-function ariaPinIcon(tipo) {
+function ariaPinIcon(tipo, label) {
   const color = ariaPinColor(tipo);
+  const lbl = label || tipo || 'stazione qualita aria';
   // divIcon: HTML inline = nessun PNG/SVG esterno
   return L.divIcon({
     className: '',
     iconSize: [22, 22],
     iconAnchor: [11, 11],
     popupAnchor: [0, -10],
-    html: `<div class="aria-pin" style="background:${color}"></div>`
+    html: `<div class="aria-pin" style="background:${color}" role="img" aria-label="${lbl}"></div>`
   });
 }
 
@@ -10938,13 +10941,18 @@ function renderAriaMap(stazioni) {
   }).addTo(map);
 
   const markers = valide.map(s => {
-    const m = L.marker([s.lat, s.lon], { icon: ariaPinIcon(s.tipo_stazione) });
+    const m = L.marker([s.lat, s.lon], { icon: ariaPinIcon(s.tipo_stazione, s.nome || s.tipo_stazione || "stazione qualita aria"), keyboard: false });
     m.bindPopup(`
       <span class="aria-popup-name">${s.nome || '—'}</span>
       <span class="aria-popup-meta">${s.tipo_zona || ''} · ${s.tipo_stazione || ''}</span>
       ${s.station_eu_code ? `<span class="aria-popup-code">${s.station_eu_code}</span>` : ''}
     `);
-    return m.addTo(map);
+    m.addTo(map);
+    const el = m.getElement();
+    if (el) {
+      el.setAttribute("aria-label", s.nome || s.tipo_stazione || "stazione qualita aria");
+    }
+    return m;
   });
 
   if (markers.length === 1) {
