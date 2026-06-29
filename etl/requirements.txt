@@ -28,3 +28,12 @@ structlog>=24.1.0
 
 # Dev / test (install with: pip install -r requirements.txt -r requirements-dev.txt)
 requests-aws4auth
+
+# Meteo ItaliaMeteo ICON-2I (build_meteo.py)
+# apt: libeccodes0 python3-eccodes
+cfgrib>=0.9.15
+xarray>=2024.1.0
+
+# Morfologia DTM 5m CNR-IRPI (run_national.py — venv separato in /home/ubuntu/morfologia_dtm5m/venv/)
+# numpy, rasterio, scipy installati nel venv morfologia, non in questo requirements
+# Per replicare: python3 -m venv venv && pip install numpy rasterio scipy
