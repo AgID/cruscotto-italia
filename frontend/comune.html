@@ -6002,7 +6002,7 @@ function renderPunTab(d) {
           <h3 class="veicoli-col-h">Mappa (${fmtNum((d.punti || []).length)} punti)</h3>
           <div id="pun-map-main" class="impa-map" role="region" aria-label="Mappa punti di ricarica veicoli elettrici"></div>
           <div id="pun-cpo-wrap" style="display:none;margin-bottom:10px">
-            <select id="pun-cpo-filter" style="width:100%;padding:7px 10px;border:2px solid var(--accent);border-radius:6px;font-family:var(--mono);font-size:12px;background:var(--paper);color:var(--ink);font-weight:500">
+            <select id="pun-cpo-filter" aria-label="Filtra per operatore CPO" style="width:100%;padding:7px 10px;border:2px solid var(--accent);border-radius:6px;font-family:var(--mono);font-size:12px;background:var(--paper);color:var(--ink);font-weight:500">
               <option value="">Tutti gli operatori (CPO)</option>
             </select>
           </div>
