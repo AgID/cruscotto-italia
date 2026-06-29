@@ -94,6 +94,7 @@ SHARDS = [
     ("censimento", "censimento/{istat}.json"),
     ("beni_culturali", "beni_culturali/{istat}.json"),
     ("meteo",          "meteo/{istat}.json"),
+    ("morfologia",      "morfologia/{istat}/{istat}_stats.json"),
 ]
 
 # Shard con path assoluto (legacy, indipendenti da DATA_DIR)
@@ -168,6 +169,7 @@ def compute_kpi_summary(out: dict) -> dict:
     pendolarismo = out.get("pendolarismo") or {}
     beni_culturali = out.get("beni_culturali") or {}
     meteo = out.get("meteo") or {}
+    morfologia = out.get("morfologia") or {}
 
     # Popolazione (riferimento per molti pro-capite/per-1000)
     pop = _safe(demo, "popolazione_totale")
@@ -381,6 +383,15 @@ def compute_kpi_summary(out: dict) -> dict:
             "ww_desc":            meteo.get("ww_desc"),
             "run_utc":            meteo.get("run_utc"),
             "valid_time_utc":     meteo.get("valid_time_utc"),
+        },
+        "morfologia_cnr": {
+            "elev_min":      morfologia.get("elev_min"),
+            "elev_max":      morfologia.get("elev_max"),
+            "elev_mean":     morfologia.get("elev_mean"),
+            "slope_mean":    morfologia.get("slope_mean"),
+            "slope_gt15_pct":morfologia.get("slope_gt15_pct"),
+            "aspect_dom":    morfologia.get("aspect_dom"),
+            "solar_mean":    morfologia.get("solar_mean"),
         },
     }
     return summary
