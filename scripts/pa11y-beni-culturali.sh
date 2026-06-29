@@ -27,7 +27,10 @@ cat > "$CONFIG_FILE" << JSONEOF
   "actions": [
     "wait for element [data-tab='beni-culturali'] to be visible",
     "click element [data-tab='beni-culturali']",
-    "wait for element #pane-beni-culturali to be visible"
+    "wait for element #pane-beni-culturali to be visible",
+    "wait for element .beni-list-row to be visible",
+    "click element .beni-list-row",
+    "wait for element .beni-list-detail to be visible"
   ],
   "ignore": ["color-contrast"]
 }

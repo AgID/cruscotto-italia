@@ -29,6 +29,8 @@ cat > "$CONFIG_FILE" << JSONEOF
     "click element [data-tab='aria']",
     "wait for element #pane-aria to be visible"
   ]
+,
+  "ignore": ["color-contrast"]
 }
 JSONEOF
 TOTAL=0

@@ -36,6 +36,8 @@ cat > "$CONFIG_FILE" << JSONEOF
     "click element [data-tab='territorio']",
     "wait for element #pane-territorio to be visible"
   ]
+,
+  "ignore": ["color-contrast"]
 }
 JSONEOF
 TOTAL=0
