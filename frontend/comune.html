@@ -3864,7 +3864,7 @@ function _morfoInitThree(mapId,canvas){
   const ctrl={theta:-0.3,phi:0.9,radius:220,exag:0.7,needsRender:true,down:false,lx:0,ly:0};
   inst._threeCtrl=ctrl;
   inst._threeScene={renderer,scene,camera,mesh:null,W,H,elevData:null,base,curTex:'elevazione'};
-  // carica terrain_512.png, ricampiona a WxH
+  // carica terrain.png (terrarium, esiste per tutti i comuni), ricampiona a WxH
   const img=new Image();
   img.crossOrigin='anonymous';
   img.onload=()=>{
@@ -3946,8 +3946,8 @@ function _morfoInitThree(mapId,canvas){
     _morfoRebuildMesh(mapId);
     _morfoRenderLoop(mapId);
   };
-  img.onerror=()=>console.warn('Three.js terrain: terrain_512.png non caricata');
-  img.src=base+'/terrain_512.png';
+  img.onerror=()=>console.warn('Three.js terrain: terrain.png non caricata');
+  img.src=base+'/terrain.png';
   // pre-carica texture colorate a WxH per vertex colors
   ['pendenze','geomorfologia','solar'].forEach(tname=>{
     const ti=new Image(); ti.crossOrigin='anonymous';
