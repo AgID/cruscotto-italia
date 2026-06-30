@@ -8489,7 +8489,8 @@ function initAnncsu(d) {
   //   chunking    : altrimenti → fetch per foglio del viewport, solo a zoom >= 15
   const CATASTO_ZOOM_THRESHOLD = 15;
   const CATASTO_MONO_MAX_BYTES = 20 * 1024 * 1024;
-  const catastoIstat = new URLSearchParams(window.location.search).get('istat');
+  const catastoIstatRaw = new URLSearchParams(window.location.search).get('istat');
+  const catastoIstat = (catastoIstatRaw && /^\d{6}$/.test(catastoIstatRaw)) ? catastoIstatRaw : null;
   const catastoChkFogli = document.getElementById('anncsu-catasto-fogli');
   const catastoChkPle   = document.getElementById('anncsu-catasto-ple');
   const catastoHintEl   = document.getElementById('anncsu-catasto-hint');
@@ -8634,7 +8635,7 @@ function initAnncsu(d) {
         }).addTo(map);
         catastoSetStatus('');
       } catch (e) {
-        catastoSetStatus('⚠ Errore caricamento particelle: ' + e.message);
+        catastoSetStatus('⚠ Errore caricamento particelle: ' + escapeHtmlMsg(e.message));
       }
       return;
     }
