@@ -3869,7 +3869,7 @@ function _morfoInitThree(mapId,canvas){
   img.crossOrigin='anonymous';
   img.onload=()=>{
     const cv=document.createElement('canvas');cv.width=W;cv.height=H;
-    const cx2=cv.getContext('2d');cx2.drawImage(img,0,0,W,H);
+    const cx2=cv.getContext('2d');cx2.imageSmoothingEnabled=false;cx2.drawImage(img,0,0,W,H);
     const px=cx2.getImageData(0,0,W,H).data;
     const raw=new Float32Array(W*H);
     const validMask=new Uint8Array(W*H);
@@ -3877,13 +3877,9 @@ function _morfoInitThree(mapId,canvas){
       const r=px[i*4],g=px[i*4+1],b=px[i*4+2],a=px[i*4+3];
       if(a>=250){const e=r*256+g+b/256-32768;if(e>-10000&&e<9000){raw[i]=e;validMask[i]=1;}}
     }
-    // mediana robusta per scartare i nodata camuffati (quota ~0 con alpha pieno)
-    let _v0=[]; for(let i=0;i<W*H;i++) if(validMask[i]) _v0.push(raw[i]);
-    _v0.sort((a2,b2)=>a2-b2);
-    const _med=_v0.length?_v0[Math.floor(_v0.length*0.5)]:0;
-    // soglia minima: scarta pixel oltre 800m sotto la mediana (nodata camuffati a 0)
-    const _sogliaMin=_med-800;
-    for(let i=0;i<W*H;i++){ if(validMask[i] && raw[i]<_sogliaMin) validMask[i]=0; }
+    // i nodata camuffati hanno quota esatta ~0 (con alpha pieno); i dati reali sono sempre >alcune decine di m.
+    // scarto i pixel a quota <1m: separa nettamente nodata da terreno reale senza tagliare il fondovalle
+    for(let i=0;i<W*H;i++){ if(validMask[i] && raw[i]<1) validMask[i]=0; }
     const vv=[];
     for(let i=0;i<W*H;i++) if(validMask[i]) vv.push(raw[i]);
     vv.sort((a2,b2)=>a2-b2);
