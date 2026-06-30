@@ -3625,20 +3625,48 @@ async function hydrateMorfologia(istat){
     +'</div></div>'
   ).join('');
 
+  // Grafico Quota: barra-gradiente altimetrico con marker media
+  const _qmin=s.elev_min, _qmax=s.elev_max, _qmean=s.elev_mean;
+  const _qpos=_qmax>_qmin?Math.round((_qmean-_qmin)/(_qmax-_qmin)*100):50;
+  const quotaChart='<div style="margin-top:6px">'
+    +'<div style="position:relative;height:14px;border-radius:7px;background:linear-gradient(90deg,#0066CC,#3cb4a0,#78be6e,#f0eb78,#eb9632,#c82828)"></div>'
+    +'<div style="position:relative;height:0"><div style="position:absolute;left:'+_qpos+'%;top:-16px;transform:translateX(-50%);width:2px;height:18px;background:#17324d"></div>'
+    +'<div style="position:absolute;left:'+_qpos+'%;top:4px;transform:translateX(-50%);font-size:11px;font-weight:700;color:#17324d;white-space:nowrap">media '+_qmean+' m</div></div>'
+    +'<div style="display:flex;justify-content:space-between;margin-top:22px;font-size:12px;color:var(--ink-mute,#6b7280)"><span>'+_qmin+' m</span><span>'+_qmax+' m</span></div>'
+    +'</div>';
+
+  // Grafico Irraggiamento: barra-gradiente solare con marker media
+  const _smin=s.solar_min, _smax=s.solar_max, _smean=s.solar_mean;
+  const _spos=_smax>_smin?Math.round((_smean-_smin)/(_smax-_smin)*100):50;
+  const solarChart='<div style="margin-top:6px">'
+    +'<div style="position:relative;height:14px;border-radius:7px;background:linear-gradient(90deg,#1a3a6e,#3c6ec8,#78be6e,#f0eb78,#eb9632,#f5d000)"></div>'
+    +'<div style="position:relative;height:0"><div style="position:absolute;left:'+_spos+'%;top:-16px;transform:translateX(-50%);width:2px;height:18px;background:#17324d"></div>'
+    +'<div style="position:absolute;left:'+_spos+'%;top:4px;transform:translateX(-50%);font-size:11px;font-weight:700;color:#17324d;white-space:nowrap">media '+fmtNum(_smean,0)+'</div></div>'
+    +'<div style="display:flex;justify-content:space-between;margin-top:22px;font-size:12px;color:var(--ink-mute,#6b7280)"><span>'+fmtNum(_smin,0)+'</span><span>'+fmtNum(_smax,0)+' kWh/m\u00b2</span></div>'
+    +'</div>';
+
   const mapId='morfo-map-'+istat;
   slot.innerHTML=`
     <h3>Morfologia del territorio</h3>
     <p class="terr-morfo-sub">Analisi del rilievo dal modello digitale del terreno · DTM 5 m</p>
     <p class="terr-morfo-credit">Fonte dati: <a href="https://zenodo.org/records/18872933" target="_blank" rel="noopener">HR-DTM 5 m — High Resolution Digital Terrain Model</a> · CNR-IRPI · CC-BY 4.0</p>
     <div class="terr-morfo-kpis">${kpis}</div>
-    <div style="display:flex;gap:18px;margin:14px 0;flex-wrap:wrap">
-      <div style="flex:1;min-width:160px">
+    <div style="display:grid;grid-template-columns:repeat(2,1fr) repeat(2,1.3fr);gap:24px;margin:14px 0;align-items:start">
+      <div>
         <div style="font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--ink-mute,#6b7280);margin-bottom:8px">Esposizione</div>
         <div style="display:flex;align-items:flex-end;gap:4px;height:52px">${roseItems}</div>
       </div>
-      <div style="flex:2;min-width:200px">
+      <div>
+        <div style="font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--ink-mute,#6b7280);margin-bottom:8px">Quota</div>
+        ${quotaChart}
+      </div>
+      <div>
         <div style="font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--ink-mute,#6b7280);margin-bottom:8px">Geomorfologia</div>
         ${geoRows}
+      </div>
+      <div>
+        <div style="font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--ink-mute,#6b7280);margin-bottom:8px">Irraggiamento</div>
+        ${solarChart}
       </div>
     </div>
     <div style="position:relative;width:100%;height:420px;border-radius:12px;overflow:hidden" id="${mapId}"></div>
