@@ -1821,6 +1821,7 @@ footer a:hover { color: #fff !important; }
   <script src="/vendor/leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin="anonymous" defer></script>
   <link rel="stylesheet" href="/vendor/maplibre-gl.css">
   <script src="/vendor/maplibre-gl.js" defer></script>
+  <script src="/vendor/three.min.js" integrity="sha384-CI3ELBVUz9XQO+97x6nwMDPosPR5XvsxW2ua7N1Xeygeh1IxtgqtCkGfQY9WWdHu" crossorigin="anonymous" defer></script>
   <script src="/vendor/pako.min.js" integrity="sha384-rNlaE5fs9dGIjmxWDALQh/RBAaGRYT5ChrzHo6tRfgrZ36iRFAiquP5g41Jsv+0j" crossorigin="anonymous" defer></script>
   <script src="/vendor/tween.umd.js" integrity="sha384-mC3fM+AqoLJ/wejJW/hH8Qttg09iYQYsj9OUXbywLVh2T0N5FRnPWropXNLsVcza" crossorigin="anonymous" defer></script>
   <script src="/vendor/CanvasFlowmapLayer.js" integrity="sha384-OH07Sw2MOqwS9hs60vR2EGdEiCZIbuCqQqY1IkjZNiVEfkFFo5MuFbgMLBVUSLO3" crossorigin="anonymous" defer></script>
@@ -3644,9 +3645,14 @@ async function hydrateMorfologia(istat){
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;align-items:center">
       <button onclick="morfoToggle3D('${mapId}')" id="morfo-btn-3d-${mapId}" style="padding:6px 14px;border:1px solid var(--line,#e5e7eb);border-radius:6px;background:#0066CC;color:#fff;cursor:pointer;font-size:14px;font-weight:600">3D ▼</button>
       <button onclick="morfoNord('${mapId}')" style="padding:4px 10px;border:1px solid var(--line,#e5e7eb);border-radius:6px;background:var(--paper,#fff);cursor:pointer;font-size:14px;font-weight:500;padding:6px 14px">↑ Nord</button>
-      <button onclick="morfoExag('${mapId}',-0.3)" style="padding:4px 10px;border:1px solid var(--line,#e5e7eb);border-radius:6px;background:var(--paper,#fff);cursor:pointer;font-size:14px;font-weight:500;padding:6px 14px">Inclina −</button>
-      <button onclick="morfoExag('${mapId}',+0.3)" style="padding:4px 10px;border:1px solid var(--line,#e5e7eb);border-radius:6px;background:var(--paper,#fff);cursor:pointer;font-size:14px;font-weight:500;padding:6px 14px">Inclina +</button>
+      <button data-morfo-inclina="${mapId}" onclick="morfoExag('${mapId}',-0.3)" style="padding:4px 10px;border:1px solid var(--line,#e5e7eb);border-radius:6px;background:var(--paper,#fff);cursor:pointer;font-size:14px;font-weight:500;padding:6px 14px">Inclina −</button>
+      <button data-morfo-inclina="${mapId}" onclick="morfoExag('${mapId}',+0.3)" style="padding:4px 10px;border:1px solid var(--line,#e5e7eb);border-radius:6px;background:var(--paper,#fff);cursor:pointer;font-size:14px;font-weight:500;padding:6px 14px">Inclina +</button>
       <button onclick="morfoReset('${mapId}')" style="padding:4px 10px;border:1px solid var(--line,#e5e7eb);border-radius:6px;background:var(--paper,#fff);cursor:pointer;font-size:14px;font-weight:500;padding:6px 14px">Reset</button>
+      <label id="morfo-exag-label-${mapId}" style="font-size:13px;color:var(--ink-mute,#6b7280);display:none;align-items:center;gap:6px;margin-left:4px">
+        Esag. <input type="range" id="morfo-exag-slider-${mapId}" min="0.2" max="6" step="0.1" value="0.7"
+          style="width:90px;accent-color:#0066CC" oninput="morfoExagSlider('${mapId}',this.value)">
+        <span id="morfo-exag-val-${mapId}">0.7×</span>
+      </label>
       <span style="width:1px;height:18px;background:var(--line,#e5e7eb);display:inline-block;margin:0 2px"></span>
       <button data-morfo-tex="elevazione" onclick="window._morfoMap&&window._morfoMap['${mapId}']&&window._morfoMap['${mapId}'].setTex('elevazione')" style="padding:4px 10px;border:1px solid var(--line,#e5e7eb);border-radius:6px;background:#0066CC;color:#fff;cursor:pointer;font-size:14px;font-weight:500;padding:6px 14px">Quota</button>
       <button data-morfo-tex="pendenze" onclick="window._morfoMap&&window._morfoMap['${mapId}']&&window._morfoMap['${mapId}'].setTex('pendenze')" style="padding:4px 10px;border:1px solid var(--line,#e5e7eb);border-radius:6px;background:var(--paper,#fff);cursor:pointer;font-size:14px;font-weight:500;padding:6px 14px">Pendenze</button>
@@ -3725,12 +3731,14 @@ async function hydrateMorfologia(istat){
   });
 
   window._morfoMap=window._morfoMap||{};
-  window._morfoMap[mapId]={map,
+  window._morfoMap[mapId]={map,_3d:true,
     get exag(){return _exag;},set exag(v){_exag=v;},
     get pitch(){return _pitch;},set pitch(v){_pitch=v;},
     setTex(t){
       if(!texLayers.includes(t)) return;
       _curTex=t;
+      // aggiorna texture 3D se attivo
+      if(this._3d) _morfoSetTex3D(mapId,t);
       for(const l of texLayers){
         if(map.getLayer('tex-layer-'+l)) map.setPaintProperty('tex-layer-'+l,'raster-opacity',l===t?0.72:0);
       }
@@ -3756,30 +3764,317 @@ async function hydrateMorfologia(istat){
       ).join('');
     }
   };
-
-
+  // auto-avvio Three.js di default (dopo init _morfoMap)
+  const mc3d=document.getElementById(mapId);
+  if(mc3d){
+    mc3d.style.display='none';
+    const c3=document.createElement('canvas');
+    c3.id=mapId+'-three';
+    c3.style.cssText='width:100%;height:420px;border-radius:12px;display:block;touch-action:none';
+    mc3d.parentNode.insertBefore(c3,mc3d.nextSibling);
+    _morfoInitThree(mapId,c3);
+    const btn3d=document.getElementById('morfo-btn-3d-'+mapId);
+    if(btn3d){btn3d.textContent='3D ▼';btn3d.style.background='#f08a24';btn3d.style.color='#fff';}
+    {const _sl=document.getElementById('morfo-exag-label-'+mapId);if(_sl)_sl.style.display='inline-flex';}
+    document.querySelectorAll('[data-morfo-inclina="'+mapId+'"]').forEach(b=>b.style.display='none');
+  }
 }
 
 function morfoToggle3D(mapId){
   const inst=window._morfoMap&&window._morfoMap[mapId];
   if(!inst) return;
-  inst.pitch=inst.pitch>5?0:50;
-  inst.map.jumpTo({pitch:inst.pitch});
+  const goTo2D=inst._3d;
+  inst._3d=!goTo2D;
   const btn=document.getElementById('morfo-btn-3d-'+mapId);
-  if(btn) btn.textContent=inst.pitch>5?'3D ▼':'2D ▶';
+  if(goTo2D){
+    // passa a 2D: mostra MapLibre, nascondi Three.js
+    const mc=document.getElementById(mapId);
+    if(mc) mc.style.display='block';
+    const c3=document.getElementById(mapId+'-three');
+    if(c3) c3.style.display='none';
+    if(btn){btn.textContent='2D ▶';btn.style.background='#0066CC';btn.style.color='#fff';}
+    {const _sl=document.getElementById('morfo-exag-label-'+mapId);if(_sl)_sl.style.display='none';}
+    document.querySelectorAll('[data-morfo-inclina="'+mapId+'"]').forEach(b=>b.style.display='');
+  } else {
+    // passa a 3D: nascondi MapLibre, mostra Three.js
+    const mc=document.getElementById(mapId);
+    if(mc) mc.style.display='none';
+    let c3=document.getElementById(mapId+'-three');
+    if(!c3){
+      c3=document.createElement('canvas');
+      c3.id=mapId+'-three';
+      c3.style.cssText='width:100%;height:420px;border-radius:12px;display:block;touch-action:none';
+      mc.parentNode.insertBefore(c3,mc.nextSibling);
+      _morfoInitThree(mapId,c3);
+    } else {
+      c3.style.display='block';
+      // forza resize renderer al ritorno in 3D, dopo il reflow del layout
+      const tinst=window._morfoMap&&window._morfoMap[mapId];
+      if(tinst&&tinst._threeScene){
+        requestAnimationFrame(function(){
+          const w=(c3.parentElement?c3.parentElement.clientWidth:0)||c3.clientWidth||800;
+          tinst._threeScene.renderer.setSize(w,420,false);
+          tinst._threeScene.camera.aspect=w/420;
+          tinst._threeScene.camera.updateProjectionMatrix();
+          if(tinst._threeCtrl) tinst._threeCtrl.needsRender=true;
+        });
+      }
+    }
+    if(btn){btn.textContent='2D ▶';btn.style.background='#f08a24';btn.style.color='#fff';}
+    {const _sl=document.getElementById('morfo-exag-label-'+mapId);if(_sl)_sl.style.display='inline-flex';}
+    document.querySelectorAll('[data-morfo-inclina="'+mapId+'"]').forEach(b=>b.style.display='none');
+  }
 }
 function morfoNord(mapId){
   const inst=window._morfoMap&&window._morfoMap[mapId];
   if(!inst) return;
-  inst.map.jumpTo({bearing:0});
+  if(inst._3d && inst._threeCtrl){
+    inst._threeCtrl.theta=0;
+    inst._threeCtrl.needsRender=true;
+  } else {
+    inst.map.jumpTo({bearing:0});
+  }
 }
 function morfoExag(mapId,delta){
   const inst=window._morfoMap&&window._morfoMap[mapId];
   if(!inst) return;
+  if(inst._3d) return;
   inst.pitch=Math.max(0,Math.min(75,inst.pitch+delta*30));
   inst.map.jumpTo({pitch:inst.pitch});
-  const btn=document.getElementById('morfo-btn-3d-'+mapId);
-  if(btn) btn.textContent=inst.pitch>5?'3D ▼':'2D ▶';
+}
+function _morfoInitThree(mapId,canvas){
+  const inst=window._morfoMap&&window._morfoMap[mapId];
+  if(!inst||typeof THREE==='undefined') return;
+  const base='/data/morfologia/'+mapId.replace('morfo-map-','');
+  const W=128,H=128;
+  const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:false});
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+  const _slot=canvas.parentElement;
+  const _cw=(_slot?_slot.clientWidth:0)||800;
+  renderer.setSize(_cw,420,false);
+  renderer.setClearColor(0x000000);
+  const scene=new THREE.Scene();
+  const camera=new THREE.PerspectiveCamera(45,_cw/420,0.1,2000);
+  camera.position.set(0,120,180);
+  camera.lookAt(0,0,0);
+  scene.add(new THREE.AmbientLight(0xffffff,0.6));
+  const dir=new THREE.DirectionalLight(0xffffff,0.9);
+  dir.position.set(80,150,80);
+  scene.add(dir);
+  const ctrl={theta:-0.3,phi:0.9,radius:220,exag:0.7,needsRender:true,down:false,lx:0,ly:0};
+  inst._threeCtrl=ctrl;
+  inst._threeScene={renderer,scene,camera,mesh:null,W,H,elevData:null,base,curTex:'elevazione'};
+  // carica terrain_512.png, ricampiona a WxH
+  const img=new Image();
+  img.crossOrigin='anonymous';
+  img.onload=()=>{
+    const cv=document.createElement('canvas');cv.width=W;cv.height=H;
+    const cx2=cv.getContext('2d');cx2.drawImage(img,0,0,W,H);
+    const px=cx2.getImageData(0,0,W,H).data;
+    const raw=new Float32Array(W*H);
+    const validMask=new Uint8Array(W*H);
+    for(let i=0;i<W*H;i++){
+      const r=px[i*4],g=px[i*4+1],b=px[i*4+2],a=px[i*4+3];
+      if(a>=250){const e=r*256+g+b/256-32768;if(e>-10000&&e<9000){raw[i]=e;validMask[i]=1;}}
+    }
+    // mediana robusta per scartare i nodata camuffati (quota ~0 con alpha pieno)
+    let _v0=[]; for(let i=0;i<W*H;i++) if(validMask[i]) _v0.push(raw[i]);
+    _v0.sort((a2,b2)=>a2-b2);
+    const _med=_v0.length?_v0[Math.floor(_v0.length*0.5)]:0;
+    // soglia minima: scarta pixel oltre 800m sotto la mediana (nodata camuffati a 0)
+    const _sogliaMin=_med-800;
+    for(let i=0;i<W*H;i++){ if(validMask[i] && raw[i]<_sogliaMin) validMask[i]=0; }
+    const vv=[];
+    for(let i=0;i<W*H;i++) if(validMask[i]) vv.push(raw[i]);
+    vv.sort((a2,b2)=>a2-b2);
+    const p1=vv[Math.floor(vv.length*0.02)]||0;
+    const p99=vv[Math.floor(vv.length*0.98)]||300;
+    const elev=new Float32Array(W*H);
+    for(let i=0;i<W*H;i++){
+      elev[i]=validMask[i]?Math.max(p1,Math.min(p99,raw[i])):p1;
+    }
+    // spike removal aggressivo: media locale, soglia 15m, 8 passate
+    for(let pass=0;pass<8;pass++){
+      const tmp=elev.slice();
+      for(let y=1;y<H-1;y++) for(let x=1;x<W-1;x++){
+        const i=y*W+x;
+        const nei=[tmp[(y-1)*W+x],tmp[(y+1)*W+x],tmp[y*W+x-1],tmp[y*W+x+1]];
+        const avg=(nei[0]+nei[1]+nei[2]+nei[3])/4;
+        if(Math.abs(tmp[i]-avg)>15) elev[i]=avg;
+      }
+    }
+    // flood-fill: vertici nodata prendono media vicini validi (per bordi morbidi)
+    for(let pass=0;pass<8;pass++){
+      const tmp=elev.slice();
+      for(let y=0;y<H;y++) for(let x=0;x<W;x++){
+        const i=y*W+x;
+        if(validMask[i]) continue;
+        let sum=0,cnt=0;
+        for(let dy=-1;dy<=1;dy++) for(let dx=-1;dx<=1;dx++){
+          const ny=y+dy,nx=x+dx;
+          if(ny<0||ny>=H||nx<0||nx>=W) continue;
+          const j=ny*W+nx;
+          if(tmp[j]>p1-0.5){sum+=tmp[j];cnt++;}
+        }
+        if(cnt>0) elev[i]=sum/cnt;
+      }
+    }
+    // tieni solo la componente connessa più grande (scarta frammenti isolati)
+    (function(){
+      const lbl=new Int32Array(W*H).fill(-1);
+      let best=-1,bestSize=0,cur=0;
+      const stack=[];
+      for(let s0=0;s0<W*H;s0++){
+        if(!validMask[s0]||lbl[s0]>=0) continue;
+        stack.length=0; stack.push(s0); lbl[s0]=cur; let size=0;
+        while(stack.length){
+          const p=stack.pop(); size++;
+          const px2=p%W, py2=(p/W)|0;
+          const nb=[[px2-1,py2],[px2+1,py2],[px2,py2-1],[px2,py2+1]];
+          for(const [nx,ny] of nb){
+            if(nx<0||nx>=W||ny<0||ny>=H) continue;
+            const q=ny*W+nx;
+            if(validMask[q]&&lbl[q]<0){lbl[q]=cur;stack.push(q);}
+          }
+        }
+        if(size>bestSize){bestSize=size;best=cur;}
+        cur++;
+      }
+      for(let i=0;i<W*H;i++){ if(lbl[i]!==best) validMask[i]=0; }
+    })();
+    const emin=p1, emax=p99;
+    inst._threeScene.elevData=elev;
+    inst._threeScene.emin=emin;
+    inst._threeScene.emax=emax;
+    inst._threeScene.mask=validMask;
+    _morfoRebuildMesh(mapId);
+    _morfoRenderLoop(mapId);
+  };
+  img.onerror=()=>console.warn('Three.js terrain: terrain_512.png non caricata');
+  img.src=base+'/terrain_512.png';
+  // pre-carica texture colorate a WxH per vertex colors
+  ['pendenze','geomorfologia','solar'].forEach(tname=>{
+    const ti=new Image(); ti.crossOrigin='anonymous';
+    ti.onload=()=>{
+      const tc=document.createElement('canvas'); tc.width=W; tc.height=H;
+      const tx=tc.getContext('2d'); tx.drawImage(ti,0,0,W,H);
+      inst._threeScene['px_'+tname]=tx.getImageData(0,0,W,H).data;
+      if(inst._threeScene.curTex===tname) _morfoRebuildMesh(mapId);
+    };
+    ti.src=base+'/tex/'+tname+'.png';
+  });
+  // interazione mouse/touch
+  canvas.addEventListener('mousedown',e=>{ctrl.down=true;ctrl.lx=e.clientX;ctrl.ly=e.clientY;});
+  window.addEventListener('mouseup',()=>{ctrl.down=false;});
+  window.addEventListener('mousemove',e=>{
+    if(!ctrl.down) return;
+    ctrl.theta+=(e.clientX-ctrl.lx)*0.005;
+    ctrl.phi=Math.max(0.15,Math.min(1.4,ctrl.phi-(e.clientY-ctrl.ly)*0.005));
+    ctrl.lx=e.clientX;ctrl.ly=e.clientY;ctrl.needsRender=true;
+  });
+  canvas.addEventListener('wheel',e=>{
+    e.preventDefault();
+    ctrl.radius=Math.max(80,Math.min(600,ctrl.radius+e.deltaY*0.3));
+    ctrl.needsRender=true;
+  },{passive:false});
+  // touch
+  let _tp=null;
+  canvas.addEventListener('touchstart',e=>{if(e.touches.length===1){ctrl.down=true;_tp={x:e.touches[0].clientX,y:e.touches[0].clientY};}},{passive:true});
+  canvas.addEventListener('touchend',()=>{ctrl.down=false;_tp=null;},{passive:true});
+  canvas.addEventListener('touchmove',e=>{
+    if(!ctrl.down||!_tp||e.touches.length!==1) return;
+    ctrl.theta+=(e.touches[0].clientX-_tp.x)*0.005;
+    ctrl.phi=Math.max(0.15,Math.min(1.4,ctrl.phi-(e.touches[0].clientY-_tp.y)*0.005));
+    _tp={x:e.touches[0].clientX,y:e.touches[0].clientY};ctrl.needsRender=true;
+  },{passive:true});
+  // resize
+  new ResizeObserver(()=>{
+    const par=canvas.parentElement;
+    const w=(par?par.clientWidth:0)||canvas.clientWidth||0;
+    if(w<10||canvas.style.display==='none') return;  // ignora quando nascosto
+    renderer.setSize(w,420,false);
+    camera.aspect=w/420;camera.updateProjectionMatrix();
+    ctrl.needsRender=true;
+  }).observe(canvas.parentElement||canvas);
+}
+function _morfoRebuildMesh(mapId){
+  const inst=window._morfoMap&&window._morfoMap[mapId];
+  if(!inst||!inst._threeScene) return;
+  const {scene,W,H,elevData,emin,emax,mask,curTex}=inst._threeScene;
+  const ctrl=inst._threeCtrl;
+  if(!elevData) return;
+  if(inst._threeScene.mesh){scene.remove(inst._threeScene.mesh);inst._threeScene.mesh.geometry.dispose();inst._threeScene.mesh.material.dispose();}
+  const erange=emax-emin||1;
+  const _tex=curTex||'elevazione';
+  const ramp=[[0,0.48,0.78],[0.22,0.70,0.42],[0.55,0.85,0.32],[0.94,0.85,0.20],[0.94,0.55,0.10],[0.78,0.16,0.16]];
+  function lerp3(t){const n=ramp.length-1;const ii=Math.min(n-1,Math.floor(t*n));const ff=t*n-ii;return ramp[ii].map((v,j)=>v+(ramp[ii+1][j]-v)*ff);}
+  const pxData=inst._threeScene['px_'+_tex];
+  function colorAt(idx){
+    if(mask&&!mask[idx]) return [0,0,0];
+    if(_tex==='elevazione'){const h=Math.max(0,Math.min(1,(elevData[idx]-emin)/erange));return lerp3(h);}
+    if(pxData){const pr=pxData[idx*4]/255,pg=pxData[idx*4+1]/255,pb=pxData[idx*4+2]/255;if(pr>0.9&&pg>0.9&&pb>0.9)return[0,0,0];return[pr,pg,pb];}
+    return [0.55,0.65,0.55];
+  }
+  // BufferGeometry: vertici tutti presenti, ma triangoli solo se validi e senza dislivello assurdo
+  const verts=[],cols=[],indices=[];
+  for(let yi=0;yi<H;yi++) for(let xi=0;xi<W;xi++){
+    const idx=yi*W+xi;
+    const yv=((elevData[idx]-emin)/erange)*ctrl.exag*50;
+    verts.push((xi/(W-1)-0.5)*200, yv, (yi/(H-1)-0.5)*200);
+    const [r,g,b]=colorAt(idx); cols.push(r,g,b);
+  }
+  for(let yi=0;yi<H-1;yi++) for(let xi=0;xi<W-1;xi++){
+    const a=yi*W+xi, b=yi*W+xi+1, c=(yi+1)*W+xi, d=(yi+1)*W+xi+1;
+    if(mask[a]&&mask[b]&&mask[c]) indices.push(a,c,b);
+    if(mask[b]&&mask[c]&&mask[d]) indices.push(b,c,d);
+  }
+  const geo=new THREE.BufferGeometry();
+  geo.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));
+  geo.setAttribute('color',new THREE.Float32BufferAttribute(cols,3));
+  geo.setIndex(indices);
+  geo.computeVertexNormals();
+  const mat=new THREE.MeshLambertMaterial({vertexColors:true,side:THREE.DoubleSide});
+  const mesh=new THREE.Mesh(geo,mat);
+  scene.add(mesh);
+  inst._threeScene.mesh=mesh;
+  ctrl.needsRender=true;
+}
+function _morfoUpdateTerrain(mapId){_morfoRebuildMesh(mapId);}
+function _morfoSetTex3D(mapId,texName){
+  const inst=window._morfoMap&&window._morfoMap[mapId];
+  if(!inst||!inst._threeScene) return;
+  inst._threeScene.curTex=texName;
+  _morfoRebuildMesh(mapId);
+}
+function _morfoRenderLoop(mapId){
+  const inst=window._morfoMap&&window._morfoMap[mapId];
+  if(!inst||!inst._threeScene) return;
+  const {renderer,scene,camera}=inst._threeScene;
+  const ctrl=inst._threeCtrl;
+  function tick(){
+    requestAnimationFrame(tick);
+    const c3=document.getElementById(mapId+'-three');
+    if(!c3||c3.style.display==='none') return;
+    if(!ctrl.needsRender) return;
+    ctrl.needsRender=false;
+    const r=ctrl.radius;
+    camera.position.set(
+      r*Math.sin(ctrl.theta)*Math.cos(ctrl.phi),
+      r*Math.sin(ctrl.phi),
+      r*Math.cos(ctrl.theta)*Math.cos(ctrl.phi)
+    );
+    camera.lookAt(0,10,0);
+    renderer.render(scene,camera);
+  }
+  tick();
+}
+function morfoExagSlider(mapId,val){
+  const inst=window._morfoMap&&window._morfoMap[mapId];
+  if(!inst||!inst._threeCtrl) return;
+  inst._threeCtrl.exag=parseFloat(val);
+  const lbl=document.getElementById('morfo-exag-val-'+mapId);
+  if(lbl) lbl.textContent=parseFloat(val).toFixed(1)+'×';
+  _morfoRebuildMesh(mapId);
 }
 function morfoReset(mapId){
   const inst=window._morfoMap&&window._morfoMap[mapId];
