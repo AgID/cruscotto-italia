@@ -617,13 +617,54 @@ def build_shard(istat: str, anag_nome: str | None,
     return out
 
 
-def write_shards_local(shards: dict[str, dict], outdir: Path) -> int:
+# Chiavi-dato che NON devono mai essere cancellate da un fetch fallito:
+# se il nuovo shard non le contiene (download andato male) ma esistono nel
+# file precedente, si preserva il dato vecchio marcandolo come stale.
+_PROTECTED_KEYS = ["parco_veicoli", "incidenti", "iscrizioni"]
+# Metadato "anno dato" associato a ciascuna sezione protetta (preservato con essa).
+_PROTECTED_META = {
+    "parco_veicoli": "_anno_dati_parco",
+    "incidenti": "_anno_dati_incidenti",
+    "iscrizioni": "_anno_dati_iscrizioni",
+}
+
+def _preserva_dati_esistenti(nuovo: dict, vecchio: dict, protected_keys: list[str]) -> int:
+    """Se una chiave protetta e' assente/vuota nel nuovo shard ma presente nel
+    vecchio, la riporta dal vecchio (fail-safe: un fetch fallito non cancella
+    dati validi gia' pubblicati). Ritorna il numero di chiavi preservate."""
+    n = 0
+    for k in protected_keys:
+        if not nuovo.get(k) and vecchio.get(k):
+            nuovo[k] = vecchio[k]
+            _meta = _PROTECTED_META.get(k)
+            if _meta and not nuovo.get(_meta) and vecchio.get(_meta):
+                nuovo[_meta] = vecchio[_meta]
+            # marca il dato come non aggiornato in questo giro
+            nuovo[f"_stale_{k}"] = vecchio.get("_generated_at") or True
+            n += 1
+    return n
+
+def write_shards_local(shards: dict[str, dict], outdir: Path,
+                       protected_keys: list[str] | None = None) -> int:
     outdir.mkdir(parents=True, exist_ok=True)
+    protected_keys = protected_keys if protected_keys is not None else _PROTECTED_KEYS
+    n_preservati = 0
+    n_shard_con_preserv = 0
     for istat, shard in shards.items():
         p = outdir / f"{istat}.json"
+        if protected_keys and p.exists():
+            try:
+                vecchio = json.loads(p.read_text(encoding="utf-8"))
+                k = _preserva_dati_esistenti(shard, vecchio, protected_keys)
+                if k:
+                    n_preservati += k
+                    n_shard_con_preserv += 1
+            except Exception as e:
+                log.warning("preserve_read_fail", istat=istat, err=str(e))
         p.write_text(json.dumps(shard, ensure_ascii=False, indent=2),
                      encoding="utf-8")
-    log.info("shards_local_written", n=len(shards), dir=str(outdir))
+    log.info("shards_local_written", n=len(shards), dir=str(outdir),
+             sezioni_preservate=n_preservati, shard_con_preservazione=n_shard_con_preserv)
     return len(shards)
 
 
