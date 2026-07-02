@@ -40,7 +40,7 @@ from pathlib import Path
 
 import structlog
 
-from etl.lib import local_lookup, manifest
+from etl.lib import local_lookup, manifest, shard_io
 
 log = structlog.get_logger()
 
@@ -647,9 +647,12 @@ def build_territorio_shards(
             shard["geo"] = geo
 
         out_path = shard_dir / f"{istat}.json"
-        out_path.write_text(
-            json.dumps(shard, ensure_ascii=False, separators=(",", ":")),
-            encoding="utf-8",
+        # fail-safe: se una fonte (suolo/rischio/rifiuti/geo) non e' disponibile in
+        # questo giro, preserva la sezione dal file esistente invece di cancellarla
+        shard_io.write_shard_preserving(
+            out_path, shard,
+            protected_keys=["suolo", "rischio_idrogeologico", "rifiuti", "geo"],
+            indent=None, separators=(",", ":"),
         )
         written += 1
 
