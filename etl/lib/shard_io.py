@@ -71,7 +71,8 @@ def write_shard_preserving(
     protected_keys: list[str] | None = None,
     meta_map: dict[str, str] | None = None,
     *,
-    indent: int = 2,
+    indent: int | None = 2,
+    separators: tuple[str, str] | None = None,
 ) -> int:
     """Scrive lo shard `nuovo` su `path` preservando le sezioni protette dal file
     esistente se assenti nel nuovo (vedi preserva_sezioni_esistenti).
@@ -90,6 +91,7 @@ def write_shard_preserving(
             # file corrotto/illeggibile: non blocchiamo la scrittura del nuovo
             n_preservate = 0
     path.write_text(
-        json.dumps(nuovo, ensure_ascii=False, indent=indent), encoding="utf-8"
+        json.dumps(nuovo, ensure_ascii=False, indent=indent, separators=separators),
+        encoding="utf-8",
     )
     return n_preservate
