@@ -1,0 +1,115 @@
+name: ETL · ACI iscrizioni CSV (artifact-based)
+
+# Workflow Pull-Artifact per i CSV ACI Linked Open Data (prime iscrizioni
+# autovetture per ente territoriale e alimentazione, 2019-2024).
+#
+# Motivo del workflow Actions
+# ===========================
+# La VM AgID (FastWeb) NON raggiunge l'IP 77.73.61.91 (lod.aci.it): il
+# traffico viene droppato subito dopo il gateway (blocco puntuale su
+# quell'IP lato rete della VM). L'IP ACI adiacente 77.73.61.34
+# (www.aci.it) e' invece raggiungibile, e ACI risponde HTTP 200 sia da IP
+# esteri sia da IP italiani domestici -> NON e' un ban ACI ne' geografico,
+# e' un filtro in uscita sulla VM. Finche' quel filtro non viene rimosso,
+# il runner GitHub (IP Azure) scarica i CSV al posto della VM.
+#
+# Cosa fa (minimale)
+# ==================
+# Scarica SOLO i 6 CSV grezzi da lod.aci.it e li pubblica come artifact.
+# NON esegue l'ETL veicoli: quello resta sulla VM, che scarica l'artifact
+# nella cache /tmp/cruscotto-veicoli-cache/ e poi lancia
+# `python -m etl.sources.veicoli` (aci_cache_hit salta la rete).
+#
+# Cadenza upstream: annuale (ACI attualmente fermo al 2024; 2025 non
+# ancora pubblicato). Trigger manuale; schedule annuale opzionale.
+#
+# Privacy / governance: repo PRIVATO per l'interno; qui (pubblico) i CSV
+# ACI sono open data CC-BY 4.0 senza PII. Retention artifact 1 giorno.
+
+on:
+  workflow_dispatch:
+    inputs:
+      anni:
+        description: 'Anni da scaricare (comma-separated). Vuoto = 2019..2024'
+        required: false
+        default: ''
+        type: string
+  # schedule:
+  #   # 15 luglio, 03:00 UTC (decommentare quando ACI pubblica un nuovo anno)
+  #   - cron: '0 3 15 7 *'
+
+permissions:
+  contents: read
+
+jobs:
+  fetch-aci:
+    name: Download CSV ACI LOD + artifact upload
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Show runner public IP
+        run: |
+          echo "Runner IP: $(curl -sS -m 5 https://api.ipify.org || echo unknown)"
+
+      - name: Verifica raggiungibilita' lod.aci.it dal runner
+        run: |
+          echo "HEAD lod.aci.it (CSV 2024):"
+          curl -sS -I -m 20 \
+            "http://lod.aci.it/sites/default/files/statistiche_prime_iscrizioni_2024.csv" \
+            | head -5
+
+      - name: Scarica i CSV ACI (discovery URL per anno)
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/aci
+          UA="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/126.0 Safari/537.36"
+          BASE="http://lod.aci.it"
+          # anni: input o default 2019..2024
+          ANNI="${{ inputs.anni }}"
+          if [ -z "$ANNI" ]; then ANNI="2019,2020,2021,2022,2023,2024"; fi
+          IFS=',' read -ra YEARS <<< "$ANNI"
+          for Y in "${YEARS[@]}"; do
+            Y=$(echo "$Y" | tr -d ' ')
+            echo "=== anno $Y ==="
+            if [ "$Y" = "2024" ]; then
+              URL="$BASE/sites/default/files/statistiche_prime_iscrizioni_2024.csv"
+            else
+              PAGE="$BASE/dataset/prime-iscrizioni-veicoli-nuovi-nel-$Y-%E2%80%93-autovetture-ente-territoriale-e-alimentazione"
+              # estrae l'URL del CSV dalla pagina dataset
+              URL=$(curl -sS -m 30 -A "$UA" "$PAGE" \
+                    | grep -oE 'href="http://lod\.aci\.it/sites/default/files/[^"]+\.csv"' \
+                    | head -1 | sed -E 's/^href="//; s/"$//')
+            fi
+            if [ -z "$URL" ]; then
+              echo "ERRORE: URL non trovato per $Y" >&2
+              exit 1
+            fi
+            echo "URL: $URL"
+            curl -sS -m 120 -A "$UA" -o "/tmp/aci/aci_iscrizioni_$Y.csv" "$URL"
+            SZ=$(stat -c%s "/tmp/aci/aci_iscrizioni_$Y.csv")
+            echo "  scaricato: $SZ byte"
+            if [ "$SZ" -lt 100000 ]; then
+              echo "ERRORE: file $Y troppo piccolo ($SZ byte)" >&2
+              exit 1
+            fi
+          done
+          echo ""
+          echo "=== riepilogo file scaricati ==="
+          ls -la /tmp/aci/
+
+      - name: Pack CSV in tar.gz per artifact
+        run: |
+          cd /tmp
+          tar czf /tmp/aci-iscrizioni-csv.tar.gz -C /tmp/aci .
+          echo "Archive size: $(du -h /tmp/aci-iscrizioni-csv.tar.gz | cut -f1)"
+          echo "Contenuto:"
+          tar tzf /tmp/aci-iscrizioni-csv.tar.gz
+
+      - name: Upload artifact (retention 1 giorno)
+        uses: actions/upload-artifact@v4
+        with:
+          name: aci-iscrizioni-csv
+          path: /tmp/aci-iscrizioni-csv.tar.gz
+          retention-days: 1
+          if-no-files-found: error
