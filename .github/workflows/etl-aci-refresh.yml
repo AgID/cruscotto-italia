@@ -34,9 +34,13 @@ on:
         required: false
         default: ''
         type: string
-  # schedule:
-  #   # 15 luglio, 03:00 UTC (decommentare quando ACI pubblica un nuovo anno)
-  #   - cron: '0 3 15 7 *'
+  schedule:
+    # Allineato al cron VM dell'ETL veicoli (1 feb / 1 apr / 1 lug, 11:00 locali).
+    # Gira alle 08:00 UTC, qualche ora prima, cosi' l'artifact e' pronto quando
+    # la VM lo scarica (10:45) e poi lancia l'ETL veicoli (11:00).
+    - cron: '0 8 1 2 *'
+    - cron: '0 8 1 4 *'
+    - cron: '0 8 1 7 *'
 
 permissions:
   contents: read
