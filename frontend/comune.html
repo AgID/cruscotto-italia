@@ -3744,13 +3744,13 @@ async function hydrateMorfologia(istat){
     map.fitBounds([sw,ne],{padding:20,duration:0});
     // legenda iniziale
     const _LEG={
-      elevazione:[['#78bec8','≤0 m'],['#5aaa78','0–50'],['#6ebe5a','50–100'],['#a0d25a','100–200'],['#d2e15a','200–300'],['#ebdc50','300–400'],['#f0b446','400–500'],['#eb8c37','500–600'],['#c85a28','600–800'],['#3c2823','>800 m']],
+      elevazione:null,
       pendenze:[['#28783c','0–2°'],['#78b446','2–5°'],['#c8d250','5–10°'],['#f0c846','10–15°'],['#eb9637','15–25°'],['#d25a2d','25–35°'],['#aa2828','>35°']],
       geomorfologia:[['#c8c8c3','Pianoro'],['#c82828','Cima'],['#eb9632','Cresta'],['#ebc878','Spalla'],['#f0eb78','Dosso'],['#78be6e','Versante'],['#78c8d2','Conca'],['#96b4d2','Piede'],['#3c6ec8','Valle'],['#6e3ca0','Depr.']],
       solar:[['#28145a','<1200'],['#781e78','1200–1500'],['#be375a','1500–1800'],['#e66e32','1800–2000'],['#f5aa32','2000–2250'],['#fae178','>2250 kWh/m²']]
     };
     const _leg=document.getElementById('morfo-legend-'+mapId);
-    if(_leg) _leg.innerHTML=(_LEG[_curTex]||[]).map(([col,lab])=>
+    if(_leg) _leg.innerHTML=(_curTex==='elevazione'?_elevLegend():(_LEG[_curTex]||[])).map(([col,lab])=>
       '<div style="display:flex;align-items:center;gap:3px">'
       +'<div style="width:12px;height:12px;border-radius:2px;background:'+col+';flex-shrink:0"></div>'
       +'<span style="color:var(--ink-mute,#6b7280)">'+lab+'</span>'
@@ -3777,12 +3777,12 @@ async function hydrateMorfologia(istat){
       });
       // aggiorna legenda
       const LEG={
-        elevazione:[['#78bec8','≤0 m'],['#5aaa78','0–50'],['#6ebe5a','50–100'],['#a0d25a','100–200'],['#d2e15a','200–300'],['#ebdc50','300–400'],['#f0b446','400–500'],['#eb8c37','500–600'],['#c85a28','600–800'],['#3c2823','>800 m']],
+        elevazione:null,
         pendenze:[['#28783c','0–2°'],['#78b446','2–5°'],['#c8d250','5–10°'],['#f0c846','10–15°'],['#eb9637','15–25°'],['#d25a2d','25–35°'],['#aa2828','>35°']],
         geomorfologia:[['#c8c8c3','Pianoro'],['#c82828','Cima'],['#eb9632','Cresta'],['#ebc878','Spalla'],['#f0eb78','Dosso'],['#78be6e','Versante'],['#78c8d2','Conca'],['#96b4d2','Piede'],['#3c6ec8','Valle'],['#6e3ca0','Depr.']],
         solar:[['#28145a','<1200'],['#781e78','1200–1500'],['#be375a','1500–1800'],['#e66e32','1800–2000'],['#f5aa32','2000–2250'],['#fae178','>2250 kWh/m²']]
       };
-      const items=LEG[t]||[];
+      const items=t==='elevazione'?_elevLegend():(LEG[t]||[]);
       const leg=document.getElementById('morfo-legend-'+mapId);
       if(leg) leg.innerHTML=items.map(([col,lab])=>
         '<div style="display:flex;align-items:center;gap:3px">'
@@ -3869,6 +3869,18 @@ function morfoExag(mapId,delta){
   if(inst._3d) return;
   inst.pitch=Math.max(0,Math.min(75,inst.pitch+delta*30));
   inst.map.jumpTo({pitch:inst.pitch});
+}
+const _MORFO_S=[[0,100,180,210],[50,80,160,130],[100,100,185,90],[200,150,205,80],[300,200,220,70],[400,230,225,60],[500,245,235,50],[600,240,210,40],[700,230,185,30],[800,215,155,25],[1000,195,120,20],[1200,175,90,18],[1500,150,65,15],[2000,120,45,12],[2500,90,32,10],[3000,65,22,8],[3500,45,15,6],[4000,30,10,4],[9000,20,8,3]];
+function _elevLegend(){
+  const out=[];
+  for(let k=0;k<_MORFO_S.length;k++){
+    const [m,r,g,b]=_MORFO_S[k];
+    const hex='#'+[r,g,b].map(v=>v.toString(16).padStart(2,'0')).join('');
+    const prev=k===0?null:_MORFO_S[k-1][0];
+    const label=k===0?('≤'+m+' m'):k===_MORFO_S.length-1?('>'+prev+' m'):(prev+'–'+m+' m');
+    out.push([hex,label]);
+  }
+  return out;
 }
 function _morfoInitThree(mapId,canvas){
   const inst=window._morfoMap&&window._morfoMap[mapId];
@@ -4037,7 +4049,7 @@ function _morfoRebuildMesh(mapId){
   function lerp3(t){const n=ramp.length-1;const ii=Math.min(n-1,Math.floor(t*n));const ff=t*n-ii;return ramp[ii].map((v,j)=>v+(ramp[ii+1][j]-v)*ff);}
   const pxData=inst._threeScene['px_'+_tex];
   function absColorMetri(m){
-    const S=[[0,120,190,200],[50,90,170,120],[100,110,190,90],[200,160,210,90],[300,210,225,90],[400,235,220,80],[500,240,180,70],[600,235,140,55],[800,200,90,40],[9000,60,40,35]];
+    const S=_MORFO_S; //[[0,120,190,200],[50,90,170,120],[100,110,190,90],[200,160,210,90],[300,210,225,90],[400,235,220,80],[500,240,200,70],[600,240,210,60],[800,235,220,50],[1000,230,215,60],[1500,210,195,70],[2000,185,160,60],[2500,160,120,45],[3000,130,85,35],[3500,100,60,25],[4000,70,40,15],[9000,45,30,10]];
     if(m<=S[0][0]) return [S[0][1]/255,S[0][2]/255,S[0][3]/255];
     for(let k=0;k<S.length-1;k++){ if(m<=S[k+1][0]){ const t=(m-S[k][0])/(S[k+1][0]-S[k][0]); return [(S[k][1]+(S[k+1][1]-S[k][1])*t)/255,(S[k][2]+(S[k+1][2]-S[k][2])*t)/255,(S[k][3]+(S[k+1][3]-S[k][3])*t)/255]; } }
     const L=S[S.length-1]; return [L[1]/255,L[2]/255,L[3]/255];
