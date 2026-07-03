@@ -3966,7 +3966,7 @@ function _morfoInitThree(mapId,canvas){
       }
       const szMap=new Int32Array(cur);
       for(let i=0;i<W*H;i++) if(lbl[i]>=0) szMap[lbl[i]]++;
-      const minSz=Math.max(50,Math.round(bestSize*0.01));
+      const minSz=Math.max(20,Math.round(bestSize*0.001));
       for(let i=0;i<W*H;i++){ if(lbl[i]<0||szMap[lbl[i]]<minSz) validMask[i]=0; }
     })();
     const emin=p1, emax=p99;
