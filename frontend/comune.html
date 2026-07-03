@@ -3964,7 +3964,10 @@ function _morfoInitThree(mapId,canvas){
         if(size>bestSize){bestSize=size;best=cur;}
         cur++;
       }
-      for(let i=0;i<W*H;i++){ if(lbl[i]!==best) validMask[i]=0; }
+      const szMap=new Int32Array(cur);
+      for(let i=0;i<W*H;i++) if(lbl[i]>=0) szMap[lbl[i]]++;
+      const minSz=Math.max(50,Math.round(bestSize*0.01));
+      for(let i=0;i<W*H;i++){ if(lbl[i]<0||szMap[lbl[i]]<minSz) validMask[i]=0; }
     })();
     const emin=p1, emax=p99;
     inst._threeScene.elevData=elev;
