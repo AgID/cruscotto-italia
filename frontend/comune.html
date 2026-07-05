@@ -3782,7 +3782,8 @@ async function hydrateMorfologia(istat){
         geomorfologia:[['#c8c8c3','Pianoro'],['#c82828','Cima'],['#eb9632','Cresta'],['#ebc878','Spalla'],['#f0eb78','Dosso'],['#78be6e','Versante'],['#78c8d2','Conca'],['#96b4d2','Piede'],['#3c6ec8','Valle'],['#6e3ca0','Depr.']],
         solar:[['#28145a','<1200'],['#781e78','1200–1500'],['#be375a','1500–1800'],['#e66e32','1800–2000'],['#f5aa32','2000–2250'],['#fae178','>2250 kWh/m²']]
       };
-      const items=t==='elevazione'?_elevLegend():(LEG[t]||[]);
+      const _ml=(window._morfoMap&&window._morfoMap[mapId]&&window._morfoMap[mapId]._threeScene&&window._morfoMap[mapId]._threeScene._morfoLocal)||null;
+      const items=t==='elevazione'?_elevLegend(_ml):(LEG[t]||[]);
       const leg=document.getElementById('morfo-legend-'+mapId);
       if(leg) leg.innerHTML=items.map(([col,lab])=>
         '<div style="display:flex;align-items:center;gap:3px">'
@@ -3870,14 +3871,15 @@ function morfoExag(mapId,delta){
   inst.pitch=Math.max(0,Math.min(75,inst.pitch+delta*30));
   inst.map.jumpTo({pitch:inst.pitch});
 }
-const _MORFO_S=[[0,170,220,255],[500,120,200,120],[1000,200,230,100],[1500,240,220,80],[2000,230,180,60],[2500,210,140,50],[3000,180,100,40],[3500,150,75,35],[4000,120,55,30],[5000,90,40,25],[9000,70,30,20]];
-function _elevLegend(){
+const _MORFO_S=[[0,120,190,240],[10,100,200,110],[100,130,210,90],[300,170,220,70],[500,210,230,60],[800,240,230,50],[1200,245,210,40],[1600,235,175,35],[2000,220,140,30],[2500,195,105,28],[3000,165,75,25],[3500,135,55,22],[4000,105,40,18],[5000,75,28,14],[9000,50,20,10]];
+function _elevLegend(pal){
+  const P=pal||_MORFO_S;
   const out=[];
-  for(let k=0;k<_MORFO_S.length;k++){
-    const [m,r,g,b]=_MORFO_S[k];
+  for(let k=0;k<P.length;k++){
+    const [m,r,g,b]=P[k];
     const hex='#'+[r,g,b].map(v=>v.toString(16).padStart(2,'0')).join('');
-    const prev=k===0?null:_MORFO_S[k-1][0];
-    const label=k===0?('≤'+m+' m'):k===_MORFO_S.length-1?('>'+prev+' m'):(prev+'–'+m+' m');
+    const prev=k===0?null:P[k-1][0];
+    const label=k===0?('≤'+Math.round(m)+' m'):k===P.length-1?('>'+Math.round(prev)+' m'):(Math.round(prev)+'–'+Math.round(m)+' m');
     out.push([hex,label]);
   }
   return out;
@@ -3925,6 +3927,8 @@ function _morfoInitThree(mapId,canvas){
     vv.sort((a2,b2)=>a2-b2);
     const p1=vv[Math.floor(vv.length*0.02)]||0;
     const p99=vv[Math.floor(vv.length*0.98)]||300;
+    const _pq=n=>Math.round(vv[Math.floor(vv.length*n)]||p1);
+    const _MORFO_LOCAL=[[_pq(0),120,200,110],[_pq(0.05),160,220,80],[_pq(0.15),210,230,70],[_pq(0.30),240,225,55],[_pq(0.50),240,200,40],[_pq(0.65),225,160,35],[_pq(0.80),195,115,30],[_pq(0.90),160,78,25],[_pq(0.97),120,50,20],[_pq(1.0),80,30,12]];
     const elev=new Float32Array(W*H);
     for(let i=0;i<W*H;i++){
       elev[i]=validMask[i]?Math.max(p1,Math.min(p99,raw[i])):p1;
@@ -3981,12 +3985,15 @@ function _morfoInitThree(mapId,canvas){
       const minSz=Math.max(20,Math.round(bestSize*0.001));
       for(let i=0;i<W*H;i++){ if(lbl[i]<0||szMap[lbl[i]]<minSz) validMask[i]=0; }
     })();
-    const emin=p1, emax=p99, emin_real=vv[0]||p1, emax_real=vv[vv.length-1]||p99;
+    const emin=p1, emax=p99, emin_real=vv[Math.floor(vv.length*0.005)]||p1, emax_real=vv[Math.floor(vv.length*0.995)]||p99, vv_min=Math.round(vv[0]||p1), vv_max=Math.round(vv[vv.length-1]||p99);
     inst._threeScene.elevData=elev;
     inst._threeScene.emin=emin;
     inst._threeScene.emax=emax;
     inst._threeScene.emin_real=emin_real;
     inst._threeScene.emax_real=emax_real;
+    inst._threeScene._morfoLocal=_MORFO_LOCAL;
+    inst._threeScene.vv_min=vv_min;
+    inst._threeScene.vv_max=vv_max;
     inst._threeScene.mask=validMask;
     _morfoRebuildMesh(mapId);
     _morfoRenderLoop(mapId);
@@ -4052,12 +4059,9 @@ function _morfoRebuildMesh(mapId){
   const pxData=inst._threeScene['px_'+_tex];
   function absColorMetri(m){
     // normalizza m sul range reale del comune -> rimappa sulle soglie palette
-    const er=emax_real-emin_real||1;
-    const t01=Math.max(0,Math.min(1,(m-emin_real)/er));
-    const S=_MORFO_S;
-    const mN=S[0][0]+t01*(S[S.length-1][0]-S[0][0]);
-    if(mN<=S[0][0]) return [S[0][1]/255,S[0][2]/255,S[0][3]/255];
-    for(let k=0;k<S.length-1;k++){ if(mN<=S[k+1][0]){ const tt=(mN-S[k][0])/(S[k+1][0]-S[k][0]); return [(S[k][1]+(S[k+1][1]-S[k][1])*tt)/255,(S[k][2]+(S[k+1][2]-S[k][2])*tt)/255,(S[k][3]+(S[k+1][3]-S[k][3])*tt)/255]; } }
+    const S=inst._threeScene._morfoLocal||_MORFO_S;
+    if(m<=S[0][0]) return [S[0][1]/255,S[0][2]/255,S[0][3]/255];
+    for(let k=0;k<S.length-1;k++){ if(m<=S[k+1][0]){ const tt=(m-S[k][0])/(S[k+1][0]-S[k][0]); return [(S[k][1]+(S[k+1][1]-S[k][1])*tt)/255,(S[k][2]+(S[k+1][2]-S[k][2])*tt)/255,(S[k][3]+(S[k+1][3]-S[k][3])*tt)/255]; } }
     const L=S[S.length-1]; return [L[1]/255,L[2]/255,L[3]/255];
   }
   function colorAt(idx){
@@ -4091,41 +4095,22 @@ function _morfoRebuildMesh(mapId){
   // linee di quota orizzontali
   if(inst._threeScene.isoLines){scene.remove(inst._threeScene.isoLines);inst._threeScene.isoLines.geometry.dispose();inst._threeScene.isoLines.material.dispose();}
   if(_tex==='elevazione'){
-    const isoQuote=[0,50,100,200,300,400,500,600,700,800,1000,1200,1500,2000,2500,3000,3500,4000].filter(q=>q>=(emin_real||emin)&&q<=(emax_real||emax));
+    const _vmin=inst._threeScene.vv_min||Math.round(emin_real||emin);
+    const _vmax=inst._threeScene.vv_max||Math.round(emax_real||emax);
+    const _isoAll=[0,50,100,150,200,250,300,400,500,600,700,800,900,1000,1100,1200,1300,1400,1500,1600,1700,1800,1900,2000,2200,2400,2600,2800,3000,3200,3400,3600,3800,4000,4200,4400,4600,4800,5000];
+    const isoQuote=[_vmin,..._isoAll.filter(q=>q>_vmin&&q<_vmax),_vmax];
     const isoVerts=[];
     if(inst._threeScene.isoLabels){inst._threeScene.isoLabels.forEach(s=>scene.remove(s));}
     const isoLabels=[];
     let lastLabelY=-999;
     for(const q of isoQuote){
-      const yq=((q-emin)/erange)*ctrl.exag*50;
+      const _er2=(inst._threeScene.vv_max-inst._threeScene.vv_min)||erange;
+      const _eb2=inst._threeScene.vv_min||emin;
+      const yq=((q-_eb2)/_er2)*ctrl.exag*50;
       isoVerts.push(-105,yq,-105, 105,yq,-105);
       isoVerts.push(-105,yq, 105, 105,yq, 105);
       // label quota come sprite canvas
-      if(yq-lastLabelY<(ctrl.exag*4.5)){continue;}
-      lastLabelY=yq;
-      const sc=document.createElement('canvas');sc.width=128;sc.height=40;
-      const sx=sc.getContext('2d');
-      sx.fillStyle='rgba(0,0,0,0)';
-      sx.fillRect(0,0,128,40);
-      sx.font='bold 22px monospace';
-      sx.fillStyle='#ffffff';
-      sx.textAlign='right';
-      sx.fillText(q+' m',120,28);
-      const st=new THREE.CanvasTexture(sc);
-      const sm=new THREE.SpriteMaterial({map:st,transparent:true,opacity:0.85});
-      const sp=new THREE.Sprite(sm);
-      sp.scale.set(18,6,1);
-      sp.position.set(112,yq,-105);
-      scene.add(sp);
-      isoLabels.push(sp);
-      // label anche lato anteriore
-      const st2=new THREE.CanvasTexture(sc);
-      const sm2=new THREE.SpriteMaterial({map:st2,transparent:true,opacity:0.85});
-      const sp2=new THREE.Sprite(sm2);
-      sp2.scale.set(18,6,1);
-      sp2.position.set(112,yq,105);
-      scene.add(sp2);
-      isoLabels.push(sp2);
+
     }
     inst._threeScene.isoLabels=isoLabels;
     const isoGeo=new THREE.BufferGeometry();
