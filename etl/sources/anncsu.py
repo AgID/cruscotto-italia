@@ -135,6 +135,24 @@ METODO_LABEL = {
 # FASE 1 - DOWNLOAD
 # ----------------------------------------------------------------------
 
+def _remote_size(url: str) -> int | None:
+    """Dimensione remota via range-request (HEAD e' bloccato 403 da Akamai).
+
+    Legge l'header Content-Range del 206 Partial Content, come lo script
+    catasto. Ritorna None se il check fallisce (l'ETL fara' fail-safe).
+    """
+    try:
+        h = dict(HEADERS)
+        h["Range"] = "bytes=0-127"
+        r = requests.get(url, headers=h, timeout=30, allow_redirects=True)
+        cr = r.headers.get("Content-Range", "")
+        if "/" in cr:
+            return int(cr.rsplit("/", 1)[-1])
+    except (requests.RequestException, ValueError):
+        pass
+    return None
+
+
 def download_one(kind: str, region: str, push_r2: bool = False) -> Path:
     """Scarica un singolo file ZIP nella cache locale.
 
@@ -147,14 +165,27 @@ def download_one(kind: str, region: str, push_r2: bool = False) -> Path:
     """
     local_path = CACHE_DIR / f"{kind}_{region}.zip"
 
-    # Cache hit?
+    url = f"{BASE_URL}?{kind}_{region}"
+
+    # Cache hit? Riusa solo se la dimensione remota combacia (AGE non ha
+    # ripubblicato). Bug storico: la cache non scadeva mai -> dati congelati.
     if local_path.exists():
-        log.info("anncsu_skip_cached", kind=kind, region=region,
-                 size=local_path.stat().st_size)
-        return local_path
+        local_sz = local_path.stat().st_size
+        remote_sz = _remote_size(url)
+        if remote_sz is not None and remote_sz == local_sz:
+            log.info("anncsu_skip_cached", kind=kind, region=region,
+                     size=local_sz)
+            return local_path
+        if remote_sz is None:
+            # Check fallito: fail-safe, riuso la cache per non bloccare l'ETL
+            log.warning("anncsu_cache_check_failed", kind=kind, region=region,
+                        size=local_sz)
+            return local_path
+        log.info("anncsu_cache_stale", kind=kind, region=region,
+                 local=local_sz, remote=remote_sz)
+        local_path.unlink()
 
     # Download
-    url = f"{BASE_URL}?{kind}_{region}"
     log.info("anncsu_downloading", kind=kind, region=region, url=url)
     t0 = time.time()
     resp = requests.get(url, headers=HEADERS, timeout=DOWNLOAD_TIMEOUT_SEC,
