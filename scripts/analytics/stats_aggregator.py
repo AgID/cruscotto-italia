@@ -41,6 +41,7 @@ UA_BOT_PATTERNS = re.compile(
     r"(?:"
     r"bot|crawler|spider|searchbot|preview|monitor|uptime|"
     r"pa11y|axios|curl|wget|python-requests|httpie|"
+    r"node|python|java/|go-http-client|okhttp|libwww|aiohttp|scrapy|locora|"
     r"facebookexternalhit|whatsapp|telegrambot|skypeuripreview|"
     r"slackbot|discordbot|linkedinbot|twitterbot|"
     r"ahrefs|semrush|mj12bot|dotbot|petalbot|bingbot|googlebot|"
@@ -408,6 +409,7 @@ def aggregate(log_paths: list[Path], exclude_test: bool = False,
         "_generated_at": stats["_generated_at"],
         "_logs_processed": stats["_logs_processed"],
         "_exclude_test_comuni": stats["_exclude_test_comuni"],
+        "unique_comuni_total": len(stats["top_comuni"]),
         "totals": stats["totals"],
         "per_day": {
             day: {"hits": v["hits"], "unique_ips": len(v["unique_ips"])}
@@ -787,7 +789,7 @@ def render_html(stats: dict, mcp_stats_path: Path | None = None, title: str = "C
         hits_bot=f"{stats['totals']['hits_bot']:,}",
         hits_attack=f"{stats['totals']['hits_attack']:,}",
         hits_error=f"{stats['totals']['hits_error']:,}",
-        unique_comuni=len(stats["top_comuni"]),
+        unique_comuni=f"{stats.get('unique_comuni_total', len(stats['top_comuni'])):,}",
         section_attacks_by_host=section_attacks_by_host,
         table_comuni=table_comuni,
         table_days=table_days,
@@ -837,7 +839,7 @@ def main() -> int:
     print(f"✓ Linee processate: {stats['totals']['lines_parsed']:,} / {stats['totals']['lines_total']:,}")
     print(f"✓ Visite umane: {stats['totals']['hits_human']:,}")
     print(f"✓ Bot: {stats['totals']['hits_bot']:,}, Attacchi: {stats['totals']['hits_attack']:,}, Errori: {stats['totals']['hits_error']:,}")
-    print(f"✓ Comuni distinti: {len(stats['top_comuni'])}")
+    print(f"✓ Comuni distinti: {stats.get('unique_comuni_total', len(stats['top_comuni']))}")
     print(f"✓ JSON: {json_out}")
     print(f"✓ HTML: {html_out}")
     return 0
