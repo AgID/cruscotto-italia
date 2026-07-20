@@ -41,7 +41,7 @@ UA_BOT_PATTERNS = re.compile(
     r"(?:"
     r"bot|crawler|spider|searchbot|preview|monitor|uptime|"
     r"pa11y|axios|curl|wget|python-requests|httpie|"
-    r"node|python|java/|go-http-client|okhttp|libwww|aiohttp|scrapy|locora|"
+    r"node|python|java/|go-http-client|okhttp|libwww|aiohttp|scrapy|locora|probe|"
     r"facebookexternalhit|whatsapp|telegrambot|skypeuripreview|"
     r"slackbot|discordbot|linkedinbot|twitterbot|"
     r"ahrefs|semrush|mj12bot|dotbot|petalbot|bingbot|googlebot|"
@@ -240,7 +240,9 @@ def parse_line(line: str) -> dict | None:
 
 
 def is_bot(ua: str) -> bool:
-    return bool(UA_BOT_PATTERNS.search(ua or ""))
+    if not ua or ua == "-":
+        return True  # nessun browser reale ha UA vuoto
+    return bool(UA_BOT_PATTERNS.search(ua))
 
 
 def is_attack(uri: str) -> bool:
@@ -311,6 +313,7 @@ def aggregate(log_paths: list[Path], exclude_test: bool = False,
             "hits_attack": 0,
             "hits_internal_asset": 0,
             "hits_error": 0,           # status >= 400
+            "hits_data": 0,            # accessi diretti /data/ e /dcat/ (riuso open data)
             "hits_human": 0,           # hits "veri"
         },
         "per_day": defaultdict(lambda: {
@@ -370,6 +373,11 @@ def aggregate(log_paths: list[Path], exclude_test: bool = False,
                     continue
                 if is_internal_asset(ev["uri"]):
                     stats["totals"]["hits_internal_asset"] += 1
+                    continue
+                if ev["uri"].startswith("/data/") or ev["uri"].startswith("/dcat/"):
+                    # Accesso diretto ai dati (client programmatici con UA browser,
+                    # worker MCP, harvester DCAT): riuso open data, non navigazione
+                    stats["totals"]["hits_data"] += 1
                     continue
 
                 # Hit "valido" — utente reale
@@ -492,6 +500,7 @@ HTML_TEMPLATE = """<!doctype html>
 
 <div class="grid">
   <div class="card"><div class="card-val">{hits_human}</div><div class="card-lbl">Visite umane</div></div>
+  <div class="card"><div class="card-val">{hits_data}</div><div class="card-lbl">Accessi dati (JSON)</div></div>
   <div class="card"><div class="card-val">{hits_bot}</div><div class="card-lbl">Bot/crawler</div></div>
   <div class="card"><div class="card-val">{hits_attack}</div><div class="card-lbl">Tentativi attacco</div></div>
   <div class="card"><div class="card-val">{hits_error}</div><div class="card-lbl">Errori 4xx/5xx</div></div>
@@ -787,6 +796,7 @@ def render_html(stats: dict, mcp_stats_path: Path | None = None, title: str = "C
         exclude_note=exclude_note,
         hits_human=f"{stats['totals']['hits_human']:,}",
         hits_bot=f"{stats['totals']['hits_bot']:,}",
+        hits_data=f"{stats['totals'].get('hits_data', 0):,}",
         hits_attack=f"{stats['totals']['hits_attack']:,}",
         hits_error=f"{stats['totals']['hits_error']:,}",
         unique_comuni=f"{stats.get('unique_comuni_total', len(stats['top_comuni'])):,}",
@@ -838,7 +848,7 @@ def main() -> int:
 
     print(f"✓ Linee processate: {stats['totals']['lines_parsed']:,} / {stats['totals']['lines_total']:,}")
     print(f"✓ Visite umane: {stats['totals']['hits_human']:,}")
-    print(f"✓ Bot: {stats['totals']['hits_bot']:,}, Attacchi: {stats['totals']['hits_attack']:,}, Errori: {stats['totals']['hits_error']:,}")
+    print(f"✓ Bot: {stats['totals']['hits_bot']:,}, Accessi dati: {stats['totals'].get('hits_data', 0):,}, Attacchi: {stats['totals']['hits_attack']:,}, Errori: {stats['totals']['hits_error']:,}")
     print(f"✓ Comuni distinti: {stats.get('unique_comuni_total', len(stats['top_comuni']))}")
     print(f"✓ JSON: {json_out}")
     print(f"✓ HTML: {html_out}")
