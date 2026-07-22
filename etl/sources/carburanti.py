@@ -9,13 +9,15 @@ impianti" pubblicato in attuazione dell'art. 51 L. 99/2009.
 Pagina dataset:
   https://www.mimit.gov.it/it/open-data/elenco-dataset/carburanti-prezzi-praticati-e-anagrafica-degli-impianti
 
-Acquisizione
-------------
-Due CSV nazionali aggiornati quotidianamente, separator '|' (dal 10/02/2026,
-sostituisce la vecgia ',' per evitare collisioni con virgole nelle anagrafiche).
-
-  https://www.mimit.gov.it/images/exportCSV/anagrafica_impianti_attivi.csv
-  https://www.mimit.gov.it/images/exportCSV/prezzo_alle_8.csv
+Acquisizione (ibrida)
+---------------------
+- Anagrafica: CSV nazionale MIMIT (separator '|', dato statico):
+    https://www.mimit.gov.it/images/exportCSV/anagrafica_impianti_attivi.csv
+- Prezzi: LIVE dal backend del portale OsservaPrezzi (ospzApi/search/area),
+  aggiornati in giornata (il CSV prezzo_alle_8.csv ha ~1 giorno di ritardo).
+  Fallback automatico al CSV dopo >=2 giorni senza fetch API riuscito
+  (o con --prezzi csv):
+    https://www.mimit.gov.it/images/exportCSV/prezzo_alle_8.csv
 
 Il primo rigo di ogni CSV e' l'header "Estrazione del YYYY-MM-DD", il secondo
 e' l'header delle colonne. ~23.700 impianti, ~93.000 righe prezzo.
@@ -144,6 +146,25 @@ BBOX_LON_MIN, BBOX_LON_MAX = 6.0, 19.0
 
 # Soglia freshness prezzo (giorni)
 FRESHNESS_DAYS = 7
+
+# -- Prezzi live via portale MIMIT (ospzApi) -- sorgente primaria dei prezzi.
+# L'anagrafica resta dai CSV; i prezzi praticati sono letti in tempo reale dal
+# backend del portale OsservaPrezzi (stesso dato IODL 2.0, aggiornato in giornata
+# invece che con ~1gg di ritardo del CSV). Il portale e' dietro Akamai: serve
+# User-Agent browser-like (UA "bot" -> 403).
+API_BASE = "https://carburanti.mise.gov.it/ospzApi"
+API_HEADERS = {
+    "User-Agent": ("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+                   "(KHTML, like Gecko) Chrome/126.0 Safari/537.36"),
+    "Accept": "application/json, text/plain, */*",
+    "Referer": "https://carburanti.mise.gov.it/ospzSearch/risultati",
+    "Content-Type": "application/json",
+}
+# fuelType filtra gli IMPIANTI (non i carburanti) -> unione famiglie per coprire
+# anche gli impianti che non vendono benzina.
+API_FUEL_FAMILIES = ["1-x", "2-x", "3-x", "4-x"]  # benzina, gasolio, metano, GPL
+API_TIMEOUT = 120
+API_MIN_IMPIANTI = 15000  # sotto questa soglia un run nazionale e' incompleto
 
 # Carburanti core (in KPI prezzo_medio)
 CARB_CORE = {
@@ -401,6 +422,106 @@ def _parse_dtcomu(s: str) -> str | None:
     return f"{m.group(3)}-{m.group(2)}-{m.group(1)}"
 
 
+# ---------------------- PREZZI API (ospzApi) -----------------------
+
+
+def _api_post(path: str, payload: dict, retries: int = 3) -> dict:
+    last = None
+    for i in range(retries):
+        try:
+            r = requests.post(API_BASE + path, headers=API_HEADERS,
+                              json=payload, timeout=API_TIMEOUT)
+            r.raise_for_status()
+            return r.json()
+        except Exception as e:
+            last = e
+            time.sleep(2 * (i + 1))
+    raise last
+
+
+def _api_get(path: str, retries: int = 3) -> dict:
+    last = None
+    for i in range(retries):
+        try:
+            r = requests.get(API_BASE + path, headers=API_HEADERS, timeout=60)
+            r.raise_for_status()
+            return r.json()
+        except Exception as e:
+            last = e
+            time.sleep(2 * (i + 1))
+    raise last
+
+
+def _api_fmt_dtcomu(iso: str | None) -> str:
+    """insertDate ISO -> 'DD/MM/YYYY HH:MM:SS' (formato dtComu CSV)."""
+    if not iso:
+        return ""
+    try:
+        return datetime.fromisoformat(iso).strftime("%d/%m/%Y %H:%M:%S")
+    except (ValueError, TypeError):
+        return ""
+
+
+def fetch_api_prezzi(region_ids: list | None = None) -> tuple[list[dict], str, dict]:
+    """Prezzi praticati LIVE dal portale MIMIT (ospzApi/search/area).
+
+    Produce SOLO prezzi_rows nella forma di parse_prezzi; l'anagrafica resta dal
+    CSV e il merge avviene in build_shards per idImpianto. fuelType filtra gli
+    impianti -> unione famiglie. RuntimeError se un run nazionale e' incompleto
+    (< API_MIN_IMPIANTI) -> attiva fallback.
+    """
+    full_run = region_ids is None
+    if full_run:
+        regs = _api_get("/registry/region")
+        L = regs.get("results", regs) if isinstance(regs, dict) else regs
+        region_ids = [r["id"] for r in L]
+
+    stations: dict = {}
+    n_req = 0
+    for rid in region_ids:
+        for ft in API_FUEL_FAMILIES:
+            data = _api_post("/search/area",
+                            {"region": rid, "fuelType": ft, "priceOrder": "asc"})
+            n_req += 1
+            for r in data.get("results", []):
+                sid = r.get("id")
+                if sid is not None:
+                    stations.setdefault(sid, r)
+
+    if full_run and len(stations) < API_MIN_IMPIANTI:
+        raise RuntimeError(
+            f"fetch_api_prezzi incompleto: {len(stations)} impianti "
+            f"(< {API_MIN_IMPIANTI})")
+
+    prezzi_rows: list[dict] = []
+    for sid, r in stations.items():
+        dtcomu = _api_fmt_dtcomu(r.get("insertDate"))
+        for f in r.get("fuels", []):
+            if f.get("price") is None:
+                continue
+            prezzi_rows.append({
+                "idImpianto": str(sid),
+                "descCarburante": (f.get("name") or "").strip(),
+                "prezzo": str(f.get("price")),
+                "isSelf": "1" if f.get("isSelf") else "0",
+                "dtComu": dtcomu,
+            })
+    snapshot = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    diag = {"impianti": len(stations), "righe": len(prezzi_rows), "richieste": n_req}
+    return prezzi_rows, snapshot, diag
+
+
+def _prezzi_fingerprint(prezzi_rows: list[dict]) -> bytes:
+    """Impronta deterministica (ordine-indipendente) per skip-check: include
+    prezzo E dtComu -> un aggiornamento infrasettimanale forza il rebuild."""
+    parts = sorted(
+        f"{r['idImpianto']}|{r['descCarburante']}|{r['isSelf']}|"
+        f"{r['prezzo']}|{r['dtComu']}"
+        for r in prezzi_rows
+    )
+    return hashlib.sha256("\n".join(parts).encode("utf-8")).digest()
+
+
 # ──────────────────────── BUILD SHARDS ─────────────────────────────
 
 def build_shards(anag_rows: list[dict],
@@ -605,19 +726,38 @@ def build_shards(anag_rows: list[dict],
 
 # ──────────────────────── SKIP LOGIC (meta locale) ─────────────────
 
+def _load_meta() -> dict:
+    """Meta locale in DATA_DIR/carburanti/_meta.json."""
+    return local_lookup.load_meta(SHARD_PREFIX) or {}
+
+
+def _save_meta(**fields) -> None:
+    """Merge non distruttivo dei campi meta (preserva quelli non passati)."""
+    meta = _load_meta()
+    meta.update({k: v for k, v in fields.items() if v is not None})
+    meta["checked_at"] = datetime.now(timezone.utc).isoformat()
+    local_lookup.save_meta(SHARD_PREFIX, meta)
+
+
 def read_last_known_hash() -> str | None:
-    """Legge l'hash dell'ultima run salvato in DATA_DIR/carburanti/_meta.json."""
-    meta = local_lookup.load_meta(SHARD_PREFIX)
-    return meta.get("hash") if meta else None
+    """Hash dell'ultimo run (skip-check anagrafica+prezzi invariati)."""
+    return _load_meta().get("hash")
 
 
-def write_last_known_hash(combined_hash: str, snapshot_date: str | None) -> None:
-    """Salva hash + snapshot_date in DATA_DIR/carburanti/_meta.json."""
-    local_lookup.save_meta(SHARD_PREFIX, {
-        "hash": combined_hash,
-        "snapshot_date": snapshot_date,
-        "checked_at": datetime.now(timezone.utc).isoformat(),
-    })
+def read_last_success_date() -> str | None:
+    """Data 'YYYY-MM-DD' dell'ultimo fetch prezzi API riuscito (timer fallback)."""
+    return _load_meta().get("last_success_date")
+
+
+def _days_since(date_str: str | None) -> int | None:
+    """Giorni di calendario da date_str a oggi (None se assente/non valida)."""
+    if not date_str:
+        return None
+    try:
+        d = datetime.strptime(date_str, "%Y-%m-%d").date()
+        return (datetime.now(timezone.utc).date() - d).days
+    except ValueError:
+        return None
 
 
 # ──────────────────────── WRITE LOCAL ──────────────────────────────
@@ -707,33 +847,65 @@ def main() -> int:
                         help="Forza esecuzione anche se hash CSV invariato + riscrittura totale")
     parser.add_argument("--no-cache", action="store_true",
                         help="Forza ridownload del CSV ISTAT comuni")
+    parser.add_argument("--prezzi", choices=["api", "csv"], default="api",
+                        help="Sorgente prezzi: 'api' portale MIMIT (default) "
+                             "o 'csv' fallback storico")
     args = parser.parse_args()
 
     log.info("etl_carburanti_start", version=ETL_VERSION, outdir=str(args.outdir))
 
-    # Fetch CSV MIMIT
+    # -- Anagrafica: sempre dai CSV MIMIT (dato statico; la staleness del CSV
+    #    e' irrilevante per comune/coord/insegna/tipo). --
     body_anag = fetch_csv(ANAG_URL)
-    body_prezzi = fetch_csv(PREZZI_URL)
 
-    # Skip check su hash del meta locale (efficiente: evita di ricostruire 5326 shard
-    # quando MIMIT non ha aggiornato i CSV)
-    combined_hash = hashlib.sha256(body_anag + body_prezzi).hexdigest()
+    # -- Prezzi: LIVE dal portale (ospzApi). Fallback ai CSV solo dopo >=2 giorni
+    #    di calendario senza alcun fetch API riuscito (robusto al cron 2x/giorno).
+    #    --prezzi csv forza il metodo storico. --
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    if args.prezzi == "csv":
+        body_prezzi = fetch_csv(PREZZI_URL)
+        prezzi_rows, snap_p = parse_prezzi(body_prezzi)
+        snapshot = snap_p or today
+        price_source = "csv_manual"
+        log.info("prezzi_csv_manual", snapshot=snapshot, righe=len(prezzi_rows))
+    else:
+        try:
+            prezzi_rows, snapshot, diag = fetch_api_prezzi()
+            price_source = "api"
+            log.info("prezzi_api_ok", snapshot=snapshot, **diag)
+        except Exception as e:
+            last_success = read_last_success_date()
+            giorni = _days_since(last_success)
+            log.warning("prezzi_api_fail", error=str(e),
+                        last_success=last_success, giorni=giorni)
+            if last_success is None or (giorni is not None and giorni >= 2):
+                log.warning("prezzi_fallback_csv", reason="api_down_ge_2gg")
+                body_prezzi = fetch_csv(PREZZI_URL)
+                prezzi_rows, snap_p = parse_prezzi(body_prezzi)
+                snapshot = snap_p or today
+                price_source = "csv_fallback"
+            else:
+                log.warning("prezzi_keep_previous", reason="api_down_lt_2gg")
+                return 0
+
+    # Parse anagrafica
+    anag_rows, snapshot_anag = parse_anagrafica(body_anag)
+    log.info("anagrafica_parsed", impianti=len(anag_rows),
+             righe_prezzi=len(prezzi_rows), snapshot=snapshot, source=price_source)
+
+    # -- Skip-check: anagrafica + impronta prezzi invariate -> niente rebuild. --
+    combined_hash = hashlib.sha256(
+        body_anag + _prezzi_fingerprint(prezzi_rows)).hexdigest()
     if not args.force:
         last_known = read_last_known_hash()
         if last_known == combined_hash:
             log.info("carburanti_skip", reason="hash_unchanged",
-                     hash=combined_hash[:16])
+                     hash=combined_hash[:16], source=price_source)
+            if price_source == "api":
+                _save_meta(last_success_date=today)
             return 0
-        log.info("carburanti_run",
-                 last_known=(last_known or "")[:16],
+        log.info("carburanti_run", last_known=(last_known or "")[:16],
                  current=combined_hash[:16])
-
-    # Parse
-    anag_rows, snapshot_anag = parse_anagrafica(body_anag)
-    prezzi_rows, snapshot_prezzi = parse_prezzi(body_prezzi)
-    snapshot = snapshot_prezzi or snapshot_anag
-    log.info("csv_parsed", impianti=len(anag_rows),
-             righe_prezzi=len(prezzi_rows), snapshot=snapshot)
 
     # Index ISTAT
     if args.no_cache and CACHE_DIR.exists():
@@ -743,7 +915,7 @@ def main() -> int:
     by_ns, by_name, by_tokens, region_by_istat = build_istat_index(istat_csv)
     prov_full_map = build_prov_full_map(istat_csv)
 
-    # Build shards
+    # Build shards (build_shards INVARIATO: anagrafica CSV + prezzi API per id)
     shards, aggregati = build_shards(
         anag_rows, prezzi_rows,
         by_ns, by_name, by_tokens, prov_full_map,
@@ -758,9 +930,13 @@ def main() -> int:
         else:
             log.info("sample_no_data", istat=sample)
 
-    # Write local + aggiorna hash meta per skip-check al prossimo run
+    # Write local + meta (last_success_date aggiornato solo su successo API)
     write_shards_local(shards, aggregati, args.outdir, force=args.force)
-    write_last_known_hash(combined_hash, snapshot)
+    if price_source == "api":
+        _save_meta(hash=combined_hash, snapshot_date=snapshot,
+                   last_success_date=today)
+    else:
+        _save_meta(hash=combined_hash, snapshot_date=snapshot)
 
     log.info("etl_carburanti_done", comuni=len(shards))
     return 0
