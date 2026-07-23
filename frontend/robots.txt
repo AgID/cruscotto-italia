@@ -1,0 +1,51 @@
+# Cruscotto Italia - https://cruscotto-italia.dati.gov.it
+# Dati aperti CC-BY 4.0. Il catalogo DCAT-AP_IT e gli shard JSON restano
+# accessibili via HTTP e agli harvester istituzionali federati.
+# Le direttive seguenti limitano il solo scaricamento massivo da parte dei
+# crawler di addestramento AI, per contenere il volume di traffico.
+
+User-agent: *
+Allow: /
+
+User-agent: GPTBot
+Disallow: /data/
+Disallow: /dcat/
+
+User-agent: Amazonbot
+Disallow: /data/
+Disallow: /dcat/
+
+User-agent: Bytespider
+Disallow: /data/
+Disallow: /dcat/
+
+User-agent: CCBot
+Disallow: /data/
+Disallow: /dcat/
+
+User-agent: Google-Extended
+Disallow: /data/
+Disallow: /dcat/
+
+User-agent: ClaudeBot
+Disallow: /data/
+Disallow: /dcat/
+
+User-agent: anthropic-ai
+Disallow: /data/
+Disallow: /dcat/
+
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: Claude-SearchBot
+Allow: /
+
+User-agent: Claude-User
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
