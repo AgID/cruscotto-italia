@@ -11,24 +11,57 @@ l'intent dell'utente.
 
 ## Pacchetto corrente
 
-- **`cruscotto-italia-workflow-v2.3.0.zip`** — workflow del connettore MCP:
-  inventario dei **6 tool** (incluso `censimento_sezione_search`
-  per ranking/lookup sulle 119 variabili censuarie raw a livello di
-  sezione di censimento sub-comunale; `comune_kpi` **25 gruppi tematici**;
-  `comune_dashboard` 25 sezioni; `anncsu_civico_search` per civici;
-  `search_comune` + `mcp_info`), endpoint REST non-MCP
-  `/data/anncsu_full/<istat>.json`, `/data/censimento_full/<istat>.geojson`
-  e `/data/beni_culturali_full/<istat>.json`, decision tree tool selection,
-  **Pattern 8 nuovo: beni culturali e patrimonio tutelato** (con esempi
-  d'uso "quanti monumenti tutelati a Matera", "top 10 comuni per beni
-  culturali", "chiese e palazzi tutelati a Lecce"), catalogo codici
-  variabili ISTAT più frequenti, pattern operativi multi-comune e
-  caveat per sezione (incluso nuovo caveat `beni_culturali_mic` con
-  spiegazione ArCo vs Cultural-ON e categorie normalizzate 9-classi).
+- **`cruscotto-italia-workflow-v2.6.1.zip`** — workflow del connettore MCP:
+  **6 tool** (`mcp_info`, `search_comune`, `comune_kpi` ~620 token con 55 KPI in
+  24 gruppi tematici, `comune_dashboard` ~250K token con le sezioni dettagliate,
+  `anncsu_civico_search`, `censimento_sezione_search`), **28 dataset** integrati
+  da **18 istituzioni fonte**, ~7.918 comuni coperti.
+  Include il decision tree per la scelta del tool, i workflow pattern operativi
+  (query puntuale, confronto multi-comune, vista approfondita, civico specifico,
+  dettaglio opere pubbliche), il catalogo dei codici delle variabili censuarie
+  e i caveat per sezione. Riferimenti: `references/dashboard_schema.md` e
+  `references/catasto_geocoding.md`.
+  Ultima aggiunta rispetto alla 2.5.0: morfologia del territorio CNR-IRPI
+  HR-DTM 5m (`kpi_summary.morfologia_cnr` con quota, pendenza, esposizione,
+  irraggiamento) e meteo ItaliaMeteo ICON-2I.
+
+## Skill CLI (eseguibile)
+
+- **`cruscotto-cli-v0.1.0.zip`** — a differenza dei pacchetti `cruscotto-italia-workflow`,
+  questa skill **contiene codice eseguibile** (`scripts/cruscotto.py`, solo stdlib
+  Python 3) e non documenta il connettore MCP: interroga direttamente gli shard
+  JSON statici, via HTTPS pubblico oppure da filesystem locale
+  (`CRUSCOTTO_BASE=/var/www/cruscotto-italia/data` sulla VM).
+  Scopo: ridurre il consumo di contesto filtrando i dati **prima** che entrino nel
+  modello, evitando di caricare shard da centinaia di KB per leggere pochi campi.
+  Comandi: `find`, `kpi`, `sezioni`, `sez`, `q`, `full` (beni culturali, civici
+  ANNCSU, censimento per sezione), `vars`.
+  Guardrail: dump vietato sulle 6 sezioni pesanti, cap di output a 20 KB,
+  filtro obbligatorio sugli archivi estesi, esclusione automatica delle sezioni
+  censuarie non residenziali e **registro esplicito dei denominatori leciti**
+  (verificato sui dati: es. il titolo di studio si rapporta a `P83`,
+  popolazione 9 anni e piu', non a `P1`).
+  Non sostituisce il Worker MCP, che resta il canale per i client AI esterni.
+  Il sorgente e' versionato in `docs/skills/cruscotto-cli/`, lo zip e' l'artefatto
+  di distribuzione.
 
 ## Pacchetti storici
 
 Le versioni precedenti restano disponibili per audit:
+
+- `cruscotto-italia-workflow-v2.5.0.zip`
+
+- `cruscotto-italia-workflow-v2.4.4.zip`
+
+- `cruscotto-italia-workflow-v2.4.3.zip`
+
+- `cruscotto-italia-workflow-v2.4.2.zip`
+
+- `cruscotto-italia-workflow-v2.4.1.zip`
+
+- `cruscotto-italia-workflow-v2.4.0.zip`
+
+- `cruscotto-italia-workflow-v2.3.0.zip`
 
 - `cruscotto-italia-workflow-v2.2.0.zip`
 
