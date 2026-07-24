@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import argparse
 import gzip
+import html as html_mod
 import json
 import re
 import sys
@@ -324,6 +325,8 @@ def aggregate(log_paths: list[Path], exclude_test: bool = False,
         "top_referer_domains": Counter(),
         "top_pages": Counter(),        # path senza querystring
         "attacks_by_host": Counter(),  # host → conteggio attacchi (dal log con $host)
+        "attack_paths": Counter(),     # path di attacco (troncati) → conteggio
+        "attack_ips": Counter(),       # IP attaccanti → conteggio
         "status_distribution": Counter(),
         "method_distribution": Counter(),
     }
@@ -351,6 +354,9 @@ def aggregate(log_paths: list[Path], exclude_test: bool = False,
                 # sul sito, quindi sono sempre 4xx).
                 if is_attack(ev["uri"]):
                     stats["totals"]["hits_attack"] += 1
+                    stats["attack_paths"][ev["uri"][:80]] += 1
+                    if ev.get("ip"):
+                        stats["attack_ips"][ev["ip"]] += 1
                     # Aggrega per server_name (= il server block nginx che ha
                     # gestito la richiesta, sempre affidabile). Fallback a host
                     # solo se host è un dominio reale; ignora IP raw (che sono
@@ -439,6 +445,14 @@ def aggregate(log_paths: list[Path], exclude_test: bool = False,
             {"host": h, "hits": n}
             for h, n in stats["attacks_by_host"].most_common()
         ],
+        "attack_paths": [
+            {"path": p, "hits": n}
+            for p, n in stats["attack_paths"].most_common(15)
+        ],
+        "attack_ips": [
+            {"ip": ip, "hits": n}
+            for ip, n in stats["attack_ips"].most_common(15)
+        ],
         "status_distribution": dict(stats["status_distribution"]),
         "method_distribution": dict(stats["method_distribution"]),
     }
@@ -508,6 +522,8 @@ HTML_TEMPLATE = """<!doctype html>
 </div>
 
 {section_attacks_by_host}
+
+{section_attack_detail}
 
 <h2>Comuni più consultati</h2>
 {table_comuni}
@@ -789,6 +805,26 @@ def render_html(stats: dict, mcp_stats_path: Path | None = None, title: str = "C
             "legacy senza il campo <code>$server_name</code>.</p>"
         )
 
+    # Dettaglio attacchi: path e IP. ESCAPE OBBLIGATORIO: i path di attacco
+    # contengono payload ostili per definizione (log poisoning XSS).
+    atk_paths = stats.get("attack_paths", [])
+    atk_ips = stats.get("attack_ips", [])
+    if atk_paths or atk_ips:
+        section_attack_detail = (
+            "<h2>Dettaglio attacchi</h2>\n"
+            "<p class=\"meta\">Path piu bersagliati (troncati a 80 caratteri) e "
+            "IP sorgente dei tentativi. I path sono mostrati come testo neutro.</p>\n"
+            + render_table(
+                [(html_mod.escape(i["path"]), i["hits"]) for i in atk_paths],
+                ("Path di attacco", "Tentativi"))
+            + "\n"
+            + render_table(
+                [(html_mod.escape(i["ip"]), i["hits"]) for i in atk_ips],
+                ("IP sorgente", "Tentativi"))
+        )
+    else:
+        section_attack_detail = ""
+
     return HTML_TEMPLATE.format(
         title=title,
         generated_at=stats["_generated_at"],
@@ -801,6 +837,7 @@ def render_html(stats: dict, mcp_stats_path: Path | None = None, title: str = "C
         hits_error=f"{stats['totals']['hits_error']:,}",
         unique_comuni=f"{stats.get('unique_comuni_total', len(stats['top_comuni'])):,}",
         section_attacks_by_host=section_attacks_by_host,
+        section_attack_detail=section_attack_detail,
         table_comuni=table_comuni,
         table_days=table_days,
         table_pages=table_pages,
