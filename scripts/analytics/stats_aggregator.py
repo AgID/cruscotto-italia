@@ -25,6 +25,7 @@ from __future__ import annotations
 import argparse
 import gzip
 import html as html_mod
+import subprocess
 import json
 import re
 import sys
@@ -549,6 +550,23 @@ HTML_TEMPLATE = """<!doctype html>
 """
 
 
+def get_banned_ips(jail: str = "cruscotto-attack") -> set[str]:
+    """IP attualmente bannati dalla jail fail2ban (sola lettura).
+    Richiede root (il cron lo e); senza permessi o senza fail2ban
+    ritorna set vuoto senza errori."""
+    try:
+        out = subprocess.run(
+            ["fail2ban-client", "status", jail],
+            capture_output=True, text=True, timeout=5,
+        ).stdout
+        for line in out.splitlines():
+            if "Banned IP list:" in line:
+                return set(line.split("Banned IP list:", 1)[1].split())
+    except Exception:
+        pass
+    return set()
+
+
 def render_table(rows: list[tuple[str, int]], headers: tuple[str, str]) -> str:
     if not rows:
         return f"<p class=\"meta\">Nessun dato.</p>"
@@ -809,6 +827,7 @@ def render_html(stats: dict, mcp_stats_path: Path | None = None, title: str = "C
     # contengono payload ostili per definizione (log poisoning XSS).
     atk_paths = stats.get("attack_paths", [])
     atk_ips = stats.get("attack_ips", [])
+    banned_now = get_banned_ips()
     if atk_paths or atk_ips:
         section_attack_detail = (
             "<h2>Dettaglio attacchi</h2>\n"
@@ -819,7 +838,12 @@ def render_html(stats: dict, mcp_stats_path: Path | None = None, title: str = "C
                 ("Path di attacco", "Tentativi"))
             + "\n"
             + render_table(
-                [(html_mod.escape(i["ip"]), i["hits"]) for i in atk_ips],
+                [(html_mod.escape(i["ip"]) + (
+                    ' <span style="background:#b91c1c;color:#fff;'
+                    'border-radius:4px;padding:1px 6px;font-size:0.75rem;'
+                    'vertical-align:middle">bannato</span>'
+                    if i["ip"] in banned_now else ""), i["hits"])
+                 for i in atk_ips],
                 ("IP sorgente", "Tentativi"))
         )
     else:
