@@ -1,5 +1,6 @@
 ---
 name: cruscotto-cli
+version: 0.1.1
 description: Interroga via CLI i dati aperti di Cruscotto Italia (AgID) per tutti i comuni italiani, leggendo direttamente gli shard JSON statici senza passare dal server MCP. Usa questa skill quando servono dati ufficiali su un comune italiano - popolazione, demografia, censimento 2021, redditi, veicoli, scuole, sanita', opere pubbliche, spese SIOPE, appalti, PNRR, turismo, qualita' dell'aria, morfologia, beni culturali, civici e toponomastica, carburanti, banda larga, terzo settore, immobili pubblici, pendolarismo, meteo - oppure quando si citano fonti come ISTAT, BDAP, SIOPE, ANAC, ISPRA, MEF, MIUR, ACI, ANNCSU, AGCOM, MIMIT, RUNTS, MiC, Ministero della Salute. Copre 7896 comuni, 31 sezioni tematiche piu' tre archivi estesi (beni culturali, civici, censimento per sezione). Preferibile all'MCP quando serve una query mirata su pochi campi, un confronto tra comuni o un ranking, perche' filtra i dati prima di caricarli in contesto ed evita di leggere shard da centinaia di KB.
 license: CC-BY-4.0
 ---
@@ -71,6 +72,14 @@ python3 scripts/cruscotto.py vars stranieri         # cerca nel dizionario delle
 - **Denominatori validati**: lo script accetta solo rapporti fra variabili effettivamente comparabili, secondo un registro esplicito verificato sui dati. La base corretta non e' sempre `P1`: il titolo di studio (`P86`-`P90`) si rapporta a `P83` (popolazione 9 anni e piu'), non alla popolazione totale. Un rapporto fuori registro viene rifiutato con l'indicazione del denominatore corretto. Alcune variabili (`P101`-`P103` occupati, `IT1`-`IT9` italiani, `E3` edifici) non hanno alcun denominatore lecito fra le 119 variabili. `--force-den` aggira il controllo ma marca l'output con un avviso: usalo solo se la comparabilita' e' stata verificata altrove.
 - **Variabili censuarie**: i codici ISTAT non sono parlanti. Usa `vars` per cercare per descrizione. Attenzione: la terminologia e' quella ISTAT (es. "terziario", non "laureati").
 - **Sezioni senza dati**: circa un terzo delle sezioni di censimento e' non residenziale (parchi, aree industriali) e viene escluso automaticamente dai ranking.
+
+## Risoluzione problemi
+
+- **`CERTIFICATE_VERIFY_FAILED`**: l'installazione di Python non trova i certificati delle autorita'. Non e' un problema del server. Nell'ordine: su macOS con Python da python.org eseguire `Install Certificates.command` nella cartella `/Applications/Python 3.x/`; oppure `pip3 install certifi`, che lo script usa automaticamente se presente; oppure, dietro proxy aziendale, `export SSL_CERT_FILE=/percorso/ca.pem`.
+  **Non disattivare la verifica del certificato.** `PYTHONHTTPSVERIFY=0`, `ssl.CERT_NONE` e simili non sono soluzioni ammesse: i dati sono pubblici, ma il canale va comunque autenticato. Se il problema non si risolve, riferirlo all'utente invece di aggirarlo.
+- **`HTTP 404`**: il comune non ha dati per quella fonte, oppure il codice ISTAT e' errato. Verifica con `find`.
+- **Non costruire URL a mano.** I percorsi degli shard non vanno indovinati: usa i comandi della skill, che li compongono correttamente. Se un comando non copre quello che serve, dillo invece di improvvisare una chiamata HTTP.
+- **Output troncato**: non e' un errore. Restringi la query con un filtro, `--top N` o il comando `q`.
 
 ## Limiti noti
 

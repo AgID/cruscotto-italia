@@ -6,6 +6,7 @@ Trasporto: HTTPS pubblico oppure filesystem locale.
   export CRUSCOTTO_BASE=/var/www/cruscotto-italia/data              (locale, sulla VM)
 """
 import argparse, json, os, re, sys, time, hashlib, unicodedata
+import ssl
 import urllib.request, urllib.error
 
 BASE  = os.environ.get("CRUSCOTTO_BASE", "https://cruscotto-italia.dati.gov.it/data")
@@ -59,6 +60,39 @@ def _err(msg, code=2):
     sys.exit(code)
 
 
+_SSL_HELP = (
+    "verifica del certificato TLS fallita. Non e' un problema del server: "
+    "l'installazione di Python in uso non trova i certificati delle autorita'. "
+    "Soluzioni, in ordine: (1) su macOS con Python da python.org, eseguire "
+    "'Install Certificates.command' nella cartella /Applications/Python 3.x/; "
+    "(2) installare certifi con 'pip3 install certifi', questo script lo usa "
+    "automaticamente se presente; (3) dietro proxy aziendale, indicare il CA "
+    "bundle con 'export SSL_CERT_FILE=/percorso/ca.pem'. "
+    "Non disattivare la verifica del certificato: i dati sono pubblici ma il "
+    "canale va comunque autenticato. In alternativa, se hai gli shard su disco, "
+    "usa 'export CRUSCOTTO_BASE=/percorso/ai/dati'."
+)
+
+
+def _ssl_ctx():
+    """Contesto TLS.
+
+    Parte sempre dallo store di sistema, che onora anche SSL_CERT_FILE e
+    SSL_CERT_DIR. Solo se lo store risulta vuoto - il caso del Python di
+    python.org su macOS, che non aggancia i certificati di sistema - aggiunge
+    il bundle di certifi, se installato. Mai in sostituzione: lo store di
+    sistema contiene anche le eventuali CA aziendali, certifi no.
+    """
+    ctx = ssl.create_default_context()
+    try:
+        if ctx.cert_store_stats().get("x509_ca", 0) == 0:
+            import certifi
+            ctx.load_verify_locations(cafile=certifi.where())
+    except Exception:
+        pass
+    return ctx
+
+
 def fetch(path):
     """Scarica (o legge) uno shard. Ritorna oggetto Python."""
     if BASE.startswith("/"):
@@ -75,10 +109,15 @@ def fetch(path):
             return json.load(f)
     try:
         req = urllib.request.Request(url, headers={"User-Agent": "cruscotto-cli/0.1.0"})
-        with urllib.request.urlopen(req, timeout=30) as r:
+        with urllib.request.urlopen(req, timeout=30, context=_ssl_ctx()) as r:
             raw = r.read().decode("utf-8")
     except urllib.error.HTTPError as e:
         _err("HTTP " + str(e.code) + " su " + url)
+    except urllib.error.URLError as e:
+        reason = getattr(e, "reason", e)
+        if isinstance(reason, ssl.SSLCertVerificationError):
+            _err(_SSL_HELP)
+        _err("rete: " + str(reason))
     except Exception as e:
         _err("rete: " + str(e))
     os.makedirs(CACHE, exist_ok=True)

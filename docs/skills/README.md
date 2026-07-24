@@ -27,7 +27,7 @@ l'intent dell'utente.
 
 ## Skill CLI (eseguibile)
 
-- **`cruscotto-cli-v0.1.0.zip`** — a differenza dei pacchetti `cruscotto-italia-workflow`,
+- **`cruscotto-cli-v0.1.1.zip`** — a differenza dei pacchetti `cruscotto-italia-workflow`,
   questa skill **contiene codice eseguibile** (`scripts/cruscotto.py`, solo stdlib
   Python 3) e non documenta il connettore MCP: interroga direttamente gli shard
   JSON statici, via HTTPS pubblico oppure da filesystem locale
@@ -44,6 +44,13 @@ l'intent dell'utente.
   Non sostituisce il Worker MCP, che resta il canale per i client AI esterni.
   Il sorgente e' versionato in `docs/skills/cruscotto-cli/`, lo zip e' l'artefatto
   di distribuzione.
+  Versione 0.1.1: gestione corretta della verifica TLS. Il contesto parte sempre
+  dallo store di sistema (che onora `SSL_CERT_FILE` e le CA aziendali) e ricorre
+  a `certifi` solo se lo store risulta vuoto, come accade con il Python di
+  python.org su macOS. In caso di errore lo script indica le soluzioni possibili
+  e la skill vieta esplicitamente di disattivare la verifica del certificato.
+
+- `cruscotto-cli-v0.1.0.zip` (storico)
 
 ## Pacchetti storici
 
