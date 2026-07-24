@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="880" height="850" viewBox="0 0 880 850" role="img" aria-label="Come usare la skill CLI di Cruscotto Italia in tre passaggi, e dove puo essere eseguita">
+  <defs>
+    <style>
+      .sans { font-family: 'Titillium Web', -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; }
+      .mono { font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, monospace; }
+      .eyebrow { font-size: 13px; font-weight: 700; letter-spacing: 2.5px; fill: #455A72; }
+      .h1 { font-size: 34px; font-weight: 700; fill: #17324d; }
+      .step-num { font-size: 17px; font-weight: 700; fill: #FFFFFF; }
+      .step-title { font-size: 19px; font-weight: 700; fill: #17324d; }
+      .step-desc { font-size: 15px; font-weight: 400; fill: #455A72; }
+      .chip-txt { font-size: 15px; font-weight: 700; fill: #FFFFFF; letter-spacing: 0.3px; }
+      .foot-title { font-size: 18px; font-weight: 700; fill: #17324d; }
+      .note { font-size: 13.5px; fill: #455A72; }
+      .code { font-size: 14px; font-weight: 500; fill: #004C99; }
+      .site { font-size: 13px; font-weight: 600; fill: #455A72; letter-spacing: 0.5px; }
+    </style>
+  </defs>
+  <rect width="880" height="850" fill="#FFFFFF"/>
+  <text x="48" y="62" class="sans eyebrow">CRUSCOTTO ITALIA · SKILL CLI</text>
+  <text x="48" y="104" class="sans h1">Interroga i dati da riga di comando</text>
+  <rect x="48"  y="124" width="30" height="4" rx="2" fill="#008055"/>
+  <rect x="82"  y="124" width="30" height="4" rx="2" fill="#E3E7EB"/>
+  <rect x="116" y="124" width="30" height="4" rx="2" fill="#CC334D"/>
+  <rect x="722" y="44" width="110" height="38" rx="19" fill="#17324d"/>
+  <text x="777" y="69" text-anchor="middle" class="mono chip-txt">&gt;_ CLI</text>
+  <line x1="76" y1="216" x2="76" y2="452" stroke="#E3E7EB" stroke-width="2"/>
+  <rect x="112" y="170" width="720" height="92" rx="10" fill="#FAFBFC" stroke="#E3E7EB"/>
+  <circle cx="76" cy="216" r="19" fill="#0066CC"/>
+  <text x="76" y="222" text-anchor="middle" class="sans step-num">1</text>
+  <text x="140" y="206" class="sans step-title">Scarica il pacchetto della skill CLI</text>
+  <text x="140" y="234" class="sans step-desc">Scarica il file ZIP dalla pagina «About» di Cruscotto Italia.</text>
+  <rect x="112" y="278" width="720" height="112" rx="10" fill="#FAFBFC" stroke="#E3E7EB"/>
+  <circle cx="76" cy="334" r="19" fill="#0066CC"/>
+  <text x="76" y="340" text-anchor="middle" class="sans step-num">2</text>
+  <text x="140" y="314" class="sans step-title">Caricala e attiva l'esecuzione del codice</text>
+  <text x="140" y="342" class="sans step-desc">Vai in Impostazioni → «Skill», clicca il pulsante «+» e carica il file ZIP.</text>
+  <text x="140" y="366" class="sans step-desc">Serve «Esecuzione codice e creazione file» attiva tra le Funzionalità.</text>
+  <rect x="112" y="406" width="720" height="92" rx="10" fill="#FAFBFC" stroke="#E3E7EB"/>
+  <circle cx="76" cy="452" r="19" fill="#008055"/>
+  <text x="76" y="458" text-anchor="middle" class="sans step-num">3</text>
+  <text x="140" y="442" class="sans step-title">Fai la tua domanda</text>
+  <text x="140" y="470" class="sans step-desc">L'assistente esegue i comandi al posto tuo e legge solo i campi che servono.</text>
+  <rect x="48" y="530" width="784" height="230" rx="12" fill="#E6F1FB"/>
+  <text x="80" y="572" class="sans foot-title">A cosa serve, e dove si usa</text>
+  <text x="80" y="604" class="sans note">Legge direttamente i file JSON pubblici del Cruscotto: non richiede il connettore MCP.</text>
+  <text x="80" y="630" class="sans note">Filtra i dati prima di leggerli, così una domanda mirata non carica l'intera scheda del comune.</text>
+  <text x="80" y="656" class="sans note">Funziona in Claude.ai con l'esecuzione codice attiva, in Claude Code e in Cowork.</text>
+  <text x="80" y="682" class="sans note">Funziona anche senza assistente AI: è uno script Python 3 senza dipendenze, da terminale.</text>
+  <rect x="80" y="702" width="600" height="34" rx="6" fill="#FFFFFF" stroke="#CBD5E1"/>
+  <text x="96" y="724" class="mono code">python3 scripts/cruscotto.py kpi Matera</text>
+  <line x1="48" y1="792" x2="832" y2="792" stroke="#E3E7EB"/>
+  <text x="48" y="822" class="sans site">cruscotto-italia.dati.gov.it</text>
+  <text x="832" y="822" text-anchor="end" class="sans site">Progetto open data · AgID</text>
+</svg>

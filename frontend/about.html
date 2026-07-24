@@ -859,7 +859,7 @@ footer a:hover { color: #fff !important; }
       <div class="metodo-step">
         <h3 id="accesso-mcp">5. Accesso</h3>
         <p>
-          I dati ricomposti sono accessibili in tre modi diversi, ognuno
+          I dati ricomposti sono accessibili in quattro modi diversi, ognuno
           adatto a un uso diverso.
         </p>
         <p>
@@ -893,11 +893,24 @@ footer a:hover { color: #fff !important; }
           inventario dei tool, schema completo delle sezioni dati e
           pattern operativi suggeriti.
         </p>
-                <p style="margin-bottom:8px"><strong>Guide passo-passo</strong> per collegare l'endpoint MCP al tuo assistente AI:</p>
+        <p>
+          <strong>Skill CLI per analisi ripetute.</strong> Per chi interroga
+          i dati in modo sistematico è disponibile una
+          <strong><a href="https://cruscotto-italia.dati.gov.it/data/skills/cruscotto-cli-v0.1.0.zip" download><em>skill</em> CLI</a></strong>:
+          un pacchetto ZIP con uno script Python 3 senza dipendenze che legge
+          direttamente i file JSON pubblici, senza passare dall'endpoint MCP.
+          Filtra i dati prima di leggerli, quindi una domanda mirata non
+          richiede di caricare l'intera scheda di un comune. Si usa in
+          Claude.ai con l'esecuzione codice attiva, in Claude Code e in
+          Cowork, ma funziona anche da sola in un terminale, senza
+          assistente AI.
+        </p>
+                <p style="margin-bottom:8px"><strong>Guide passo-passo</strong> per collegare Cruscotto Italia al tuo assistente AI:</p>
         <div style="display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 16px">
           <a href="/assets/guide/mcp-claude.svg" target="_blank" rel="noopener" style="display:inline-block;border:1px solid #0066CC;border-radius:20px;padding:7px 16px;background:#f5f8fc;color:#004C99;font-weight:600;font-size:14px;text-decoration:none">Istruzioni per Claude</a>
           <a href="/assets/guide/skill-claude.svg" target="_blank" rel="noopener" style="display:inline-block;border:1px solid #0066CC;border-radius:20px;padding:7px 16px;background:#f5f8fc;color:#004C99;font-weight:600;font-size:14px;text-decoration:none">Istruzioni Skill per Claude</a>
           <a href="/assets/guide/mcp-chatgpt.svg" target="_blank" rel="noopener" style="display:inline-block;border:1px solid #0066CC;border-radius:20px;padding:7px 16px;background:#f5f8fc;color:#004C99;font-weight:600;font-size:14px;text-decoration:none">Istruzioni per ChatGPT</a>
+          <a href="/assets/guide/skill-cli.svg" target="_blank" rel="noopener" style="display:inline-block;border:1px solid #0066CC;border-radius:20px;padding:7px 16px;background:#f5f8fc;color:#004C99;font-weight:600;font-size:14px;text-decoration:none">Istruzioni Skill CLI</a>
         </div>
 <p style="margin-bottom:8px"><strong>Esempi di domande</strong> che puoi porre a un assistente AI collegato all'endpoint MCP:</p>
         <div style="display:flex;flex-direction:column;gap:8px;margin:4px 0 8px">
