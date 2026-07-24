@@ -27,7 +27,7 @@ l'intent dell'utente.
 
 ## Skill CLI (eseguibile)
 
-- **`cruscotto-cli-v0.1.1.zip`** — a differenza dei pacchetti `cruscotto-italia-workflow`,
+- **`cruscotto-cli-v0.1.2.zip`** — a differenza dei pacchetti `cruscotto-italia-workflow`,
   questa skill **contiene codice eseguibile** (`scripts/cruscotto.py`, solo stdlib
   Python 3) e non documenta il connettore MCP: interroga direttamente gli shard
   JSON statici, via HTTPS pubblico oppure da filesystem locale
@@ -49,6 +49,14 @@ l'intent dell'utente.
   a `certifi` solo se lo store risulta vuoto, come accade con il Python di
   python.org su macOS. In caso di errore lo script indica le soluzioni possibili
   e la skill vieta esplicitamente di disattivare la verifica del certificato.
+  Versione 0.1.2: protezione del server. Lo script impone un intervallo minimo
+  fra le richieste e si ferma oltre un numero massimo di comuni distinti in una
+  finestra di dieci minuti; lo stato e' su file con lock esclusivo, perche' ogni
+  invocazione e' un processo separato e il rischio reale sono le richieste
+  parallele. La skill dichiara inoltre che non esistono aggregati regionali o
+  provinciali e vieta di ricostruirli scaricando interi territori.
+
+- `cruscotto-cli-v0.1.1.zip` (storico)
 
 - `cruscotto-cli-v0.1.0.zip` (storico)
 

@@ -1,6 +1,6 @@
 ---
 name: cruscotto-cli
-version: 0.1.1
+version: 0.1.2
 description: Interroga via CLI i dati aperti di Cruscotto Italia (AgID) per tutti i comuni italiani, leggendo direttamente gli shard JSON statici senza passare dal server MCP. Usa questa skill quando servono dati ufficiali su un comune italiano - popolazione, demografia, censimento 2021, redditi, veicoli, scuole, sanita', opere pubbliche, spese SIOPE, appalti, PNRR, turismo, qualita' dell'aria, morfologia, beni culturali, civici e toponomastica, carburanti, banda larga, terzo settore, immobili pubblici, pendolarismo, meteo - oppure quando si citano fonti come ISTAT, BDAP, SIOPE, ANAC, ISPRA, MEF, MIUR, ACI, ANNCSU, AGCOM, MIMIT, RUNTS, MiC, Ministero della Salute. Copre 7896 comuni, 31 sezioni tematiche piu' tre archivi estesi (beni culturali, civici, censimento per sezione). Preferibile all'MCP quando serve una query mirata su pochi campi, un confronto tra comuni o un ranking, perche' filtra i dati prima di caricarli in contesto ed evita di leggere shard da centinaia di KB.
 license: CC-BY-4.0
 ---
@@ -20,6 +20,8 @@ export CRUSCOTTO_BASE=/var/www/cruscotto-italia/data
 ```
 
 Opzionali: `CRUSCOTTO_CACHE` (default `/tmp/cruscotto-cache`), `CRUSCOTTO_TTL` (86400 s), `CRUSCOTTO_CAP` (20000 byte di output massimo).
+
+Protezione del server, da non modificare per aggirare un blocco: `CRUSCOTTO_MIN_INTERVAL` (0.5 s fra le richieste), `CRUSCOTTO_MAX_COMUNI` (12 comuni distinti), `CRUSCOTTO_WINDOW` (600 s di finestra).
 
 ## Uso
 
@@ -72,6 +74,15 @@ python3 scripts/cruscotto.py vars stranieri         # cerca nel dizionario delle
 - **Denominatori validati**: lo script accetta solo rapporti fra variabili effettivamente comparabili, secondo un registro esplicito verificato sui dati. La base corretta non e' sempre `P1`: il titolo di studio (`P86`-`P90`) si rapporta a `P83` (popolazione 9 anni e piu'), non alla popolazione totale. Un rapporto fuori registro viene rifiutato con l'indicazione del denominatore corretto. Alcune variabili (`P101`-`P103` occupati, `IT1`-`IT9` italiani, `E3` edifici) non hanno alcun denominatore lecito fra le 119 variabili. `--force-den` aggira il controllo ma marca l'output con un avviso: usalo solo se la comparabilita' e' stata verificata altrove.
 - **Variabili censuarie**: i codici ISTAT non sono parlanti. Usa `vars` per cercare per descrizione. Attenzione: la terminologia e' quella ISTAT (es. "terziario", non "laureati").
 - **Sezioni senza dati**: circa un terzo delle sezioni di censimento e' non residenziale (parchi, aree industriali) e viene escluso automaticamente dai ranking.
+
+## Uso responsabile del server
+
+- La skill interroga un server pubblico con un limite di richieste attivo: superarlo fa **bloccare l'indirizzo IP per un'ora**.
+- **Non esistono dati aggregati** per regione, provincia o area nazionale: la skill lavora comune per comune. Medie territoriali, classifiche regionali e simili **non vanno ricostruite** scaricando tutti i comuni di un territorio.
+- Se l'utente chiede un aggregato territoriale, rispondi che il dato non e' disponibile in questa forma. Non stimarlo e non calcolarlo con uno scaricamento di massa.
+- **Non proporre approfondimenti che richiederebbero dati inesistenti**, ad esempio «confronto con la media regionale»: suggerire un'analisi impossibile porta poi a tentare lo scaricamento di massa.
+- I confronti fra pochi comuni indicati dall'utente sono l'uso previsto e non pongono alcun problema.
+- Lo script impone da se' un intervallo minimo fra le richieste e si ferma oltre un certo numero di comuni distinti in dieci minuti. Se il blocco scatta, **riferiscilo all'utente**: non alzare `CRUSCOTTO_MAX_COMUNI` e non aggirare il limite in altro modo.
 
 ## Risoluzione problemi
 

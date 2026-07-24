@@ -13,6 +13,9 @@ BASE  = os.environ.get("CRUSCOTTO_BASE", "https://cruscotto-italia.dati.gov.it/d
 CACHE = os.environ.get("CRUSCOTTO_CACHE", "/tmp/cruscotto-cache")
 TTL   = int(os.environ.get("CRUSCOTTO_TTL", "86400"))
 CAP   = int(os.environ.get("CRUSCOTTO_CAP", "20000"))
+WINDOW = int(os.environ.get("CRUSCOTTO_WINDOW", "600"))
+MAXCOM = int(os.environ.get("CRUSCOTTO_MAX_COMUNI", "12"))
+MININT = float(os.environ.get("CRUSCOTTO_MIN_INTERVAL", "0.5"))
 
 HEAVY = {"anncsu", "opere", "siope", "immobili_pa", "runts", "scuole"}
 
@@ -74,6 +77,70 @@ _SSL_HELP = (
 )
 
 
+_SWEEP_HELP = (
+    "limite di sicurezza raggiunto: gia' {n} comuni distinti scaricati negli "
+    "ultimi {m} minuti. Questa skill serve per singoli comuni e per confronti "
+    "fra pochi, non per scaricare interi territori. Il server applica un limite "
+    "di richieste e blocca per un'ora gli indirizzi che lo superano. "
+    "Non esistono dati aggregati per regione, provincia o area nazionale, e non "
+    "vanno ricostruiti scaricando tutti i comuni di un territorio: se serve un "
+    "aggregato, va detto all'utente che non e' disponibile in questa forma. "
+    "Non alzare CRUSCOTTO_MAX_COMUNI per aggirare questo limite: riferisci "
+    "invece il problema all'utente."
+)
+
+
+def _guard(path):
+    """Throttle persistente e guardia anti-sweep, prima di ogni richiesta di rete.
+
+    Lo stato sta su file, non in memoria: ogni invocazione della CLI e' un
+    processo nuovo, e il caso che ha motivato questa guardia era proprio uno
+    sciame di processi paralleli che saturavano il burst di nginx nello stesso
+    secondo. Il lock esclusivo li mette in coda invece di sommarli.
+    Inattivo in modalita' filesystem locale: li' non c'e' nessun server da
+    proteggere.
+    """
+    if BASE.startswith("/"):
+        return
+    os.makedirs(CACHE, exist_ok=True)
+    m = re.search(r"/(\d{6})[._]", "/" + path)
+    istat = m.group(1) if m else None
+    try:
+        import fcntl
+    except ImportError:
+        fcntl = None
+    f = open(os.path.join(CACHE, ".guard.json"), "a+", encoding="utf-8")
+    try:
+        if fcntl:
+            fcntl.flock(f, fcntl.LOCK_EX)
+        f.seek(0)
+        try:
+            st = json.loads(f.read() or "{}")
+        except Exception:
+            st = {}
+        now = time.time()
+        com = {k: v for k, v in st.get("comuni", {}).items() if now - v < WINDOW}
+        if istat and istat not in com and len(com) >= MAXCOM:
+            _err(_SWEEP_HELP.format(n=len(com), m=int(WINDOW / 60)))
+        attesa = st.get("last", 0) + MININT - now
+        if attesa > 0:
+            time.sleep(attesa)
+            now = time.time()
+        if istat:
+            com[istat] = now
+        f.seek(0)
+        f.truncate()
+        f.write(json.dumps({"last": now, "comuni": com}))
+        f.flush()
+    finally:
+        if fcntl:
+            try:
+                fcntl.flock(f, fcntl.LOCK_UN)
+            except Exception:
+                pass
+        f.close()
+
+
 def _ssl_ctx():
     """Contesto TLS.
 
@@ -107,8 +174,9 @@ def fetch(path):
     if os.path.exists(cf) and (time.time() - os.path.getmtime(cf)) < TTL:
         with open(cf, encoding="utf-8") as f:
             return json.load(f)
+    _guard(path)
     try:
-        req = urllib.request.Request(url, headers={"User-Agent": "cruscotto-cli/0.1.0"})
+        req = urllib.request.Request(url, headers={"User-Agent": "cruscotto-cli/0.1.2"})
         with urllib.request.urlopen(req, timeout=30, context=_ssl_ctx()) as r:
             raw = r.read().decode("utf-8")
     except urllib.error.HTTPError as e:
