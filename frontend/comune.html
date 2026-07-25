@@ -906,7 +906,7 @@ footer a{color:rgba(255,255,255,0.85);text-decoration:none}
 .pnrr-row-eur{font-family:var(--mono);font-size:13px;color:var(--ink);font-weight:600;text-align:right;}
 .pnrr-row-stato{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.08em;text-align:center;padding:3px 8px;border-radius:3px;}
 .pnrr-row-stato.concluso{background:var(--accent);color:var(--paper);}
-.pnrr-row-stato.in-corso{background:var(--gold);color:var(--ink);}
+.pnrr-row-stato.in-corso{background:var(--gold);color:#fff;}
 .pnrr-row-stato.altro{background:var(--paper-2);color:var(--ink-mute);}
 .pnrr-row-toggle{font-family:var(--mono);font-size:14px;color:var(--ink-mute);text-align:center;}
 .pnrr-row-detail{padding:0 14px 18px 94px;display:none;font-family:var(--serif);font-size:13px;color:var(--ink-soft);}
@@ -1201,7 +1201,7 @@ footer a{color:rgba(255,255,255,0.85);text-decoration:none}
 .settore-n{color:var(--ink);font-weight:600;}
 .settore-eur{color:var(--ink-2);}
 .tab-footer{font-family:var(--font-mono);font-size:12px;color:var(--ink-2);margin-top:32px;padding-top:20px;border-top:1px solid var(--ink-3);}
-.tab-footer a{color:var(--accent);text-decoration:none;}
+.tab-footer a{color:var(--accent);text-decoration:underline;}
 .tab-footer a:hover{text-decoration:underline;}
 
 @media (max-width: 720px){
@@ -2284,15 +2284,15 @@ function renderOpereDettaglioContent(container, data) {
     <div class="spese-filters">
       <input type="search" id="opere-search" class="spese-search-input"
              placeholder="Cerca tra i ${progetti.length} progetti (descrizione, CUP)…" autocomplete="off">
-      <select id="opere-stato">
+      <select id="opere-stato" aria-label="Filtra le opere per stato">
         <option value="">Tutti gli stati</option>
         ${stati.map(s => `<option value="${s}">${s}</option>`).join('')}
       </select>
-      <select id="opere-settore">
+      <select id="opere-settore" aria-label="Filtra le opere per settore">
         <option value="">Tutti i settori</option>
         ${settori.map(s => `<option value="${s}">${s}</option>`).join('')}
       </select>
-      <select id="opere-sort">
+      <select id="opere-sort" aria-label="Ordina le opere">
         <option value="costo_desc">Costo ↓</option>
         <option value="costo_asc">Costo ↑</option>
         <option value="cup">CUP</option>
@@ -3335,14 +3335,14 @@ function renderPnrrContent(container, data) {
 
       <div class="pnrr-filters">
         <input type="text" class="pnrr-search-input" id="pnrr-search" placeholder="Cerca per CUP, titolo, settore…" oninput="onPnrrFilterChange()">
-        <select id="pnrr-missione-filter" onchange="onPnrrFilterChange()">
+        <select id="pnrr-missione-filter" onchange="onPnrrFilterChange()" aria-label="Filtra i progetti PNRR per missione">
           <option value="all">Tutte le missioni</option>
           ${[...new Set(progetti.map(p => p.missione).filter(Boolean))].sort().map(m => {
             const desc = (perMissione.find(x => x.missione === m) || {}).descrizione || '';
             return `<option value="${m}">${m} — ${desc.slice(0, 35)}</option>`;
           }).join('')}
         </select>
-        <select id="pnrr-stato-filter" onchange="onPnrrFilterChange()">
+        <select id="pnrr-stato-filter" onchange="onPnrrFilterChange()" aria-label="Filtra i progetti PNRR per stato">
           <option value="all">Tutti gli stati</option>
           <option value="In Corso">In Corso</option>
           <option value="Concluso">Concluso</option>
@@ -4600,11 +4600,11 @@ function renderSpeseContent(container, istat, anno) {
     <div class="spese-filters">
       <input type="search" id="spese-search" class="spese-search-input"
              placeholder="Cerca tra le ${voci.length} voci di spesa…" autocomplete="off">
-      <select id="spese-titolo">
+      <select id="spese-titolo" aria-label="Filtra le spese per titolo">
         <option value="">Tutti i titoli</option>
         ${titoli.map(t => `<option value="${t}">${t}</option>`).join('')}
       </select>
-      <select id="spese-sort">
+      <select id="spese-sort" aria-label="Ordina le spese">
         <option value="importo_desc">Importo ↓</option>
         <option value="importo_asc">Importo ↑</option>
         <option value="codice">Codice gestionale</option>
@@ -9441,7 +9441,7 @@ function renderCensimentoTab(d) {
       <div id="censimento-map" class="censimento-map" role="region" aria-label="Mappa choropleth sezioni di censimento">
         <div class="censimento-map-loading" data-censimento-loading>Caricamento sezioni di censimento…</div>
       </div>
-      <div class="censimento-legend" id="censimento-legend" aria-label="Legenda dell'indicatore visualizzato"></div>
+      <div class="censimento-legend" id="censimento-legend" role="img" aria-label="Legenda dell'indicatore visualizzato"></div>
       <div id="censimento-section-detail" class="censimento-section-detail" aria-live="polite">
         <p class="muted censimento-section-hint">Clicca una sezione sulla mappa per visualizzare grafici e tabella completa delle 119 variabili demografiche e abitative.</p>
       </div>
@@ -10735,8 +10735,12 @@ function enhanceTabsA11y() {
       el.setAttribute('role', 'application');
       if (!el.getAttribute('aria-label')) el.setAttribute('aria-label', 'Mappa interattiva. I dati corrispondenti sono disponibili nelle tabelle ed elenchi della stessa sezione.');
     });
-    // togli i marker dalla tab-order: l'alternativa accessibile sono tabelle/elenchi
-    document.querySelectorAll('.leaflet-marker-icon[tabindex], .leaflet-interactive[tabindex]').forEach(m => m.setAttribute('tabindex', '-1'));
+    // marker: fuori dalla tab-order e nascosti agli screen reader (alternativa = elenchi/tabelle di sezione)
+    document.querySelectorAll('.leaflet-marker-icon, .leaflet-interactive, .leaflet-marker-icon[role], .leaflet-interactive[role]').forEach(m => {
+      m.setAttribute('tabindex', '-1');
+      m.setAttribute('aria-hidden', 'true');
+      if (m.getAttribute('role') === 'button') m.removeAttribute('role');
+    });
   };
   markMaps();
   if (!window.__mapsA11yObs) {
