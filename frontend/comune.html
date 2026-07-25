@@ -1221,7 +1221,7 @@ footer a{color:rgba(255,255,255,0.85);text-decoration:none}
 .scuole-ord-primaria{background:var(--chart-blue-4);}
 .scuole-ord-sec1{background:var(--chart-blue-3);}
 .scuole-ord-sec2{background:var(--chart-blue-1);}
-.scuole-ord-altro{background:var(--paper-3, #c0b9b0);}
+.scuole-ord-altro{background:var(--paper-3, #c0b9b0);color:var(--ink);}
 .scuole-ord-n{font-weight:700;color:var(--ink);text-align:right;}
 
 /* Vocazione formativa: barre orizzontali sec II grado (licei vs tecnici/prof) */
@@ -1229,9 +1229,9 @@ footer a{color:rgba(255,255,255,0.85);text-decoration:none}
 .scuole-voc-stack{display:flex;height:24px;background:var(--paper-2);border-radius:3px;overflow:hidden;margin-top:8px;}
 .scuole-voc-seg{display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:10px;font-weight:700;color:var(--paper);text-transform:uppercase;letter-spacing:.05em;}
 .scuole-voc-liceale{background:var(--chart-blue-1);}
-.scuole-voc-tecnico{background:var(--chart-blue-3);color:#fff;}
+.scuole-voc-tecnico{background:var(--chart-blue-3);color:#1a1a1a;}
 .scuole-voc-professionale{background:var(--chart-blue-5);color:var(--ink);}
-.scuole-voc-altro{background:var(--paper-3,#c0b9b0);color:var(--ink-mute);}
+.scuole-voc-altro{background:var(--paper-3,#c0b9b0);color:var(--ink);}
 .scuole-voc-legend{display:flex;gap:18px;margin-top:6px;font-family:var(--mono);font-size:10px;color:var(--ink-mute);text-transform:uppercase;letter-spacing:.04em;}
 .scuole-voc-legend-dot{display:inline-block;width:10px;height:10px;margin-right:4px;border-radius:1px;vertical-align:middle;}
 
@@ -1395,10 +1395,10 @@ footer a{color:rgba(255,255,255,0.85);text-decoration:none}
 .veicoli-parco-stack{display:flex;height:28px;background:var(--bg-alt);border-radius:3px;overflow:hidden;margin-top:10px;}
 .veicoli-parco-seg{display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:10px;font-weight:700;color:var(--paper);text-transform:uppercase;letter-spacing:.05em;min-width:0;}
 .veicoli-parco-autovetture{background:var(--chart-blue-1);}
-.veicoli-parco-motocicli{background:var(--chart-blue-3);color:#fff;}
+.veicoli-parco-motocicli{background:var(--chart-blue-3);color:#1a1a1a;}
 .veicoli-parco-autocarri{background:var(--chart-blue-2);}
 .veicoli-parco-autobus{background:var(--chart-blue-5);color:var(--ink);}
-.veicoli-parco-altri{background:var(--paper-3,#c0b9b0);color:var(--ink-mute);}
+.veicoli-parco-altri{background:var(--paper-3,#c0b9b0);color:var(--ink);}
 .veicoli-parco-legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:8px;font-family:var(--mono);font-size:10px;color:var(--ink-mute);text-transform:uppercase;letter-spacing:.04em;}
 .veicoli-parco-legend-dot{display:inline-block;width:10px;height:10px;margin-right:5px;border-radius:1px;vertical-align:middle;}
 .veicoli-warning{padding:14px 18px;margin:0 0 24px;border-left:3px solid var(--gold);background:var(--paper-2);font-family:var(--serif);font-size:14px;color:var(--ink-soft);font-style:italic;line-height:1.5;}
@@ -12355,6 +12355,15 @@ function setupTabsScrollHint() {
 // ----------------------------------------------------------------------------
 
 // Mapping sezione -> etichetta verbose + colore + descrizione tooltip
+function badgeText(bg){
+  if(!bg||typeof bg!=='string')return '#ffffff';
+  const m=bg.replace('#','').match(/^([0-9a-f]{6})$/i); if(!m)return '#ffffff';
+  const h=m[1], toL=c=>{c/=255;return c<=0.03928?c/12.92:Math.pow((c+0.055)/1.055,2.4);};
+  const L=0.2126*toL(parseInt(h.slice(0,2),16))+0.7152*toL(parseInt(h.slice(2,4),16))+0.0722*toL(parseInt(h.slice(4,6),16));
+  const rw=(1.05)/(L+0.05);
+  const Lb=0.0083, rb=(L+0.05)/(Lb+0.05);
+  return rw>=rb?'#ffffff':'#1a1a1a';
+}
 const RUNTS_SEZIONI = {
   APS: { lab: 'APS', full: 'Associazione di Promozione Sociale', color: '#0066CC',
          hint: 'L. 383/2000 — finalità sociali, prevalenza soci attivi non retribuiti' },
@@ -12994,7 +13003,7 @@ function initRunts(d) {
       tbody.innerHTML = slice.map(e => {
         const sez = RUNTS_SEZIONI[e.sez];
         const sezBadge = sez
-          ? `<span class="runts-sez-badge" style="background:${sez.color}" title="${sez.full}">${sez.lab}</span>`
+          ? `<span class="runts-sez-badge" style="background:${sez.color};color:${badgeText(sez.color)}" title="${sez.full}">${sez.lab}</span>`
           : escHtml(e.sez);
         return `<tr>
           <td><strong>${escHtml(e.denom)}</strong></td>
