@@ -99,6 +99,9 @@ EXTRA_CATS = {
 }
 
 # DATA_TYPE codici
+# Codici CL_ITTER107 che NON sono province reali (aggregati/placeholder)
+NUTS3_AGGREGATI = {"ITTOT", "ITZZZ", "ITNI1", "ITCDE"}
+
 DATA_BEDS = "BEDS"        # posti letto
 DATA_NUM_EST = "NUM_EST"  # numero esercizi
 DATA_BED_RMS = "BED_RMS"  # camere
@@ -167,15 +170,19 @@ def parse_comune_to_provincia(xml_path: Path) -> dict:
     log.info("itter107_parsing", path=str(xml_path))
     text = xml_path.read_text(encoding="utf-8")
 
-    # Estrai prima nome di ogni provincia NUTS3 (IT[A-Z]\d{2})
+    # Estrai prima nome di ogni provincia NUTS3 (IT + 3 alfanumerici).
+    # NB: alcuni codici finiscono con lettera (ITC4A Cremona, ITE1A Grosseto)
+    # o sono interamente numerici (IT108 Monza, IT111 Sud Sardegna).
     prov_pattern = re.compile(
-        r'<structure:Code id="(IT[A-Z]\d{2})">(.*?)</structure:Code>',
+        r'<structure:Code id="(IT[0-9A-Z]{3})">(.*?)</structure:Code>',
         re.DOTALL,
     )
     prov_nomi = {}
     for m in prov_pattern.finditer(text):
         cid = m.group(1)
         body = m.group(2)
+        if cid in NUTS3_AGGREGATI:
+            continue
         nm = re.search(r'<common:Name xml:lang="it">([^<]*)</common:Name>', body)
         prov_nomi[cid] = nm.group(1) if nm else cid
     log.info("itter107_province_loaded", n=len(prov_nomi))
@@ -189,7 +196,7 @@ def parse_comune_to_provincia(xml_path: Path) -> dict:
     for m in com_pattern.finditer(text):
         cid = m.group(1)
         body = m.group(2)
-        parent = re.search(r'<structure:Parent>\s*<Ref id="(IT[A-Z]\d{2})"', body)
+        parent = re.search(r'<structure:Parent>\s*<Ref id="(IT[0-9A-Z]{3})"', body)
         if parent:
             nuts3 = parent.group(1)
             com_to_prov[cid] = (nuts3, prov_nomi.get(nuts3, nuts3))
@@ -293,8 +300,8 @@ def build_turismo_shards(cache_dir: Path, output_dir: Path) -> Path:
 
     flussi_by_prov: dict[str, dict] = {}
     for prov, dt, country, val in flussi:
-        # Solo province NUTS3 (IT[A-Z]\d{2})
-        if not re.fullmatch(r'IT[A-Z]\d{2}', prov or ''):
+        # Solo province NUTS3 reali (esclusi gli aggregati)
+        if not re.fullmatch(r'IT[0-9A-Z]{3}', prov or '') or prov in NUTS3_AGGREGATI:
             continue
         d = flussi_by_prov.setdefault(prov, {})
         d[(dt, country)] = val
@@ -307,12 +314,20 @@ def build_turismo_shards(cache_dir: Path, output_dir: Path) -> Path:
 
     # 6) === Costruisci shard JSON per ogni comune ===
     # Set di tutti gli istat che compaiono in capacita o nel mapping
-    all_istat = set(cap_by_istat.keys()) | set(com_to_prov.keys())
+    # La codelist ISTAT contiene anche comuni cessati/soppressi: si scrive
+    # solo per i comuni presenti nella anagrafica corrente, per non generare
+    # shard orfani non piu raggiungibili dal frontend.
+    comuni_validi = set(local_lookup.load_comuni_bundle().keys())
+    log.info("istat_anagrafica_loaded", comuni=len(comuni_validi))
+
+    all_istat = (set(cap_by_istat.keys()) | set(com_to_prov.keys())) & comuni_validi
     written = 0
+    skip_no_prov = 0
     for istat in sorted(all_istat):
         prov_info = com_to_prov.get(istat)
         if not prov_info:
-            continue  # comune non in CL_ITTER107 (raro)
+            skip_no_prov += 1
+            continue  # comune non in CL_ITTER107
         prov_nuts3, prov_nome = prov_info
 
         cap_data = cap_by_istat.get(istat, {})
@@ -334,7 +349,9 @@ def build_turismo_shards(cache_dir: Path, output_dir: Path) -> Path:
         if written % 1000 == 0:
             log.info("istat_shards_progress", written=written)
 
-    log.info("istat_shards_done", written=written, dir=str(shard_dir))
+    log.info("istat_shards_done", written=written,
+             skip_no_provincia=skip_no_prov, attesi=len(comuni_validi),
+             dir=str(shard_dir))
     return shard_dir
 
 
