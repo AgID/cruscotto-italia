@@ -75,7 +75,9 @@ PATH_ATTACK_PATTERNS = re.compile(
     r"/configprops|/heapdump|/profiler(?:/|$)|"  # Spring/Symfony diagnostic
     r"/env(?:\?|$)|"                # endpoint /env exposed (Spring)
     r"/docker-compose(?:\.[a-z]+)?\.ya?ml|"  # docker-compose.yml e varianti
-    r"/webdav/|/\.well-known/security"
+    r"/webdav/|/\.well-known/security|"
+    r"/nuxeo/|/solr/|/struts|/geoserver/|"  # RCE noti (Nuxeo JEXL, Solr, Struts2, GeoServer)
+    r"/\.git/config|/_ignition/|/telescope/"  # git leak, Laravel Ignition RCE, Telescope
     r")",
     re.IGNORECASE,
 )
@@ -478,8 +480,10 @@ def aggregate(log_paths: list[Path], exclude_test: bool = False,
 
                 # Top pages (humanized: asset esclusi a monte da is_internal_asset
                 # qui sopra, e i path tecnici mappati a label leggibili)
-                page = humanize_page(ev["uri"])
-                stats["top_pages"][page] += 1
+                if "${" not in ev["uri"] and "%24%7B" not in ev["uri"]:
+                    # scarta i template literal JS seguiti come link da crawler ingenui
+                    page = humanize_page(ev["uri"])
+                    stats["top_pages"][page] += 1
 
                 # Top referer
                 ref = extract_referer_domain(ev["referer"])
