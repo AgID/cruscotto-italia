@@ -247,6 +247,71 @@ def is_bot(ua: str) -> bool:
     return bool(UA_BOT_PATTERNS.search(ua))
 
 
+# Etichette note: l'UA grezzo ha decine di varianti per versione ("GPTBot/1.1",
+# "GPTBot/1.2", "gptbot"), quindi si normalizza a un nome stabile prima di
+# contare. L'ordine conta: i pattern piu' specifici vanno prima.
+UA_LABELS = (
+    ("OAI-SearchBot", "OAI-SearchBot (OpenAI)"),
+    ("ChatGPT-User", "ChatGPT-User (OpenAI)"),
+    ("GPTBot", "GPTBot (OpenAI)"),
+    ("Claude-User", "Claude-User (Anthropic)"),
+    ("ClaudeBot", "ClaudeBot (Anthropic)"),
+    ("anthropic-ai", "Anthropic AI"),
+    ("PerplexityBot", "PerplexityBot"),
+    ("Amazonbot", "Amazonbot"),
+    ("Bytespider", "Bytespider (ByteDance)"),
+    ("meta-externalagent", "Meta External Agent"),
+    ("Googlebot", "Googlebot"),
+    ("Google-Extended", "Google-Extended"),
+    ("bingbot", "Bingbot"),
+    ("Applebot", "Applebot"),
+    ("YandexBot", "YandexBot"),
+    ("Baiduspider", "Baiduspider"),
+    ("DuckDuckBot", "DuckDuckBot"),
+    ("SemrushBot", "SemrushBot"),
+    ("AhrefsBot", "AhrefsBot"),
+    ("MJ12bot", "MJ12bot"),
+    ("DotBot", "DotBot"),
+    ("PetalBot", "PetalBot"),
+    ("Slackbot", "Slackbot"),
+    ("facebookexternalhit", "Facebook"),
+    ("TelegramBot", "TelegramBot"),
+    ("python-requests", "python-requests"),
+    ("Python-urllib", "Python-urllib"),
+    ("curl", "curl"),
+    ("Wget", "wget"),
+    ("Go-http-client", "Go-http-client"),
+    ("okhttp", "okhttp"),
+    ("Scrapy", "Scrapy"),
+)
+
+
+def ua_label(ua: str) -> str:
+    """Riduce lo user-agent a un'etichetta stabile per l'aggregazione."""
+    if not ua or ua == "-":
+        return "(non dichiarato)"
+    low = ua.lower()
+    for needle, label in UA_LABELS:
+        if needle.lower() in low:
+            return label
+    # UA non in elenco: quasi tutti i crawler si mascherano da browser
+    # ("Mozilla/5.0 (compatible; QualcosaBot/1.0; +url)"), quindi il primo
+    # token non dice nulla. Si cerca prima il token che contiene bot/crawler/
+    # spider/agent, che e' quello informativo.
+    # Prima si rimuovono le URL di contatto ("+https://.../robots.txt"),
+    # altrimenti il token informativo viene pescato dentro l'URL.
+    pulito = re.sub(r"https?://\S+", " ", ua)
+    m = re.search(r"([A-Za-z0-9_.-]*(?:bot|crawler|spider|agent)[A-Za-z0-9_.-]*)",
+                  pulito, re.IGNORECASE)
+    if m:
+        token = m.group(1)
+    else:
+        token = re.split(r"[/\s;()]", ua.strip(), 1)[0]
+    token = re.sub(r"[/_.-]?v?[0-9][0-9.]*$", "", token.strip())
+    token = token.strip() or ua.strip()[:40]
+    return token[:40]
+
+
 def is_attack(uri: str) -> bool:
     # search() per matchare anche path annidati tipo '/zend/.env', '/var/www/.env'
     return bool(PATH_ATTACK_PATTERNS.search(uri))
@@ -328,6 +393,7 @@ def aggregate(log_paths: list[Path], exclude_test: bool = False,
         "attacks_by_host": Counter(),  # host → conteggio attacchi (dal log con $host)
         "attack_paths": Counter(),     # path di attacco (troncati) → conteggio
         "attack_ips": Counter(),       # IP attaccanti → conteggio
+        "top_bots": Counter(),        # user-agent normalizzato -> conteggio
         "status_distribution": Counter(),
         "method_distribution": Counter(),
     }
@@ -377,6 +443,7 @@ def aggregate(log_paths: list[Path], exclude_test: bool = False,
                     continue
                 if is_bot(ev["ua"]):
                     stats["totals"]["hits_bot"] += 1
+                    stats["top_bots"][ua_label(ev["ua"])] += 1
                     continue
                 if is_internal_asset(ev["uri"]):
                     stats["totals"]["hits_internal_asset"] += 1
@@ -441,6 +508,10 @@ def aggregate(log_paths: list[Path], exclude_test: bool = False,
         "top_pages": [
             {"page": p, "hits": n}
             for p, n in stats["top_pages"].most_common(20)
+        ],
+        "top_bots": [
+            {"bot": b, "hits": n}
+            for b, n in stats["top_bots"].most_common(20)
         ],
         "attacks_by_host": [
             {"host": h, "hits": n}
@@ -537,6 +608,9 @@ HTML_TEMPLATE = """<!doctype html>
 
 <h2>Referer esterni</h2>
 {table_referers}
+
+<h2>Bot e crawler per user-agent</h2>
+{table_bots}
 
 {mcp_section}
 
@@ -783,6 +857,13 @@ def render_html(stats: dict, mcp_stats_path: Path | None = None, title: str = "C
         [(r["domain"], r["hits"]) for r in stats["top_referer_domains"]],
         ("Dominio referer", "Visite"),
     ) if stats["top_referer_domains"] else "<p class=\"meta\">Nessun referer esterno.</p>"
+    # Composizione del totale bot/crawler per user-agent normalizzato: serve a
+    # distinguere i crawler legittimi (indicizzazione AI e motori di ricerca)
+    # dagli scraper anomali, senza dover ricostruire il dato dai log a mano.
+    table_bots = render_table(
+        [(b["bot"], b["hits"]) for b in stats.get("top_bots", [])],
+        ("User-agent", "Richieste"),
+    ) if stats.get("top_bots") else "<p class=\"meta\">Nessun bot rilevato.</p>"
 
     # Sezione "Attacchi per sito": sempre visibile.
     # Ora basata su $server_name (= il server block nginx che ha gestito la
@@ -866,6 +947,7 @@ def render_html(stats: dict, mcp_stats_path: Path | None = None, title: str = "C
         table_days=table_days,
         table_pages=table_pages,
         table_referers=table_referers,
+        table_bots=table_bots,
         mcp_section=render_mcp_section(mcp_stats_path),
     )
 
