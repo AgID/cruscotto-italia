@@ -48,21 +48,21 @@
   <rect x="112" y="278" width="720" height="92" rx="10" fill="#FAFBFC" stroke="#E3E7EB"/>
   <circle cx="76" cy="324" r="19" fill="#0066CC"/>
   <text x="76" y="330" text-anchor="middle" class="sans step-num">2</text>
-  <text x="140" y="314" class="sans step-title">Vai alla sezione «App»</text>
-  <text x="140" y="342" class="sans step-desc">Nel menu laterale delle impostazioni seleziona la voce «App».</text>
+  <text x="140" y="314" class="sans step-title">Attiva la Modalità sviluppatore</text>
+  <text x="140" y="342" class="sans step-desc">Apri «Avanzate» e attiva «Modalità sviluppatore»: senza, i plugin MCP non funzionano.</text>
 
   <!-- ===== Step 3 ===== -->
   <rect x="112" y="386" width="720" height="92" rx="10" fill="#FAFBFC" stroke="#E3E7EB"/>
   <circle cx="76" cy="432" r="19" fill="#0066CC"/>
   <text x="76" y="438" text-anchor="middle" class="sans step-num">3</text>
-  <text x="140" y="422" class="sans step-title">Crea una nuova app</text>
-  <text x="140" y="450" class="sans step-desc">Alla riga «Impostazioni avanzate» clicca sul pulsante «Crea app».</text>
+  <text x="140" y="422" class="sans step-title">Vai alla sezione «Plugin»</text>
+  <text x="140" y="450" class="sans step-desc">Nel menu laterale delle impostazioni seleziona la voce «Plugin».</text>
 
   <!-- ===== Step 4 (URL) ===== -->
   <rect x="112" y="494" width="720" height="150" rx="10" fill="#FAFBFC" stroke="#E3E7EB"/>
   <circle cx="76" cy="540" r="19" fill="#0066CC"/>
   <text x="76" y="546" text-anchor="middle" class="sans step-num">4</text>
-  <text x="140" y="530" class="sans step-title">Compila la scheda «Nuova app»</text>
+  <text x="140" y="530" class="sans step-title">Clicca il + per creare il nuovo plugin</text>
   <text x="140" y="558" class="sans step-desc">Nome e descrizione a piacere. In «Collegamento» scegli «URL del server» e incolla:</text>
   <rect x="140" y="576" width="664" height="44" rx="8" fill="#E6F1FB" stroke="#0066CC" stroke-opacity="0.35"/>
   <text x="162" y="603" class="mono url">https://cruscotto-italia-mcp.agid.workers.dev/mcp</text>
@@ -79,7 +79,7 @@
   <circle cx="76" cy="814" r="19" fill="#008055"/>
   <text x="76" y="820" text-anchor="middle" class="sans step-num">6</text>
   <text x="140" y="804" class="sans step-title">Clicca «Crea»</text>
-  <text x="140" y="832" class="sans step-desc">L'app compare tra le «App abilitate» ed è subito pronta all'uso.</text>
+  <text x="140" y="832" class="sans step-desc">Il plugin compare tra quelli abilitati ed è subito pronto all'uso.</text>
 
   <!-- ===== Come usarlo ===== -->
   <rect x="48" y="896" width="784" height="200" rx="12" fill="#E6F1FB"/>
