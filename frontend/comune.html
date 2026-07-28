@@ -2180,7 +2180,7 @@ function renderComune(data) {
           <div class="kpi-card ${k.siope?.n_voci != null ? '' : 'tbd'}" data-go-tab="spese" tabindex="0" role="button" aria-label="Vai alla tab SIOPE">
             <div class="kpi-card-lab">SIOPE</div>
             <div class="kpi-card-val">${k.siope?.n_voci != null ? fmtNum(k.siope.n_voci) : '—'}</div>
-            <div class="kpi-card-sub">${k.siope?.totale_anno != null ? '€' + fmtNum(Math.round(k.siope.totale_anno)) : 'voci di spesa'}</div>
+            <div class="kpi-card-sub">${k.siope?.totale_anno != null ? '€' + fmtNum(Math.round(k.siope.totale_anno)) : 'movimenti di cassa'}</div>
           </div>
 
           <div class="kpi-card ${k.territorio?.kpi?.suolo_consumato_2024_pct != null ? '' : 'tbd'}" data-go-tab="territorio" tabindex="0" role="button" aria-label="Vai alla tab Territorio">
@@ -4466,7 +4466,7 @@ function renderMappaSection(geo, denominazione) {
   `;
 }
 
-// Render del tab "Spese" (SIOPE on-demand)
+// Render del tab SIOPE (pagamenti e incassi, on-demand)
 // ----------------------------------------------------------------------------
 
 // Cache lato sessione: { istat: { <anno>: yearBlockFlat,
@@ -11947,7 +11947,7 @@ function updateTabBadgesFromDashboard(d) {
   // Territorio: % suolo consumato
   const pct = d.territorio?.kpi?.suolo_consumato_2024_pct;
   setBadge('[data-tab-territorio-pct]', pct != null ? (pct.toFixed(1) + '%') : null);
-  // SIOPE: # voci di spesa (v0.2.0: dentro per_anno[anno_default]; v0.1.0: top-level)
+  // SIOPE: # voci di pagamento (v0.2.0+: dentro per_anno[anno_default]; v0.1.0: top-level)
   let nv = null;
   if (d.siope) {
     if (d.siope.per_anno && d.siope.anno_default != null) {
@@ -12006,7 +12006,7 @@ FONTI INTEGRATE
 ---------------
 - ANAC                              Contratti pubblici (OCDS)
 - BDAP-MOP                          Opere pubbliche dei comuni
-- SIOPE                             Flussi di cassa (per_anno multi-anno)
+- SIOPE                             Cassa: pagamenti + entrate + saldo_cassa (per_anno)
 - Italia Domani (PNRR)              Progetti del Piano (Sistema ReGiS)
 - ISPRA                             Consumo suolo, IdroGEO, rifiuti, SNPA qualità aria
 - ISTAT                             Demografia, profilo censimento, turismo, incidenti,

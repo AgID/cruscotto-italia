@@ -13,7 +13,7 @@ anagrafica,codice_catastale,Codice catastale Agenzia Entrate,codice,Agenzia Entr
 anagrafica,kpi.popolazione,KPI aggregato popolazione totale,numero,ISTAT POSAS,1 gen anno corrente,https://demo.istat.it,CC BY 3.0 IT
 anagrafica,kpi.contratti,KPI aggregato n. contratti ANAC (può essere null),numero,ANAC,ultimo mese disponibile,https://dati.anticorruzione.it,CC BY 4.0
 anagrafica,kpi.opere,KPI aggregato n. opere pubbliche BDAP (può essere null),numero,BDAP MOP,annuale,https://bdap-opendata.rgs.mef.gov.it,IODL 2.0
-anagrafica,kpi.spese_siope,KPI aggregato n. voci spesa SIOPE (può essere null),numero,SIOPE,mensile cumulato,https://www.siope.it,CC BY 4.0
+anagrafica,kpi.spese_siope,KPI aggregato n. voci di pagamento SIOPE (può essere null),numero,SIOPE,mensile cumulato,https://www.siope.it,CC BY 4.0
 anagrafica,kpi.coesione,KPI aggregato fondi coesione (può essere null),numero,OpenCoesione,corrente,https://opencoesione.gov.it,IODL 2.0
 demografia,popolazione_totale,Popolazione residente totale,numero,ISTAT POSAS,1 gennaio (stima),https://demo.istat.it,CC BY 3.0 IT
 demografia,maschi,Popolazione maschile residente,numero,ISTAT POSAS,1 gennaio (stima),https://demo.istat.it,CC BY 3.0 IT
@@ -93,9 +93,9 @@ siope,per_anno.<anno>.ente_siope,Denominazione ente SIOPE,testo,MEF-RGS SIOPE (s
 siope,per_anno.<anno>.popolazione,Popolazione di riferimento per il calcolo pro-capite,numero,MEF-RGS SIOPE (siope.it),corrente,https://www.siope.it/,CC BY 4.0
 siope,per_anno.<anno>.mesi_disponibili,Lista mesi con dati cumulati disponibili,lista,MEF-RGS SIOPE (siope.it),mensile,https://www.siope.it/,CC BY 4.0
 siope,per_anno.<anno>.ultimo_mese,Ultimo mese disponibile (YYYY/MM),data,MEF-RGS SIOPE (siope.it),mensile,https://www.siope.it/,CC BY 4.0
-siope,per_anno.<anno>.n_voci,Numero voci di spesa rendicontate,numero,MEF-RGS SIOPE (siope.it),annuale,https://www.siope.it/,CC BY 4.0
-siope,per_anno.<anno>.totale_anno,Totale spese cumulato anno (euro),euro,MEF-RGS SIOPE (siope.it),annuale,https://www.siope.it/,CC BY 4.0
-siope,per_anno.<anno>.voci,Dettaglio voci spesa con codice gestionale e importi,lista,MEF-RGS SIOPE (siope.it),annuale,https://www.siope.it/,CC BY 4.0
+siope,per_anno.<anno>.n_voci,Numero voci di pagamento rendicontate,numero,MEF-RGS SIOPE (siope.it),annuale,https://www.siope.it/,CC BY 4.0
+siope,per_anno.<anno>.totale_anno,Totale pagamenti di cassa dell'anno (euro),euro,MEF-RGS SIOPE (siope.it),annuale,https://www.siope.it/,CC BY 4.0
+siope,per_anno.<anno>.voci,Dettaglio voci di pagamento con codice gestionale e importi,lista,MEF-RGS SIOPE (siope.it),annuale,https://www.siope.it/,CC BY 4.0
 siope,per_anno.<anno>.voci[].mensili,Serie mensile cumulata della voce (chiave YYYY/MM),euro,MEF-RGS SIOPE (siope.it),mensile,https://www.siope.it/,CC BY 4.0
 siope,per_anno.<anno>.saldo_cassa,Saldo di cassa = incassi meno pagamenti (non e un avanzo di bilancio),euro,MEF-RGS SIOPE (siope.it),annuale,https://www.siope.it/,CC BY 4.0
 siope,per_anno.<anno>.entrate.n_voci,Numero voci di incasso rendicontate,numero,MEF-RGS SIOPE (siope.it),annuale,https://www.siope.it/,CC BY 4.0
