@@ -1132,7 +1132,7 @@ footer a{color:rgba(255,255,255,0.85);text-decoration:none}
   .finanz-row{grid-template-columns:1fr;text-align:left;}
 }
 
-/* ---- Tab Spese SIOPE ---- */
+/* ---- Tab SIOPE (pagamenti e incassi) ---- */
 .mesi-note{font-style:italic;color:var(--ink-mute);text-transform:none;letter-spacing:0;font-family:var(--serif);font-size:11px;margin-left:6px;}
 .spese-anno-toggle{display:flex;align-items:center;gap:10px;margin:18px 0 14px;padding:12px 14px;background:var(--paper-2);border:1px solid var(--ink-mute);}
 .spese-anno-toggle .toggle-label{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--ink-mute);margin-right:6px;}
@@ -2052,7 +2052,7 @@ function renderComune(data) {
     { id: 'redditi', label: 'Redditi e fisco', kpi: k.redditi?.anni?.[String(k.redditi.anni_disponibili?.slice(-1)[0])]?.reddito_complessivo?.medio != null ? '€' + fmtNum(k.redditi.anni[String(k.redditi.anni_disponibili.slice(-1)[0])].reddito_complessivo.medio) : '—' },
     { id: 'sanita', label: 'Sanità', kpi: k.sanita_mds?.farmacie?.kpi?.n_totale != null ? fmtNum(k.sanita_mds.farmacie.kpi.n_totale) : '—' },
     { id: 'scuole', label: 'Scuole', kpi: k.scuole?.kpi?.n_scuole != null ? fmtNum(k.scuole.kpi.n_scuole) : '—' },
-    { id: 'spese', label: 'Spese SIOPE', kpi: '<span data-tab-spese-count><span class="tab-spinner"></span></span>' },
+    { id: 'spese', label: 'SIOPE', kpi: '<span data-tab-spese-count><span class="tab-spinner"></span></span>' },
     { id: 'territorio', label: 'Territorio', kpi: '<span data-tab-territorio-pct><span class="tab-spinner"></span></span>' },
     { id: 'runts', label: 'Terzo Settore', kpi: k.runts?.kpi?.n_totale != null ? fmtNum(k.runts.kpi.n_totale) : '—' },
     { id: 'turismo', label: 'Turismo', kpi: '<span data-tab-turismo-idx><span class="tab-spinner"></span></span>' },
@@ -2177,8 +2177,8 @@ function renderComune(data) {
             <div class="kpi-card-sub">plessi MIUR</div>
           </div>
 
-          <div class="kpi-card ${k.siope?.n_voci != null ? '' : 'tbd'}" data-go-tab="spese" tabindex="0" role="button" aria-label="Vai alla tab Spese SIOPE">
-            <div class="kpi-card-lab">Spese SIOPE</div>
+          <div class="kpi-card ${k.siope?.n_voci != null ? '' : 'tbd'}" data-go-tab="spese" tabindex="0" role="button" aria-label="Vai alla tab SIOPE">
+            <div class="kpi-card-lab">SIOPE</div>
             <div class="kpi-card-val">${k.siope?.n_voci != null ? fmtNum(k.siope.n_voci) : '—'}</div>
             <div class="kpi-card-sub">${k.siope?.totale_anno != null ? '€' + fmtNum(Math.round(k.siope.totale_anno)) : 'voci di spesa'}</div>
           </div>
@@ -4493,10 +4493,11 @@ function renderSpeseTabSkeleton() {
   return `
     <div class="tab-pane" id="pane-spese">
       <div class="section-title">§ spese</div>
-      <h2 class="section-h">Spese <em>SIOPE</em>.</h2>
+      <h2 class="section-h">Cassa <em>SIOPE</em>.</h2>
       <p class="section-sub">
-        Pagamenti del Comune registrati a sistema secondo i codici gestionali standard nazionali (~250 voci).
-        Dati pre-calcolati da BDAP OpenData (RGS-MEF), aggregati a livello comunale.
+        Pagamenti e incassi del Comune registrati a sistema secondo i codici gestionali
+        standard nazionali (~250 voci). Sono movimenti di <strong>cassa</strong>, non di
+        competenza: il saldo di cassa non &egrave; un avanzo di bilancio.
       </p>
       <div id="spese-content">
         <div class="spese-loading" role="status" aria-live="polite">
@@ -4523,18 +4524,26 @@ async function loadSpeseTab(istat) {
       </div>`;
     return;
   }
-  renderSpeseContent(container, istat, c.__anno_default);
+  renderSpeseContent(container, istat, c.__anno_default, 'uscite');
 }
 
 /** Switch anno: ri-renderizza il tab Spese con un anno diverso. */
-function switchSpeseAnno(istat, anno) {
+function switchSpeseAnno(istat, anno, flusso) {
   const container = document.getElementById('spese-content');
   if (!container) return;
-  renderSpeseContent(container, istat, anno);
+  renderSpeseContent(container, istat, anno, flusso || 'uscite');
 }
 window.switchSpeseAnno = switchSpeseAnno;
 
-function renderSpeseContent(container, istat, anno) {
+/** Switch pagamenti/incassi mantenendo l'anno selezionato. */
+function switchSpeseFlusso(istat, anno, flusso) {
+  const container = document.getElementById('spese-content');
+  if (!container) return;
+  renderSpeseContent(container, istat, anno, flusso);
+}
+window.switchSpeseFlusso = switchSpeseFlusso;
+
+function renderSpeseContent(container, istat, anno, flusso) {
   const c = window.__speseCache[istat] || {};
   const data = c[anno];
   if (!data) {
@@ -4546,9 +4555,15 @@ function renderSpeseContent(container, istat, anno) {
     return;
   }
 
-  const totale = data.totale_anno || 0;
-  const voci = data.voci || [];
+  // flusso: 'uscite' = pagamenti, 'entrate' = incassi. Le entrate esistono dallo
+  // shard v0.3.0 in poi; sugli shard precedenti il toggle non compare.
+  const hasEntrate = !!(data.entrate && (data.entrate.voci || []).length);
+  const isEntrate = flusso === 'entrate' && hasEntrate;
+  const blocco = isEntrate ? data.entrate : data;
+  const totale = blocco.totale_anno || 0;
+  const voci = blocco.voci || [];
   const voci_sopra_1m = voci.filter(v => v.importo_cumulato >= 1e6).length;
+  const etichetta = isEntrate ? 'incasso' : 'pagamento';
   const ultimo_mese = data.mesi_disponibili?.slice(-1)[0] || '—';
   const isParziale = data.parziale === true;
   const noteParziale = isParziale && data.ultimo_mese
@@ -4565,7 +4580,7 @@ function renderSpeseContent(container, istat, anno) {
       <span class="toggle-label">Anno</span>
       ${anniDisp.map(a => `
         <button type="button" class="spese-anno-btn ${a === anno ? 'active' : ''}"
-                onclick="window.switchSpeseAnno('${istat}', ${a})">${a}</button>
+                onclick="window.switchSpeseAnno('${istat}', ${a}, '${isEntrate ? 'entrate' : 'uscite'}')">${a}</button>
       `).join('')}
       ${noteParziale ? `<span class="spese-anno-note">${noteParziale}</span>` : ''}
     </div>
@@ -4575,21 +4590,43 @@ function renderSpeseContent(container, istat, anno) {
     </div>
   ` : '');
 
+  const flussoHtml = hasEntrate ? `
+    <div class="spese-anno-toggle" role="group" aria-label="Tipo di movimento di cassa">
+      <span class="toggle-label">Movimenti</span>
+      <button type="button" class="spese-anno-btn ${!isEntrate ? 'active' : ''}"
+              onclick="window.switchSpeseFlusso('${istat}', ${anno}, 'uscite')">Pagamenti</button>
+      <button type="button" class="spese-anno-btn ${isEntrate ? 'active' : ''}"
+              onclick="window.switchSpeseFlusso('${istat}', ${anno}, 'entrate')">Incassi</button>
+    </div>` : '';
+
   container.innerHTML = `
     ${toggleHtml}
+    ${flussoHtml}
     <div class="kpi-cards">
       <div class="kpi-card">
-        <div class="kpi-card-lab">Totale anno</div>
-        <div class="kpi-card-val">€${fmtNum(Math.round(totale))}</div>
+        <div class="kpi-card-lab">Pagamenti</div>
+        <div class="kpi-card-val">€${fmtNum(Math.round(data.totale_anno || 0))}</div>
+        <div class="kpi-card-sub">uscite di cassa</div>
+      </div>
+      ${hasEntrate ? `
+      <div class="kpi-card">
+        <div class="kpi-card-lab">Incassi</div>
+        <div class="kpi-card-val">€${fmtNum(Math.round(data.entrate.totale_anno || 0))}</div>
+        <div class="kpi-card-sub">entrate di cassa</div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-card-lab">Voci di spesa</div>
-        <div class="kpi-card-val">${fmtNum(voci.length)}</div>
-        <div class="kpi-card-sub">codici gestionali</div>
-      </div>
+        <div class="kpi-card-lab">Saldo di cassa</div>
+        <div class="kpi-card-val">${(data.saldo_cassa || 0) < 0 ? '−' : ''}€${fmtNum(Math.abs(Math.round(data.saldo_cassa || 0)))}</div>
+        <div class="kpi-card-sub">incassi meno pagamenti</div>
+      </div>` : `
       <div class="kpi-card">
         <div class="kpi-card-lab">Voci > €1M</div>
         <div class="kpi-card-val">${fmtNum(voci_sopra_1m)}</div>
+      </div>`}
+      <div class="kpi-card">
+        <div class="kpi-card-lab">Voci di ${etichetta}</div>
+        <div class="kpi-card-val">${fmtNum(voci.length)}</div>
+        <div class="kpi-card-sub">codici gestionali</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-card-lab">Ultimo aggiornamento</div>
@@ -4599,7 +4636,7 @@ function renderSpeseContent(container, istat, anno) {
 
     <div class="spese-filters">
       <input type="search" id="spese-search" class="spese-search-input"
-             placeholder="Cerca tra le ${voci.length} voci di spesa…" autocomplete="off">
+             placeholder="Cerca tra le ${voci.length} voci di ${etichetta}…" autocomplete="off">
       <select id="spese-titolo" aria-label="Filtra le spese per titolo">
         <option value="">Tutti i titoli</option>
         ${titoli.map(t => `<option value="${t}">${t}</option>`).join('')}
@@ -4613,13 +4650,14 @@ function renderSpeseContent(container, istat, anno) {
     </div>
 
     <div class="spese-list" id="spese-list">
-      ${voci.map((v, i) => renderSpeseRow(v, i, totale, anno)).join('')}
+      ${voci.map((v, i) => renderSpeseRow(v, i, totale, anno, isEntrate)).join('')}
     </div>
 
     <div class="tab-footer">
-      <strong>Fonte</strong>: <a href="https://bdap-opendata.rgs.mef.gov.it/" target="_blank" rel="noopener">BDAP OpenData</a>
-      — SIOPE Movimenti cumulati mensili di Spesa, regione ${data.anagrafica.regione}, anno ${anno}.
-      Dati pre-calcolati da CSV bulk dati.gov.it (CKAN), aggregazione comunale.
+      <strong>Fonte</strong>: MEF — Ragioneria Generale dello Stato,
+      <a href="https://www.siope.it/" target="_blank" rel="noopener">SIOPE</a>
+      (banca dati gestita da Banca d'Italia), anno ${anno}. Licenza CC BY 4.0.
+      Elaborazione Cruscotto Italia su dati SIOPE, aggregazione comunale.
       Codifica gestionale: <a href="https://www.rgs.mef.gov.it/VERSIONE-I/e_government/amministrazioni_pubbliche/siope/" target="_blank" rel="noopener">SIOPE/RGS</a>.
     </div>
   `;
@@ -4644,7 +4682,7 @@ function renderSpeseContent(container, istat, anno) {
     else if (sort === 'codice') filtered.sort((a,b)=>a.codice_gestionale.localeCompare(b.codice_gestionale));
     else if (sort === 'alpha') filtered.sort((a,b)=>a.desc_gestionale.localeCompare(b.desc_gestionale,'it'));
     list.innerHTML = filtered.length
-      ? filtered.map((v,i)=>renderSpeseRow(v,i,totale,anno)).join('')
+      ? filtered.map((v,i)=>renderSpeseRow(v,i,totale,anno,isEntrate)).join('')
       : `<div class="placeholder">Nessuna voce corrisponde ai filtri.</div>`;
     bindRowClicks();
   }
@@ -4654,7 +4692,7 @@ function renderSpeseContent(container, istat, anno) {
   bindRowClicks();
 }
 
-function renderSpeseRow(v, idx, totale, anno) {
+function renderSpeseRow(v, idx, totale, anno, isEntrate) {
   const pct = totale > 0 ? (v.importo_cumulato / totale * 100) : 0;
   const barW = Math.min(100, Math.max(0.5, pct));
   return `
@@ -4675,7 +4713,7 @@ function renderSpeseRow(v, idx, totale, anno) {
         <div class="spesa-expand">▾</div>
       </div>
       <div class="spesa-detail" style="display:none">
-        <div class="spesa-mesi-label">Speso per mese ${anno} <span class="mesi-note">(differenza tra cumulati)</span></div>
+        <div class="spesa-mesi-label">${isEntrate ? 'Incassato' : 'Pagato'} per mese ${anno} <span class="mesi-note">(differenza tra cumulati)</span></div>
         <svg class="spesa-sparkline" viewBox="0 0 600 80" preserveAspectRatio="none" aria-hidden="true" focusable="false">
           ${renderSparkline(v.mensili)}
         </svg>
@@ -4711,22 +4749,31 @@ function renderSparkline(mensili) {
   const deltas = cumulatoToDelta(mensili);
   const entries = Object.entries(deltas).sort();
   if (entries.length === 0) return '';
-  const max = Math.max(...entries.map(([_,v]) => v));
-  if (max === 0) return '<text x="300" y="40" text-anchor="middle" fill="var(--ink-mute)" font-family="var(--mono)" font-size="11" font-style="italic">nessun pagamento nei mesi</text>';
+  // I codici "da regolarizzare" possono avere mesi NEGATIVI (storni): la scala
+  // deve includere lo zero e le barre negative vanno disegnate sotto la baseline,
+  // altrimenti l'SVG riceve height negativa e non rende nulla.
+  const vals = entries.map(([_,v]) => v);
+  const max = Math.max(...vals, 0);
+  const min = Math.min(...vals, 0);
+  const span = max - min;
+  if (span === 0) return '<text x="300" y="40" text-anchor="middle" fill="var(--ink-mute)" font-family="var(--mono)" font-size="11" font-style="italic">nessun movimento nei mesi</text>';
 
-  // Bar chart (più adatto per spese mensili discrete)
+  const yOf = v => 78 - ((v - min) / span) * 70;
+  const yZero = yOf(0);
   const barW = 600 / entries.length * 0.7;
   const gap = 600 / entries.length * 0.3;
   const innerW = 600 / entries.length;
 
   return entries.map(([mese, v], i) => {
-    const h = (v / max) * 70;
+    const y = yOf(v);
+    const top = Math.min(y, yZero);
+    const h = Math.max(0.5, Math.abs(y - yZero));
     const x = i * innerW + gap/2;
-    const y = 80 - h - 2;
-    return `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" fill="var(--accent)" fill-opacity="0.7"/>`;
+    const col = v < 0 ? 'var(--ink-mute)' : 'var(--accent)';
+    return `<rect x="${x.toFixed(1)}" y="${top.toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" fill="${col}" fill-opacity="0.7"/>`;
   }).join('') +
-  // baseline
-  `<line x1="0" y1="78" x2="600" y2="78" stroke="var(--ink-mute)" stroke-width="0.5" stroke-opacity="0.4"/>`;
+  // baseline allo zero
+  `<line x1="0" y1="${yZero.toFixed(1)}" x2="600" y2="${yZero.toFixed(1)}" stroke="var(--ink-mute)" stroke-width="0.5" stroke-opacity="0.4"/>`;
 }
 
 function bindRowClicks() {

@@ -16,7 +16,7 @@ Cercando un comune ("Lecce") si ottiene una vista a 360° su:
 
 - 🏗️ **Contratti pubblici** (ANAC OCDS-IT)
 - 🚧 **Opere pubbliche** (BDAP-MOP — MEF/RGS)
-- 💰 **Flussi di cassa** (SIOPE — MEF/RGS)
+- 💰 **Flussi di cassa** (SIOPE — MEF/RGS): pagamenti, incassi e saldo di cassa
 - 🇪🇺 **Progetti PNRR** (Italia Domani — Sistema ReGiS)
 - 👥 **Demografia comunale** (ISTAT POSAS)
 - 🎓 **Profilo socioeconomico** (ISTAT Censimento permanente)
@@ -287,7 +287,7 @@ cruscotto-italia/
 │   │   ├── anagrafica.py        ← spina dorsale ISTAT comuni + IPA
 │   │   ├── anac.py              ← contratti pubblici (OCDS)
 │   │   ├── bdap.py              ← BDAP-MOP opere pubbliche
-│   │   ├── siope.py             ← SIOPE Spese multi-anno
+│   │   ├── siope.py             ← SIOPE uscite+entrate multi-anno (siope.it)
 │   │   ├── pnrr_progetti.py     ← progetti PNRR (Italia Domani/ReGiS)
 │   │   ├── demografia.py        ← popolazione (POSAS)
 │   │   ├── istat_profilo.py     ← Censimento permanente *via Actions*
@@ -369,10 +369,10 @@ Le derivate devono restare aperte.
 I **dati** delle fonti sono pubblicati sotto le rispettive licenze:
 
 - **CC BY 4.0** — la maggior parte delle fonti (ANAC, ISTAT moderni,
-  MIUR, ACI, ISPRA, MEF DE Patrimonio, Italia Domani PNRR, MiC ArCo,
-  MiC Cultural-ON, AdE Catasto INSPIRE)
+  MIUR, ACI, ISPRA, MEF DE Patrimonio, MEF-RGS SIOPE, Italia Domani PNRR,
+  MiC ArCo, MiC Cultural-ON, AdE Catasto INSPIRE)
 - **CC BY 3.0 IT** — MEF Federalismo Fiscale, alcuni dataset ISTAT storici
-- **IODL 2.0** — BDAP-MOP, BDAP-SIOPE, Ministero della Salute, MIMIT
+- **IODL 2.0** — BDAP-MOP, Ministero della Salute, MIMIT
 - **CC BY 4.0 ex art. 52 c.2 D.Lgs 82/2005 (CAD)** — dati delle PA
   pubblicati senza licenza esplicita ("open by default"). Si applica per
   esempio a GSE/MASE (PUN punti di ricarica EV), AGCOM (Broadband Map

@@ -21,7 +21,8 @@ FONTI ORIGINARIE E LORO LICENZE
 -------------------------------
 - ANAC (Autorità Nazionale Anticorruzione) ........... CC BY 4.0
 - BDAP-MOP (MEF — Opere Pubbliche) ................... IODL 2.0
-- SIOPE (dati.gov.it / Banca d'Italia) ............... CC BY 4.0
+- SIOPE (MEF — Ragioneria Generale dello Stato;
+  banca dati gestita da Banca d'Italia, siope.it) .... CC BY 4.0
 - Italia Domani (PNRR — Presidenza del Consiglio) .... CC BY 4.0
 - ISPRA (Suolo, IdroGEO, Catasto Rifiuti, SNPA Aria) . CC BY 4.0
 - ISTAT (POSAS, Censimento, Turismo, Incidenti,

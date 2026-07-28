@@ -86,16 +86,21 @@ opere,progetti[].fin_europei,Finanziamenti europei (euro),euro,BDAP MOP,annuale,
 opere,progetti[].fin_enti_terr,Finanziamenti enti territoriali (euro),euro,BDAP MOP,annuale,https://bdap-opendata.rgs.mef.gov.it,IODL 2.0
 opere,progetti[].fin_privati,Finanziamenti privati (euro),euro,BDAP MOP,annuale,https://bdap-opendata.rgs.mef.gov.it,IODL 2.0
 opere,progetti[].fin_altri,Altri finanziamenti (euro),euro,BDAP MOP,annuale,https://bdap-opendata.rgs.mef.gov.it,IODL 2.0
-siope,anni_disponibili,Anni di rendicontazione disponibili,lista,SIOPE via CKAN BDAP,mensile cumulato,https://dati.gov.it,CC BY 4.0
+siope,anni_disponibili,Anni di rendicontazione disponibili,lista,MEF-RGS SIOPE (siope.it),mensile cumulato,https://www.siope.it/,CC BY 4.0
 siope,anno_default,Anno predefinito mostrato dal frontend,numero,Cruscotto Italia,corrente,{{SITE_URL}},CC BY 4.0
-siope,per_anno.<anno>.parziale,True se anno in corso (dati non completi),boolean,SIOPE,corrente,https://dati.gov.it,CC BY 4.0
-siope,per_anno.<anno>.ente_siope,Denominazione ente SIOPE,testo,SIOPE,corrente,https://dati.gov.it,CC BY 4.0
-siope,per_anno.<anno>.popolazione,Popolazione di riferimento per il calcolo pro-capite,numero,SIOPE,corrente,https://dati.gov.it,CC BY 4.0
-siope,per_anno.<anno>.mesi_disponibili,Lista mesi con dati cumulati disponibili,lista,SIOPE,mensile,https://dati.gov.it,CC BY 4.0
-siope,per_anno.<anno>.ultimo_mese,Ultimo mese disponibile (YYYY/MM),data,SIOPE,mensile,https://dati.gov.it,CC BY 4.0
-siope,per_anno.<anno>.n_voci,Numero voci di spesa rendicontate,numero,SIOPE,annuale,https://dati.gov.it,CC BY 4.0
-siope,per_anno.<anno>.totale_anno,Totale spese cumulato anno (euro),euro,SIOPE,annuale,https://dati.gov.it,CC BY 4.0
-siope,per_anno.<anno>.voci,Dettaglio voci spesa con codice gestionale e importi,lista,SIOPE,annuale,https://dati.gov.it,CC BY 4.0
+siope,per_anno.<anno>.parziale,True se anno in corso (dati non completi),boolean,MEF-RGS SIOPE (siope.it),corrente,https://www.siope.it/,CC BY 4.0
+siope,per_anno.<anno>.ente_siope,Denominazione ente SIOPE,testo,MEF-RGS SIOPE (siope.it),corrente,https://www.siope.it/,CC BY 4.0
+siope,per_anno.<anno>.popolazione,Popolazione di riferimento per il calcolo pro-capite,numero,MEF-RGS SIOPE (siope.it),corrente,https://www.siope.it/,CC BY 4.0
+siope,per_anno.<anno>.mesi_disponibili,Lista mesi con dati cumulati disponibili,lista,MEF-RGS SIOPE (siope.it),mensile,https://www.siope.it/,CC BY 4.0
+siope,per_anno.<anno>.ultimo_mese,Ultimo mese disponibile (YYYY/MM),data,MEF-RGS SIOPE (siope.it),mensile,https://www.siope.it/,CC BY 4.0
+siope,per_anno.<anno>.n_voci,Numero voci di spesa rendicontate,numero,MEF-RGS SIOPE (siope.it),annuale,https://www.siope.it/,CC BY 4.0
+siope,per_anno.<anno>.totale_anno,Totale spese cumulato anno (euro),euro,MEF-RGS SIOPE (siope.it),annuale,https://www.siope.it/,CC BY 4.0
+siope,per_anno.<anno>.voci,Dettaglio voci spesa con codice gestionale e importi,lista,MEF-RGS SIOPE (siope.it),annuale,https://www.siope.it/,CC BY 4.0
+siope,per_anno.<anno>.voci[].mensili,Serie mensile cumulata della voce (chiave YYYY/MM),euro,MEF-RGS SIOPE (siope.it),mensile,https://www.siope.it/,CC BY 4.0
+siope,per_anno.<anno>.saldo_cassa,Saldo di cassa = incassi meno pagamenti (non e un avanzo di bilancio),euro,MEF-RGS SIOPE (siope.it),annuale,https://www.siope.it/,CC BY 4.0
+siope,per_anno.<anno>.entrate.n_voci,Numero voci di incasso rendicontate,numero,MEF-RGS SIOPE (siope.it),annuale,https://www.siope.it/,CC BY 4.0
+siope,per_anno.<anno>.entrate.totale_anno,Totale incassi dell'anno (euro),euro,MEF-RGS SIOPE (siope.it),annuale,https://www.siope.it/,CC BY 4.0
+siope,per_anno.<anno>.entrate.voci,Dettaglio voci di incasso con codice gestionale e importi,lista,MEF-RGS SIOPE (siope.it),annuale,https://www.siope.it/,CC BY 4.0
 scuole,anno_scolastico,Anno scolastico di riferimento (es. 2025/26),testo,MIUR,annuale settembre,https://dati.mim.gov.it,CC BY 4.0
 scuole,kpi.n_scuole,Numero totale scuole nel comune,numero,MIUR DS0400SCUANAGRAFESTAT,annuale,https://dati.mim.gov.it,CC BY 4.0
 scuole,kpi.n_sedi_direttivo,Numero sedi direttivo (istituti principali),numero,MIUR,annuale,https://dati.mim.gov.it,CC BY 4.0
