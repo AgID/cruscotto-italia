@@ -15,7 +15,7 @@
  *   - pnrr/<istat>.json
  *   - territorio/<istat>.json
  *   - bdap/dettaglio/<istat>.json    (opere)
- *   - siope/<istat>.json             (spese SIOPE pre-calcolate)
+ *   - siope/<istat>.json             (SIOPE: pagamenti + incassi + saldo di cassa)
  *   - immobili_pa/<istat>.json     (MEF DE - Beni Immobili Pubblici 2022)
  *   - anncsu/<istat>.json          (Agenzia Entrate + ISTAT - ANNCSU strade
  *                                   e numeri civici certificati, sample 1000
@@ -83,16 +83,28 @@
  *     "pnrr":        { ... } | null,
  *     "territorio":  { ... } | null,
  *     "opere":       { ... } | null,
- *     "siope":       { ... } | null,    // schema v0.2.0 multi-anno:
- *                                         //   { _etl_version: "0.2.0",
+ *     "siope":       { ... } | null,    // schema v0.3.0 multi-anno:
+ *                                         //   { _etl_version: "0.3.0",
+ *                                         //     _source: "MEF-RGS SIOPE (siope.it)",
+ *                                         //     _licenza: "CC BY 4.0",
  *                                         //     anni_disponibili: [2025, 2026],
- *                                         //     anno_default: 2025,
+ *                                         //     anno_default: 2025,   // ultimo anno CHIUSO (12 mesi)
  *                                         //     per_anno: {
- *                                         //       "2025": { totale_anno, n_voci, voci, mesi_disponibili,
- *                                         //                 ultimo_mese, parziale: false, ... },
+ *                                         //       "2025": {
+ *                                         //         // USCITE = pagamenti di cassa
+ *                                         //         totale_anno, n_voci, voci, mesi_disponibili,
+ *                                         //         ultimo_mese, parziale: false, ente_siope, popolazione,
+ *                                         //         // ENTRATE = incassi di cassa (dal 28/07/2026)
+ *                                         //         entrate: { totale_anno, n_voci, voci },
+ *                                         //         saldo_cassa   // incassi - pagamenti
+ *                                         //       },
  *                                         //       "2026": { ..., parziale: true }
  *                                         //     }
  *                                         //   }
+ *                                         // voci[].mensili e CUMULATO (chiave "YYYY/MM").
+ *                                         // Codici: U... = uscite, E... = entrate.
+ *                                         // Sono movimenti di CASSA, non di competenza:
+ *                                         // il saldo di cassa NON e un avanzo di bilancio.
  *     "anac":        { ... } | null,
  *     "immobili_pa": { ... } | null    // MEF DE - Beni Immobili Pubblici 2022:
  *                                       //   { anno_rilevazione: 2022,
@@ -395,7 +407,7 @@ interface DashboardShard {
 
 export const comuneDashboard: ToolDefinition = {
   description:
-    "Vista completa di un comune italiano (~250K token). Usa comune_kpi per domande puntuali o confronti; usa questo tool solo per array dettagliati: ANAC top-CPV, BDAP settori, PNRR missioni, SIOPE time-series, civici ANNCSU, EV, ospedali, ATECO, censimento sezioni. Sezioni: anagrafica, demografia, profilo ISTAT, turismo, PNRR, territorio (ISPRA+sismica DPC), qualita_aria, opere BDAP, spese SIOPE, contratti ANAC, scuole MIUR, veicoli+incidenti ACI, redditi MEF, immobili PA, civici ANNCSU, sanita MdS, EV GSE, FTTH AGCOM, carburanti MIMIT, RUNTS, imprese ASIA, pendolarismo 2021, meteo ItaliaMeteo ICON-2I, morfologia CNR-IRPI DTM5m (elevazione/pendenza/esposizione/geomorfologia/solare), censimento 2021 sezioni (119 var, geometrie via /data/censimento_full/<istat>.geojson). Richiede istat_code 6 cifre. Se hai solo nome, chiama prima search_comune. Schema completo: skill cruscotto-italia-workflow.",
+    "Vista completa di un comune italiano (~250K token). Usa comune_kpi per domande puntuali o confronti; usa questo tool solo per array dettagliati: ANAC top-CPV, BDAP settori, PNRR missioni, SIOPE time-series pagamenti e incassi, civici ANNCSU, EV, ospedali, ATECO, censimento sezioni. Sezioni: anagrafica, demografia, profilo ISTAT, turismo, PNRR, territorio (ISPRA+sismica DPC), qualita_aria, opere BDAP, cassa SIOPE (pagamenti, incassi, saldo), contratti ANAC, scuole MIUR, veicoli+incidenti ACI, redditi MEF, immobili PA, civici ANNCSU, sanita MdS, EV GSE, FTTH AGCOM, carburanti MIMIT, RUNTS, imprese ASIA, pendolarismo 2021, meteo ItaliaMeteo ICON-2I, morfologia CNR-IRPI DTM5m (elevazione/pendenza/esposizione/geomorfologia/solare), censimento 2021 sezioni (119 var, geometrie via /data/censimento_full/<istat>.geojson). Richiede istat_code 6 cifre. Se hai solo nome, chiama prima search_comune. Schema completo: skill cruscotto-italia-workflow.",
   inputSchema: {
     type: "object",
     properties: {

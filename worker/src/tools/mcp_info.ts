@@ -9,7 +9,7 @@ import type { ToolDefinition } from "./index.js";
 
 export const mcpInfo: ToolDefinition = {
   description:
-    "Returns server metadata, version, and data freshness for each integrated source (ANAC, BDAP-MOP, SIOPE, Italia Domani PNRR, ISTAT, ISPRA, Protezione Civile (classificazione sismica), MIUR, ACI, MEF Federalismo Fiscale, MEF Patrimonio Immobiliare PA, Agenzia delle Entrate/ISTAT ANNCSU, Ministero della Salute Open Data, GSE/MASE Piattaforma Unica Nazionale punti di ricarica, AGCOM Broadband Map, MIMIT Osservatorio Prezzi Carburanti, Ministero del Lavoro Registro Unico Nazionale Terzo Settore RUNTS, ISTAT Archivio Statistico Imprese Attive ASIA UL, ISTAT Matrice Pendolarismo 2021, ISTAT Basi Territoriali + Variabili Censuarie 2021).",
+    "Returns server metadata, version, and data freshness for each integrated source (ANAC, BDAP-MOP, SIOPE pagamenti e incassi di cassa, Italia Domani PNRR, ISTAT, ISPRA, Protezione Civile (classificazione sismica), MIUR, ACI, MEF Federalismo Fiscale, MEF Patrimonio Immobiliare PA, Agenzia delle Entrate/ISTAT ANNCSU, Ministero della Salute Open Data, GSE/MASE Piattaforma Unica Nazionale punti di ricarica, AGCOM Broadband Map, MIMIT Osservatorio Prezzi Carburanti, Ministero del Lavoro Registro Unico Nazionale Terzo Settore RUNTS, ISTAT Archivio Statistico Imprese Attive ASIA UL, ISTAT Matrice Pendolarismo 2021, ISTAT Basi Territoriali + Variabili Censuarie 2021).",
   inputSchema: {
     type: "object",
     properties: {},
@@ -27,7 +27,7 @@ export const mcpInfo: ToolDefinition = {
     }
     return {
       service: "cruscotto-italia-mcp",
-      version: "0.17.1",
+      version: "0.18.0",
       protocol: "MCP 2024-11-05",
       datasets: 27,
       institutions: 17,
@@ -41,7 +41,20 @@ export const mcpInfo: ToolDefinition = {
         bdap: {
           canonical: "https://bdap-opendata.rgs.mef.gov.it",
           license: "IODL 2.0",
-          datasets: ["BDAP-MOP opere pubbliche", "SIOPE flussi di cassa"],
+          datasets: ["BDAP-MOP opere pubbliche"],
+        },
+        siope: {
+          canonical: "https://www.siope.it",
+          license: "CC-BY 4.0",
+          rights_holder:
+            "MEF - Dipartimento della Ragioneria Generale dello Stato",
+          datasets: [
+            "SIOPE pagamenti di cassa per codice gestionale (uscite)",
+            "SIOPE incassi di cassa per codice gestionale (entrate)",
+            "Saldo di cassa (incassi meno pagamenti; NON e un avanzo di bilancio)",
+          ],
+          note:
+            "Movimenti di CASSA, non di competenza. Fonte primaria: banca dati SIOPE gestita da Banca d'Italia per conto di RGS-MEF. Copertura 7.896 comuni, serie mensile.",
         },
         italia_domani: {
           canonical: "https://italiadomani.gov.it/it/strumenti/dati-e-trasparenza.html",

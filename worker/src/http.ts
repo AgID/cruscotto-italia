@@ -370,7 +370,7 @@ export async function handleHealth(_req: Request, env: Env): Promise<Response> {
     /* same */
   }
 
-  const status = { service: "cruscotto-italia-mcp", version: "0.17.1", r2: r2Ok, kv: kvOk, timestamp: new Date().toISOString() };
+  const status = { service: "cruscotto-italia-mcp", version: "0.18.0", r2: r2Ok, kv: kvOk, timestamp: new Date().toISOString() };
   return new Response(JSON.stringify(status), {
     headers: { "Content-Type": "application/json" },
   });
