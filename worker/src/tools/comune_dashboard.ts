@@ -22,8 +22,8 @@
  *                                   punti geo-ref. Full su anncsu_full/ via
  *                                   endpoint dedicato /data/anncsu_full/)
  *   - censimento/<istat>.json      (ISTAT Basi Territoriali + Variabili
- *                                   censuarie 2021. KPI comune-level + 5
- *                                   distribuzioni. Geometrie full + 119
+ *                                   censuarie 2023. KPI comune-level + 5
+ *                                   distribuzioni. Geometrie full + 127
  *                                   variabili per sezione su endpoint
  *                                   /data/censimento_full/<istat>.geojson)
  *   - sanita_mds/<istat>.json      (Ministero Salute - farmacie e parafarmacie
@@ -142,15 +142,15 @@
  *                                       //             // completo fetch HTTP GET
  *                                       //             // /data/anncsu_full/<istat>.json
  *                                       //   }
- *     "censimento":  { ... } | null    // ISTAT Censimento permanente 2021:
+ *     "censimento":  { ... } | null    // ISTAT Censimento permanente 2023:
  *                                       //   { _source, _license: "CC-BY 3.0 IT",
- *                                       //     _anno_rilevazione: 2021,
+ *                                       //     _anno_rilevazione: 2023,
  *                                       //     _has_full: bool, _has_asc: bool,
  *                                       //     kpi_comune: { n_sezioni, pop_totale,
  *                                       //                   pop_maschi, pop_femmine,
  *                                       //                   famiglie_totali,
  *                                       //                   abitazioni_totali/occupate/vuote,
- *                                       //                   edifici_residenziali,
+ *                                       //                   stranieri_totali,
  *                                       //                   stranieri_totali/ue/extra_ue,
  *                                       //                   occupati_15_64/maschi/femmine,
  *                                       //                   area_kmq },
@@ -163,7 +163,7 @@
  *                                       //       stranieri_eta: {0-29,30-54,55+}
  *                                       //     }
  *                                       //   }
- *                                       //   Per geometrie complete + 119 variabili
+ *                                       //   Per geometrie complete + 127 variabili
  *                                       //   per sezione fetch HTTP GET
  *                                       //   /data/censimento_full/<istat>.geojson
  *     "sanita_mds":  { ... } | null    // Ministero Salute - bundle sanita'

@@ -1,16 +1,16 @@
 /**
  * Tool: censimento_sezione_search
  *
- * Ricerca puntuale o ranking sulle 119 variabili raw del Censimento
- * Permanente 2021 ISTAT (Basi Territoriali + Variabili censuarie) per
+ * Ricerca puntuale o ranking sulle 127 variabili raw del Censimento
+ * Permanente 2023 ISTAT (Basi Territoriali + Variabili censuarie) per
  * singola sezione di censimento del comune.
  *
  * Distinto da comune_dashboard.censimento (KPI aggregati comune-level):
  * questo tool espone il dato grezzo a livello di sezione di censimento,
- * con le 119 vars (P1, P2, ..., ST33, PF1-PF8, A2/A3/A8, E3, IT*).
+ * con le 127 vars (P1, P2, ..., ST33, PF1-PF9, A2/A3/A5/A8, NA1, EM1-EM6, IT*).
  *
  * Due modalita':
- *   - lookup (con sez_id):  ritorna 1 sezione con tutte le 119 vars raw.
+ *   - lookup (con sez_id):  ritorna 1 sezione con tutte le 127 vars raw.
  *   - ranking (con var_name): ordina le sezioni del comune per il valore
  *     di una variabile (o per rapporto var_name/denominator_var se set),
  *     top N risultati.
@@ -51,7 +51,7 @@ interface FeatureProperties {
   tipo_loc?: number;
   loc_id?: number;
   area_mq: number;
-  vars: Record<string, number>;  // 0-119 keys
+  vars: Record<string, number>;  // 0-127 keys
 }
 
 interface Feature {
@@ -147,7 +147,7 @@ function polygonCentroid(geom: Feature["geometry"]): { lat: number; lon: number 
 
 export const censimentoSezioneSearch: ToolDefinition = {
   description:
-    "Ricerca o ranking sulle 119 variabili censuarie raw del Censimento Permanente 2021 ISTAT (Basi Territoriali + Variabili censuarie, CC BY 3.0 IT) per singola sezione di censimento di un comune italiano. Distinto da comune_dashboard.censimento (KPI aggregati comune-level): qui il dato grezzo a livello sub-comunale, una sezione di censimento per record. Due modalita': (1) LOOKUP - passa sez_id (es. 750350001012) per ottenere le 119 vars raw + area + centroide di quella sezione; (2) RANKING - passa var_name (es. 'P1' popolazione, 'ST19' stranieri extra-UE, 'A3' abitazioni vuote, 'PF1' famiglie) per ottenere la top N sezioni ordinate per quel valore. Opzionalmente denominator_var per ranking percentuale (es. var_name='ST19' denominator_var='ST1' = % extra-UE su totale stranieri). Variabili chiave: P1 pop totale, P2/P3 maschi/femmine, P14-P29 fasce eta' 5anni (totale), P30-P45 maschi, P46-P61 femmine, P62-P82 stato civile, P86-P90 titolo di studio 9+ (nessuno/elementare/media/diploma/terziario per sesso), P101-P103 occupati 15-64 (tot/M/F), IT1-IT12 italiani per fascia eta', ST1 stranieri tot, ST16 UE, ST19 Extra-UE, ST3-ST5 stranieri per fascia eta', ST20-ST33 stranieri occupati/UE/extra dettagliati, PF1 famiglie tot, PF3-PF8 famiglie 1-6+ componenti, A2/A3/A8 abitazioni occupate/vuote/totali, E3 edifici residenziali. Le 33% sezioni 'no_vars' (aree non residenziali: parchi, zone industriali, infrastrutture) escluse automaticamente da ranking. Centroide approssimato (media vertici). Aggiornamento decennale (prossimo 2031).",
+    "Ricerca o ranking sulle 127 variabili censuarie raw del Censimento Permanente 2023 ISTAT (Basi Territoriali + Variabili censuarie, CC BY 3.0 IT) per singola sezione di censimento di un comune italiano. Distinto da comune_dashboard.censimento (KPI aggregati comune-level): qui il dato grezzo a livello sub-comunale, una sezione di censimento per record. Due modalita': (1) LOOKUP - passa sez_id (es. 750350001012) per ottenere le 119 vars raw + area + centroide di quella sezione; (2) RANKING - passa var_name (es. 'P1' popolazione, 'ST19' stranieri extra-UE, 'A3' abitazioni vuote, 'PF1' famiglie) per ottenere la top N sezioni ordinate per quel valore. Opzionalmente denominator_var per ranking percentuale (es. var_name='ST19' denominator_var='ST1' = % extra-UE su totale stranieri). Variabili chiave: P1 pop totale, P2/P3 maschi/femmine, P14-P29 fasce eta' 5anni (totale), P30-P45 maschi, P46-P61 femmine, P62-P82 stato civile, P86-P90 titolo di studio 9+ (nessuno/elementare/media/diploma/terziario per sesso), P101-P103 occupati 15-64 (tot/M/F), IT1-IT12 italiani per fascia eta', ST1 stranieri tot, ST16 UE, ST19 Extra-UE, ST3-ST5 stranieri per fascia eta', ST20-ST33 stranieri occupati/UE/extra dettagliati, PF1 famiglie tot, PF3-PF8 famiglie 1-6+ componenti, A2/A3/A8 abitazioni occupate/vuote/totali, E3 edifici residenziali. Le 33% sezioni 'no_vars' (aree non residenziali: parchi, zone industriali, infrastrutture) escluse automaticamente da ranking. Centroide approssimato (media vertici). Aggiornamento decennale (prossimo 2031).",
   inputSchema: {
     type: "object",
     properties: {
@@ -244,7 +244,7 @@ export const censimentoSezioneSearch: ToolDefinition = {
     if (!fc?.features) {
       const result = {
         anagrafica: { istat_code: detail.istat_code, denominazione: detail.denominazione },
-        _source: "ISTAT Basi Territoriali 2021 + Variabili censuarie del Censimento permanente 2021",
+        _source: "ISTAT Basi Territoriali 2021 + Variabili censuarie 2023 del Censimento permanente",
         _note: "Shard censimento_full non disponibile per questo comune.",
         count: 0,
         risultati: [],
@@ -263,7 +263,7 @@ export const censimentoSezioneSearch: ToolDefinition = {
       if (!target) {
         const result = {
           anagrafica: { istat_code: detail.istat_code, denominazione: detail.denominazione },
-          _source: "ISTAT Basi Territoriali 2021 + Variabili censuarie del Censimento permanente 2021",
+          _source: "ISTAT Basi Territoriali 2021 + Variabili censuarie 2023 del Censimento permanente",
           mode: "lookup",
           sez_id: sezId,
           error: "sez_id_not_found",
@@ -275,7 +275,7 @@ export const censimentoSezioneSearch: ToolDefinition = {
       const centroid = polygonCentroid(target.geometry);
       const result = {
         anagrafica: { istat_code: detail.istat_code, denominazione: detail.denominazione },
-        _source: "ISTAT Basi Territoriali 2021 + Variabili censuarie del Censimento permanente 2021",
+        _source: "ISTAT Basi Territoriali 2021 + Variabili censuarie 2023 del Censimento permanente",
         _license: "CC-BY 3.0 IT",
         mode: "lookup",
         sez_id: sezId,
@@ -345,7 +345,7 @@ export const censimentoSezioneSearch: ToolDefinition = {
 
     const result = {
       anagrafica: { istat_code: detail.istat_code, denominazione: detail.denominazione },
-      _source: "ISTAT Basi Territoriali 2021 + Variabili censuarie del Censimento permanente 2021",
+      _source: "ISTAT Basi Territoriali 2021 + Variabili censuarie 2023 del Censimento permanente",
       _license: "CC-BY 3.0 IT",
       mode: "ranking",
       query: {

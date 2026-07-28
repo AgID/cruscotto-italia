@@ -30,7 +30,7 @@
  *   - comune_dashboard: workhorse pesante, vista completa 25 sezioni
  *   - anncsu_civico_search: query puntuali civici ANNCSU
  *   - censimento_sezione_search: ranking/lookup sezioni di censimento
- *     ISTAT 2021 con 119 variabili censuarie raw (sub-comunale)
+ *     ISTAT 2023 con 127 variabili censuarie raw (sub-comunale)
  *
  * Storico: comune_opere_dettaglio (tool BDAP dedicato) deprecato il
  * 18/05/2026: dati gia' inclusi in comune_dashboard.opere, e endpoint
@@ -75,7 +75,7 @@ export const tools = {
   // Specializzato: query puntuali civici ANNCSU (non ridondante con dashboard)
   anncsu_civico_search: anncsuCivicoSearch,
 
-  // Specializzato: ranking/lookup sezioni di censimento ISTAT 2021 con 119
+  // Specializzato: ranking/lookup sezioni di censimento ISTAT 2023 con 127
   // variabili censuarie raw (granularita' sub-comunale, non duplica
   // comune_dashboard.censimento che e' aggregato comune-level)
   censimento_sezione_search: censimentoSezioneSearch,
