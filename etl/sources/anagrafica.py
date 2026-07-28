@@ -51,6 +51,19 @@ ISTAT_COMUNI_CSV = "https://www.istat.it/storage/codici-unita-amministrative/Ele
 
 # IPA: dataset "enti" dal portale CKAN ufficiale
 IPA_CKAN_BASE = "https://indicepa.gov.it/ipa-dati/api/3/action"
+
+# Correzioni residue al comune di appartenenza degli enti IPA. Registro ESPLICITO.
+# Il join primario e per CODICE CATASTALE (vedi build_anagrafica); questo registro
+# copre solo i casi in cui anche il catastale di IPA e errato.
+# Verificato 28/07/2026 sul dump IPA del giorno: un solo caso.
+#   c_b364 Comune di Caines dichiara ISTAT 021073 e catastale H284, che sono
+#   entrambi di Rifiano. Solo il codice_ipa (B364) conserva il valore giusto.
+#   Effetto se non corretto: Rifiano espone il codice fiscale di Caines.
+# Voce auto-sanante: se IPA corregge a monte, diventa un no-op registrato nel log.
+IPA_ISTAT_FIX = {
+    "c_b364": "021014",  # Comune di Caines
+}
+
 IPA_ENTI_DATASET = "enti"  # CKAN package name
 
 USER_AGENT = "cruscotto-italia-etl/0.1 (+https://github.com/piersoft/cruscotto-italia)"
@@ -353,10 +366,13 @@ def build_anagrafica(istat_csv: Path, ipa_csv: Path, output_dir: Path, pop_map: 
             (c for c in cols_ipa if "codice_comune_istat" in c.lower() or "comune_istat" in c.lower()), None
         )
 
+        catastale_ipa_col = "Codice_catastale_comune" if "Codice_catastale_comune" in cols_ipa else next(
+            (c for c in cols_ipa if "catastale" in c.lower()), None
+        )
         log.info("ipa_columns_detected",
                  codice_ipa=codice_ipa_col, cf=cf_ente_col, denom=denom_ente_col,
                  codice_comune=codice_comune_istat_col, categoria=nome_cat_col,
-                 codice_categoria=codice_categoria_col)
+                 codice_categoria=codice_categoria_col, catastale=catastale_ipa_col)
 
         if not codice_ipa_col or not cf_ente_col:
             raise RuntimeError(f"Cannot detect IPA key columns. Found: {cols_ipa}")
@@ -374,6 +390,10 @@ def build_anagrafica(istat_csv: Path, ipa_csv: Path, output_dir: Path, pop_map: 
             f'lpad(CAST("{codice_comune_istat_col}" AS VARCHAR), 6, \'0\')'
             if codice_comune_istat_col else "NULL"
         )
+        catastale_select = (
+            f'upper(trim(CAST("{catastale_ipa_col}" AS VARCHAR)))'
+            if catastale_ipa_col else "NULL"
+        )
 
         con.execute(f"""
             CREATE TABLE ipa_enti AS
@@ -382,12 +402,61 @@ def build_anagrafica(istat_csv: Path, ipa_csv: Path, output_dir: Path, pop_map: 
                 "{cf_ente_col}" AS codice_fiscale_ente,
                 "{denom_ente_col}" AS denominazione_ipa,
                 {codice_comune_select} AS codice_comune_istat,
+                {catastale_select} AS codice_catastale_ipa,
                 {f'"{nome_cat_col}"' if nome_cat_col else "NULL"} AS nome_categoria
             FROM ipa_raw
             {comune_filter}
         """)
         ipa_count = con.execute("SELECT COUNT(*) FROM ipa_enti").fetchone()[0]
         log.info("ipa_enti_filtered", row_count=ipa_count)
+
+        # Il campo Codice_comune_ISTAT di IPA e inaffidabile: per tutta la Sardegna
+        # usa una codifica provinciale non ISTAT (prefissi 112-119, province
+        # soppresse) e per alcuni enti riporta il codice di un altro comune.
+        # Il codice catastale (Belfiore) e invece popolato al 100% e corretto:
+        # sul dump del 28/07/2026 risolvono 8042/8044 record contro istat_comuni,
+        # a fronte di 7510/8044 del campo dichiarato.
+        if catastale_ipa_col:
+            n_corretti = con.execute("""
+                SELECT COUNT(*) FROM ipa_enti e JOIN istat_comuni i
+                  ON e.codice_catastale_ipa = upper(trim(i.codice_catastale))
+                WHERE e.codice_comune_istat IS DISTINCT FROM i.codice_istat
+            """).fetchone()[0]
+            con.execute("""
+                UPDATE ipa_enti SET codice_comune_istat = i.codice_istat
+                FROM istat_comuni i
+                WHERE ipa_enti.codice_catastale_ipa = upper(trim(i.codice_catastale))
+                  AND ipa_enti.codice_comune_istat IS DISTINCT FROM i.codice_istat
+            """)
+            n_orfani = con.execute("""
+                SELECT COUNT(*) FROM ipa_enti e WHERE e.codice_catastale_ipa IS NULL
+                   OR NOT EXISTS (SELECT 1 FROM istat_comuni i
+                        WHERE upper(trim(i.codice_catastale)) = e.codice_catastale_ipa)
+            """).fetchone()[0]
+            log.info("ipa_istat_da_catastale",
+                     corretti=n_corretti, senza_catastale_valido=n_orfani)
+        else:
+            log.warning("ipa_catastale_col_assente",
+                        msg="fallback su Codice_comune_ISTAT: atteso disallineamento in Sardegna")
+
+        # Applica il registro IPA_ISTAT_FIX prima di persistere ipa_enti.
+        fix_applied, fix_skipped = [], []
+        for cip, istat_ok in IPA_ISTAT_FIX.items():
+            cur = con.execute(
+                "SELECT codice_comune_istat FROM ipa_enti WHERE codice_ipa = ?", [cip]
+            ).fetchone()
+            if cur is None:
+                fix_skipped.append([cip, "codice_ipa assente in IPA"])
+                continue
+            if cur[0] == istat_ok:
+                fix_skipped.append([cip, "gia corretto alla fonte"])
+                continue
+            con.execute(
+                "UPDATE ipa_enti SET codice_comune_istat = ? WHERE codice_ipa = ?",
+                [istat_ok, cip],
+            )
+            fix_applied.append([cip, cur[0], istat_ok])
+        log.info("ipa_istat_fix", applied=fix_applied, skipped=fix_skipped)
 
         ipa_pq = lookup_dir / "ipa_enti.parquet"
         con.execute(f"COPY ipa_enti TO '{ipa_pq}' (FORMAT PARQUET, COMPRESSION ZSTD)")
@@ -445,16 +514,28 @@ def build_anagrafica(istat_csv: Path, ipa_csv: Path, output_dir: Path, pop_map: 
         con.execute("""
             CREATE TABLE anagrafica_dedup AS
             SELECT * FROM (
-                SELECT *,
+                SELECT a.*,
                     ROW_NUMBER() OVER (
-                        PARTITION BY codice_istat
+                        PARTITION BY a.codice_istat
                         ORDER BY
-                            CASE WHEN codice_ipa LIKE 'c\\_%' ESCAPE '\\' THEN 0
-                                 WHEN codice_ipa IS NOT NULL THEN 1
+                            CASE WHEN starts_with(a.codice_ipa, 'c_') THEN 0
+                                 WHEN a.codice_ipa IS NOT NULL THEN 1
                                  ELSE 2 END,
-                            codice_ipa
+                            CASE
+                                WHEN ipa.denominazione_ipa IS NULL THEN 1
+                                WHEN regexp_replace(upper(a.denominazione), '[^A-Z]', '', 'g')
+                                     LIKE regexp_replace(regexp_replace(upper(ipa.denominazione_ipa),
+                                          '[^A-Z]', '', 'g'), '^COMUNEDI', '') || '%'
+                                THEN 0
+                                WHEN regexp_replace(regexp_replace(upper(ipa.denominazione_ipa),
+                                          '[^A-Z]', '', 'g'), '^COMUNEDI', '')
+                                     LIKE regexp_replace(upper(a.denominazione), '[^A-Z]', '', 'g') || '%'
+                                THEN 0
+                                ELSE 1 END,
+                            a.codice_ipa
                     ) AS rn
-                FROM anagrafica_unificata
+                FROM anagrafica_unificata a
+                LEFT JOIN ipa_enti ipa ON a.codice_ipa = ipa.codice_ipa
             )
             WHERE rn = 1
         """)
@@ -485,6 +566,14 @@ def build_anagrafica(istat_csv: Path, ipa_csv: Path, output_dir: Path, pop_map: 
             "row_count": len(index_rows),
         })
         log.info("comuni_index_built", path=str(index_path), rows=len(index_rows), bytes=index_path.stat().st_size)
+        # Guardia: un comune senza codice fiscale e irraggiungibile da qualsiasi
+        # join per CF (SIOPE, BDAP-MOP, ANAC, immobili PA). Non alza eccezioni
+        # perche i file sono gia stati scritti: segnala e riporta nelle stats.
+        senza_cf = [r[0] for r in index_rows if not r[5]]
+        n_senza_cf = len(senza_cf)
+        if senza_cf:
+            log.warning("comuni_senza_cf", n=n_senza_cf, istat=senza_cf[:20])
+
 
         # 2. SINGLE bundle file with all comuni details — much faster R2 upload
         # than 7896 small files. Worker downloads once and serves from edge cache.
@@ -531,6 +620,7 @@ def build_anagrafica(istat_csv: Path, ipa_csv: Path, output_dir: Path, pop_map: 
     return {
         "files": files,
         "stats": {
+            "comuni_senza_cf": n_senza_cf,
             "istat_count": istat_count,
             "ipa_count": ipa_count,
             "unified_count": unif_count,

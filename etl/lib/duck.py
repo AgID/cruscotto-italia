@@ -1,7 +1,7 @@
 """DuckDB helper for ETL transformations.
 
-DuckDB is the workhorse: it reads CSV/JSON/Parquet directly from disk
-or HTTP, applies SQL transformations, and writes Parquet output.
+DuckDB is the workhorse: it reads CSV/JSON/Parquet directly from disk,
+applies SQL transformations, and writes Parquet output.
 
 Usage:
     with duck_session() as con:
@@ -25,7 +25,16 @@ def duck_session(memory_limit: str = "2GB") -> Iterator[duckdb.DuckDBPyConnectio
     """
     con = duckdb.connect(":memory:")
     con.execute(f"SET memory_limit='{memory_limit}'")
-    con.execute("INSTALL httpfs; LOAD httpfs;")
+    # httpfs serve solo a leggere da HTTP/S3. L'architettura e local-first: ogni
+    # ETL legge da filesystem, nessuna query usa read_csv_auto('http...') o s3://.
+    # La VM AgID non raggiunge extensions.duckdb.org (stesso filtro egress di
+    # lod.aci.it), quindi l'INSTALL incondizionato faceva fallire l'intero ETL
+    # per un'estensione inutilizzata. Best-effort: se c'e si carica, altrimenti
+    # si prosegue e la mancanza esplode solo su una query che la usi davvero.
+    try:
+        con.execute("LOAD httpfs;")
+    except duckdb.Error:
+        pass
     try:
         yield con
     finally:
