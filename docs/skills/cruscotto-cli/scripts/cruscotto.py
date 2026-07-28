@@ -377,7 +377,7 @@ def cmd_full_censimento(a, istat):
             if a.den not in ok and not a.force_den:
                 sug = ("Denominatori leciti per " + a.var + ": " + ", ".join(ok) + "."
                        ) if ok else ("Per " + a.var + " non esiste un denominatore "
-                                     "lecito fra le 119 variabili censuarie.")
+                                     "lecito fra le 127 variabili censuarie.")
                 _err("rapporto non comparabile: " + a.var + " non e' un sottoinsieme di "
                      + a.den + ". " + sug
                      + " Usa --force-den solo se la comparabilita' e' verificata a parte.")
@@ -459,7 +459,7 @@ def main():
                    help="forza un rapporto fuori registro (sconsigliato)")
     x.set_defaults(fn=cmd_full)
 
-    x = s.add_parser("vars", help="dizionario delle 119 variabili censuarie")
+    x = s.add_parser("vars", help="dizionario delle 127 variabili censuarie")
     x.add_argument("cerca", nargs="?"); x.set_defaults(fn=cmd_vars)
 
     a = p.parse_args()

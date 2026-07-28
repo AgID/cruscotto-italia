@@ -1,7 +1,7 @@
 ---
 name: cruscotto-cli
-version: 0.1.3
-description: Interroga via CLI i dati aperti di Cruscotto Italia (AgID) per tutti i comuni italiani, leggendo direttamente gli shard JSON statici senza passare dal server MCP. Usa questa skill quando servono dati ufficiali su un comune italiano - popolazione, demografia, censimento 2021, redditi, veicoli, scuole, sanita', opere pubbliche, cassa SIOPE (pagamenti e incassi), appalti, PNRR, turismo, qualita' dell'aria, morfologia, beni culturali, civici e toponomastica, carburanti, banda larga, terzo settore, immobili pubblici, pendolarismo, meteo - oppure quando si citano fonti come ISTAT, BDAP, SIOPE, ANAC, ISPRA, MEF, MIUR, ACI, ANNCSU, AGCOM, MIMIT, RUNTS, MiC, Ministero della Salute. Copre 7896 comuni, 31 sezioni tematiche piu' tre archivi estesi (beni culturali, civici, censimento per sezione). Preferibile all'MCP quando serve una query mirata su pochi campi, un confronto tra comuni o un ranking, perche' filtra i dati prima di caricarli in contesto ed evita di leggere shard da centinaia di KB.
+version: 0.1.4
+description: Interroga via CLI i dati aperti di Cruscotto Italia (AgID) per tutti i comuni italiani, leggendo direttamente gli shard JSON statici senza passare dal server MCP. Usa questa skill quando servono dati ufficiali su un comune italiano - popolazione, demografia, censimento 2023, redditi, veicoli, scuole, sanita', opere pubbliche, cassa SIOPE (pagamenti e incassi), appalti, PNRR, turismo, qualita' dell'aria, morfologia, beni culturali, civici e toponomastica, carburanti, banda larga, terzo settore, immobili pubblici, pendolarismo, meteo - oppure quando si citano fonti come ISTAT, BDAP, SIOPE, ANAC, ISPRA, MEF, MIUR, ACI, ANNCSU, AGCOM, MIMIT, RUNTS, MiC, Ministero della Salute. Copre 7896 comuni, 31 sezioni tematiche piu' tre archivi estesi (beni culturali, civici, censimento per sezione). Preferibile all'MCP quando serve una query mirata su pochi campi, un confronto tra comuni o un ranking, perche' filtra i dati prima di caricarli in contesto ed evita di leggere shard da centinaia di KB.
 license: CC-BY-4.0
 ---
 
@@ -58,7 +58,7 @@ python3 scripts/cruscotto.py full 077014 beni --find "archivio" --desc
 python3 scripts/cruscotto.py full 077014 anncsu --kpi
 python3 scripts/cruscotto.py full 077014 anncsu --via "via lucana" --civico 53
 
-# censimento 2021 per sezione (119 variabili)
+# censimento 2023 per sezione (127 variabili)
 python3 scripts/cruscotto.py full 077014 censimento --kpi
 python3 scripts/cruscotto.py full 077014 censimento --sez 388
 python3 scripts/cruscotto.py full 077014 censimento --var ST19 --den ST1 --min-den 30 --top 10
@@ -71,7 +71,7 @@ python3 scripts/cruscotto.py vars stranieri         # cerca nel dizionario delle
 - **Archivi `full`**: un filtro e' sempre obbligatorio (`--kpi` e' il piu' economico). Non esiste il dump completo.
 - **Output troncato**: superati i 20 KB l'output viene tagliato con avviso. Non e' un errore: restringi la query.
 - **Ranking percentuali** (`--var` con `--den`): senza `--min-den` la classifica e' dominata da sezioni con denominatore minimo (es. 2 stranieri su 2 = 100%). Usa `--min-den 30` sui comuni medio-grandi, valori piu' bassi sui comuni piccoli. Lo script segnala quante sezioni ha scartato.
-- **Denominatori validati**: lo script accetta solo rapporti fra variabili effettivamente comparabili, secondo un registro esplicito verificato sui dati. La base corretta non e' sempre `P1`: il titolo di studio (`P86`-`P90`) si rapporta a `P83` (popolazione 9 anni e piu'), non alla popolazione totale. Un rapporto fuori registro viene rifiutato con l'indicazione del denominatore corretto. Alcune variabili (`P101`-`P103` occupati, `IT1`-`IT9` italiani, `E3` edifici) non hanno alcun denominatore lecito fra le 119 variabili. `--force-den` aggira il controllo ma marca l'output con un avviso: usalo solo se la comparabilita' e' stata verificata altrove.
+- **Denominatori validati**: lo script accetta solo rapporti fra variabili effettivamente comparabili, secondo un registro esplicito verificato sui dati. La base corretta non e' sempre `P1`: il titolo di studio (`P86`-`P90`) si rapporta a `P83` (popolazione 9 anni e piu'), non alla popolazione totale. Un rapporto fuori registro viene rifiutato con l'indicazione del denominatore corretto. Alcune variabili (`P101`-`P103` occupati, `IT1`-`IT9` italiani, `NA1` automobili) non hanno alcun denominatore lecito fra le 127 variabili. `--force-den` aggira il controllo ma marca l'output con un avviso: usalo solo se la comparabilita' e' stata verificata altrove.
 - **Variabili censuarie**: i codici ISTAT non sono parlanti. Usa `vars` per cercare per descrizione. Attenzione: la terminologia e' quella ISTAT (es. "terziario", non "laureati").
 - **Sezioni senza dati**: circa un terzo delle sezioni di censimento e' non residenziale (parchi, aree industriali) e viene escluso automaticamente dai ranking.
 
@@ -101,4 +101,4 @@ python3 scripts/cruscotto.py vars stranieri         # cerca nel dizionario delle
 ## Riferimenti
 
 - `references/SEZIONI.md` - cosa contiene ogni sezione, con la fonte istituzionale
-- `references/censimento_vars.json` - le 119 variabili censuarie con la descrizione
+- `references/censimento_vars.json` - le 127 variabili censuarie con la descrizione

@@ -21,7 +21,7 @@ I pesi indicati sono quelli di Matera (077014, 59k abitanti): scalano con la dim
 | `agcom_bbmap` | AGCOM | copertura banda larga e FTTH | 0.9 KB |
 | `profilo` | ISTAT | profilo sintetico del comune | 1.2 KB |
 | `pendolarismo` | ISTAT (Censimento 2021) | flussi casa-lavoro e casa-studio | 1.2 KB |
-| `censimento` | ISTAT (Basi Territoriali 2021) | KPI censuari aggregati a livello comunale | 1.3 KB |
+| `censimento` | ISTAT (Variabili censuarie 2023 su Basi Territoriali 2021) | KPI censuari aggregati a livello comunale | 1.3 KB |
 | `veicoli` | ACI | parco veicolare, classi Euro, alimentazioni | 1.5 KB |
 | `turismo` | ISTAT | capacita' ricettiva e movimento turistico | 1.5 KB |
 | `territorio` | ISPRA + DPC | consumo di suolo, dissesto idrogeologico, rifiuti, classificazione sismica | 4.1 KB |
@@ -67,7 +67,7 @@ Accessibili solo con il comando `full`, sempre con filtro obbligatorio.
 |---|---|---|---|
 | `beni` | `beni_culturali_full/<istat>.json` | 215 luoghi per Matera: denominazione, categoria, coordinate, descrizione | 184 KB |
 | `anncsu` | `anncsu_full/<istat>.json` | 17.720 civici per Matera: odonimo, civico, coordinate, metodo di georeferenziazione | 1.8 MB |
-| `censimento` | `censimento_full/<istat>.geojson` | 623 sezioni di censimento per Matera, 119 variabili ciascuna | 1.3 MB |
+| `censimento` | `censimento_full/<istat>.geojson` | 623 sezioni di censimento per Matera, 127 variabili ciascuna | 1.3 MB |
 
 Non esposto: `catasto_full` (geometrie catastali, 7.2 MB compressi) - il point-in-polygon resta lato client per vincolo CERT-AgID.
 
@@ -107,10 +107,10 @@ Il comando `full <comune> censimento --var X --den Y` accetta solo le coppie qui
 
 ## Senza denominatore lecito
 
-Queste variabili non hanno un totale di riferimento fra le 119 disponibili:
+Queste variabili non hanno un totale di riferimento fra le 127 disponibili:
 
 - `P101`-`P103` (occupati 15-64): la base sarebbe la popolazione 15-64, che non esiste come variabile singola (andrebbe ricostruita come `IT2 + ST23`)
 - `IT1`-`IT9` (italiani per fascia d'eta'): non esiste una variabile "italiani totali" (sarebbe `P1 - ST1`)
-- `E3` (edifici residenziali): non esiste un totale edifici
+- `NA1` (automobili di proprieta'): non esiste un totale veicoli fra le variabili censuarie
 
 Per queste il comando rifiuta il rapporto. Il flag `--force-den` lo consente comunque, ma l'output riporta un avviso esplicito di comparabilita' non garantita.
