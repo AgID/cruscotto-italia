@@ -663,6 +663,42 @@ def main() -> int:
 
     try:
         anag = fetch_zip(sess, ANAGRAFICHE_ZIP, cache_dir, args.no_cache)
+
+        # Uscita anticipata se NULLA e cambiato sulla fonte. Senza questa, ogni
+        # run riparsa ~13 M righe e riscrive 7.896 shard (848 MB) anche quando i
+        # file sono identici a quelli gia elaborati. E' cio' che rende
+        # sostenibile una cadenza piu fitta di quella mensile.
+        # Come agcom_bbmap in caso di sha_unchanged, lo skip NON tocca il
+        # manifest: last_run resta quello dell'ultimo aggiornamento REALE del
+        # dato. Il freshness check distingue "non e' girato" (log del cron) da
+        # "il dato non cambia" (manifest) proprio contando su questa semantica.
+        _firma = {}
+        for _a in anni:
+            for _pref in ("SIOPE_USCITE", "SIOPE_ENTRATE"):
+                if _pref == "SIOPE_ENTRATE" and args.no_entrate:
+                    continue
+                _mp = cache_dir / f"{_pref}.{_a}.zip.meta.json"
+                if _mp.exists():
+                    try:
+                        _firma[f"{_pref}.{_a}"] = json.loads(
+                            _mp.read_text(encoding="utf-8")).get("last_modified")
+                    except (OSError, json.JSONDecodeError):
+                        pass
+        _statofile = cache_dir / "ultimo_elaborato.json"
+        if not (args.no_cache or args.dry_run) and _firma and _statofile.exists():
+            try:
+                _prec = json.loads(_statofile.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                _prec = {}
+            _remoto = {}
+            for _k in _firma:
+                _remoto[_k] = remote_last_modified(sess, f"{BASE_URL}/{_k}.zip")
+            _shard_ok = args.outdir.is_dir() and len(list(args.outdir.glob("*.json"))) > 7000
+            if _shard_ok and _remoto == _prec.get("firma") and all(_remoto.values()):
+                log.info("nessun_aggiornamento", firma=_remoto,
+                         elaborato_il=_prec.get("ts"),
+                         msg="fonte invariata e shard presenti: niente da fare")
+                return 0
         mappa_enti, per_comune = costruisci_mappa_enti(anag)
         if not mappa_enti:
             raise RuntimeError("anagrafica enti vuota")
@@ -731,6 +767,15 @@ def main() -> int:
 
         res = scrivi_shards(shards, args.outdir, anni)
         log.info("shard_scritti", **res)
+        try:
+            _statofile = cache_dir / "ultimo_elaborato.json"
+            _statofile.write_text(json.dumps(
+                {"ts": datetime.now(timezone.utc).isoformat(),
+                 "anni": anni,
+                 "firma": {k: v for k, v in _firma.items()}},
+                indent=2), encoding="utf-8")
+        except OSError as e:
+            log.warning("stato_non_scritto", error=str(e))
         files_manifest.append({"key": "data/siope/", "row_count": res["scritti"]})
 
         # Il manifest descrive la PRODUZIONE: un run su --outdir diverso e un
