@@ -88,13 +88,60 @@ def save(manifest: dict[str, Any]) -> None:
              sources=len(manifest.get("sources", {})))
 
 
+def _diagnostics_path() -> Path:
+    """Percorso del file di diagnostica, NON servito da nginx.
+
+    /data/ e' una whitelist per-sottocartella: _diagnostics/ non e' inclusa,
+    quindi risponde 404 dall'esterno (verificato). E' il posto giusto per il
+    testo integrale degli errori.
+    """
+    return local_lookup.get_data_dir() / "_diagnostics" / "etl_errors.json"
+
+
+def _sanitize_status(status: str) -> str:
+    """Riduce lo status a un valore pubblicabile.
+
+    manifest.json e' servito PUBBLICAMENTE su /data/manifest.json (lo legge il
+    Worker MCP, che a sua volta lo espone dentro mcp_info). Ci finiva il testo
+    integrale delle eccezioni: il 28/07/2026 esponeva URL interni e versione di
+    DuckDB di un ETL fallito. E' informazione di ricognizione, oltre che un
+    problema di immagine.
+
+    Fuori: solo "ok" oppure "degraded". Il dettaglio va in _diagnostics/.
+    """
+    s = (status or "").strip()
+    return "ok" if s == "ok" or s.startswith("ok") else "degraded"
+
+
+def _write_diagnostics(source: str, status: str) -> None:
+    """Registra il dettaglio dell'errore in chiaro, ma non pubblicamente."""
+    f = _diagnostics_path()
+    try:
+        f.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            d = json.loads(f.read_text(encoding="utf-8"))
+        except Exception:
+            d = {}
+        ts = datetime.now(timezone.utc).isoformat()
+        if _sanitize_status(status) == "ok":
+            d.pop(source, None)          # rientrato: si toglie la voce
+        else:
+            d[source] = {"ts": ts, "status": status}
+        tmp = f.with_suffix(f.suffix + ".tmp")
+        tmp.write_text(json.dumps(d, indent=2, ensure_ascii=False), encoding="utf-8")
+        tmp.replace(f)
+    except OSError as e:
+        log.warning("diagnostics_write_failed", source=source, error=str(e))
+
+
 def update_source(source: str, files: list[dict], status: str = "ok") -> None:
     """Aggiorna l'entry di una singola sorgente nel manifest."""
     m = load()
     m.setdefault("sources", {})
     m["sources"][source] = {
         "last_run": datetime.now(timezone.utc).isoformat(),
-        "status": status,
+        "status": _sanitize_status(status),
         "files": files,
     }
+    _write_diagnostics(source, status)
     save(m)
