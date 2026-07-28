@@ -669,23 +669,51 @@ def main() -> int:
 
         dati: dict[int, dict] = {}
         descr: dict[int, dict] = {}
+        anni_saltati: list[int] = []
         for anno in anni:
             descr[anno] = {
                 "u": carica_descrizioni(anag, "ANAG_CODGEST_USCITE", anno),
                 "e": carica_descrizioni(anag, "ANAG_CODGEST_ENTRATE", anno),
             }
-            zu = fetch_zip(sess, f"SIOPE_USCITE.{anno}.zip", cache_dir, args.no_cache)
+            try:
+                zu = fetch_zip(sess, f"SIOPE_USCITE.{anno}.zip", cache_dir, args.no_cache)
+            except requests.HTTPError as e:
+                # A gennaio il file dell'anno nuovo non esiste ancora (404): il
+                # cron passa sempre anno-1 e anno corrente. Senza questa guardia
+                # l'intero ETL moriva e si perdeva anche l'aggiornamento
+                # dell'anno precedente, che invece c'e'.
+                # Si salta solo il 404; ogni altro errore HTTP resta un guasto.
+                if getattr(e.response, "status_code", None) == 404:
+                    log.warning("anno_non_ancora_pubblicato", anno=anno,
+                                msg="file assente sulla fonte, anno saltato")
+                    anni_saltati.append(anno)
+                    continue
+                raise
             d = {"uscite": aggrega_anno(zu, f"USCITE_{anno}", anno, mappa_enti, "uscite")}
             files_manifest.append({"key": f"siope.it/SIOPE_USCITE.{anno}.zip",
                                    "size": zu.stat().st_size})
             if not args.no_entrate:
-                ze = fetch_zip(sess, f"SIOPE_ENTRATE.{anno}.zip", cache_dir, args.no_cache)
-                d["entrate"] = aggrega_anno(ze, f"ENTRATE_{anno}", anno,
-                                            mappa_enti, "entrate")
-                files_manifest.append({"key": f"siope.it/SIOPE_ENTRATE.{anno}.zip",
-                                       "size": ze.stat().st_size})
+                try:
+                    ze = fetch_zip(sess, f"SIOPE_ENTRATE.{anno}.zip", cache_dir, args.no_cache)
+                    d["entrate"] = aggrega_anno(ze, f"ENTRATE_{anno}", anno,
+                                                mappa_enti, "entrate")
+                    files_manifest.append({"key": f"siope.it/SIOPE_ENTRATE.{anno}.zip",
+                                           "size": ze.stat().st_size})
+                except requests.HTTPError as e:
+                    # Uscite presenti ma entrate no: si prosegue con le sole
+                    # uscite invece di perdere tutto l'anno.
+                    if getattr(e.response, "status_code", None) == 404:
+                        log.warning("entrate_non_disponibili", anno=anno)
+                    else:
+                        raise
             dati[anno] = d
 
+        anni = [a for a in anni if a in dati]
+        if not anni:
+            raise RuntimeError("nessun anno disponibile sulla fonte: "
+                               f"saltati {anni_saltati}")
+        if anni_saltati:
+            log.warning("anni_saltati", anni=anni_saltati, elaborati=anni)
         shards = costruisci_shards(anni, dati, mappa_enti, per_comune, descr)
         log.info("shard_costruiti", comuni=len(shards))
 
@@ -707,7 +735,7 @@ def main() -> int:
 
         # Il manifest descrive la PRODUZIONE: un run su --outdir diverso e un
         # test e non deve toccarlo (altrimenti i test non sono isolabili).
-        if args.outdir.resolve() == DEFAULT_OUTDIR.resolve():
+        if args.outdir.resolve() == DEFAULT_OUTDIR.resolve() and not args.dry_run:
             try:
                 manifest.update_source("siope", files_manifest, status="ok")
             except Exception as e:
@@ -720,7 +748,10 @@ def main() -> int:
 
     except Exception as e:
         log.exception("etl_failed", tipo=type(e).__name__, error=str(e))
-        if args.outdir.resolve() == DEFAULT_OUTDIR.resolve():
+        # Anche in errore: un --dry-run non deve marcare la produzione come
+        # degradata. Il 28/07/2026 una prova con un anno inesistente ha
+        # sovrascritto lo status di una fonte sana e azzerato la lista file.
+        if args.outdir.resolve() == DEFAULT_OUTDIR.resolve() and not args.dry_run:
             try:
                 manifest.update_source("siope", [],
                                        status=f"failed: {type(e).__name__}: {e}")
