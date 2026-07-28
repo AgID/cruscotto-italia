@@ -535,12 +535,40 @@ def write_local(shards: dict[str, dict], outdir: Path) -> int:
     """
     outdir.mkdir(parents=True, exist_ok=True)
     n = 0
+    preservati = 0
     for istat, data in shards.items():
+        path = outdir / f"{istat}.json"
+        # Fail-safe: se un anno non e' stato elaborato in questo giro ma esiste
+        # nello shard su disco, va conservato. Senza questo, saltare un anno per
+        # un errore di rete lo CANCELLA dal dato pubblicato: il rimedio sarebbe
+        # peggiore del guasto.
+        if path.exists() and isinstance(data.get("anni"), dict):
+            try:
+                vecchio = json.loads(path.read_text(encoding="utf-8"))
+                for a, blocco in (vecchio.get("anni") or {}).items():
+                    if a not in data["anni"]:
+                        data["anni"][a] = blocco
+                        preservati += 1
+                data["anni"] = {k: data["anni"][k] for k in sorted(data["anni"])}
+                data["anni_disponibili"] = sorted(int(a) for a in data["anni"])
+                # Il trend va ricostruito sugli anni EFFETTIVI: preservare solo
+                # "anni" lascerebbe lo shard con 5 anni di dati e 4 nel grafico.
+                data["trend"] = [
+                    {"anno": int(a),
+                     "reddito_medio": b["reddito_complessivo"]["medio"],
+                     "contribuenti": b["contribuenti"],
+                     "imposta_media": b["imposta_netta"]["medio"],
+                     "add_comunale_media": b["addizionale_comunale"]["medio"]}
+                    for a, b in sorted(data["anni"].items())
+                ]
+            except (OSError, json.JSONDecodeError, ValueError, KeyError, TypeError):
+                pass
         body = json.dumps(data, ensure_ascii=False, separators=(",", ":"))
-        with open(outdir / f"{istat}.json", "w", encoding="utf-8") as f:
+        with open(path, "w", encoding="utf-8") as f:
             f.write(body)
         n += 1
-    log.info("redditi_local_done: %d shard in %s", n, str(outdir))
+    log.info("redditi_local_done: %d shard in %s (anni preservati: %d)",
+             n, str(outdir), preservati)
     return n
 
 
@@ -563,9 +591,19 @@ def run(
     log.info("=" * 60)
 
     years_data: dict[int, dict[str, dict]] = {}
+    anni_falliti: list[int] = []
     for yr in years:
-        zip_bytes = download_year_zip(yr, force=force)
-        parsed = parse_year_csv(zip_bytes, yr)
+        # download_year_zip fa raise_for_status(): senza questa guardia il
+        # fallimento di UN anno (file MEF spostato, errore transitorio, cache
+        # miss su VM nuova) faceva morire l'intero ETL e si perdevano tutti e
+        # cinque gli anni. Stessa correzione applicata a siope.py il 28/07/2026.
+        try:
+            zip_bytes = download_year_zip(yr, force=force)
+            parsed = parse_year_csv(zip_bytes, yr)
+        except Exception as e:
+            log.warning("anno %d SALTATO: %s: %s", yr, type(e).__name__, e)
+            anni_falliti.append(yr)
+            continue
         if len(parsed) < EXPECTED_COMUNI - 100:
             log.warning(
                 "anno %d: parsati solo %d comuni (atteso ~%d)",
@@ -574,6 +612,12 @@ def run(
                 EXPECTED_COMUNI,
             )
         years_data[yr] = parsed
+
+    if not years_data:
+        raise RuntimeError(f"nessun anno scaricabile (falliti: {anni_falliti})")
+    if anni_falliti:
+        log.warning("anni falliti: %s | elaborati: %s",
+                    anni_falliti, sorted(years_data.keys()))
 
     log.info("Costruisco shards multi-anno...")
     shards = build_shards(years_data)
