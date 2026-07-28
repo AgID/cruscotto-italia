@@ -1,90 +1,36 @@
-"""ETL SIOPE Spese Comunali - bulk download da BDAP CKAN, multi-anno.
+#!/usr/bin/env python3
+"""ETL SIOPE — fonte primaria siope.it (RGS-MEF, banca dati gestita da Banca d'Italia).
 
-Sostituisce la query OData live del worker comune_spese.ts con shard
-pre-calcolati siope/<istat>.json. Risolve due problemi:
-  1) BDAP OData live e' lento e instabile (down 2026-05-08)
-  2) Frontend fa N chiamate MCP, una per comune visitato
+Sostituisce l'ingestione via BDAP (v0.2.0). Motivi della migrazione:
+  - BDAP genera i dump on-demand: cap ~400 s lato server, 503 ricorrenti,
+    resource_id hardcoded per regione+anno, nessuna API di query.
+  - BDAP aveva il 2025 troncato a marzo per 1.717 comuni (Lombardia + FVG)
+    e assente per 84 comuni di Trento. Su siope.it i 12 mesi ci sono tutti.
+  - siope.it espone Last-Modified e Accept-Ranges: la cache e invalidabile
+    correttamente (il bug della cache senza TTL aveva congelato la produzione).
 
-Strategia:
-  1) Per ognuna delle 20 regioni italiane e per ogni anno richiesto, scarica
-     il CSV bulk pubblicato su dati.gov.it (CKAN), risorsa
-     'spd_rnd_spe_sio_reg<XX>_01_<anno>'.
-  2) Filtra solo righe Codice Tipologia Ente BDAP == 'CO' (comuni).
-  3) Cache su R2: raw/siope/reg<XX>_<anno>_comuni.csv (CSV gia' filtrato,
-     ~10-20% del raw originale). Riusato finche' il dataset upstream non
-     viene aggiornato.
-  4) Aggrega per (cod_istat_provincia + cod_istat_comune) e per codice
-     gestionale, replicando la logica di worker/src/tools/comune_spese.ts:
-     ordina voci per importo_cumulato decrescente, conserva mensili.
-  5) Output: siope/<istat>.json per ognuno dei ~7896 comuni, con un blocco
-     per_anno che racchiude tutti gli anni richiesti.
+Formato fonte:
+  SIOPE_USCITE.<anno>.zip / SIOPE_ENTRATE.<anno>.zip -> 1 CSV nazionale,
+  senza header, separatore ',', 5 campi:
+      "codice_ente","anno","mese","codice_gestionale","importo"
+  Importi in CENTESIMI e MENSILI PURI (non cumulati): il totale anno e la
+  somma dei mesi, non l'ultimo valore.
 
-Input upstream: BDAP CKAN bulk CSV (CC-BY 4.0, RGS-MEF).
+  SIOPE_ANAGRAFICHE.zip -> ANAG_ENTI_SIOPE (codice_ente -> comune, CF,
+  popolazione) + ANAG_CODGEST_USCITE/ENTRATE (descrizioni per comparto).
 
-Output schema (v0.2.0, multi-anno):
-{
-  "_etl_version": "0.2.0",
-  "_source": "BDAP CKAN bulk - SIOPE Movimenti cumulati mensili di Spesa",
-  "_generated_at": "ISO-8601",
-  "anni_disponibili": [2025, 2026],
-  "anno_default": 2025,
-  "per_anno": {
-    "2025": {
-      "_resource_id": "<uuid>",
-      "anno": 2025,
-      "parziale": false,
-      "ente_siope": "COMUNE DI LECCE",
-      "popolazione": 84543.0,
-      "mesi_disponibili": ["2025/01", ..., "2025/12"],
-      "ultimo_mese": "2025/12",
-      "n_voci": 87,
-      "totale_anno": 1234567.89,
-      "voci": [
-        {
-          "codice_gestionale": "U1010101002",
-          "desc_gestionale": "Voci stipendiali...",
-          "codice_titolo": "U1000000000",
-          "desc_titolo": "Spese correnti",
-          "importo_cumulato": 1234.56,
-          "ultimo_mese": "2025/12",
-          "mensili": {"2025/01": 100.0, ..., "2025/12": 1234.56}
-        }
-      ]
-    },
-    "2026": {
-      "_resource_id": "<uuid>",
-      "anno": 2026,
-      "parziale": true,
-      "ente_siope": "COMUNE DI LECCE",
-      "popolazione": 84543.0,
-      "mesi_disponibili": ["2026/01", ..., "2026/04"],
-      "ultimo_mese": "2026/04",
-      "n_voci": 65,
-      "totale_anno": 410000.00,
-      "voci": [...]
-    }
-  }
-}
+Risoluzione del comune: il join primario e per CODICE FISCALE contro
+lookup/comuni-index.json. Il campo prov+com dichiarato da SIOPE usa una
+codifica provinciale non ISTAT per tutta la Sardegna (prefissi 112-119,
+province soppresse) ed e quindi inaffidabile come chiave primaria: usarlo
+produceva 377 shard con nomi ISTAT inesistenti.
 
-Note: ogni shard ha "anno_default" = anno chiuso piu' recente disponibile;
-se nessun anno chiuso e' presente, prende l'anno parziale piu' recente.
+Compatibilita shard: la chiave `voci` resta le USCITE con `mensili` CUMULATI,
+identica alla v0.2.0, per non rompere frontend e chatbot. Le ENTRATE sono
+additive sotto `entrate`, con `saldo_cassa` = incassi - pagamenti.
 
-Usage:
-  python -m etl.sources.siope                                # tutti gli anni supportati
-  python -m etl.sources.siope --regioni=06                   # solo FVG
-  python -m etl.sources.siope --no-cache                     # forza re-download
-  python -m etl.sources.siope --anni=2026                    # solo 2026
-  python -m etl.sources.siope --anni=2025,2026               # entrambi
-
-Cache:
-  - Locale: /tmp/cruscotto-siope-cache/reg<XX>_<anno>_comuni.csv
-    (CSV pre-filtrato CO, per anno). Override via --cache-dir.
-
-Note:
-  - BDAP server richiede Accept-Encoding gzip + Referer header per servire i CSV
-    a velocita' decente (altrimenti hangs in download).
-  - CSV encoding: cp1252 (NON utf-8). Separatore ';', quote '"'.
-  - L'ultima colonna del CSV e' vuota (trailing ';').
+Licenza dato: CC BY 4.0 (stesso titolare e stesso regime di BDAP; accesso
+libero per art. 8 c.3 DL 66/2014 e DM MEF 47989/2014).
 """
 from __future__ import annotations
 
@@ -92,9 +38,10 @@ import argparse
 import csv
 import io
 import json
+import os
+import re
 import sys
-import tempfile
-import time
+import zipfile
 from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
@@ -108,458 +55,563 @@ from etl.lib import manifest
 
 log = structlog.get_logger()
 
-ETL_VERSION = "0.2.0"
+ETL_VERSION = "0.3.0"
+SOURCE_LABEL = ("MEF - Ragioneria Generale dello Stato, SIOPE "
+                "(banca dati gestita da Banca d'Italia, www.siope.it); "
+                "codifica D.M. 9/6/2016")
+LICENZA = "CC BY 4.0"
 
-# Cache locale (override via --cache-dir o env SIOPE_CACHE_DIR)
-import os
-SIOPE_CACHE_DIR = Path(os.environ.get("SIOPE_CACHE_DIR", "/tmp/cruscotto-siope-cache"))
+# URL finale gia risolto: l'entry point /Siope/documenti/... risponde 302 verso
+# http:// (porta 80 filtrata) e manderebbe in stallo il download.
+BASE_URL = "https://www.siope.it/documenti/siope2/open/last"
+ANAGRAFICHE_ZIP = "SIOPE_ANAGRAFICHE.zip"
 
-# Anni supportati. L'anno "default" e' l'ultimo chiuso (=ultimo anno per cui
-# il dataset upstream copre tutti i 12 mesi). Gli anni "parziali" hanno
-# mesi_disponibili < 12 e vengono marcati con flag parziale=true nello shard.
-SUPPORTED_YEARS: list[int] = [2025, 2026]
-DEFAULT_YEAR: int = 2025
-# Anni considerati parziali (mesi disponibili < 12). Aggiornare quando l'anno
-# passa "in chiusura" (tipicamente febbraio/marzo dell'anno N+2 quando RGS
-# pubblica l'ultimo mese di N).
-PARTIAL_YEARS: set[int] = {2026}
+# Cache persistente: /tmp viene ripulito e ha gia causato la perdita della
+# cache ANAC. Override con --cache-dir o env SIOPE_CACHE_DIR.
+CACHE_DIR = Path(os.environ.get("SIOPE_CACHE_DIR", "/var/cache/cruscotto-etl/siope"))
+CACHE_DIR_FALLBACK = Path("/tmp/cruscotto-siope-cache")
 
-# Mappa codice regione SIOPE → CKAN resource_id del CSV bulk SIOPE Spese,
-# per anno. Generata da package_show su dati.gov.it.
-# Per rigenerare: ./scripts/find_siope_resources.py (TODO)
-SIOPE_RESOURCE_IDS: dict[int, dict[str, str]] = {
-    2025: {
-        "01": "18270689-1897-4a5a-8fb8-b5a9a129593a",  # Piemonte
-        "02": "44b6b335-d697-4997-8121-5eaa4c431aff",  # Valle d'Aosta
-        "03": "54644001-abb4-4b21-ba8b-5a39622f6ecd",  # Lombardia
-        "04": "e833081d-3f79-4d34-b921-6c38d956e4eb",  # Trentino-AA
-        "05": "e3fe09cb-078b-4e27-9bce-8e34764fe899",  # Veneto
-        "06": "1c572f0e-f80b-4ad7-902b-ebe492ec56dc",  # Friuli-VG
-        "07": "afeb3b7f-b1c0-426c-b862-6f29af0a0358",  # Liguria
-        "08": "a083eb86-44bf-400e-bd7e-fc6fa70f89e1",  # Emilia-Romagna
-        "09": "74533d22-b1c2-4d89-b1b9-b98e6c9713ff",  # Toscana
-        "10": "327259cc-9b32-4247-9611-3766815d8a58",  # Umbria
-        "11": "a92cbcc0-b0a5-4ab9-b4be-98f255a6e22c",  # Marche
-        "12": "33d82c62-46d3-4194-9484-1fb710cfef88",  # Lazio
-        "13": "2f24c6fb-e500-4dab-963e-12cdad31ef8f",  # Abruzzo
-        "14": "fe81de16-1502-4e1f-b0ec-adecc324c1d7",  # Molise
-        "15": "4c30da4a-943c-4936-ba85-5c68182f678a",  # Campania
-        "16": "0b3e4df5-8135-40c9-a91b-951f40de8ba2",  # Puglia
-        "17": "a0987ac6-d2e4-4de3-b068-ffcfa553f731",  # Basilicata
-        "18": "22ace8c3-f967-43fd-98d5-8deb6e704bca",  # Calabria
-        "19": "8a740486-dec8-4566-a78e-cdd72d75813b",  # Sicilia
-        "20": "75b2eb4b-a42b-42ae-9165-b24f1d2cc34b",  # Sardegna
-    },
-    # 2026: dataset osservati al 22/04/2026 (gen-apr, ~4 mesi).
-    # Discovered via ckan_package_show su dati.gov.it il 2026-05-10.
-    2026: {
-        "01": "84ae6d4e-2885-4b35-9ee0-30759e84717a",  # Piemonte
-        "02": "0dcce75b-26d8-4fba-841d-c82fae08b5c0",  # Valle d'Aosta
-        "03": "e889c511-dada-49c1-bf1c-fc1cfe99b593",  # Lombardia
-        "04": "da86b267-e8a9-4696-b404-bd3181bf9f02",  # Trentino-AA
-        "05": "ca84752a-d25c-46c5-a1b3-c045f9ee61b2",  # Veneto
-        "06": "aa4bd579-372d-44ba-84ea-8a592699b664",  # Friuli-VG
-        "07": "8dae5843-3e77-442f-858a-1622d8938826",  # Liguria
-        "08": "94c2a579-d68f-4ae8-a221-182d8bb2fd49",  # Emilia-Romagna
-        "09": "c1f46e68-60ac-4ce3-a3c8-5642926a27ec",  # Toscana
-        "10": "5d4c4cba-efc2-41ef-aa88-a59a846dd557",  # Umbria
-        "11": "75661947-7478-4725-9b10-246ad3b17b2f",  # Marche
-        "12": "165dc480-95c5-4b47-b300-07e4bb5cd313",  # Lazio
-        "13": "6a1bf483-a4e9-4d19-9e0d-1e09c6177854",  # Abruzzo
-        "14": "b18aaeda-dc39-4235-838a-50bdfc84c100",  # Molise
-        "15": "e0dd93c9-5d92-4310-a082-207870baac6e",  # Campania
-        "16": "8289e75a-9d24-4bc5-94bf-df2489da7843",  # Puglia
-        "17": "7e5bed38-b703-41fa-a06c-2c6611a8e961",  # Basilicata
-        "18": "ab0f9e49-8906-4217-9628-9d5f44242e5e",  # Calabria
-        "19": "a06298aa-0c50-4917-9eb9-3836f4f25576",  # Sicilia
-        "20": "94d4950c-b023-4d93-b310-dab2c14d3ced",  # Sardegna
-    },
+DEFAULT_OUTDIR = Path("/var/www/cruscotto-italia/data/siope")
+LOOKUP_INDEX = Path("/var/www/cruscotto-italia/data/lookup/comuni-index.json")
+
+HTTP_CONNECT_TIMEOUT = int(os.environ.get("SIOPE_CONNECT_TIMEOUT", "30"))
+HTTP_READ_TIMEOUT = int(os.environ.get("SIOPE_READ_TIMEOUT", "600"))
+CHUNK = 1 << 20  # 1 MB
+
+HEADERS = {
+    "User-Agent": "cruscotto-italia-etl (+https://cruscotto-italia.dati.gov.it)",
+    "Accept": "*/*",
 }
 
+# Comparto degli enti comunali in ANAG_CODGEST_*: da ANAG_SOTTOCOMPARTI,
+# COMUNE -> COMUNI -> comparto PRO ("Province - Comuni - Citta metropolitane -
+# Unioni di Comuni"). Le descrizioni degli altri comparti sono in larga parte
+# identiche (codifica armonizzata) ma PRO e l'unico semanticamente corretto.
+COMPARTO_COMUNI = "PRO"
 
-def get_resource_id(reg: str, anno: int) -> str:
-    """Ritorna il resource_id CKAN per (regione, anno). Solleva KeyError se non mappato."""
-    return SIOPE_RESOURCE_IDS[anno][reg]
-
-
-# Backward-compat: alcuni moduli o script potrebbero referenziare la vecchia costante.
-SIOPE_RESOURCE_IDS_2025 = SIOPE_RESOURCE_IDS[2025]
-
-CSV_BASE_URL = "https://bdap-opendata.rgs.mef.gov.it/SpodCkanApi/api/3/datastore/dump"
-CSV_ENCODING = "cp1252"
-CSV_DELIM = ";"
-
-# Headers necessari per non venire bloccati/rallentati da BDAP
-BROWSER_HEADERS = {
-    "User-Agent": (
-        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
-        "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-    ),
-    "Accept": "text/csv,application/csv,*/*;q=0.9",
-    "Accept-Language": "it-IT,it;q=0.9,en;q=0.8",
-    "Accept-Encoding": "gzip, deflate",
-    "Referer": "https://bdap-opendata.rgs.mef.gov.it/",
+# Titoli: non esistono nell'anagrafica dei codici gestionali (nessun codice a
+# zeri). BDAP li derivava dalla prima cifra del codice gestionale; verificato
+# su Matera 2026, 0 voci non conformi su 95. Le stringhe USCITE sono quelle
+# gia presenti negli shard di produzione, per continuita testuale.
+TITOLI_USCITE = {
+    "0": "PAGAMENTI DA REGOLARIZZARE",
+    "1": "Spese correnti",
+    "2": "Spese in conto capitale",
+    "3": "Spese per incremento attivita finanziarie",
+    "4": "Rimborso Prestiti",
+    "5": "Chiusura Anticipazioni ricevute da istituto tesoriere/cassiere",
+    "7": "Uscite per conto terzi e partite di giro",
+}
+TITOLI_ENTRATE = {
+    "0": "INCASSI DA REGOLARIZZARE",
+    "1": "Entrate correnti di natura tributaria, contributiva e perequativa",
+    "2": "Trasferimenti correnti",
+    "3": "Entrate extratributarie",
+    "4": "Entrate in conto capitale",
+    "5": "Entrate da riduzione di attivita finanziarie",
+    "6": "Accensione prestiti",
+    "7": "Anticipazioni da istituto tesoriere/cassiere",
+    "9": "Entrate per conto terzi e partite di giro",
 }
 
-# Download tuning: BDAP a volte stalla senza inviare RST.
-# Strategia: timeout (connect, read) + chunked iteration + retry con backoff.
-HTTP_CONNECT_TIMEOUT = 30      # secondi per stabilire connessione
-HTTP_READ_TIMEOUT = 60         # secondi tra un chunk e il successivo
-DOWNLOAD_CHUNK_SIZE = 1 << 16  # 64 KB
-MAX_DOWNLOAD_ATTEMPTS = 3      # tentativi per regione prima di skip
-RETRY_BACKOFF_SECONDS = 10     # sleep tra tentativi
+# Registro correzioni: codice_ente SIOPE il cui comune dichiarato e errato e
+# non correggibile per codice fiscale. Auto-sanante: se la fonte corregge,
+# la voce diventa un no-op registrato nel log.
+ENTE_ISTAT_FIX: dict[str, str] = {}
 
 
-def _make_http_session() -> requests.Session:
-    """Session con retry su connect/read errors transitori (non a livello chunk)."""
+# ---------------------------------------------------------------------------
+# Normalizzazione testo
+# ---------------------------------------------------------------------------
+
+_ACC = {"a": "\u00e0", "e": "\u00e8", "i": "\u00ec", "o": "\u00f2", "u": "\u00f9",
+        "A": "\u00c0", "E": "\u00c8", "I": "\u00cc", "O": "\u00d2", "U": "\u00d9"}
+
+
+def norm_desc(s: str) -> str:
+    """Normalizza le descrizioni di siope.it, che sono ASCII pure.
+
+    La fonte ha traslitterato perdendo i caratteri tipografici:
+      - vocale + apostrofo a fine parola = accento  (attivita' -> attivita con accento)
+      - '?' tra due lettere = apostrofo curvo perso (dell?art -> dell'art)
+      - '?' prima di chiusura = ellissi persa       (ecc?) -> ecc)
+    Verificata su 495 codici comuni con gli shard BDAP: 445 identiche senza
+    normalizzazione, 481 con.
+    """
+    if not s:
+        return ""
+    s = s.replace("\ufeff", "").strip()
+    s = re.sub(r"(?<=[A-Za-z])\?(?=[A-Za-z])", "'", s)
+    s = re.sub(r"\s*,?\s*\?(?=[)\],.]|$)", "", s)
+    s = re.sub(r"([aeiouAEIOU])'(?=$|[\s,.;:)\]/])", lambda m: _ACC.get(m.group(1), m.group(1)), s)
+    s = re.sub(r"\s{2,}", " ", s)
+    return s.strip()
+
+
+def norm_nome(s: str) -> str:
+    """Chiave di confronto fra denominazioni (accenti, punteggiatura, prefissi)."""
+    import unicodedata
+    s = unicodedata.normalize("NFKD", str(s or "")).encode("ascii", "ignore").decode()
+    s = s.upper()
+    for pre in ("COMUNE DI ", "COMUNE ", "CITTA DI ", "CITTA' DI "):
+        if s.startswith(pre):
+            s = s[len(pre):]
+            break
+    return re.sub(r"[^A-Z]", "", s)
+
+
+def cg_to_code(cg: str, prefisso: str) -> str | None:
+    """Converte il codice gestionale NPC puntato nella notazione degli shard.
+
+    siope.it: '1.01.01.01.002'  ->  BDAP/shard: 'U1010101002'
+    Verificato su Matera: 95/95 codici combaciano.
+    """
+    d = (cg or "").replace(".", "").strip()
+    return (prefisso + d) if d.isdigit() else None
+
+
+# ---------------------------------------------------------------------------
+# HTTP
+# ---------------------------------------------------------------------------
+
+def make_session() -> requests.Session:
     s = requests.Session()
-    retry = Retry(
-        total=2, connect=2, read=0,  # read=0: gestiamo noi via chunk
-        backoff_factor=2,
-        status_forcelist=[502, 503, 504],
-        allowed_methods=["GET"],
-    )
+    retry = Retry(total=4, backoff_factor=5,
+                  status_forcelist=[429, 500, 502, 503, 504],
+                  allowed_methods=["GET"])
     s.mount("https://", HTTPAdapter(max_retries=retry))
+    s.headers.update(HEADERS)
     return s
 
-# Colonne CSV BDAP (italian)
-COL_PROV_ISTAT = "Codice istat provincia"
-COL_COM_ISTAT = "Codice istat comune"
-COL_TIPO_ENTE = "Codice Tipologia Ente BDAP"
-COL_DESC_ENTE = "Descrizione Ente BDAP"
-COL_ANNO_MESE = "Anno/Mese calendario"
-COL_COD_TITOLO = "Codice Titolo CG"
-COL_DESC_TITOLO = "Descrizione Titolo CG"
-COL_COD_GEST = "Codice Gestionale Enti Locali"
-COL_DESC_GEST = "Descrizione CG"
-COL_POPOL = "Popolazione ISTAT"
-COL_IMPORTO = "Importo cumulato"
 
-TIPO_ENTE_COMUNE = "CO"
-
-
-# ---------------------------------------------------------------------------
-# Cache R2: raw/siope/reg<XX>_<anno>_comuni.csv (gia' filtrato)
-# ---------------------------------------------------------------------------
-
-def cache_path(reg: str, anno: int, cache_dir: Path = None) -> Path:
-    """Path locale del file CSV pre-filtrato."""
-    d = cache_dir if cache_dir is not None else SIOPE_CACHE_DIR
-    return d / f"reg{reg}_{anno}_comuni.csv"
-
-
-def cache_exists(reg: str, anno: int, cache_dir: Path = None) -> bool:
-    return cache_path(reg, anno, cache_dir).exists()
-
-
-def cache_download(reg: str, anno: int, cache_dir: Path = None) -> bytes:
-    """Legge CSV pre-filtrato dalla cache locale."""
-    return cache_path(reg, anno, cache_dir).read_bytes()
-
-
-def cache_upload(reg: str, anno: int, csv_bytes: bytes,
-                 cache_dir: Path = None) -> None:
-    """Salva CSV pre-filtrato nella cache locale."""
-    d = cache_dir if cache_dir is not None else SIOPE_CACHE_DIR
-    d.mkdir(parents=True, exist_ok=True)
-    cache_path(reg, anno, cache_dir).write_bytes(csv_bytes)
-
-
-# ---------------------------------------------------------------------------
-# Download BDAP + filtro CO
-# ---------------------------------------------------------------------------
-
-def _download_with_retries(reg: str, url: str, log_ctx) -> bytes:
-    """Scarica un URL in chunk con stall detection e retry esterno.
-
-    Ritorna i bytes RAW (gia' decompressi se era gzip-Content-Encoding).
-    Solleva RuntimeError se tutti i tentativi falliscono.
-    """
-    last_err = None
-    session = _make_http_session()
-    for attempt in range(1, MAX_DOWNLOAD_ATTEMPTS + 1):
-        t0 = time.time()
-        try:
-            log_ctx.info("download_attempt", reg=reg, attempt=attempt,
-                         max=MAX_DOWNLOAD_ATTEMPTS)
-            with session.get(
-                url,
-                headers=BROWSER_HEADERS,
-                stream=True,
-                timeout=(HTTP_CONNECT_TIMEOUT, HTTP_READ_TIMEOUT),
-            ) as resp:
-                resp.raise_for_status()
-                # Iter su chunk: requests applica HTTP_READ_TIMEOUT tra chunk,
-                # quindi se BDAP smette di inviare byte solleva ReadTimeout.
-                buf = bytearray()
-                bytes_received = 0
-                last_log_mb = 0
-                for chunk in resp.iter_content(chunk_size=DOWNLOAD_CHUNK_SIZE):
-                    if chunk:
-                        buf.extend(chunk)
-                        bytes_received += len(chunk)
-                        cur_mb = bytes_received // (5 * 1024 * 1024)  # log ogni 5 MB
-                        if cur_mb > last_log_mb:
-                            last_log_mb = cur_mb
-                            log_ctx.info("download_progress",
-                                         reg=reg,
-                                         mb=round(bytes_received / 1024 / 1024, 1),
-                                         elapsed_s=round(time.time() - t0, 1))
-                # NB: requests ha gia' decodificato Content-Encoding: gzip
-                # quando si itera con iter_content (raw=False di default).
-                elapsed = time.time() - t0
-                log_ctx.info("download_ok", reg=reg,
-                             mb=round(len(buf) / 1024 / 1024, 1),
-                             elapsed_s=round(elapsed, 1))
-                return bytes(buf)
-        except (requests.exceptions.RequestException,
-                requests.exceptions.ChunkedEncodingError,
-                ConnectionError,
-                OSError) as e:
-            last_err = e
-            elapsed = time.time() - t0
-            log_ctx.warning("download_failed",
-                            reg=reg, attempt=attempt,
-                            elapsed_s=round(elapsed, 1),
-                            error=str(e)[:200])
-            if attempt < MAX_DOWNLOAD_ATTEMPTS:
-                sleep_s = RETRY_BACKOFF_SECONDS * attempt
-                log_ctx.info("retry_sleep", reg=reg, sleep_s=sleep_s)
-                time.sleep(sleep_s)
-
-    raise RuntimeError(
-        f"reg{reg}: all {MAX_DOWNLOAD_ATTEMPTS} download attempts failed; "
-        f"last error: {last_err}"
-    )
-
-
-def download_and_filter_csv(reg: str, anno: int, log_ctx) -> bytes:
-    """Scarica CSV regionale da BDAP, filtra solo righe Tipo CO, ritorna bytes
-    del CSV filtrato (encoding cp1252, header preservato).
-    """
-    resource_id = get_resource_id(reg, anno)
-    url = f"{CSV_BASE_URL}/{resource_id}.csv"
-    log_ctx.info("downloading_csv", reg=reg, anno=anno, url=url)
-
-    raw = _download_with_retries(reg, url, log_ctx)
-    raw_size_mb = len(raw) / 1024 / 1024
-    log_ctx.info("csv_downloaded", reg=reg, raw_mb=round(raw_size_mb, 1))
-
-    # Decode CSV in cp1252, filtra righe CO, riencode in cp1252
-    text = raw.decode(CSV_ENCODING)
-    in_buf = io.StringIO(text)
-    reader = csv.DictReader(in_buf, delimiter=CSV_DELIM, quotechar='"')
-
-    out_buf = io.StringIO()
-    fieldnames = reader.fieldnames
-    if not fieldnames:
-        raise RuntimeError(f"reg{reg}: CSV header missing")
-    writer = csv.DictWriter(out_buf, fieldnames=fieldnames,
-                            delimiter=CSV_DELIM, quotechar='"',
-                            quoting=csv.QUOTE_ALL)
-    writer.writeheader()
-
-    n_total = 0
-    n_kept = 0
-    for row in reader:
-        n_total += 1
-        if row.get(COL_TIPO_ENTE, "").strip() == TIPO_ENTE_COMUNE:
-            writer.writerow(row)
-            n_kept += 1
-
-    filtered_bytes = out_buf.getvalue().encode(CSV_ENCODING)
-    filtered_mb = len(filtered_bytes) / 1024 / 1024
-
-    log_ctx.info("csv_filtered", reg=reg,
-                 rows_total=n_total, rows_kept=n_kept,
-                 keep_pct=round(100 * n_kept / n_total, 1),
-                 filtered_mb=round(filtered_mb, 1))
-
-    return filtered_bytes
-
-
-def get_filtered_csv(reg: str, anno: int, use_cache: bool, log_ctx,
-                     cache_dir: Path = None) -> bytes:
-    """Ritorna CSV filtrato dalla cache locale o scarica+filtra+cacha."""
-    if use_cache and cache_exists(reg, anno, cache_dir):
-        log_ctx.info("cache_hit", reg=reg, path=str(cache_path(reg, anno, cache_dir)))
-        return cache_download(reg, anno, cache_dir)
-
-    csv_bytes = download_and_filter_csv(reg, anno, log_ctx)
-    cache_upload(reg, anno, csv_bytes, cache_dir)
-    log_ctx.info("cache_uploaded", reg=reg, path=str(cache_path(reg, anno, cache_dir)))
-    return csv_bytes
-
-
-# ---------------------------------------------------------------------------
-# Aggregazione per comune
-# ---------------------------------------------------------------------------
-
-def to_float(v) -> float:
-    if v is None or v == "":
-        return 0.0
+def remote_last_modified(sess: requests.Session, url: str) -> str | None:
+    """HEAD non e supportato dalla fonte (risponde text/html): si usa un GET
+    con Range di 1 byte, che restituisce 206 con gli header completi."""
     try:
-        return float(v)
-    except ValueError:
-        return 0.0
+        r = sess.get(url, headers={"Range": "bytes=0-0"},
+                     timeout=(HTTP_CONNECT_TIMEOUT, 60), stream=True)
+        r.close()
+        return r.headers.get("Last-Modified")
+    except requests.RequestException as e:
+        log.warning("last_modified_ko", url=url, err=type(e).__name__, msg=str(e)[:300])
+        return None
 
 
-def aggregate_csv_to_shards(csv_bytes: bytes, anno: int,
-                             reg: str, log_ctx) -> dict[str, dict]:
-    """Aggrega un CSV regionale in year_block per-comune.
+def fetch_zip(sess: requests.Session, nome: str, cache_dir: Path,
+              no_cache: bool = False) -> Path:
+    """Scarica uno zip con validazione della cache per Last-Modified."""
+    url = f"{BASE_URL}/{nome}"
+    dest = cache_dir / nome
+    meta_p = cache_dir / (nome + ".meta.json")
+    lm = remote_last_modified(sess, url)
 
-    Ritorna {istat_code: year_block_dict} dove year_block_dict ha lo schema
-    del campo per_anno[<anno>] descritto in docstring del modulo.
-    Il merging tra anni e l'aggiunta di campi top-level (anni_disponibili,
-    anno_default, _generated_at) avvengono in build_final_shards().
+    if not no_cache and dest.exists() and meta_p.exists() and lm:
+        try:
+            meta = json.loads(meta_p.read_text(encoding="utf-8"))
+            if meta.get("last_modified") == lm and dest.stat().st_size == meta.get("size"):
+                log.info("cache_hit", file=nome, last_modified=lm,
+                         mb=round(dest.stat().st_size / 1e6, 1))
+                return dest
+            log.info("cache_stale", file=nome, cache=meta.get("last_modified"), remoto=lm)
+        except Exception as e:
+            log.warning("cache_meta_illeggibile", file=nome, err=type(e).__name__)
+
+    log.info("download_start", file=nome, url=url, last_modified=lm)
+    tmp = dest.with_suffix(dest.suffix + ".part")
+    got = 0
+    with sess.get(url, timeout=(HTTP_CONNECT_TIMEOUT, HTTP_READ_TIMEOUT), stream=True) as r:
+        r.raise_for_status()
+        tot = int(r.headers.get("Content-Length") or 0)
+        lm = r.headers.get("Last-Modified") or lm
+        soglia = 10 << 20
+        prossima = soglia
+        with open(tmp, "wb") as fh:
+            for blocco in r.iter_content(CHUNK):
+                if not blocco:
+                    continue
+                fh.write(blocco)
+                got += len(blocco)
+                if got >= prossima:
+                    pct = f"{got / tot * 100:.0f}%" if tot else "?"
+                    log.info("download_progress", file=nome,
+                             mb=round(got / 1e6, 1), pct=pct)
+                    prossima += soglia
+    if got < 1024:
+        tmp.unlink(missing_ok=True)
+        raise RuntimeError(f"{nome}: download troppo piccolo ({got} byte)")
+    with open(tmp, "rb") as fh:
+        if fh.read(2) != b"PK":
+            tmp.unlink(missing_ok=True)
+            raise RuntimeError(f"{nome}: non e uno ZIP (magic diverso da PK)")
+    os.replace(tmp, dest)
+    meta_p.write_text(json.dumps({"last_modified": lm, "size": got,
+                                  "scaricato": datetime.now(timezone.utc).isoformat()}),
+                      encoding="utf-8")
+    log.info("download_done", file=nome, mb=round(got / 1e6, 1), last_modified=lm)
+    return dest
+
+
+def zip_member(zp: Path, prefisso: str) -> str:
+    with zipfile.ZipFile(zp) as z:
+        for n in z.namelist():
+            if os.path.basename(n).upper().startswith(prefisso.upper()):
+                return n
+    raise RuntimeError(f"{zp.name}: nessun membro con prefisso {prefisso}")
+
+
+def zip_rows(zp: Path, prefisso: str):
+    """Itera le righe di un CSV dentro lo zip, in streaming."""
+    nome = zip_member(zp, prefisso)
+    with zipfile.ZipFile(zp) as z, z.open(nome) as fh:
+        yield from csv.reader(io.TextIOWrapper(fh, encoding="latin-1", newline=""))
+
+
+# ---------------------------------------------------------------------------
+# Anagrafiche
+# ---------------------------------------------------------------------------
+
+def carica_comuni_ufficiali() -> tuple[dict, dict, dict]:
+    """comuni-index.json -> (per_istat, per_cf, per_nome)."""
+    righe = json.loads(LOOKUP_INDEX.read_text(encoding="utf-8"))
+    per_istat = {r["i"]: r for r in righe}
+    per_cf: dict[str, list[str]] = defaultdict(list)
+    per_nome: dict[str, list[str]] = defaultdict(list)
+    for r in righe:
+        if r.get("cf"):
+            per_cf[r["cf"].strip()].append(r["i"])
+        for parte in [r["n"]] + str(r["n"]).split("/"):
+            k = norm_nome(parte)
+            if k and r["i"] not in per_nome[k]:
+                per_nome[k].append(r["i"])
+    return per_istat, per_cf, per_nome
+
+
+def costruisci_mappa_enti(anag_zip: Path) -> tuple[dict, dict]:
+    """ANAG_ENTI_SIOPE -> {codice_ente: {istat, denominazione, popolazione, dal}}.
+
+    Cascata: codice fiscale -> prov+com (solo se la denominazione e coerente)
+    -> nome univoco. Il campo prov+com non e affidabile come chiave primaria.
     """
-    text = csv_bytes.decode(CSV_ENCODING)
-    reader = csv.DictReader(io.StringIO(text), delimiter=CSV_DELIM, quotechar='"')
+    per_istat, per_cf, per_nome = carica_comuni_ufficiali()
+    mappa: dict[str, dict] = {}
+    strat: dict[str, int] = defaultdict(int)
+    irrisolti: list[tuple] = []
 
-    # Per ogni comune accumula:
-    #   ente_siope (denominazione)
-    #   popolazione (ultima vista)
-    #   voci: dict[cod_gestionale -> {codice/desc/titolo/mensili/...}]
-    #   mesi_disponibili: set
-    per_comune: dict[str, dict] = defaultdict(lambda: {
-        "ente_siope": None,
-        "popolazione": None,
-        "voci": {},
-        "mesi": set(),
-    })
-
-    for row in reader:
-        prov = row.get(COL_PROV_ISTAT, "").strip()
-        com = row.get(COL_COM_ISTAT, "").strip()
-        if not prov or not com:
+    for row in zip_rows(anag_zip, "ANAG_ENTI_SIOPE"):
+        if len(row) != 9:
             continue
-        istat = prov + com
-
-        anno_mese = row.get(COL_ANNO_MESE, "").strip()
-        if not anno_mese:
+        cod, dal, al, cf, den, com, prov, pop, tipo = (x.strip() for x in row)
+        if al != "9999-12-31" or tipo.upper() != "COMUNE":
             continue
 
-        cg = row.get(COL_COD_GEST, "").strip()
-        if not cg:
+        istat = None
+        if cod in ENTE_ISTAT_FIX:
+            istat = ENTE_ISTAT_FIX[cod]
+            strat["1_registro"] += 1
+        else:
+            cand = per_cf.get(cf)
+            if cand and len(cand) == 1:
+                istat = cand[0]
+                strat["2_codice_fiscale"] += 1
+            else:
+                dic = prov + com
+                if dic in per_istat and norm_nome(den) and (
+                    norm_nome(per_istat[dic]["n"]).startswith(norm_nome(den))
+                    or norm_nome(den).startswith(norm_nome(per_istat[dic]["n"]))
+                ):
+                    istat = dic
+                    strat["3_prov_com"] += 1
+                else:
+                    n = per_nome.get(norm_nome(den)) or []
+                    if len(n) == 1:
+                        istat = n[0]
+                        strat["4_nome"] += 1
+
+        if not istat:
+            strat["5_IRRISOLTO"] += 1
+            irrisolti.append((cod, den, cf, prov + com))
             continue
 
-        c = per_comune[istat]
-        if c["ente_siope"] is None:
-            c["ente_siope"] = row.get(COL_DESC_ENTE, "").strip()
-        c["popolazione"] = to_float(row.get(COL_POPOL))
-        c["mesi"].add(anno_mese)
+        try:
+            popn = float(pop)
+        except ValueError:
+            popn = None
+        mappa[cod] = {"istat": istat, "denominazione": den,
+                      "popolazione": popn, "dal": dal}
 
-        voce = c["voci"].get(cg)
-        if voce is None:
-            voce = {
-                "codice_gestionale": cg,
-                "desc_gestionale": row.get(COL_DESC_GEST, "").strip(),
-                "codice_titolo": row.get(COL_COD_TITOLO, "").strip(),
-                "desc_titolo": row.get(COL_DESC_TITOLO, "").strip(),
-                "importo_cumulato": 0.0,
-                "ultimo_mese": "",
-                "mensili": {},
-            }
-            c["voci"][cg] = voce
+    per_comune = defaultdict(list)
+    for cod, v in mappa.items():
+        per_comune[v["istat"]].append(cod)
+    fusioni = {k: v for k, v in per_comune.items() if len(v) > 1}
 
-        importo = to_float(row.get(COL_IMPORTO))
-        voce["mensili"][anno_mese] = importo
-        if anno_mese > voce["ultimo_mese"]:
-            voce["ultimo_mese"] = anno_mese
-            voce["importo_cumulato"] = importo
+    log.info("enti_risolti", enti=len(mappa), comuni=len(per_comune),
+             strategie=dict(strat), fusioni=len(fusioni))
+    for r in irrisolti[:10]:
+        log.warning("ente_irrisolto", codice_ente=r[0], denominazione=r[1],
+                    cf=r[2], prov_com=r[3])
+    return mappa, dict(per_comune)
 
-    # Costruisci year_block per comune
-    resource_id = get_resource_id(reg, anno)
-    year_blocks: dict[str, dict] = {}
-    for istat, c in per_comune.items():
-        voci_list = sorted(
-            c["voci"].values(),
-            key=lambda v: v["importo_cumulato"],
-            reverse=True,
-        )
-        totale = sum(v["importo_cumulato"] for v in voci_list)
-        mesi_sorted = sorted(c["mesi"])
-        year_blocks[istat] = {
-            "_resource_id": resource_id,
-            "anno": anno,
-            "parziale": anno in PARTIAL_YEARS,
-            "ente_siope": c["ente_siope"],
-            "popolazione": c["popolazione"],
-            "mesi_disponibili": mesi_sorted,
-            "ultimo_mese": mesi_sorted[-1] if mesi_sorted else "",
-            "n_voci": len(voci_list),
-            "totale_anno": round(totale, 2),
-            "voci": voci_list,
+
+def carica_descrizioni(anag_zip: Path, prefisso_file: str, anno: int) -> dict[str, str]:
+    """ANAG_CODGEST_* -> {codice NPC: descrizione normalizzata}.
+
+    Cascata a tre livelli, perche la validita temporale dichiarata non copre
+    tutti i codici realmente usati (alcuni risultano scaduti nel 2018 ma
+    compaiono ancora nei movimenti, altri partono dal 2026 e sono usati prima):
+      1. comparto PRO valido per l anno richiesto
+      2. comparto PRO, versione piu recente a prescindere dalla validita
+      3. qualunque altro comparto (la codifica e armonizzata: le descrizioni
+         coincidono, cambia solo il perimetro di enti a cui si applica)
+    """
+    pro_valide: dict[str, tuple[str, str]] = {}
+    pro_tutte: dict[str, tuple[str, str]] = {}
+    altri: dict[str, tuple[str, str]] = {}
+
+    for row in zip_rows(anag_zip, prefisso_file):
+        if len(row) != 5:
+            continue
+        cod, comparto, desc, dal, al = (x.strip() for x in row)
+        d = norm_desc(desc)
+        if not d:
+            continue
+        if comparto == COMPARTO_COMUNI:
+            prec = pro_tutte.get(cod)
+            if prec is None or dal > prec[0]:
+                pro_tutte[cod] = (dal, d)
+            if dal[:4] <= str(anno) <= al[:4]:
+                prec = pro_valide.get(cod)
+                if prec is None or dal > prec[0]:
+                    pro_valide[cod] = (dal, d)
+        else:
+            prec = altri.get(cod)
+            if prec is None or dal > prec[0]:
+                altri[cod] = (dal, d)
+
+    out = {k: v[1] for k, v in pro_tutte.items()}
+    out.update({k: v[1] for k, v in altri.items() if k not in out})
+    out.update({k: v[1] for k, v in pro_valide.items()})
+    log.info("descrizioni_caricate", file=prefisso_file, anno=anno,
+             pro_valide=len(pro_valide), pro_totali=len(pro_tutte),
+             da_altri_comparti=len([k for k in altri if k not in pro_tutte]),
+             totale=len(out))
+    return out
+
+
+# ---------------------------------------------------------------------------
+# Parsing movimenti
+# ---------------------------------------------------------------------------
+
+def aggrega_anno(zp: Path, prefisso_membro: str, anno: int,
+                 mappa_enti: dict, etichetta: str) -> dict:
+    """Somma gli importi per (comune, codice gestionale, mese).
+
+    Gli importi sono in centesimi e MENSILI PURI: il totale anno e la somma
+    dei 12 mesi. Ritorna {istat: {cg: [12 float]}} piu i mesi visti.
+    """
+    acc: dict[str, dict[str, list]] = defaultdict(lambda: defaultdict(lambda: [0.0] * 12))
+    mesi_per_comune: dict[str, set] = defaultdict(set)
+    righe = ignorate = fuori_anno = malformate = 0
+    mesi_glob: dict[str, int] = defaultdict(int)
+
+    log.info("parsing_start", tipo=etichetta, anno=anno, file=zp.name)
+    for row in zip_rows(zp, prefisso_membro):
+        righe += 1
+        if righe % 1000000 == 0:
+            log.info("parsing_progress", tipo=etichetta, anno=anno,
+                     righe=righe, comuni=len(acc))
+        if len(row) != 5:
+            malformate += 1
+            continue
+        cod, a, mese, cg, imp = (x.strip() for x in row)
+        if a != str(anno):
+            fuori_anno += 1
+            continue
+        ente = mappa_enti.get(cod)
+        if ente is None:
+            ignorate += 1
+            continue
+        try:
+            idx = int(mese) - 1
+            val = int(imp) / 100.0
+        except ValueError:
+            malformate += 1
+            continue
+        if not 0 <= idx < 12:
+            malformate += 1
+            continue
+        istat = ente["istat"]
+        acc[istat][cg][idx] += val
+        mesi_per_comune[istat].add(idx)
+        mesi_glob[mese] += 1
+
+    log.info("parsing_done", tipo=etichetta, anno=anno, righe=righe,
+             comuni=len(acc), ignorate_non_comuni=ignorate,
+             fuori_anno=fuori_anno, malformate=malformate,
+             righe_per_mese=dict(sorted(mesi_glob.items())))
+    return {"acc": acc, "mesi": mesi_per_comune}
+
+
+def costruisci_voci(cg_map: dict[str, list], anno: int, descrizioni: dict,
+                    prefisso: str, titoli: dict) -> tuple[list, float]:
+    """Da {cg: [12 mensili puri]} alle voci dello shard.
+
+    `mensili` e CUMULATO e `importo_cumulato` e il totale d'anno della voce:
+    stessa semantica della v0.2.0, per non rompere frontend e chatbot.
+    """
+    voci = []
+    for cg, mens in cg_map.items():
+        code = cg_to_code(cg, prefisso)
+        if not code:
+            continue
+        cum = 0.0
+        mensili: dict[str, float] = {}
+        ultimo = ""
+        for i, v in enumerate(mens):
+            if v == 0.0 and cum == 0.0:
+                continue
+            cum += v
+            k = f"{anno}/{i + 1:02d}"
+            mensili[k] = round(cum, 2)
+            ultimo = k
+        if not mensili:
+            continue
+        voci.append({
+            "codice_gestionale": code,
+            "desc_gestionale": descrizioni.get(cg, ""),
+            "codice_titolo": prefisso + code[1] + "0" * 9,
+            "desc_titolo": titoli.get(code[1], ""),
+            "importo_cumulato": round(cum, 2),
+            "ultimo_mese": ultimo,
+            "mensili": mensili,
+        })
+    voci.sort(key=lambda v: v["importo_cumulato"], reverse=True)
+    return voci, round(sum(v["importo_cumulato"] for v in voci), 2)
+
+
+# ---------------------------------------------------------------------------
+# Shard
+# ---------------------------------------------------------------------------
+
+def blocco_anno(istat: str, anno: int, codici: list[str], mappa_enti: dict,
+                uscite: dict, entrate: dict | None,
+                desc_u: dict, desc_e: dict) -> dict | None:
+    """Costruisce il blocco di un anno per un comune, sommando i codice_ente
+    che vi afferiscono (piu di uno in caso di fusione)."""
+    cg_u: dict[str, list] = defaultdict(lambda: [0.0] * 12)
+    cg_e: dict[str, list] = defaultdict(lambda: [0.0] * 12)
+    mesi: set[int] = set()
+
+    acc_u, mesi_u = uscite["acc"], uscite["mesi"]
+    for cg, m in acc_u.get(istat, {}).items():
+        for i, v in enumerate(m):
+            cg_u[cg][i] += v
+    mesi |= mesi_u.get(istat, set())
+
+    if entrate is not None:
+        for cg, m in entrate["acc"].get(istat, {}).items():
+            for i, v in enumerate(m):
+                cg_e[cg][i] += v
+        mesi |= entrate["mesi"].get(istat, set())
+
+    if not cg_u and not cg_e:
+        return None
+
+    voci_u, tot_u = costruisci_voci(cg_u, anno, desc_u, "U", TITOLI_USCITE)
+    voci_e, tot_e = costruisci_voci(cg_e, anno, desc_e, "E", TITOLI_ENTRATE)
+
+    mesi_lista = [f"{anno}/{i + 1:02d}" for i in sorted(mesi)]
+    # L'ente piu recente e quello corretto in caso di fusione.
+    ente = sorted((mappa_enti[c] for c in codici), key=lambda x: x["dal"])[-1]
+
+    blocco = {
+        "anno": anno,
+        "parziale": len(mesi_lista) < 12,
+        "ente_siope": ente["denominazione"],
+        "popolazione": ente["popolazione"],
+        "mesi_disponibili": mesi_lista,
+        "ultimo_mese": mesi_lista[-1] if mesi_lista else "",
+        "n_voci": len(voci_u),
+        "totale_anno": tot_u,
+        "voci": voci_u,
+    }
+    if entrate is not None:
+        blocco["entrate"] = {
+            "n_voci": len(voci_e),
+            "totale_anno": tot_e,
+            "voci": voci_e,
         }
+        blocco["saldo_cassa"] = round(tot_e - tot_u, 2)
+    return blocco
 
-    log_ctx.info("aggregated", reg=reg, anno=anno, comuni=len(year_blocks))
-    return year_blocks
 
-
-def build_final_shards(
-    year_blocks_by_year: dict[int, dict[str, dict]],
-) -> dict[str, dict]:
-    """Unisce i year_block di piu' anni in shard finali per-comune.
-
-    Input: {anno: {istat: year_block}, ...}
-    Output: {istat: shard_finale_v0.2.0}
-
-    Un comune compare nello shard finale se almeno UN anno ha dati per esso.
-    """
-    # Set di tutti gli istat visti in qualunque anno
-    all_istat: set[str] = set()
-    for blocks in year_blocks_by_year.values():
-        all_istat.update(blocks.keys())
-
-    anni_processati = sorted(year_blocks_by_year.keys())
-
-    now_iso = datetime.now(timezone.utc).isoformat(timespec="seconds")
+def costruisci_shards(anni: list[int], dati: dict, mappa_enti: dict,
+                      per_comune: dict, descrizioni: dict) -> dict[str, dict]:
+    now = datetime.now(timezone.utc).isoformat(timespec="seconds")
     shards: dict[str, dict] = {}
-    for istat in all_istat:
+    for istat, codici in sorted(per_comune.items()):
         per_anno: dict[str, dict] = {}
-        anni_disp_per_comune: list[int] = []
-        for anno in anni_processati:
-            yb = year_blocks_by_year.get(anno, {}).get(istat)
-            if yb is not None:
-                per_anno[str(anno)] = yb
-                anni_disp_per_comune.append(anno)
-
+        for anno in anni:
+            b = blocco_anno(istat, anno, codici, mappa_enti,
+                            dati[anno]["uscite"], dati[anno].get("entrate"),
+                            descrizioni[anno]["u"], descrizioni[anno]["e"])
+            if b:
+                per_anno[str(anno)] = b
         if not per_anno:
             continue
-
-        # anno_default per il comune: scegliere l'ultimo anno chiuso DISPONIBILE
-        # per quel comune; se nessun anno chiuso disponibile, l'ultimo parziale.
-        chiusi_comune = [a for a in anni_disp_per_comune if a not in PARTIAL_YEARS]
-        anno_default_comune = (
-            max(chiusi_comune) if chiusi_comune else max(anni_disp_per_comune)
-        )
-
         shards[istat] = {
             "_etl_version": ETL_VERSION,
-            "_source": "BDAP CKAN bulk - SIOPE Movimenti cumulati mensili di Spesa",
-            "_generated_at": now_iso,
-            "anni_disponibili": anni_disp_per_comune,
-            "anno_default": anno_default_comune,
+            "_source": SOURCE_LABEL,
+            "_licenza": LICENZA,
+            "_generated_at": now,
             "per_anno": per_anno,
         }
-
     return shards
 
 
-# ---------------------------------------------------------------------------
-# Push R2
-# ---------------------------------------------------------------------------
+def _completa_metadati(shard: dict) -> dict:
+    """anni_disponibili e anno_default derivati dal contenuto reale.
 
-def write_shards_local(shards: dict[str, dict], output_dir: Path) -> int:
-    """Scrive shard JSON in output_dir locale. Ritorna count."""
-    output_dir.mkdir(parents=True, exist_ok=True)
+    L'anno di default e l'ultimo CHIUSO (12 mesi) disponibile per quel comune;
+    se non ce ne sono, l'ultimo parziale. Mai da costante hardcoded: era la
+    causa per cui un anno troncato veniva presentato come completo.
+    """
+    anni = sorted(int(a) for a in shard["per_anno"])
+    chiusi = [a for a in anni if not shard["per_anno"][str(a)].get("parziale")]
+    shard["anni_disponibili"] = anni
+    shard["anno_default"] = max(chiusi) if chiusi else max(anni)
+    return shard
+
+
+def scrivi_shards(shards: dict[str, dict], outdir: Path, anni: list[int]) -> dict:
+    """Scrive gli shard preservando gli anni non processati in questo giro.
+
+    Regola fail-safe: se un anno presente nel file esistente non e fra quelli
+    elaborati ora, va conservato. La v0.2.0 riscriveva lo shard per intero da
+    memoria e un fallimento parziale cancellava gli anni non caricati.
+    """
+    outdir.mkdir(parents=True, exist_ok=True)
+    elaborati = {str(a) for a in anni}
+    scritti = preservati = 0
     for istat, shard in shards.items():
-        path = output_dir / f"{istat}.json"
-        path.write_text(
-            json.dumps(shard, ensure_ascii=False, separators=(",", ":")),
-            encoding="utf-8",
-        )
-    return len(shards)
+        path = outdir / f"{istat}.json"
+        if path.exists():
+            try:
+                vecchio = json.loads(path.read_text(encoding="utf-8"))
+                for a, blocco in (vecchio.get("per_anno") or {}).items():
+                    if a not in elaborati:
+                        shard["per_anno"][a] = blocco
+                        preservati += 1
+            except Exception:
+                pass
+        _completa_metadati(shard)
+        shard["per_anno"] = {k: shard["per_anno"][k]
+                             for k in sorted(shard["per_anno"])}
+        tmp = path.with_suffix(".json.tmp")
+        tmp.write_text(json.dumps(shard, ensure_ascii=False, separators=(",", ":")),
+                       encoding="utf-8")
+        os.replace(tmp, path)
+        scritti += 1
+    return {"scritti": scritti, "anni_preservati": preservati}
 
 
 # ---------------------------------------------------------------------------
@@ -567,144 +619,113 @@ def write_shards_local(shards: dict[str, dict], output_dir: Path) -> int:
 # ---------------------------------------------------------------------------
 
 def main() -> int:
-    parser = argparse.ArgumentParser(
-        description="ETL SIOPE Spese - bulk download CKAN + aggregazione comunale, multi-anno"
-    )
-    # --target tenuto per retrocompat workflow esistenti, ma solo 'local' e' supportato
-    parser.add_argument(
-        "--target", choices=["local"], default="local",
-        help="Solo 'local' supportato (R2 rimosso dall'infrastruttura AgID)"
-    )
-    parser.add_argument(
-        "--outdir", type=Path,
-        default=Path("/var/www/cruscotto-italia/data/siope"),
-        help="Directory output locale (default: /var/www/cruscotto-italia/data/siope)"
-    )
-    parser.add_argument(
-        "--cache-dir", type=Path, default=None,
-        help=f"Directory cache CSV pre-filtrati (default: {SIOPE_CACHE_DIR})"
-    )
-    parser.add_argument(
-        "--regioni", type=str, default=None,
-        help="Codici regione separati da virgola (es. '06,07'). Default: tutte le 20."
-    )
-    parser.add_argument(
-        "--no-cache", action="store_true",
-        help="Forza re-download del CSV ignorando la cache locale"
-    )
-    parser.add_argument(
-        "--anni", type=str, default=None,
-        help=(
-            f"Anni separati da virgola, es. '2025,2026' o 'all'. "
-            f"Default: tutti gli anni supportati ({SUPPORTED_YEARS})."
-        ),
-    )
-    # Backward-compat: --anno (singolare) accettato come alias di --anni
-    parser.add_argument(
-        "--anno", type=int, default=None,
-        help=argparse.SUPPRESS,
-    )
-    args = parser.parse_args()
+    p = argparse.ArgumentParser(
+        description="ETL SIOPE da fonte primaria siope.it (uscite + entrate)")
+    p.add_argument("--target", choices=["local"], default="local")
+    p.add_argument("--outdir", type=Path, default=DEFAULT_OUTDIR)
+    p.add_argument("--cache-dir", type=Path, default=None)
+    p.add_argument("--anni", type=str, default=None,
+                   help="Anni separati da virgola (default: anno corrente e precedente)")
+    p.add_argument("--no-cache", action="store_true",
+                   help="Forza il re-download ignorando Last-Modified")
+    p.add_argument("--no-entrate", action="store_true",
+                   help="Elabora le sole uscite")
+    p.add_argument("--dry-run", action="store_true",
+                   help="Non scrive shard: solo download, parsing e statistiche")
+    args = p.parse_args()
 
-    # Cache dir: default SIOPE_CACHE_DIR, override via --cache-dir
-    cache_dir = args.cache_dir if args.cache_dir else SIOPE_CACHE_DIR
+    structlog.configure(processors=[
+        structlog.processors.TimeStamper(fmt="iso"),
+        structlog.processors.add_log_level,
+        structlog.dev.ConsoleRenderer(colors=sys.stderr.isatty()),
+    ])
 
-    # Risolvi anni richiesti
-    if args.anno is not None and args.anni is not None:
-        log.error("anno_anni_conflict", hint="usa o --anno o --anni, non entrambi")
-        return 1
-    if args.anno is not None:
-        anni = [args.anno]
-    elif args.anni is None or args.anni.lower() == "all":
-        anni = list(SUPPORTED_YEARS)
+    anno_corrente = datetime.now(timezone.utc).year
+    if args.anni:
+        anni = sorted({int(x) for x in args.anni.split(",") if x.strip()})
     else:
-        try:
-            anni = [int(a.strip()) for a in args.anni.split(",") if a.strip()]
-        except ValueError as e:
-            log.error("anni_parse_error", value=args.anni, error=str(e))
-            return 1
-    for a in anni:
-        if a not in SUPPORTED_YEARS:
-            log.error("anno_not_supported", anno=a, supported=SUPPORTED_YEARS)
-            return 1
+        anni = [anno_corrente - 1, anno_corrente]
 
-    # Risolvi regioni richieste
-    all_regs = sorted(SIOPE_RESOURCE_IDS[SUPPORTED_YEARS[0]].keys())
-    if args.regioni:
-        regioni = [r.strip() for r in args.regioni.split(",")]
-        for r in regioni:
-            if r not in all_regs:
-                log.error("regione_not_mapped", regione=r)
-                return 1
-    else:
-        regioni = all_regs
+    cache_dir = args.cache_dir or CACHE_DIR
+    try:
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        (cache_dir / ".w").write_text("x"); (cache_dir / ".w").unlink()
+    except OSError as e:
+        log.warning("cache_dir_non_scrivibile", path=str(cache_dir),
+                    err=str(e), fallback=str(CACHE_DIR_FALLBACK))
+        cache_dir = CACHE_DIR_FALLBACK
+        cache_dir.mkdir(parents=True, exist_ok=True)
 
-    output_dir = args.outdir
-    log.info("etl_start",
-             regioni=regioni,
-             anni=anni,
-             use_cache=not args.no_cache,
-             cache_dir=str(cache_dir),
-             output_dir=str(output_dir))
-
-    # Accumulatore: {anno: {istat: year_block}}
-    year_blocks_by_year: dict[int, dict[str, dict]] = {a: {} for a in anni}
-    failed_jobs: list[tuple[int, str, str]] = []  # (anno, reg, error)
+    log.info("etl_start", versione=ETL_VERSION, anni=anni, outdir=str(args.outdir),
+             cache=str(cache_dir), entrate=not args.no_entrate, dry_run=args.dry_run)
+    sess = make_session()
+    files_manifest = []
 
     try:
+        anag = fetch_zip(sess, ANAGRAFICHE_ZIP, cache_dir, args.no_cache)
+        mappa_enti, per_comune = costruisci_mappa_enti(anag)
+        if not mappa_enti:
+            raise RuntimeError("anagrafica enti vuota")
+
+        dati: dict[int, dict] = {}
+        descr: dict[int, dict] = {}
         for anno in anni:
-            log.info("year_start", anno=anno)
-            for reg in regioni:
-                log_ctx = log.bind(reg=reg, anno=anno)
-                log_ctx.info("region_start")
-                try:
-                    csv_bytes = get_filtered_csv(
-                        reg, anno,
-                        use_cache=not args.no_cache,
-                        log_ctx=log_ctx,
-                        cache_dir=cache_dir,
-                    )
-                    yb = aggregate_csv_to_shards(csv_bytes, anno, reg, log_ctx)
-                    # Merge nel grande accumulatore
-                    year_blocks_by_year[anno].update(yb)
-                    log_ctx.info("region_done",
-                                 comuni_anno_so_far=len(year_blocks_by_year[anno]))
-                except Exception as e:
-                    failed_jobs.append((anno, reg, str(e)[:200]))
-                    log_ctx.error("region_failed", error=str(e)[:200])
-            log.info("year_done", anno=anno,
-                     comuni_anno=len(year_blocks_by_year[anno]))
+            descr[anno] = {
+                "u": carica_descrizioni(anag, "ANAG_CODGEST_USCITE", anno),
+                "e": carica_descrizioni(anag, "ANAG_CODGEST_ENTRATE", anno),
+            }
+            zu = fetch_zip(sess, f"SIOPE_USCITE.{anno}.zip", cache_dir, args.no_cache)
+            d = {"uscite": aggrega_anno(zu, f"USCITE_{anno}", anno, mappa_enti, "uscite")}
+            files_manifest.append({"key": f"siope.it/SIOPE_USCITE.{anno}.zip",
+                                   "size": zu.stat().st_size})
+            if not args.no_entrate:
+                ze = fetch_zip(sess, f"SIOPE_ENTRATE.{anno}.zip", cache_dir, args.no_cache)
+                d["entrate"] = aggrega_anno(ze, f"ENTRATE_{anno}", anno,
+                                            mappa_enti, "entrate")
+                files_manifest.append({"key": f"siope.it/SIOPE_ENTRATE.{anno}.zip",
+                                       "size": ze.stat().st_size})
+            dati[anno] = d
 
-        if failed_jobs:
-            log.warning("jobs_skipped", count=len(failed_jobs))
-            for anno, reg, err in failed_jobs:
-                log.warning("skipped_detail", anno=anno, reg=reg, error=err)
+        shards = costruisci_shards(anni, dati, mappa_enti, per_comune, descr)
+        log.info("shard_costruiti", comuni=len(shards))
 
-        # Build shard finali (merge tra anni)
-        shards = build_final_shards(year_blocks_by_year)
-        total_shards = write_shards_local(shards, output_dir)
+        copertura = {}
+        for anno in anni:
+            n = sum(1 for s in shards.values() if str(anno) in s["per_anno"])
+            compl = sum(1 for s in shards.values()
+                        if not (s["per_anno"].get(str(anno)) or {"parziale": True})["parziale"])
+            copertura[anno] = {"comuni": n, "anni_completi_12_mesi": compl}
+        log.info("copertura", **{str(k): v for k, v in copertura.items()})
 
-        log.info("aggregation_done",
-                 total_shards=total_shards,
-                 anni=anni,
-                 jobs_skipped=len(failed_jobs),
-                 output_dir=str(output_dir))
+        if args.dry_run:
+            log.info("dry_run_fine", comuni=len(shards))
+            return 0
 
-        # Manifest update best-effort
-        try:
-            manifest.update_source(
-                "siope",
-                [{"key": "siope/*", "count": total_shards}],
-                status="ok",
-            )
-            log.info("manifest_updated", anni=anni, count=total_shards)
-        except Exception as e:
-            log.warning("manifest_update_skipped", error=str(e))
+        res = scrivi_shards(shards, args.outdir, anni)
+        log.info("shard_scritti", **res)
+        files_manifest.append({"key": "data/siope/", "row_count": res["scritti"]})
 
-        log.info("etl_done", total_shards=total_shards, anni=anni)
+        # Il manifest descrive la PRODUZIONE: un run su --outdir diverso e un
+        # test e non deve toccarlo (altrimenti i test non sono isolabili).
+        if args.outdir.resolve() == DEFAULT_OUTDIR.resolve():
+            try:
+                manifest.update_source("siope", files_manifest, status="ok")
+            except Exception as e:
+                log.warning("manifest_skip", error=str(e))
+        else:
+            log.info("manifest_non_toccato", motivo="outdir non di produzione",
+                     outdir=str(args.outdir))
+        log.info("etl_done", comuni=len(shards), **res)
         return 0
+
     except Exception as e:
-        log.exception("etl_failed", error=str(e))
+        log.exception("etl_failed", tipo=type(e).__name__, error=str(e))
+        if args.outdir.resolve() == DEFAULT_OUTDIR.resolve():
+            try:
+                manifest.update_source("siope", [],
+                                       status=f"failed: {type(e).__name__}: {e}")
+            except Exception:
+                pass
         return 1
 
 

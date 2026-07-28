@@ -264,8 +264,17 @@ def compute_kpi_summary(out: dict) -> dict:
         },
         "siope": {
             "anno": anno_siope,
+            # "uscite" = pagamenti di cassa, "incassi" = riscossioni. Etichette
+            # coerenti con SIOPE: non sono spese/entrate di competenza, e il
+            # saldo di cassa non e un avanzo di bilancio.
             "totale_uscite_eur": _safe(siope_anno, "totale_anno"),
             "uscite_per_abitante_eur": _per_abitante(_safe(siope_anno, "totale_anno"), pop),
+            "totale_incassi_eur": _safe(siope_anno, "entrate", "totale_anno"),
+            "incassi_per_abitante_eur": _per_abitante(
+                _safe(siope_anno, "entrate", "totale_anno"), pop),
+            "saldo_cassa_eur": _safe(siope_anno, "saldo_cassa"),
+            "mesi_disponibili": len(_safe(siope_anno, "mesi_disponibili") or []),
+            "parziale": _safe(siope_anno, "parziale"),
         },
         "patrimonio_pa": {
             "n_immobili": _safe(immobili, "kpi", "n_totale"),
