@@ -2038,7 +2038,7 @@ function renderComune(data) {
     { id: 'aria', label: 'Meteo e Aria', kpi: k.meteo_italiameteo?.t2m_c != null ? Math.round(k.meteo_italiameteo.t2m_c) + '°C' : '<span data-tab-aria-n><span class="tab-spinner"></span></span>' },
     { id: 'banda-larga', label: 'Banda larga', kpi: k.agcom_bbmap?.kpi?.copertura_ftth_desi_pct != null ? Math.round(k.agcom_bbmap.kpi.copertura_ftth_desi_pct) + '%' : '—' },
     { id: 'beni-culturali', label: 'Beni culturali', kpi: k.beni_culturali?.kpi?.n_totale ? fmtNum(k.beni_culturali.kpi.n_totale) : '—' },
-    { id: 'censimento', label: 'Censimento 2021', kpi: k.censimento?.kpi_comune?.n_sezioni != null ? fmtNum(k.censimento.kpi_comune.n_sezioni) : '—' },
+    { id: 'censimento', label: 'Censimento 2023', kpi: k.censimento?.kpi_comune?.n_sezioni != null ? fmtNum(k.censimento.kpi_comune.n_sezioni) : '—' },
     { id: 'contratti', label: 'Contratti ANAC', kpi: fmtNum(k.contratti?.count || 0) },
     { id: 'demografia', label: 'Demografia', kpi: k.popolazione != null ? fmtNum(k.popolazione) : '—' },
     { id: 'carburanti', label: 'Distributori e prezzi', kpi: k.carburanti?.kpi?.n_impianti != null ? fmtNum(k.carburanti.kpi.n_impianti) : '—' },
@@ -9400,20 +9400,19 @@ function renderCensimentoTab(d) {
   if (!d || !d.kpi_comune) {
     return `
       <div class="tab-pane" id="pane-censimento">
-        <div class="section-title">§ Censimento ISTAT 2021</div>
+        <div class="section-title">§ Censimento ISTAT 2023</div>
         <h2 class="section-h">Dati <em>non disponibili</em>.</h2>
         <p class="muted">Il comune non risulta nelle Basi Territoriali ISTAT 2021 (Censimento permanente).</p>
       </div>`;
   }
   const k = d.kpi_comune;
-  // 8 KPI cards (sempre presenti, "—" se ETL non ha aggregato la metrica).
+  // 7 KPI cards (sempre presenti, "—" se ETL non ha aggregato la metrica).
   const densita = (k.pop_totale && k.area_kmq) ? Math.round(k.pop_totale / k.area_kmq) : null;
   const cards = [
     { lab: 'Sezioni di censimento', val: fmtNum(k.n_sezioni || 0), unit: '' },
     { lab: 'Popolazione totale',    val: fmtNum(k.pop_totale || 0), unit: 'ab.' },
     { lab: 'Famiglie',              val: fmtNum(k.famiglie_totali || 0), unit: '' },
     { lab: 'Abitazioni',            val: fmtNum(k.abitazioni_totali || 0), unit: '' },
-    { lab: 'Edifici residenziali',  val: fmtNum(k.edifici_residenziali || 0), unit: '' },
     { lab: 'Stranieri',             val: fmtNum(k.stranieri_totali || 0), unit: k.pop_totale ? (((k.stranieri_totali || 0) / k.pop_totale * 100).toFixed(1) + '%') : '' },
     { lab: 'Occupati 15-64',        val: fmtNum(k.occupati_15_64 || 0), unit: '' },
     { lab: 'Densità',               val: densita != null ? fmtNum(densita) : '—', unit: 'ab./km²' },
@@ -9474,7 +9473,7 @@ function renderCensimentoTab(d) {
           <option value="pct_occupati">% Occupati 15-64</option>
           <option value="pct_unipersonali">% Famiglie unipersonali</option>
           <option value="pct_abit_vuote">% Abitazioni vuote</option>
-          <option value="edifici_res">Edifici residenziali (assoluto)</option>
+          <option value="auto_proprieta">Automobili di proprietà (assoluto)</option>
           <option value="pct_extra_ue">% Stranieri Extra-UE (su stranieri)</option>
           <option value="indice_vecchiaia">Indice di vecchiaia</option>
           <option value="pct_donne_occ">% Donne occupate (su occupati 15-64)</option>
@@ -9497,12 +9496,13 @@ function renderCensimentoTab(d) {
 
   return `
     <div class="tab-pane" id="pane-censimento">
-      <div class="section-title">§ Censimento ISTAT 2021</div>
+      <div class="section-title">§ Censimento ISTAT 2023</div>
       <h2 class="section-h">Basi territoriali e variabili <em>censuarie</em>.</h2>
       <p class="muted">
-        Fonte: <a href="https://www.istat.it/notizia/basi-territoriali-e-variabili-censuarie/" target="_blank" rel="noopener">ISTAT — Basi Territoriali e Variabili censuarie 2021</a>
-        (Censimento permanente, per sezione di censimento). Licenza CC-BY 3.0 IT.
-        Copertura 100% comuni inclusi TN/BZ. Aggiornamento decennale + revisioni.
+        Fonte: <a href="https://www.istat.it/notizia/dati-per-sezioni-di-censimento/" target="_blank" rel="noopener">ISTAT — Dati per sezioni di censimento 2023</a>
+        (Censimento permanente, rilevazione al 31/12/2023) sulle
+        <a href="https://www.istat.it/notizia/basi-territoriali-e-variabili-censuarie/" target="_blank" rel="noopener">Basi Territoriali 2021</a>.
+        Licenza CC-BY 3.0 IT. Copertura 100% comuni inclusi TN/BZ. Aggiornamento biennale.
       </p>
       <div class="kpi-cards">${cardsHtml}</div>
       ${abitBlock}
@@ -9570,11 +9570,11 @@ const CENSIMENTO_INDICATORS = {
     decimals: 1,
     note: 'Percentuale di abitazioni vuote o occupate solo da non-residenti sul totale abitazioni.',
   },
-  edifici_res: {
-    label: 'Edifici residenziali',
+  auto_proprieta: {
+    label: 'Automobili di proprietà',
     unit: '',
     decimals: 0,
-    note: 'Numero assoluto di edifici a uso residenziale rilevati nella sezione.',
+    note: 'Numero assoluto di automobili di proprietà nella sezione (variabile NA1, introdotta nel rilascio 2023).',
   },
   pct_extra_ue: {
     label: '% Stranieri Extra-UE',
@@ -9643,8 +9643,8 @@ function _censimentoComputeIndicator(feature, indicator) {
       if (!has('A8') || v.A8 === 0) return null;
       return safe('A3') / v.A8 * 100;
     }
-    case 'edifici_res': {
-      return has('E3') ? v.E3 : null;
+    case 'auto_proprieta': {
+      return has('NA1') ? v.NA1 : null;
     }
     case 'pct_extra_ue': {
       if (!has('ST1') || v.ST1 === 0) return null;
@@ -9974,7 +9974,7 @@ const CENSIMENTO_FAMILIES = [
   },
   {
     id: 'famiglie_abit',
-    label: 'Famiglie, abitazioni ed edifici',
+    label: 'Famiglie, abitazioni e automobili',
     vars: [
       ['PF1', 'Famiglie totali'],
       ['PF3', 'Famiglie 1 componente'],
@@ -9983,10 +9983,24 @@ const CENSIMENTO_FAMILIES = [
       ['PF6', 'Famiglie 4 componenti'],
       ['PF7', 'Famiglie 5 componenti'],
       ['PF8', 'Famiglie 6+ componenti'],
+      ['PF9', 'Famiglie coabitanti'],
       ['A2', 'Abitazioni occupate da residenti'],
       ['A3', 'Abitazioni vuote o solo non-residenti'],
+      ['A5', 'Altro tipo di alloggi occupati'],
       ['A8', 'Abitazioni totali'],
-      ['E3', 'Edifici residenziali'],
+      ['NA1', 'Automobili di proprietà'],
+    ],
+  },
+  {
+    id: 'nascita',
+    label: 'Paese di nascita e cittadinanza',
+    vars: [
+      ['EM1', 'Italiani dalla nascita nati in Italia'],
+      ['EM2', "Italiani dalla nascita nati all'estero"],
+      ['EM3', 'Italiani acquisiti nati in Italia'],
+      ['EM4', "Italiani acquisiti nati all'estero"],
+      ['EM5', 'Stranieri e apolidi nati in Italia'],
+      ['EM6', "Stranieri e apolidi nati all'estero"],
     ],
   },
 ];

@@ -1,26 +1,29 @@
-"""ETL ISTAT - Basi Territoriali + Variabili censuarie 2021.
+"""ETL ISTAT - Basi Territoriali 2021 + Variabili censuarie 2023.
 
-Fonte: ISTAT - Censimento permanente popolazione 2021.
+Fonte: ISTAT - Censimento permanente popolazione, rilevazione al 31/12/2023.
 Licenza: CC BY 3.0 IT (standard ISTAT).
 URL pagina: https://www.istat.it/notizia/basi-territoriali-e-variabili-censuarie/
 
 Composizione fonte:
 - 20 ZIP regionali shapefile sezioni di censimento 2021 (WGS84 UTM Zona 32N):
     https://www.istat.it/storage/cartografia/basi_territoriali/2021/R<NN>_21.zip
-- 1 ZIP nazionale variabili censuarie sezioni 2021 (XLSX per regione):
-    https://esploradati.istat.it/databrowser/DWL/PERMPOP/SUBCOM/Dati_regionali_2021.zip
+- 1 ZIP nazionale variabili censuarie sezioni 2023 (XLSX per regione):
+    https://esploradati.istat.it/databrowser/DWL/PERMPOP/SUBCOM/Dati_regionali_2023.zip
 - 1 ZIP aree subcomunali 2021 (solo ~43 capoluoghi, layer overlay opzionale):
     https://www.istat.it/wp-content/uploads/2025/04/ASC_21.zip
 
-Edizione: dati definitivi pubblicati 14/05/2026 (pagina ISTAT aggiornata).
+Edizione variabili: tornata 2023. Primo rilascio 18/12/2025, aggiornato il
+05/03/2026 (con 59 comuni inizialmente mancanti) e il 09/06/2026 (variabili
+aggiuntive). Geometrie: Basi Territoriali 2021, invariate fra le due tornate,
+quindi la sostituzione 2021 -> 2023 non richiede rebuild dei poligoni.
 
 Copertura: 7896/7896 comuni (TN/BZ inclusi, a differenza del Catasto AdE).
 Strategia: ETL local-first, output flat in data/censimento_full/<istat>.geojson
-(geometrie + 122 variabili per sezione) + un solo file di aggregati
+(geometrie + 127 variabili per sezione) + un solo file di aggregati
 data/censimento/aggregati.json (dict {istat: kpi_comune+distribuzioni})
 letto da dashboard.py per la sezione "censimento" nel comune A1.
 
-Schema 122 variabili (dal file TRACCIATO_2021 ufficiale ISTAT):
+Schema 127 variabili (dal foglio TRACCIATO_2023 ufficiale ISTAT):
   - P1-P3: popolazione totale + sesso
   - P14-P29: popolazione totale per fascia eta 5 anni
   - P30-P45: popolazione maschi per fascia eta 5 anni
@@ -30,16 +33,22 @@ Schema 122 variabili (dal file TRACCIATO_2021 ufficiale ISTAT):
   - IT1-IT12: italiani per fascia eta (0-14, 15-64, 65+) x sesso x occupati
   - ST1-ST33: stranieri (totali, UE/extra-UE, fasce eta, sesso, occupati)
   - PF1, PF3-PF8: famiglie per numero componenti
+  - PF9: famiglie coabitanti (nuova 2023)
   - A2, A3, A8: abitazioni (occupate, vuote, totali)
-  - E3: edifici residenziali
+  - A5: altro tipo di alloggi occupati (nuova 2023)
+  - EM1-EM6: paese di nascita e acquisizione cittadinanza (nuove 2023)
+  - NA1: automobili di proprieta (nuova 2023)
+  NB: E3 (edifici residenziali) era presente nel 2021 ma NON e diffuso
+  nel tracciato 2023, quindi non e piu estratto ne aggregato.
 
 Output:
 - data/censimento_full/<istat>.geojson : 7896 file, FeatureCollection con
-  geometrie (Polygon EPSG:4326) + properties.vars (dict 122 variabili)
+  geometrie (Polygon EPSG:4326) + properties.vars (dict 127 variabili)
 - data/censimento/aggregati.json : 1 file con dict aggregati comune-level
   per il dashboard A1 (kpi_comune + distribuzioni)
 
-Aggiornamento: annuale, allineato al rilascio ISTAT (tipicamente aprile).
+Aggiornamento: biennale, allineato al rilascio ISTAT dei dati per sezione
+del Censimento permanente (tornate 2021, 2023, ...).
 """
 from __future__ import annotations
 
@@ -63,11 +72,11 @@ log = structlog.get_logger()
 # Costanti fonte
 # ═════════════════════════════════════════════════════════════════════════
 
-SOURCE_LABEL = "ISTAT - Basi Territoriali + Variabili censuarie 2021"
+SOURCE_LABEL = "ISTAT - Basi Territoriali 2021 + Variabili censuarie 2023"
 SOURCE_PAGE = "https://www.istat.it/notizia/basi-territoriali-e-variabili-censuarie/"
 LICENSE = "CC BY 3.0 IT"
-ANNO = 2021
-ETL_VERSION = "0.1.0"
+ANNO = 2023
+ETL_VERSION = "0.2.0"
 
 # URL pattern shapefile regionali (R01-R20). R04 = Trentino-Alto Adige incluso.
 URL_BT_REGION = (
@@ -77,7 +86,7 @@ URL_BT_REGION = (
 # Variabili censuarie sezioni: 1 ZIP nazionale con 20 XLSX regionali + TRACCIATO
 URL_VARS = (
     "https://esploradati.istat.it/databrowser/DWL/PERMPOP/SUBCOM/"
-    "Dati_regionali_2021.zip"
+    "Dati_regionali_2023.zip"
 )
 
 # Aree subcomunali (municipi/circoscrizioni/quartieri) - solo ~43 capoluoghi
@@ -86,7 +95,7 @@ URL_ASC = "https://www.istat.it/wp-content/uploads/2025/04/ASC_21.zip"
 UA = "CruscottoItalia-ETL/1.0 (+https://cruscotto-italia.dati.gov.it)"
 
 # ═════════════════════════════════════════════════════════════════════════
-# Lista 122 variabili numeriche estratte per ogni sezione (dal TRACCIATO ISTAT)
+# Lista 127 variabili numeriche estratte per ogni sezione (dal TRACCIATO 2023)
 # ═════════════════════════════════════════════════════════════════════════
 
 # Popolazione totale e per sesso (3)
@@ -118,13 +127,20 @@ VARS_STRANIERI = (
     + [f"ST{i}" for i in range(16, 34)]
 )
 
-# Famiglie per numero componenti (7): PF1, PF3-PF8
-VARS_FAMIGLIE = ["PF1"] + [f"PF{i}" for i in range(3, 9)]
+# Famiglie per numero componenti + coabitanti (8): PF1, PF3-PF9
+VARS_FAMIGLIE = ["PF1"] + [f"PF{i}" for i in range(3, 10)]
 
-# Abitazioni ed edifici (4)
-VARS_ABITAZIONI = ["A2", "A3", "A8", "E3"]
+# Abitazioni e altri alloggi (4). NB: E3 (edifici residenziali) NON e presente
+# nel tracciato 2023, la variabile e stata rimossa dalla diffusione ISTAT.
+VARS_ABITAZIONI = ["A2", "A3", "A5", "A8"]
 
-# Unione totale: 110 codici numerici (i 12 anagrafici come PROCOM, REGIONE
+# Paese di nascita e acquisizione cittadinanza (6): EM1-EM6. Nuove nel 2023.
+VARS_NASCITA = [f"EM{i}" for i in range(1, 7)]
+
+# Automobili di proprieta (1): NA1. Nuova nel 2023.
+VARS_AUTO = ["NA1"]
+
+# Unione totale: 127 codici numerici (gli 11 anagrafici come PROCOM, REGIONE
 # sono trattati separatamente come metadata della sezione, non in vars{}).
 VARS_NUMERIC = (
     VARS_POP_BASE
@@ -137,11 +153,13 @@ VARS_NUMERIC = (
     + VARS_STRANIERI
     + VARS_FAMIGLIE
     + VARS_ABITAZIONI
+    + VARS_NASCITA
+    + VARS_AUTO
 )
-# Sanity check: deve essere 3 + 16 + 16 + 16 + 18 + 3 + 12 + 24 + 7 + 4 = 119
+# Sanity check: 3 + 16 + 16 + 16 + 18 + 3 + 12 + 24 + 8 + 4 + 6 + 1 = 127
 # (le "122 variabili" del titolo includono anche 3 voci anagrafica
 #  contestuali: CODREG/CODPRO/CODCOM, gestite come metadata).
-assert len(VARS_NUMERIC) == 119, f"Expected 119 vars, got {len(VARS_NUMERIC)}"
+assert len(VARS_NUMERIC) == 127, f"Expected 127 vars, got {len(VARS_NUMERIC)}"
 
 # ═════════════════════════════════════════════════════════════════════════
 # Mapping dello shapefile TIPO_LOC (campo numerico) -> label leggibile
@@ -159,7 +177,7 @@ CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
 # Soglie minime per validare ZIP "non corrotti" (in byte):
 # BT regionali piu' piccoli sono ~120KB (es. Molise small), quindi 50KB e' safe
-# Variabili Dati_regionali_2021.zip e' ~250MB
+# Variabili Dati_regionali_2023.zip e' ~250MB
 MIN_ZIP_SIZE_BT = 50_000
 MIN_ZIP_SIZE_VARS = 100_000_000  # 100 MB
 MIN_ZIP_SIZE_ASC = 100_000
@@ -222,12 +240,12 @@ def _http_get(url: str, dest: Path, min_size: int, timeout: int = 600) -> Path:
 
 
 def download_dati_regionali(force: bool = False) -> Path:
-    """Scarica Dati_regionali_2021.zip (~250MB) contenente 20 XLSX regionali
-    di variabili censuarie + 1 XLSX TRACCIATO_2021 con il dizionario.
+    """Scarica Dati_regionali_2023.zip (~250MB) contenente 20 XLSX regionali
+    di variabili censuarie + 1 XLSX di tracciato con il dizionario.
 
-    Cache: /tmp/cruscotto_censimento/Dati_regionali_2021.zip
+    Cache: /tmp/cruscotto_censimento/Dati_regionali_2023.zip
     """
-    out = CACHE_DIR / "Dati_regionali_2021.zip"
+    out = CACHE_DIR / "Dati_regionali_2023.zip"
     if force and out.exists():
         out.unlink()
     return _http_get(URL_VARS, out, MIN_ZIP_SIZE_VARS, timeout=900)
@@ -286,8 +304,34 @@ def _to_int(val) -> int:
         return 0
 
 
+def _resolve_xlsx_name(zip_path: Path, region: int) -> str:
+    """Individua il path interno dello XLSX regionale dentro il ZIP nazionale.
+
+    Nel rilascio 2023 il nome contiene la denominazione della regione, con
+    spazi e apostrofi (es. R02_Valle d Aosta_2023_sezioni.xlsx), quindi non
+    e ricostruibile per formato come nel 2021: va cercato nella namelist.
+    Il match su prefisso R<NN>_ e suffisso _sezioni.xlsx resta compatibile
+    anche con il naming 2021 (R<NN>_indicatori_2021_sezioni.xlsx).
+    """
+    pref = f"R{region:02d}_"
+    with zipfile.ZipFile(zip_path, "r") as zf:
+        names = zf.namelist()
+    cand = [
+        n for n in names
+        if Path(n).name.startswith(pref)
+        and n.lower().endswith("_sezioni.xlsx")
+    ]
+    if len(cand) != 1:
+        raise RuntimeError(
+            f"Attesa 1 corrispondenza XLSX per regione {region}, "
+            f"trovate {len(cand)}: {cand[:3]}. "
+            f"Namelist (primi 5): {names[:5]}"
+        )
+    return cand[0]
+
+
 def parse_vars_xlsx_from_zip(zip_path: Path, region: int) -> dict[int, dict]:
-    """Estrae il file R<NN>_indicatori_2021_sezioni.xlsx dal ZIP nazionale
+    """Estrae lo XLSX regionale delle variabili dal ZIP nazionale
     e ritorna {SEZ21_ID: {"procom": int, "vars": {P1:..., P2:..., ...}}}.
 
     Strategia:
@@ -297,19 +341,21 @@ def parse_vars_xlsx_from_zip(zip_path: Path, region: int) -> dict[int, dict]:
     3. Mappa header -> indice colonna (i nomi sono fissi dal TRACCIATO)
     4. Per ogni riga emette il record con int-cast difensivo
 
-    Note ZIP64: il file nazionale Dati_regionali_2021.zip e' ZIP64 (>4GB
+    Note ZIP64: il file nazionale Dati_regionali_2023.zip e' ZIP64 (>4GB
     capability). openpyxl gestisce correttamente i sub-XLSX via zipfile.
     """
     if not 1 <= region <= 20:
         raise ValueError(f"region deve essere 1-20, ricevuto {region}")
 
-    xlsx_name = f"R{region:02d}_indicatori_2021_sezioni.xlsx"
+    xlsx_name = _resolve_xlsx_name(zip_path, region)
     log.info("censimento_vars_parse_start",
              zip_path=str(zip_path), xlsx=xlsx_name, region=region)
     t0 = time.time()
 
-    # Estrai SOLO il file della regione richiesta in CACHE_DIR per riuso
-    xlsx_out = CACHE_DIR / xlsx_name
+    # Estrai SOLO il file della regione richiesta in CACHE_DIR per riuso.
+    # Nome cache NORMALIZZATO: il nome interno 2023 contiene spazi e apostrofi,
+    # che sono scomodi come nome file. Il path interno resta in xlsx_name.
+    xlsx_out = CACHE_DIR / f"R{region:02d}_2023_sezioni.xlsx"
     if not xlsx_out.exists():
         with zipfile.ZipFile(zip_path, "r") as zf:
             try:
@@ -617,7 +663,6 @@ def aggregate_comune(features_with_vars: list[dict]) -> dict:
         "abitazioni_totali": sumv("A8"),
         "abitazioni_occupate": sumv("A2"),
         "abitazioni_vuote": sumv("A3"),
-        "edifici_residenziali": sumv("E3"),
         "stranieri_totali": sumv("ST1"),
         "stranieri_ue": sumv("ST16"),
         "stranieri_extra_ue": sumv("ST19"),
@@ -850,7 +895,7 @@ def run_etl(
 def _smoke_test() -> int:
     """Test end-to-end veloce solo su Valle d'Aosta + comune Cogne.
 
-    Pre-condizione: ZIP nazionale Dati_regionali_2021.zip gia' presente in
+    Pre-condizione: ZIP nazionale Dati_regionali_2023.zip gia' presente in
     CACHE_DIR (e' 250MB, non lo scarichiamo nello smoke). Per eseguirlo
     la prima volta, lanciare prima con --download-vars.
 
@@ -872,7 +917,7 @@ def _smoke_test() -> int:
     print(f"      OK: {bt_zip} ({bt_zip.stat().st_size / 1024 / 1024:.1f} MB)")
 
     # 2. Verifica file vars nazionale (pre-condizione)
-    vars_zip = CACHE_DIR / "Dati_regionali_2021.zip"
+    vars_zip = CACHE_DIR / "Dati_regionali_2023.zip"
     if not vars_zip.exists():
         print(f"\n  ATTENZIONE: {vars_zip} non trovato.")
         print(f"  Per popolare la cache, lancia prima:")
