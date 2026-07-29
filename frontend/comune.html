@@ -4954,7 +4954,7 @@ function renderScuoleTab(scuole, popolazione) {
     return `
       <div class="tab-pane" id="pane-scuole">
         <div class="section-title">§ scuole</div>
-        <h2 class="section-h">Nessuna scuola statale <em>in questo comune</em>.</h2>
+        <h2 class="section-h">Nessun plesso scolastico statale <em>in questo comune</em>.</h2>
         <div class="placeholder">
           Il dataset MIUR (Anagrafe scuole statali) non riporta scuole con sede
           in questo comune. È comune nei piccoli comuni: gli studenti
@@ -5029,7 +5029,7 @@ function renderScuoleTab(scuole, popolazione) {
     `).join('');
     vocHtml = `
       <div class="scuole-voc-block">
-        <h3 class="col-h">Vocazione formativa Sec. II° grado <span class="scuole-group-n">${sec2Tot} scuole</span></h3>
+        <h3 class="col-h">Vocazione formativa Sec. II° grado <span class="scuole-group-n">${sec2Tot} plessi</span></h3>
         <div class="scuole-voc-stack">${stackHtml}</div>
         <div class="scuole-voc-legend">${legendHtml}</div>
       </div>
@@ -5097,25 +5097,25 @@ function renderScuoleTab(scuole, popolazione) {
     <div class="kpi-card">
       <div class="kpi-card-lab">Densità scolastica</div>
       <div class="kpi-card-val">${densita.toFixed(2)}</div>
-      <div class="kpi-card-sub">scuole/1.000 ab. <em>(Italia ≈ ${densitaIta.toFixed(2)})</em></div>
+      <div class="kpi-card-sub">plessi/1.000 ab. <em>(Italia ≈ ${densitaIta.toFixed(2)})</em></div>
     </div>` : '';
 
   return `
     <div class="tab-pane" id="pane-scuole">
       <div class="section-title">§ scuole</div>
-      <h2 class="section-h">${fmtNum(k.n_scuole)} scuole statali <em>nel comune</em>.</h2>
+      <h2 class="section-h">${fmtNum(k.n_scuole)} plessi scolastici <em>nel comune</em>.</h2>
       <p class="section-sub">
         Anagrafe MIUR delle scuole statali con sede nel comune
         (a.s. <code>${annoScolastico}</code>). Sono incluse anche le scuole
         equiparate a statali delle Province Autonome di Trento, Bolzano e
         Aosta. Non sono incluse scuole paritarie private né scuole
-        dell'infanzia comunali (gestite localmente).
+        dell'infanzia comunali (gestite localmente). Ogni voce corrisponde a un punto di erogazione del servizio (plesso), non a un'istituzione scolastica autonoma: un istituto comprensivo compare con tutti i suoi plessi.
       </p>
       <div class="kpi-cards">
         <div class="kpi-card">
-          <div class="kpi-card-lab">Scuole totali</div>
+          <div class="kpi-card-lab">Plessi scolastici</div>
           <div class="kpi-card-val">${fmtNum(k.n_scuole)}</div>
-          <div class="kpi-card-sub">${plessi} plessi · ${k.n_sedi_direttivo} con dirigenza</div>
+          <div class="kpi-card-sub">${k.n_sedi_direttivo} sedi di dirigenza · ${plessi} sedi associate</div>
         </div>
         <div class="kpi-card">
           <div class="kpi-card-lab">Autonomia organizzativa</div>
@@ -5134,8 +5134,8 @@ function renderScuoleTab(scuole, popolazione) {
       </div>
       ${vocHtml}
       <div class="spese-filters">
-        <input type="search" id="scuole-search" aria-label="Cerca tra le scuole per denominazione, indirizzo o codice meccanografico" class="spese-search-input"
-               placeholder="Cerca tra le ${lista.length} scuole (denominazione, indirizzo, codice meccanografico)…" autocomplete="off">
+        <input type="search" id="scuole-search" aria-label="Cerca tra i plessi per denominazione, indirizzo o codice meccanografico" class="spese-search-input"
+               placeholder="Cerca tra i ${lista.length} plessi (denominazione, indirizzo, codice meccanografico)…" autocomplete="off">
         <select id="scuole-ordine" aria-label="Filtra le scuole per ordine">
           <option value="">Tutti gli ordini</option>
           <option value="infanzia">Scuola dell'infanzia</option>
@@ -5145,12 +5145,12 @@ function renderScuoleTab(scuole, popolazione) {
           <option value="altro">Altro</option>
         </select>
         <select id="scuole-direttivo" aria-label="Filtra le scuole per istituto direttivo">
-          <option value="">Tutte le scuole</option>
+          <option value="">Tutti i plessi</option>
           <option value="si">Solo sedi di direttivo</option>
         </select>
       </div>
       <div class="scuole-empty-msg" id="scuole-empty-msg" style="display:none;font-family:var(--mono);font-size:11px;color:var(--ink-mute);text-transform:uppercase;letter-spacing:.05em;text-align:center;padding:24px 0;">
-        Nessuna scuola corrisponde ai filtri.
+        Nessun plesso corrisponde ai filtri.
       </div>
       <div class="scuole-groups" id="scuole-groups">${groupsHtml}</div>
       <div class="tab-footer">
