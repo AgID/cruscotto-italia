@@ -87,6 +87,7 @@ import structlog
 from requests_aws4auth import AWS4Auth
 
 from etl.lib import local_lookup, manifest
+from etl.lib.text import clean_text
 
 log = structlog.get_logger()
 
@@ -439,9 +440,16 @@ def fetch_all_details(evse_ids: list[str]) -> list[dict]:
 # ──────────────────────── PARSE RECORD → RIGA ──────────────────────
 
 def _clean(v) -> str | None:
+    """Normalizza un campo testuale: fix encoding, strip, None se vuoto.
+
+    I dati OCPI dei CPO arrivano con doppio o triplo encoding UTF-8 su circa
+    330 stringhe (indirizzi, ragioni sociali), soprattutto in Alto Adige.
+    sostituzioni=False: il dataset non presenta casi di U+00BF, quindi
+    l euristica tarata sul Ministero della Salute non serve qui.
+    """
     if v is None:
         return None
-    s = str(v).strip()
+    s = clean_text(str(v))
     return s if s else None
 
 
