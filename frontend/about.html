@@ -188,6 +188,37 @@ footer a {
   text-underline-offset: 3px;
 }
 footer a:hover { color: #fff !important; }
+/* INDICE-CONTENUTI-CSS:START (generato da scripts/genera_indice.py) */
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;
+  overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
+.indice-acc{border:1px solid var(--border);border-radius:8px;background:var(--bg-soft);
+  margin:1.2rem 0;}
+.indice-acc>summary{cursor:pointer;padding:.85rem 1rem;font-weight:600;
+  color:var(--blu-italia);list-style:none;}
+.indice-acc>summary::-webkit-details-marker{display:none;}
+.indice-acc>summary::before{content:"\25B8";display:inline-block;margin-right:.5rem;
+  transition:transform .15s ease;}
+.indice-acc[open]>summary::before{transform:rotate(90deg);}
+.indice-acc>summary:focus-visible{outline:2px solid var(--blu-italia);outline-offset:2px;}
+.indice-body{padding:0 1rem 1rem;}
+.indice-search-lab{display:block;font-size:.85rem;font-weight:600;margin-bottom:.35rem;}
+.indice-search{width:100%;max-width:26rem;padding:.5rem .7rem;font:inherit;
+  border:1px solid var(--border);border-radius:6px;background:var(--bg);}
+.indice-search:focus-visible{outline:2px solid var(--blu-italia);outline-offset:1px;}
+.indice-count{font-size:.85rem;color:var(--ink-soft,#555);margin:.5rem 0 .75rem;}
+.indice-tab{width:100%;border-collapse:collapse;font-size:.92rem;}
+.indice-tab th,.indice-tab td{text-align:left;padding:.4rem .6rem;
+  border-bottom:1px solid var(--border-soft);vertical-align:top;}
+.indice-tab thead th{position:sticky;top:0;background:var(--bg);
+  border-bottom:2px solid var(--border);}
+.indice-tab tbody th{font-weight:600;width:52%;}
+.indice-tab tbody td{color:var(--ink-soft,#444);}
+.indice-empty{padding:.75rem;font-style:italic;}
+@media (max-width:640px){
+  .indice-tab{font-size:.86rem;}
+  .indice-tab tbody th{width:50%;}
+}
+/* INDICE-CONTENUTI-CSS:END */
 </style>
 </head>
 <body>
@@ -719,6 +750,568 @@ footer a:hover { color: #fff !important; }
 </section>
 
 <!-- ============ § METODOLOGIA ============ -->
+<section class="about-section" id="cosa-cercare">
+  <div class="wrap">
+<!-- INDICE-CONTENUTI:START (generato da scripts/genera_indice.py) -->
+      <div class="section-title">&sect; indice dei contenuti</div>
+      <h2 class="section-h">Cosa cercare e <em>dove</em>.</h2>
+      <p>
+        Ogni scheda comunale e' divisa in schede tematiche. Questo indice elenca
+        <strong>492 voci</strong> distribuite su <strong>24 schede</strong>:
+        per ogni termine trovi la scheda in cui il dato viene mostrato. Alcuni argomenti
+        compaiono in piu' schede &mdash; le automobili, per esempio, stanno sia nel
+        Censimento (auto possedute dalle famiglie) sia in Veicoli e incidenti
+        (parco circolante ACI).
+      </p>
+      <details class="indice-acc">
+        <summary>Apri l'indice dei contenuti (492 voci)</summary>
+        <div class="indice-body">
+          <label class="indice-search-lab" for="indice-q">Filtra le voci</label>
+          <input type="search" id="indice-q" class="indice-search"
+                 placeholder="Scrivi un termine: catasto, tasse, farmacie&hellip;"
+                 autocomplete="off" aria-describedby="indice-count">
+          <p id="indice-count" class="indice-count" role="status" aria-live="polite">
+            492 voci
+          </p>
+          <table class="indice-tab">
+            <caption class="sr-only">Elenco alfabetico dei dati e scheda in cui trovarli</caption>
+            <thead>
+              <tr><th scope="col">Voce</th><th scope="col">Dove si trova</th></tr>
+            </thead>
+            <tbody id="indice-tbody">
+            <tr><th scope="row">% Abitazioni vuote</th><td>Censimento 2023</td></tr>
+            <tr><th scope="row">% Donne occupate</th><td>Censimento 2023</td></tr>
+            <tr><th scope="row">% Famiglie unipersonali</th><td>Censimento 2023</td></tr>
+            <tr><th scope="row">% Laureati</th><td>Censimento 2023</td></tr>
+            <tr><th scope="row">% Occupati 15-64</th><td>Censimento 2023</td></tr>
+            <tr><th scope="row">% Popolazione 0-14</th><td>Censimento 2023</td></tr>
+            <tr><th scope="row">% Popolazione 65+</th><td>Censimento 2023</td></tr>
+            <tr><th scope="row">% Stranieri</th><td>Censimento 2023</td></tr>
+            <tr><th scope="row">% Stranieri Extra-UE</th><td>Censimento 2023</td></tr>
+            <tr><th scope="row">1 stella</th><td>Turismo</td></tr>
+            <tr><th scope="row">2 stelle</th><td>Turismo</td></tr>
+            <tr><th scope="row">3 stelle</th><td>Turismo</td></tr>
+            <tr><th scope="row">4 stelle</th><td>Turismo</td></tr>
+            <tr><th scope="row">5 stelle (lusso)</th><td>Turismo</td></tr>
+            <tr><th scope="row">5x1000</th><td>Terzo Settore</td></tr>
+            <tr><th scope="row">Abitanti</th><td>Demografia</td></tr>
+            <tr><th scope="row">Abitazioni</th><td>Censimento 2023</td></tr>
+            <tr><th scope="row">Abitazioni: occupate vs vuote</th><td>Censimento 2023</td></tr>
+            <tr><th scope="row">AC standard</th><td>Punti di ricarica</td></tr>
+            <tr><th scope="row">ACI</th><td>Veicoli e incidenti</td></tr>
+            <tr><th scope="row">Addetti</th><td>Imprese e addetti</td></tr>
+            <tr><th scope="row">Addizionale comunale</th><td>Redditi e fisco</td></tr>
+            <tr><th scope="row">Addizionale comunale e imposta netta</th><td>Redditi e fisco</td></tr>
+            <tr><th scope="row">AGCOM</th><td>Banda larga</td></tr>
+            <tr><th scope="row">Agenzia delle Entrate</th><td>ANNCSU e Catasto</td></tr>
+            <tr><th scope="row">Aggiudicazioni</th><td>Contratti ANAC</td></tr>
+            <tr><th scope="row">Agriturismi</th><td>Turismo</td></tr>
+            <tr><th scope="row">Alberghi</th><td>Turismo</td></tr>
+            <tr><th scope="row">Alberghieri</th><td>Turismo</td></tr>
+            <tr><th scope="row">Alluvioni</th><td>Territorio</td></tr>
+            <tr><th scope="row">Altitudine</th><td>Territorio</td></tr>
+            <tr><th scope="row">Altro (CPIA, ecc.)</th><td>Scuole</td></tr>
+            <tr><th scope="row">ANAC</th><td>Contratti ANAC</td></tr>
+            <tr><th scope="row">ANNCSU e Catasto</th><td>Panoramica</td></tr>
+            <tr><th scope="row">Anno</th><td>Meteo e Aria, SIOPE</td></tr>
+            <tr><th scope="row">Anno scolastico</th><td>Scuole</td></tr>
+            <tr><th scope="row">Anziani</th><td>Censimento 2023, Demografia</td></tr>
+            <tr><th scope="row">Appalti</th><td>Contratti ANAC</td></tr>
+            <tr><th scope="row">Apri mappa</th><td>Banda larga</td></tr>
+            <tr><th scope="row">APS</th><td>Terzo Settore</td></tr>
+            <tr><th scope="row">Aree a pericolosità da frana</th><td>Territorio</td></tr>
+            <tr><th scope="row">Aree a pericolosità idraulica (alluvioni)</th><td>Territorio</td></tr>
+            <tr><th scope="row">Arrivi</th><td>Turismo</td></tr>
+            <tr><th scope="row">Arrivi annuali</th><td>Turismo</td></tr>
+            <tr><th scope="row">Arrivi turistici</th><td>Turismo</td></tr>
+            <tr><th scope="row">Artigiani</th><td>Imprese e addetti</td></tr>
+            <tr><th scope="row">Asili</th><td>Scuole</td></tr>
+            <tr><th scope="row">Associazioni</th><td>Terzo Settore</td></tr>
+            <tr><th scope="row">ATECO</th><td>Imprese e addetti</td></tr>
+            <tr><th scope="row">Auto</th><td>Censimento 2023, Veicoli e incidenti</td></tr>
+            <tr><th scope="row">Auto Euro 0–3</th><td>Veicoli e incidenti</td></tr>
+            <tr><th scope="row">Auto-contenimento</th><td>Pendolarismo</td></tr>
+            <tr><th scope="row">Automobili</th><td>Censimento 2023, Veicoli e incidenti</td></tr>
+            <tr><th scope="row">Automobili di proprietà</th><td>Censimento 2023</td></tr>
+            <tr><th scope="row">Autonomia organizzativa</th><td>Scuole</td></tr>
+            <tr><th scope="row">Avanzamento per</th><td>PNRR</td></tr>
+            <tr><th scope="row">Aziende</th><td>Imprese e addetti</td></tr>
+            <tr><th scope="row">B&amp;B</th><td>Turismo</td></tr>
+            <tr><th scope="row">Bambini</th><td>Censimento 2023, Demografia</td></tr>
+            <tr><th scope="row">Banda larga</th><td>Panoramica</td></tr>
+            <tr><th scope="row">Bandi</th><td>Contratti ANAC</td></tr>
+            <tr><th scope="row">Basi territoriali e variabili</th><td>Censimento 2023</td></tr>
+            <tr><th scope="row">BDAP</th><td>Opere</td></tr>
+            <tr><th scope="row">Beni cult.</th><td>Territorio</td></tr>
+            <tr><th scope="row">Beni culturali</th><td>Panoramica</td></tr>
+            <tr><th scope="row">Beni immobili pubblici dichiarati al MEF</th><td>Patrimonio PA</td></tr>
+            <tr><th scope="row">Beni vincolati</th><td>Beni culturali</td></tr>
+            <tr><th scope="row">Benzina</th><td>Distributori e prezzi</td></tr>
+            <tr><th scope="row">Benzina più economica</th><td>Distributori e prezzi</td></tr>
+            <tr><th scope="row">Benzina self service</th><td>Distributori e prezzi</td></tr>
+            <tr><th scope="row">Biblioteche</th><td>Beni culturali</td></tr>
+            <tr><th scope="row">Bilancio del Comune</th><td>SIOPE</td></tr>
+            <tr><th scope="row">Biossido di azoto</th><td>Meteo e Aria</td></tr>
+            <tr><th scope="row">Camere totali</th><td>Turismo</td></tr>
+            <tr><th scope="row">Campeggi</th><td>Turismo</td></tr>
+            <tr><th scope="row">Camping/Villaggi</th><td>Turismo</td></tr>
+            <tr><th scope="row">Cantieri</th><td>Opere</td></tr>
+            <tr><th scope="row">Capacità nel comune</th><td>Turismo</td></tr>
+            <tr><th scope="row">Capacità ricettiva</th><td>Turismo</td></tr>
+            <tr><th scope="row">Case</th><td>Censimento 2023</td></tr>
+            <tr><th scope="row">Case in affitto</th><td>Turismo</td></tr>
+            <tr><th scope="row">Case per ferie</th><td>Turismo</td></tr>
+            <tr><th scope="row">Case vuote</th><td>Censimento 2023</td></tr>
+            <tr><th scope="row">Cassa</th><td>SIOPE</td></tr>
+            <tr><th scope="row">Castelli</th><td>Beni culturali</td></tr>
+            <tr><th scope="row">Catasto</th><td>ANNCSU e Catasto</td></tr>
+            <tr><th scope="row">Categorie distinte</th><td>Contratti ANAC</td></tr>
+            <tr><th scope="row">Cemento</th><td>Territorio</td></tr>
+            <tr><th scope="row">Censimento 2023</th><td>Panoramica</td></tr>
+            <tr><th scope="row">Centraline ARPA</th><td>Meteo e Aria</td></tr>
+            <tr><th scope="row">Cerca una farmacia o parafarmacia</th><td>Sanità</td></tr>
+            <tr><th scope="row">Chiese</th><td>Beni culturali</td></tr>
+            <tr><th scope="row">Choropleth — indicatore per sezione</th><td>Censimento 2023</td></tr>
+            <tr><th scope="row">Cinque per mille</th><td>Terzo Settore</td></tr>
+            <tr><th scope="row">Cittadinanza</th><td>Censimento 2023, Profilo</td></tr>
+            <tr><th scope="row">Civici metrici</th><td>ANNCSU e Catasto</td></tr>
+            <tr><th scope="row">Civici nero</th><td>ANNCSU e Catasto</td></tr>
+            <tr><th scope="row">Civici rosso</th><td>ANNCSU e Catasto</td></tr>
+            <tr><th scope="row">Classi Euro</th><td>Veicoli e incidenti</td></tr>
+            <tr><th scope="row">CNR-IRPI</th><td>Territorio</td></tr>
+            <tr><th scope="row">Codice</th><td>Censimento 2023</td></tr>
+            <tr><th scope="row">Colonnine di ricarica</th><td>Punti di ricarica</td></tr>
+            <tr><th scope="row">Composizione parco</th><td>Veicoli e incidenti</td></tr>
+            <tr><th scope="row">Comune</th><td>Distributori e prezzi, Pendolarismo</td></tr>
+            <tr><th scope="row">Con vincolo</th><td>Patrimonio PA</td></tr>
+            <tr><th scope="row">Concentrazioni annuali PM10, PM2.5 e NO₂</th><td>Meteo e Aria</td></tr>
+            <tr><th scope="row">Confronto prezzo medio</th><td>Distributori e prezzi</td></tr>
+            <tr><th scope="row">Consumo di suolo</th><td>Territorio</td></tr>
+            <tr><th scope="row">Contratti ANAC</th><td>Panoramica</td></tr>
+            <tr><th scope="row">Contribuenti</th><td>Redditi e fisco</td></tr>
+            <tr><th scope="row">Coordinate</th><td>Territorio</td></tr>
+            <tr><th scope="row">Coordinate fuori comune</th><td>Sanità</td></tr>
+            <tr><th scope="row">Coordinate Ministero della Salute</th><td>Sanità</td></tr>
+            <tr><th scope="row">Coordinate non affidabili</th><td>Sanità</td></tr>
+            <tr><th scope="row">Coordinate non disponibili</th><td>Sanità</td></tr>
+            <tr><th scope="row">Copertura DESI vs FTTH effettiva entro 20m</th><td>Banda larga</td></tr>
+            <tr><th scope="row">Copertura di rete</th><td>Banda larga</td></tr>
+            <tr><th scope="row">Copertura FTTH 20m</th><td>Banda larga</td></tr>
+            <tr><th scope="row">Copertura FTTH DESI</th><td>Banda larga</td></tr>
+            <tr><th scope="row">Costo effettivo</th><td>Opere</td></tr>
+            <tr><th scope="row">Costo previsto</th><td>Opere</td></tr>
+            <tr><th scope="row">CPV</th><td>Contratti ANAC</td></tr>
+            <tr><th scope="row">Crescita UL</th><td>Imprese e addetti</td></tr>
+            <tr><th scope="row">CUP</th><td>Opere, PNRR</td></tr>
+            <tr><th scope="row">Data fine prevista</th><td>Opere</td></tr>
+            <tr><th scope="row">Data inizio</th><td>Opere</td></tr>
+            <tr><th scope="row">Data iscr.</th><td>Terzo Settore</td></tr>
+            <tr><th scope="row">Dati</th><td>ANNCSU e Catasto, Censimento 2023, Patrimonio PA, Redditi e fisco, Sanità, Veicoli e incidenti</td></tr>
+            <tr><th scope="row">Dati a terzi</th><td>Patrimonio PA</td></tr>
+            <tr><th scope="row">Dati di pendolarismo</th><td>Pendolarismo</td></tr>
+            <tr><th scope="row">Dati non ancora caricati</th><td>Panoramica</td></tr>
+            <tr><th scope="row">Dato consolidato di Unione</th><td>Territorio</td></tr>
+            <tr><th scope="row">Dato non disaggregabile</th><td>Territorio</td></tr>
+            <tr><th scope="row">Day Hospital + Surgery</th><td>Sanità</td></tr>
+            <tr><th scope="row">DC fast</th><td>Punti di ricarica</td></tr>
+            <tr><th scope="row">Degenza ordinaria</th><td>Sanità</td></tr>
+            <tr><th scope="row">Demanio</th><td>Patrimonio PA</td></tr>
+            <tr><th scope="row">Demografia</th><td>Panoramica</td></tr>
+            <tr><th scope="row">Denominazione</th><td>Terzo Settore</td></tr>
+            <tr><th scope="row">Densità</th><td>Censimento 2023</td></tr>
+            <tr><th scope="row">Densità popolazione</th><td>Censimento 2023</td></tr>
+            <tr><th scope="row">Densità scolastica</th><td>Scuole</td></tr>
+            <tr><th scope="row">Descrizione</th><td>Censimento 2023</td></tr>
+            <tr><th scope="row">Dettaglio per settore ATECO e classe dime</th><td>Imprese e addetti</td></tr>
+            <tr><th scope="row">Dichiarazioni IRPEF</th><td>Redditi e fisco</td></tr>
+            <tr><th scope="row">Differenziata raccolta</th><td>Territorio</td></tr>
+            <tr><th scope="row">Dimensione media</th><td>Imprese e addetti</td></tr>
+            <tr><th scope="row">Diploma e oltre</th><td>Profilo</td></tr>
+            <tr><th scope="row">Diploma maturità</th><td>Profilo</td></tr>
+            <tr><th scope="row">Diplomati</th><td>Censimento 2023, Profilo</td></tr>
+            <tr><th scope="row">Disoccupazione</th><td>Profilo</td></tr>
+            <tr><th scope="row">Dissesto idrogeologico</th><td>Territorio</td></tr>
+            <tr><th scope="row">Distributori di benzina</th><td>Distributori e prezzi</td></tr>
+            <tr><th scope="row">Distributori e prezzi</th><td>Panoramica</td></tr>
+            <tr><th scope="row">Distribuzione classi Euro (autovetture)</th><td>Veicoli e incidenti</td></tr>
+            <tr><th scope="row">Distribuzione fasce di reddito</th><td>Redditi e fisco</td></tr>
+            <tr><th scope="row">Distribuzione per ordine</th><td>Scuole</td></tr>
+            <tr><th scope="row">Distribuzione posti letto per disciplina</th><td>Sanità</td></tr>
+            <tr><th scope="row">Edifici</th><td>Territorio</td></tr>
+            <tr><th scope="row">Elenco beni</th><td>Beni culturali</td></tr>
+            <tr><th scope="row">Elenco enti</th><td>Terzo Settore</td></tr>
+            <tr><th scope="row">Enti del Terzo Settore</th><td>Terzo Settore</td></tr>
+            <tr><th scope="row">Enti del Terzo Settore iscritti al RUNTS</th><td>Terzo Settore</td></tr>
+            <tr><th scope="row">Entranti</th><td>Pendolarismo</td></tr>
+            <tr><th scope="row">Entrate del Comune</th><td>SIOPE</td></tr>
+            <tr><th scope="row">Esplora i progetti</th><td>Opere</td></tr>
+            <tr><th scope="row">Esposti a frane (P3+P4)</th><td>Territorio</td></tr>
+            <tr><th scope="row">Esposti ad alluvioni (P2 media)</th><td>Territorio</td></tr>
+            <tr><th scope="row">Eta media</th><td>Demografia</td></tr>
+            <tr><th scope="row">Età media</th><td>Demografia</td></tr>
+            <tr><th scope="row">Extra-alberghieri</th><td>Turismo</td></tr>
+            <tr><th scope="row">Extra-alberghiero</th><td>Turismo</td></tr>
+            <tr><th scope="row">Fabbricati</th><td>Patrimonio PA</td></tr>
+            <tr><th scope="row">Famiglie</th><td>Censimento 2023, Profilo, Territorio</td></tr>
+            <tr><th scope="row">Famiglie FTTH entro 20m</th><td>Banda larga</td></tr>
+            <tr><th scope="row">Famiglie per numero componenti</th><td>Censimento 2023</td></tr>
+            <tr><th scope="row">Famiglie raggiunte</th><td>Banda larga</td></tr>
+            <tr><th scope="row">Famiglie, abitazioni e automobili</th><td>Censimento 2023</td></tr>
+            <tr><th scope="row">Farmacie</th><td>Sanità</td></tr>
+            <tr><th scope="row">Farmacie attive</th><td>Sanità</td></tr>
+            <tr><th scope="row">Farmacie, parafarmacie e ospedali</th><td>Sanità</td></tr>
+            <tr><th scope="row">Fasce d&#x27;eta</th><td>Demografia</td></tr>
+            <tr><th scope="row">Fase attuale</th><td>PNRR</td></tr>
+            <tr><th scope="row">Femmine</th><td>Censimento 2023</td></tr>
+            <tr><th scope="row">Feriti</th><td>Veicoli e incidenti</td></tr>
+            <tr><th scope="row">Fibra ottica</th><td>Banda larga</td></tr>
+            <tr><th scope="row">Finanziamenti</th><td>Opere, PNRR</td></tr>
+            <tr><th scope="row">Finanziamento PNRR</th><td>PNRR</td></tr>
+            <tr><th scope="row">Finanziamento totale</th><td>PNRR</td></tr>
+            <tr><th scope="row">Fine prevista / effettiva</th><td>PNRR</td></tr>
+            <tr><th scope="row">Flussi turistici</th><td>Turismo</td></tr>
+            <tr><th scope="row">Foglio catastale</th><td>ANNCSU e Catasto</td></tr>
+            <tr><th scope="row">Fondi europei</th><td>PNRR</td></tr>
+            <tr><th scope="row">Fonte</th><td>Contratti ANAC, Demografia, Opere, PNRR, Profilo, SIOPE, Scuole, Turismo</td></tr>
+            <tr><th scope="row">Fonti</th><td>Veicoli e incidenti</td></tr>
+            <tr><th scope="row">Frane</th><td>Territorio</td></tr>
+            <tr><th scope="row">Frane e alluvioni</th><td>Territorio</td></tr>
+            <tr><th scope="row">FTTH</th><td>Banda larga</td></tr>
+            <tr><th scope="row">Fuori comune</th><td>Profilo</td></tr>
+            <tr><th scope="row">Gare</th><td>Contratti ANAC</td></tr>
+            <tr><th scope="row">Gasolio</th><td>Distributori e prezzi</td></tr>
+            <tr><th scope="row">Gasolio più economico</th><td>Distributori e prezzi</td></tr>
+            <tr><th scope="row">Gasolio self service</th><td>Distributori e prezzi</td></tr>
+            <tr><th scope="row">Geo-referenziati</th><td>ANNCSU e Catasto, Beni culturali, Patrimonio PA</td></tr>
+            <tr><th scope="row">Geomorf.</th><td>Territorio</td></tr>
+            <tr><th scope="row">GPL</th><td>Distributori e prezzi</td></tr>
+            <tr><th scope="row">Grandi 250+</th><td>Terzo Settore</td></tr>
+            <tr><th scope="row">GSE</th><td>Punti di ricarica</td></tr>
+            <tr><th scope="row">Hotel</th><td>Turismo</td></tr>
+            <tr><th scope="row">HPC + Ultra fast</th><td>Punti di ricarica</td></tr>
+            <tr><th scope="row">Immigrati</th><td>Censimento 2023, Profilo</td></tr>
+            <tr><th scope="row">Immobili pubblici</th><td>Patrimonio PA</td></tr>
+            <tr><th scope="row">Importo medio</th><td>Contratti ANAC</td></tr>
+            <tr><th scope="row">Imposta netta media</th><td>Redditi e fisco</td></tr>
+            <tr><th scope="row">Imprese</th><td>Imprese e addetti, Territorio</td></tr>
+            <tr><th scope="row">Imprese e addetti</th><td>Panoramica</td></tr>
+            <tr><th scope="row">In rete associativa</th><td>Terzo Settore</td></tr>
+            <tr><th scope="row">Incassi</th><td>SIOPE</td></tr>
+            <tr><th scope="row">Incidenti</th><td>Veicoli e incidenti</td></tr>
+            <tr><th scope="row">Incidenti stradali</th><td>Veicoli e incidenti</td></tr>
+            <tr><th scope="row">Inclina +</th><td>Territorio</td></tr>
+            <tr><th scope="row">Inclina −</th><td>Territorio</td></tr>
+            <tr><th scope="row">Incrementi annuali</th><td>Territorio</td></tr>
+            <tr><th scope="row">Indice di vecchiaia</th><td>Censimento 2023, Demografia</td></tr>
+            <tr><th scope="row">Indice dipendenza</th><td>Demografia</td></tr>
+            <tr><th scope="row">Indice turisticità</th><td>Turismo</td></tr>
+            <tr><th scope="row">Indice vecchiaia</th><td>Demografia</td></tr>
+            <tr><th scope="row">Indirizzi</th><td>ANNCSU e Catasto</td></tr>
+            <tr><th scope="row">Indirizzi postali raggiunti</th><td>Banda larga</td></tr>
+            <tr><th scope="row">Inizio previsto / effettivo</th><td>PNRR</td></tr>
+            <tr><th scope="row">Inquinamento</th><td>Meteo e Aria</td></tr>
+            <tr><th scope="row">Internet veloce</th><td>Banda larga</td></tr>
+            <tr><th scope="row">IODL v2.0</th><td>Sanità</td></tr>
+            <tr><th scope="row">IRPEF</th><td>Redditi e fisco</td></tr>
+            <tr><th scope="row">Iscritti al 5x1000</th><td>Terzo Settore</td></tr>
+            <tr><th scope="row">Iscrizioni per anno</th><td>Terzo Settore</td></tr>
+            <tr><th scope="row">ISPRA</th><td>Meteo e Aria, Territorio</td></tr>
+            <tr><th scope="row">ISTAT</th><td>Censimento 2023, Demografia, Imprese e addetti, Pendolarismo, Profilo, Turismo</td></tr>
+            <tr><th scope="row">Istituti tecnici</th><td>Scuole</td></tr>
+            <tr><th scope="row">Istruzione</th><td>Censimento 2023, Profilo</td></tr>
+            <tr><th scope="row">Italia</th><td>Distributori e prezzi</td></tr>
+            <tr><th scope="row">ItaliaMeteo</th><td>Meteo e Aria</td></tr>
+            <tr><th scope="row">Italiani</th><td>Profilo</td></tr>
+            <tr><th scope="row">Laurea magistrale / Phd</th><td>Profilo</td></tr>
+            <tr><th scope="row">Laurea triennale / ITS</th><td>Profilo</td></tr>
+            <tr><th scope="row">Laureati</th><td>Censimento 2023, Profilo</td></tr>
+            <tr><th scope="row">Laureati 25-64</th><td>Profilo</td></tr>
+            <tr><th scope="row">Lavori pubblici</th><td>Opere</td></tr>
+            <tr><th scope="row">Lavoro</th><td>Pendolarismo, Profilo</td></tr>
+            <tr><th scope="row">Licei</th><td>Scuole</td></tr>
+            <tr><th scope="row">Licenza elementare</th><td>Profilo</td></tr>
+            <tr><th scope="row">Licenza media</th><td>Profilo</td></tr>
+            <tr><th scope="row">Luoghi della Cultura visitabili</th><td>Beni culturali</td></tr>
+            <tr><th scope="row">Mappa beni georeferenziati</th><td>Beni culturali</td></tr>
+            <tr><th scope="row">Mappa degli impianti</th><td>Distributori e prezzi</td></tr>
+            <tr><th scope="row">Mappa dei civici geo-referenziati</th><td>ANNCSU e Catasto</td></tr>
+            <tr><th scope="row">Mappa dei presidi sanitari</th><td>Sanità</td></tr>
+            <tr><th scope="row">Mappa dei punti</th><td>Patrimonio PA, Punti di ricarica</td></tr>
+            <tr><th scope="row">Mappa flussi pendolari</th><td>Pendolarismo</td></tr>
+            <tr><th scope="row">Mappe catastali</th><td>ANNCSU e Catasto</td></tr>
+            <tr><th scope="row">Maschi</th><td>Censimento 2023</td></tr>
+            <tr><th scope="row">Medie 50-249</th><td>Terzo Settore</td></tr>
+            <tr><th scope="row">MEF</th><td>Patrimonio PA, Redditi e fisco</td></tr>
+            <tr><th scope="row">Metano</th><td>Distributori e prezzi</td></tr>
+            <tr><th scope="row">Meteo</th><td>Meteo e Aria</td></tr>
+            <tr><th scope="row">Meteo e Aria</th><td>Panoramica</td></tr>
+            <tr><th scope="row">Meteo e qualità dell&#x27;aria</th><td>Meteo e Aria</td></tr>
+            <tr><th scope="row">Micro 1-9</th><td>Terzo Settore</td></tr>
+            <tr><th scope="row">MIMIT</th><td>Distributori e prezzi</td></tr>
+            <tr><th scope="row">Ministero della Cultura</th><td>Beni culturali</td></tr>
+            <tr><th scope="row">Ministero della Salute</th><td>Sanità</td></tr>
+            <tr><th scope="row">Missioni distinte</th><td>PNRR</td></tr>
+            <tr><th scope="row">MIUR</th><td>Scuole</td></tr>
+            <tr><th scope="row">Mix dimensionale</th><td>Imprese e addetti</td></tr>
+            <tr><th scope="row">Mix finanziamenti</th><td>Opere</td></tr>
+            <tr><th scope="row">Mix per categoria</th><td>Beni culturali, Patrimonio PA</td></tr>
+            <tr><th scope="row">Mix per categoria di potenza</th><td>Punti di ricarica</td></tr>
+            <tr><th scope="row">Mix per sezione</th><td>Terzo Settore</td></tr>
+            <tr><th scope="row">Mix tecnologico delle celle 20×20m</th><td>Banda larga</td></tr>
+            <tr><th scope="row">Mobilità</th><td>Profilo</td></tr>
+            <tr><th scope="row">Monumenti</th><td>Beni culturali</td></tr>
+            <tr><th scope="row">Morfologia</th><td>Territorio</td></tr>
+            <tr><th scope="row">Morfologia del territorio</th><td>Territorio</td></tr>
+            <tr><th scope="row">Morti</th><td>Veicoli e incidenti</td></tr>
+            <tr><th scope="row">Morti + feriti strada</th><td>Veicoli e incidenti</td></tr>
+            <tr><th scope="row">Morti sulla strada</th><td>Veicoli e incidenti</td></tr>
+            <tr><th scope="row">Moto</th><td>Veicoli e incidenti</td></tr>
+            <tr><th scope="row">Musei</th><td>Beni culturali</td></tr>
+            <tr><th scope="row">Natalità</th><td>Demografia</td></tr>
+            <tr><th scope="row">Natura intervento</th><td>Opere</td></tr>
+            <tr><th scope="row">Neve</th><td>Meteo e Aria</td></tr>
+            <tr><th scope="row">Neve al suolo</th><td>Meteo e Aria</td></tr>
+            <tr><th scope="row">Nuclei familiari</th><td>Censimento 2023, Profilo</td></tr>
+            <tr><th scope="row">Numeri civici</th><td>ANNCSU e Catasto</td></tr>
+            <tr><th scope="row">Numero civico</th><td>ANNCSU e Catasto</td></tr>
+            <tr><th scope="row">Numero famiglie</th><td>Profilo</td></tr>
+            <tr><th scope="row">Nuove elettr.+ibride</th><td>Veicoli e incidenti</td></tr>
+            <tr><th scope="row">Nuovo cemento</th><td>Territorio</td></tr>
+            <tr><th scope="row">Nuvolosità</th><td>Meteo e Aria</td></tr>
+            <tr><th scope="row">Occupati 15-64</th><td>Censimento 2023</td></tr>
+            <tr><th scope="row">Occupati 15–64 e cittadini italiani</th><td>Censimento 2023</td></tr>
+            <tr><th scope="row">Occupazione</th><td>Censimento 2023, Profilo</td></tr>
+            <tr><th scope="row">Odonimi</th><td>ANNCSU e Catasto</td></tr>
+            <tr><th scope="row">ODV</th><td>Terzo Settore</td></tr>
+            <tr><th scope="row">Onlus</th><td>Terzo Settore</td></tr>
+            <tr><th scope="row">Opere</th><td>Panoramica</td></tr>
+            <tr><th scope="row">Opere BDAP</th><td>Panoramica</td></tr>
+            <tr><th scope="row">Opere pubbliche</th><td>Opere</td></tr>
+            <tr><th scope="row">Ospedali</th><td>Sanità</td></tr>
+            <tr><th scope="row">Ostelli</th><td>Turismo</td></tr>
+            <tr><th scope="row">P1 bassa</th><td>Territorio</td></tr>
+            <tr><th scope="row">P1 moderata</th><td>Territorio</td></tr>
+            <tr><th scope="row">P2 media</th><td>Territorio</td></tr>
+            <tr><th scope="row">P3 alta</th><td>Territorio</td></tr>
+            <tr><th scope="row">P3 elevata</th><td>Territorio</td></tr>
+            <tr><th scope="row">P4 molto elevata</th><td>Territorio</td></tr>
+            <tr><th scope="row">Paese di nascita e cittadinanza</th><td>Censimento 2023</td></tr>
+            <tr><th scope="row">Pagamenti</th><td>SIOPE</td></tr>
+            <tr><th scope="row">Panoramica</th><td>Panoramica</td></tr>
+            <tr><th scope="row">Parafarmacie</th><td>Sanità</td></tr>
+            <tr><th scope="row">Parco circolante</th><td>Veicoli e incidenti</td></tr>
+            <tr><th scope="row">Particella</th><td>ANNCSU e Catasto</td></tr>
+            <tr><th scope="row">Particella catastale</th><td>ANNCSU e Catasto</td></tr>
+            <tr><th scope="row">Partite IVA</th><td>Imprese e addetti</td></tr>
+            <tr><th scope="row">Patrimonio PA</th><td>Panoramica</td></tr>
+            <tr><th scope="row">Pendenza</th><td>Territorio</td></tr>
+            <tr><th scope="row">Pendenze</th><td>Territorio</td></tr>
+            <tr><th scope="row">Pendolari</th><td>Pendolarismo</td></tr>
+            <tr><th scope="row">Pendolari totali</th><td>Profilo</td></tr>
+            <tr><th scope="row">Pendolarismo</th><td>Panoramica</td></tr>
+            <tr><th scope="row">Per lavoro</th><td>Profilo</td></tr>
+            <tr><th scope="row">Per stato</th><td>Opere</td></tr>
+            <tr><th scope="row">Per studio</th><td>Profilo</td></tr>
+            <tr><th scope="row">Permanenza media</th><td>Turismo</td></tr>
+            <tr><th scope="row">Persone</th><td>Territorio</td></tr>
+            <tr><th scope="row">Piccole 10-49</th><td>Terzo Settore</td></tr>
+            <tr><th scope="row">Pioggia</th><td>Meteo e Aria</td></tr>
+            <tr><th scope="row">Piramide dell&#x27;età</th><td>Demografia</td></tr>
+            <tr><th scope="row">Piramide demografica</th><td>Demografia</td></tr>
+            <tr><th scope="row">Piramide età</th><td>Censimento 2023</td></tr>
+            <tr><th scope="row">Plessi scolastici</th><td>Scuole</td></tr>
+            <tr><th scope="row">PM10</th><td>Meteo e Aria</td></tr>
+            <tr><th scope="row">PM2.5</th><td>Meteo e Aria</td></tr>
+            <tr><th scope="row">PNRR</th><td>PNRR</td></tr>
+            <tr><th scope="row">Pompe bianche</th><td>Distributori e prezzi</td></tr>
+            <tr><th scope="row">Pop. a rischio frane</th><td>Territorio</td></tr>
+            <tr><th scope="row">Pop. in famiglia</th><td>Profilo</td></tr>
+            <tr><th scope="row">Popolazione</th><td>Censimento 2023, Demografia, Profilo</td></tr>
+            <tr><th scope="row">Popolazione al</th><td>Demografia</td></tr>
+            <tr><th scope="row">Popolazione femmine per età</th><td>Censimento 2023</td></tr>
+            <tr><th scope="row">Popolazione maschi per età</th><td>Censimento 2023</td></tr>
+            <tr><th scope="row">Popolazione per età</th><td>Censimento 2023</td></tr>
+            <tr><th scope="row">Popolazione totale</th><td>Censimento 2023, Profilo</td></tr>
+            <tr><th scope="row">Posti letto</th><td>Sanità, Turismo</td></tr>
+            <tr><th scope="row">Posti letto totali</th><td>Sanità</td></tr>
+            <tr><th scope="row">Posti letto turistici</th><td>Turismo</td></tr>
+            <tr><th scope="row">Potenza totale</th><td>Punti di ricarica</td></tr>
+            <tr><th scope="row">Precipitazioni 24h</th><td>Meteo e Aria</td></tr>
+            <tr><th scope="row">Presenze (notti)</th><td>Turismo</td></tr>
+            <tr><th scope="row">Presenze turistiche</th><td>Turismo</td></tr>
+            <tr><th scope="row">Prezzi aggiornati</th><td>Distributori e prezzi</td></tr>
+            <tr><th scope="row">Prezzo carburanti</th><td>Distributori e prezzi</td></tr>
+            <tr><th scope="row">Prima aggiudicazione</th><td>Contratti ANAC</td></tr>
+            <tr><th scope="row">Produzione e raccolta rifiuti</th><td>Territorio</td></tr>
+            <tr><th scope="row">Profilo</th><td>Panoramica, Territorio</td></tr>
+            <tr><th scope="row">Profilo del</th><td>Profilo</td></tr>
+            <tr><th scope="row">Progetti</th><td>PNRR</td></tr>
+            <tr><th scope="row">Progetti PNRR</th><td>PNRR</td></tr>
+            <tr><th scope="row">Progetti totali</th><td>PNRR</td></tr>
+            <tr><th scope="row">Pronto soccorso</th><td>Sanità</td></tr>
+            <tr><th scope="row">Protezione Civile</th><td>Territorio</td></tr>
+            <tr><th scope="row">Pubblicità legale.</th><td>Terzo Settore</td></tr>
+            <tr><th scope="row">Punti di ricarica</th><td>Panoramica</td></tr>
+            <tr><th scope="row">Qualità dell&#x27;aria</th><td>Meteo e Aria</td></tr>
+            <tr><th scope="row">Qualità dell&#x27;aria — ISPRA SNPA</th><td>Meteo e Aria</td></tr>
+            <tr><th scope="row">Quota</th><td>Territorio</td></tr>
+            <tr><th scope="row">Raccolta differenziata</th><td>Territorio</td></tr>
+            <tr><th scope="row">Rappresentante</th><td>Terzo Settore</td></tr>
+            <tr><th scope="row">Redditi</th><td>Redditi e fisco</td></tr>
+            <tr><th scope="row">Redditi e fisco</th><td>Panoramica</td></tr>
+            <tr><th scope="row">Reddito medio</th><td>Redditi e fisco</td></tr>
+            <tr><th scope="row">Reddito medio — serie storica</th><td>Redditi e fisco</td></tr>
+            <tr><th scope="row">Reparti ospedalieri</th><td>Sanità</td></tr>
+            <tr><th scope="row">Reset</th><td>Territorio</td></tr>
+            <tr><th scope="row">Residenze TA</th><td>Turismo</td></tr>
+            <tr><th scope="row">Ricalcolate via ANNCSU</th><td>Sanità</td></tr>
+            <tr><th scope="row">Ricarica rapida</th><td>Punti di ricarica</td></tr>
+            <tr><th scope="row">Riferimento temporale</th><td>Territorio</td></tr>
+            <tr><th scope="row">Riferimento territoriale</th><td>Turismo</td></tr>
+            <tr><th scope="row">Rifiuti</th><td>Territorio</td></tr>
+            <tr><th scope="row">Rifiuti urbani totali</th><td>Territorio</td></tr>
+            <tr><th scope="row">Rifugi montagna</th><td>Turismo</td></tr>
+            <tr><th scope="row">Rischio sismico</th><td>Territorio</td></tr>
+            <tr><th scope="row">RUNTS</th><td>Terzo Settore</td></tr>
+            <tr><th scope="row">Saldo netto</th><td>Pendolarismo</td></tr>
+            <tr><th scope="row">Sanità</th><td>Panoramica</td></tr>
+            <tr><th scope="row">Scarica dati (ZIP</th><td>Panoramica</td></tr>
+            <tr><th scope="row">Scuola dell&#x27;infanzia</th><td>Scuole</td></tr>
+            <tr><th scope="row">Scuola primaria</th><td>Scuole</td></tr>
+            <tr><th scope="row">Scuole</th><td>Panoramica, Scuole</td></tr>
+            <tr><th scope="row">Sec. II° grado</th><td>Scuole</td></tr>
+            <tr><th scope="row">Sec. I° grado</th><td>Scuole</td></tr>
+            <tr><th scope="row">Senza titolo</th><td>Profilo</td></tr>
+            <tr><th scope="row">Serie storica unità locali e addetti</th><td>Imprese e addetti</td></tr>
+            <tr><th scope="row">Settore ATECO</th><td>Imprese e addetti</td></tr>
+            <tr><th scope="row">Settore CUP</th><td>PNRR</td></tr>
+            <tr><th scope="row">Settori economici</th><td>Imprese e addetti</td></tr>
+            <tr><th scope="row">Sezione</th><td>Terzo Settore</td></tr>
+            <tr><th scope="row">Sezione prevalente</th><td>Terzo Settore</td></tr>
+            <tr><th scope="row">Sezioni di censimento</th><td>Censimento 2023</td></tr>
+            <tr><th scope="row">SIOPE</th><td>SIOPE</td></tr>
+            <tr><th scope="row">Siti archeologici</th><td>Beni culturali</td></tr>
+            <tr><th scope="row">Solare</th><td>Territorio</td></tr>
+            <tr><th scope="row">Solo media o meno</th><td>Profilo</td></tr>
+            <tr><th scope="row">Sotto 15.000 €</th><td>Redditi e fisco</td></tr>
+            <tr><th scope="row">Sottosettore</th><td>Opere</td></tr>
+            <tr><th scope="row">Spese del Comune</th><td>SIOPE</td></tr>
+            <tr><th scope="row">Spostamenti casa-lavoro</th><td>Pendolarismo</td></tr>
+            <tr><th scope="row">Stabilimenti ospedalieri</th><td>Sanità</td></tr>
+            <tr><th scope="row">Stato avanzamento</th><td>PNRR</td></tr>
+            <tr><th scope="row">Stazioni di monitoraggio</th><td>Meteo e Aria</td></tr>
+            <tr><th scope="row">Strade</th><td>ANNCSU e Catasto</td></tr>
+            <tr><th scope="row">Strade bilingui</th><td>ANNCSU e Catasto</td></tr>
+            <tr><th scope="row">Strade, civici e catasto</th><td>ANNCSU e Catasto</td></tr>
+            <tr><th scope="row">Stranieri</th><td>Censimento 2023, Profilo</td></tr>
+            <tr><th scope="row">Stranieri UE ed Extra-UE</th><td>Censimento 2023</td></tr>
+            <tr><th scope="row">Stranieri: UE vs Extra-UE</th><td>Censimento 2023</td></tr>
+            <tr><th scope="row">Strutture totali</th><td>Turismo</td></tr>
+            <tr><th scope="row">Submisura</th><td>PNRR</td></tr>
+            <tr><th scope="row">Suolo</th><td>Territorio</td></tr>
+            <tr><th scope="row">Suolo consumato</th><td>Territorio</td></tr>
+            <tr><th scope="row">Suolo consumato 2024</th><td>Territorio</td></tr>
+            <tr><th scope="row">Superficie comunale</th><td>Territorio</td></tr>
+            <tr><th scope="row">Superficie del comune</th><td>Territorio</td></tr>
+            <tr><th scope="row">Superficie totale</th><td>Patrimonio PA</td></tr>
+            <tr><th scope="row">Tabella completa variabili ISTAT</th><td>Censimento 2023</td></tr>
+            <tr><th scope="row">Tasse</th><td>Redditi e fisco</td></tr>
+            <tr><th scope="row">Tasso di attività</th><td>Profilo</td></tr>
+            <tr><th scope="row">Tasso di motorizzazione</th><td>Veicoli e incidenti</td></tr>
+            <tr><th scope="row">Tasso disoccupazione</th><td>Profilo</td></tr>
+            <tr><th scope="row">Tasso motorizzazione</th><td>Veicoli e incidenti</td></tr>
+            <tr><th scope="row">Tasso occupazione</th><td>Profilo</td></tr>
+            <tr><th scope="row">Temperatura</th><td>Meteo e Aria</td></tr>
+            <tr><th scope="row">Terremoti</th><td>Territorio</td></tr>
+            <tr><th scope="row">Terreni</th><td>Patrimonio PA</td></tr>
+            <tr><th scope="row">Terreni pubblici</th><td>Patrimonio PA</td></tr>
+            <tr><th scope="row">Territorio</th><td>Panoramica</td></tr>
+            <tr><th scope="row">Terziario</th><td>Profilo</td></tr>
+            <tr><th scope="row">Terzo Settore</th><td>Panoramica</td></tr>
+            <tr><th scope="row">Tipologie di reddito</th><td>Redditi e fisco</td></tr>
+            <tr><th scope="row">Titolo di studio</th><td>Censimento 2023, Profilo</td></tr>
+            <tr><th scope="row">Top 10 comuni di destinazione dei pendolari</th><td>Pendolarismo</td></tr>
+            <tr><th scope="row">Top 10 comuni di origine dei pendolari</th><td>Pendolarismo</td></tr>
+            <tr><th scope="row">Top 10 destinazioni pendolari</th><td>Pendolarismo</td></tr>
+            <tr><th scope="row">Top 10 origini pendolari</th><td>Pendolarismo</td></tr>
+            <tr><th scope="row">Top 10 settori ATECO per unità locali</th><td>Imprese e addetti</td></tr>
+            <tr><th scope="row">Top categorie merceologiche (CPV)</th><td>Contratti ANAC</td></tr>
+            <tr><th scope="row">Top settori d&#x27;investimento</th><td>Opere</td></tr>
+            <tr><th scope="row">Toponomastica</th><td>ANNCSU e Catasto</td></tr>
+            <tr><th scope="row">Totale</th><td>Beni culturali</td></tr>
+            <tr><th scope="row">Totale enti</th><td>Terzo Settore</td></tr>
+            <tr><th scope="row">Totale immobili</th><td>Patrimonio PA</td></tr>
+            <tr><th scope="row">Totale impianti</th><td>Distributori e prezzi</td></tr>
+            <tr><th scope="row">Totale punti</th><td>Punti di ricarica</td></tr>
+            <tr><th scope="row">Trasporti</th><td>Pendolarismo</td></tr>
+            <tr><th scope="row">Turismo</th><td>Panoramica</td></tr>
+            <tr><th scope="row">Turisti stranieri</th><td>Turismo</td></tr>
+            <tr><th scope="row">Tutte</th><td>Terzo Settore</td></tr>
+            <tr><th scope="row">Tutte le bandiere</th><td>Distributori e prezzi</td></tr>
+            <tr><th scope="row">Tutti</th><td>Beni culturali, Patrimonio PA, Punti di ricarica</td></tr>
+            <tr><th scope="row">Tutti i carburanti</th><td>Distributori e prezzi</td></tr>
+            <tr><th scope="row">Ultima aggiudicazione</th><td>Contratti ANAC</td></tr>
+            <tr><th scope="row">Ultimo aggiornamento</th><td>SIOPE</td></tr>
+            <tr><th scope="row">Umidità relativa</th><td>Meteo e Aria</td></tr>
+            <tr><th scope="row">Unità locali</th><td>Imprese e addetti</td></tr>
+            <tr><th scope="row">Unità locali e addetti per settore ATECO</th><td>Imprese e addetti</td></tr>
+            <tr><th scope="row">Unità locali per classe</th><td>Imprese e addetti</td></tr>
+            <tr><th scope="row">Uscenti</th><td>Pendolarismo</td></tr>
+            <tr><th scope="row">Valore</th><td>Censimento 2023</td></tr>
+            <tr><th scope="row">Variabili censuarie per famiglia di indicatori</th><td>Censimento 2023</td></tr>
+            <tr><th scope="row">Veicoli</th><td>Panoramica</td></tr>
+            <tr><th scope="row">Veicoli e incidenti</th><td>Panoramica</td></tr>
+            <tr><th scope="row">Veicoli elettrici</th><td>Punti di ricarica, Veicoli e incidenti</td></tr>
+            <tr><th scope="row">Vento</th><td>Meteo e Aria</td></tr>
+            <tr><th scope="row">Vento a 10 metri</th><td>Meteo e Aria</td></tr>
+            <tr><th scope="row">Vie e strade</th><td>ANNCSU e Catasto</td></tr>
+            <tr><th scope="row">Vocazione formativa Sec. II° grado</th><td>Scuole</td></tr>
+            <tr><th scope="row">Voci di cassa</th><td>SIOPE</td></tr>
+            <tr><th scope="row">Volontariato</th><td>Terzo Settore</td></tr>
+            <tr><th scope="row">Zona sismica</th><td>Territorio</td></tr>
+            <tr><th scope="row">Zona&#x27; + subLabel + &#x27;</th><td>Territorio</td></tr>
+            <tr><th scope="row">★ Solo i più economici del comune</th><td>Distributori e prezzi</td></tr>
+            </tbody>
+          </table>
+          <p class="indice-empty" id="indice-empty" hidden>Nessuna voce corrisponde alla ricerca.</p>
+        </div>
+      </details>
+      <script>
+      (function () {
+        var q = document.getElementById('indice-q');
+        if (!q) return;
+        var tbody = document.getElementById('indice-tbody');
+        var cnt = document.getElementById('indice-count');
+        var vuoto = document.getElementById('indice-empty');
+        var righe = Array.prototype.slice.call(tbody.querySelectorAll('tr'));
+        var tot = righe.length;
+        function norm(s) {
+          return s.toLowerCase()
+                  .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        }
+        var idx = righe.map(function (tr) { return norm(tr.textContent); });
+        var timer = null;
+        function filtra() {
+          var v = norm(q.value.trim());
+          var n = 0;
+          for (var i = 0; i < righe.length; i++) {
+            var ok = !v || idx[i].indexOf(v) !== -1;
+            righe[i].hidden = !ok;
+            if (ok) n++;
+          }
+          cnt.textContent = v ? (n + ' voci su ' + tot) : (tot + ' voci');
+          vuoto.hidden = n !== 0;
+        }
+        q.addEventListener('input', function () {
+          clearTimeout(timer);
+          timer = setTimeout(filtra, 120);
+        });
+      })();
+      </script>
+<!-- INDICE-CONTENUTI:END -->
+  </div>
+</section>
+
 <section class="about-section" id="metodologia">
   <div class="wrap">
     <div class="section-title">§ metodologia</div>
