@@ -103,7 +103,7 @@ SHARDS_LOCAL = [
     ("pendolarismo", "/var/www/cruscotto-italia/data/pendolarismo/{istat}.json"),
 ]
 
-ETL_VERSION = "0.1.0"
+ETL_VERSION = "0.2.0"
 
 
 def fetch_json_local(path: str) -> dict | None:
@@ -242,6 +242,11 @@ def compute_kpi_summary(out: dict) -> dict:
         "scuole_miur": {
             "n_scuole": _safe(scuole, "kpi", "n_scuole"),
             "anno_scolastico": scuole.get("anno_scolastico"),
+            "_nota": ("n_scuole conta i plessi, cioe' i punti di erogazione del "
+                      "servizio censiti nell'anagrafe MIUR, non le istituzioni "
+                      "scolastiche autonome: un istituto comprensivo compare con "
+                      "tutti i suoi plessi. Le sedi di dirigenza sono nella "
+                      "sezione scuole del dashboard completo."),
             "scuole_per_1000_ab": _per_1000(_safe(scuole, "kpi", "n_scuole"), pop),
         },
         "contratti_anac": {
