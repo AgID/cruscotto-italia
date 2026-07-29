@@ -51,6 +51,7 @@ CSS = CSS_START + """
   border:1px solid var(--border);border-radius:6px;background:var(--bg);}
 .indice-search:focus-visible{outline:2px solid var(--blu-italia);outline-offset:1px;}
 .indice-count{font-size:.85rem;color:var(--ink-soft,#555);margin:.5rem 0 .75rem;}
+.indice-tab-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
 .indice-tab{width:100%;border-collapse:collapse;font-size:.92rem;}
 .indice-tab th,.indice-tab td{text-align:left;padding:.4rem .6rem;
   border-bottom:1px solid var(--border-soft);vertical-align:top;}
@@ -292,6 +293,7 @@ def costruisci_html(indice):
           <p id="indice-count" class="indice-count" role="status" aria-live="polite">
             {n_termini} voci
           </p>
+          <div class="indice-tab-wrap">
           <table class="indice-tab">
             <caption class="sr-only">Elenco alfabetico dei dati e scheda in cui trovarli</caption>
             <thead>
@@ -301,6 +303,7 @@ def costruisci_html(indice):
 {righe}
             </tbody>
           </table>
+          </div>
           <p class="indice-empty" id="indice-empty" hidden>Nessuna voce corrisponde alla ricerca.</p>
         </div>
       </details>

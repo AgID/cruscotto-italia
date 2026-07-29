@@ -206,6 +206,7 @@ footer a:hover { color: #fff !important; }
   border:1px solid var(--border);border-radius:6px;background:var(--bg);}
 .indice-search:focus-visible{outline:2px solid var(--blu-italia);outline-offset:1px;}
 .indice-count{font-size:.85rem;color:var(--ink-soft,#555);margin:.5rem 0 .75rem;}
+.indice-tab-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
 .indice-tab{width:100%;border-collapse:collapse;font-size:.92rem;}
 .indice-tab th,.indice-tab td{text-align:left;padding:.4rem .6rem;
   border-bottom:1px solid var(--border-soft);vertical-align:top;}
@@ -226,7 +227,7 @@ footer a:hover { color: #fff !important; }
 
 <!-- ============ MASTHEAD ============ -->
 <!-- ============ HEADER ISTITUZIONALE ============ -->
-<div class="mini-mast">
+<header class="mini-mast">
   <div class="wrap">
     <div class="mini-agid">
       <a href="https://www.agid.gov.it/it" target="_blank" rel="noopener noreferrer" aria-label="Sito istituzionale AgID (apre in nuova scheda)">
@@ -238,7 +239,7 @@ footer a:hover { color: #fff !important; }
       <span class="mini-brand-sub">7.896 comuni · fonti istituzionali</span>
     </div>
   </div>
-</div>
+</header>
 
 <main id="main">
 
@@ -267,7 +268,7 @@ footer a:hover { color: #fff !important; }
     <p>
       Il codice di Cruscotto Italia è interamente <strong>open source</strong>
       con licenza AGPL-3.0. Il codice sorgente è pubblicato su
-      <a href="https://github.com/AgID/cruscotto-italia" target="_blank" rel="noopener">GitHub</a>.
+      <a href="https://github.com/AgID/cruscotto-italia" target="_blank" rel="noopener">GitHub<span class="sr-only"> (apre in nuova scheda)</span></a>.
       Tutti i dataset utilizzati sono pubblici sotto licenze CC-BY 4.0, IODL 2.0
       o altre comunque aperte (es. CC-BY 3.0 IT per ISTAT),
       ricomposti per codice ISTAT del comune attraverso pipeline automatiche
@@ -289,11 +290,12 @@ footer a:hover { color: #fff !important; }
     </p>
 
     <table class="fonti-table">
+      <caption class="sr-only">Fonti istituzionali integrate, con dataset e frequenza di aggiornamento</caption>
       <thead>
         <tr>
-          <th>Fonte</th>
-          <th>Dataset</th>
-          <th>Frequenza</th>
+          <th scope="col">Fonte</th>
+          <th scope="col">Dataset</th>
+          <th scope="col">Frequenza</th>
         </tr>
       </thead>
       <tbody>
@@ -322,7 +324,7 @@ footer a:hover { color: #fff !important; }
             Sistema Informativo Operazioni Enti Pubblici. Pagamenti e
             incassi di cassa di ogni comune, voce per voce, con saldo
             di cassa. Fonte primaria <a href="https://www.siope.it/"
-            target="_blank" rel="noopener">siope.it</a>.
+            target="_blank" rel="noopener">siope.it<span class="sr-only"> (apre in nuova scheda)</span></a>.
           </td>
           <td class="freq">mensile</td>
         </tr>
@@ -702,7 +704,7 @@ footer a:hover { color: #fff !important; }
             Consiglio Nazionale delle Ricerche &mdash; Istituto di Ricerca per la
             Protezione Idrogeologica (Panza, Muto, Rossi, Alvioli, Iovine, Marchesini).
             Dataset <strong>HRDTM5m</strong> pubblicato su Zenodo
-            (DOI&nbsp;<a href="https://doi.org/10.5281/zenodo.18872933" target="_blank" rel="noopener">10.5281/zenodo.18872933</a>),
+            (DOI&nbsp;<a href="https://doi.org/10.5281/zenodo.18872933" target="_blank" rel="noopener">10.5281/zenodo.18872933<span class="sr-only"> (apre in nuova scheda)</span></a>),
             griglia 5&nbsp;m in EPSG:6875 (RDN2008), copertura nazionale completa.
             Per ogni comune: elevazione (min/max/media), pendenza media e distribuzione
             per classi, esposizione prevalente (rosa dei venti), TRI, geomorfologia
@@ -713,10 +715,10 @@ footer a:hover { color: #fff !important; }
             <strong>~7.895 comuni</strong>. Produzione one-shot (dato statico).
             Licenza <strong>CC BY 4.0</strong>.
             Elaborazione headless con
-            <a href="https://github.com/pigreco/qgis_headless_wsl2" target="_blank" rel="noopener">qgis_headless_wsl2</a>
+            <a href="https://github.com/pigreco/qgis_headless_wsl2" target="_blank" rel="noopener">qgis_headless_wsl2<span class="sr-only"> (apre in nuova scheda)</span></a>
             di <strong>Salvatore Fiandaca</strong>.
             Metodi, layer e KPI ispirati a
-            <a href="https://palermohub.opendatasicilia.it/palermo_dtm5m.html" target="_blank" rel="noopener">PalermoHub DTM 5m</a>
+            <a href="https://palermohub.opendatasicilia.it/palermo_dtm5m.html" target="_blank" rel="noopener">PalermoHub DTM 5m<span class="sr-only"> (apre in nuova scheda)</span></a>
             di <strong>Giovan Battista Vitrano</strong> e <strong>Andrea Borruso</strong>.
           </td>
           <td class="freq">one-shot<br>(statico)</td>
@@ -725,7 +727,7 @@ footer a:hover { color: #fff !important; }
           <td>ItaliaMeteo &middot; Cineca</td>
           <td>
             <strong>Previsioni meteorologiche ICON-2I</strong>
-            Modello numerico ad area limitata gestito dall'<a href="https://meteohub.agenziaitaliameteo.it/" target="_blank" rel="noopener">Agenzia Nazionale per la Meteorologia e Climatologia (ItaliaMeteo)</a>
+            Modello numerico ad area limitata gestito dall'<a href="https://meteohub.agenziaitaliameteo.it/" target="_blank" rel="noopener">Agenzia Nazionale per la Meteorologia e Climatologia (ItaliaMeteo)<span class="sr-only"> (apre in nuova scheda)</span></a>
             con il supporto di Cineca. Griglia 2,2&nbsp;km, copertura Italia, 73 step orari (0&ndash;72h):
             temperatura 2m, precipitazioni totali, umidità relativa, vento 10m (U/V),
             raffica massima, copertura nuvolosa, altezza neve, codice meteo WMO.
@@ -773,6 +775,7 @@ footer a:hover { color: #fff !important; }
           <p id="indice-count" class="indice-count" role="status" aria-live="polite">
             492 voci
           </p>
+          <div class="indice-tab-wrap">
           <table class="indice-tab">
             <caption class="sr-only">Elenco alfabetico dei dati e scheda in cui trovarli</caption>
             <thead>
@@ -1273,6 +1276,7 @@ footer a:hover { color: #fff !important; }
             <tr><th scope="row">★ Solo i più economici del comune</th><td>Distributori e prezzi</td></tr>
             </tbody>
           </table>
+          </div>
           <p class="indice-empty" id="indice-empty" hidden>Nessuna voce corrisponde alla ricerca.</p>
         </div>
       </details>
@@ -1506,10 +1510,10 @@ footer a:hover { color: #fff !important; }
         </p>
                 <p style="margin-bottom:8px"><strong>Guide passo-passo</strong> per collegare Cruscotto Italia al tuo assistente AI:</p>
         <div style="display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 16px">
-          <a href="/assets/guide/mcp-claude.svg" target="_blank" rel="noopener" style="display:inline-block;border:1px solid #0066CC;border-radius:20px;padding:7px 16px;background:#f5f8fc;color:#004C99;font-weight:600;font-size:14px;text-decoration:none">Istruzioni per Claude</a>
-          <a href="/assets/guide/skill-claude.svg" target="_blank" rel="noopener" style="display:inline-block;border:1px solid #0066CC;border-radius:20px;padding:7px 16px;background:#f5f8fc;color:#004C99;font-weight:600;font-size:14px;text-decoration:none">Istruzioni Skill per Claude</a>
-          <a href="/assets/guide/mcp-chatgpt.svg" target="_blank" rel="noopener" style="display:inline-block;border:1px solid #0066CC;border-radius:20px;padding:7px 16px;background:#f5f8fc;color:#004C99;font-weight:600;font-size:14px;text-decoration:none">Istruzioni per ChatGPT</a>
-          <a href="/assets/guide/skill-cli.svg" target="_blank" rel="noopener" style="display:inline-block;border:1px solid #0066CC;border-radius:20px;padding:7px 16px;background:#f5f8fc;color:#004C99;font-weight:600;font-size:14px;text-decoration:none">Istruzioni Skill CLI</a>
+          <a href="/assets/guide/mcp-claude.svg" target="_blank" rel="noopener" style="display:inline-block;border:1px solid #0066CC;border-radius:20px;padding:7px 16px;background:#f5f8fc;color:#004C99;font-weight:600;font-size:14px;text-decoration:none">Istruzioni per Claude<span class="sr-only"> (apre in nuova scheda)</span></a>
+          <a href="/assets/guide/skill-claude.svg" target="_blank" rel="noopener" style="display:inline-block;border:1px solid #0066CC;border-radius:20px;padding:7px 16px;background:#f5f8fc;color:#004C99;font-weight:600;font-size:14px;text-decoration:none">Istruzioni Skill per Claude<span class="sr-only"> (apre in nuova scheda)</span></a>
+          <a href="/assets/guide/mcp-chatgpt.svg" target="_blank" rel="noopener" style="display:inline-block;border:1px solid #0066CC;border-radius:20px;padding:7px 16px;background:#f5f8fc;color:#004C99;font-weight:600;font-size:14px;text-decoration:none">Istruzioni per ChatGPT<span class="sr-only"> (apre in nuova scheda)</span></a>
+          <a href="/assets/guide/skill-cli.svg" target="_blank" rel="noopener" style="display:inline-block;border:1px solid #0066CC;border-radius:20px;padding:7px 16px;background:#f5f8fc;color:#004C99;font-weight:600;font-size:14px;text-decoration:none">Istruzioni Skill CLI<span class="sr-only"> (apre in nuova scheda)</span></a>
         </div>
 <p style="margin-bottom:8px"><strong>Esempi di domande</strong> che puoi porre a un assistente AI collegato all'endpoint MCP:</p>
         <div style="display:flex;flex-direction:column;gap:8px;margin:4px 0 8px">
@@ -1785,8 +1789,8 @@ footer a:hover { color: #fff !important; }
     </p>
     <p>
       L'utente formula domande in linguaggio naturale (italiano o inglese): SIMBA comprende
-      l'intento, interroga in tempo reale <a href="https://www.dati.gov.it/" target="_blank" rel="noopener noreferrer">dati.gov.it</a>,
-      <a href="https://lod.dati.gov.it/sparql/" target="_blank" rel="noopener noreferrer">lod.dati.gov.it/sparql</a>
+      l'intento, interroga in tempo reale <a href="https://www.dati.gov.it/" target="_blank" rel="noopener noreferrer">dati.gov.it<span class="sr-only"> (apre in nuova scheda)</span></a>,
+      <a href="https://lod.dati.gov.it/sparql/" target="_blank" rel="noopener noreferrer">lod.dati.gov.it/sparql<span class="sr-only"> (apre in nuova scheda)</span></a>
       e altri portali CKAN regionali, restituisce risultati strutturati con riferimenti diretti
       alle fonti, e propone strumenti integrati per la validazione di CSV e la trasformazione
       in RDF/TTL.
@@ -1806,12 +1810,12 @@ footer a:hover { color: #fff !important; }
       SIMBA è costruito su uno stack a 7 microservizi containerizzati Docker: frontend React + Vite,
       backend Node.js Express, microservizi Python per validazione, RDF/SPARQL e guardrail di sicurezza,
       runtime LLM Ollama su GPU. Il codice è pubblicato su
-      <a href="https://github.com/AgID/simba-chatbot" target="_blank" rel="noopener noreferrer">github.com/AgID/simba-chatbot</a>
+      <a href="https://github.com/AgID/simba-chatbot" target="_blank" rel="noopener noreferrer">github.com/AgID/simba-chatbot<span class="sr-only"> (apre in nuova scheda)</span></a>
       con licenza AGPL-3.0.
     </p>
 
     <p style="margin-top:var(--sp-5);">
-      <a href="https://chatbot.dati.gov.it/chatbot/" target="_blank" rel="noopener noreferrer" class="cta-link"><strong>Apri SIMBA</strong> →</a>
+      <a href="https://chatbot.dati.gov.it/chatbot/" target="_blank" rel="noopener noreferrer" class="cta-link"><strong>Apri SIMBA</strong> →<span class="sr-only"> (apre in nuova scheda)</span></a>
     </p>
   </div>
 </section>
@@ -1829,8 +1833,8 @@ footer a:hover { color: #fff !important; }
     <p>
       I codici sono entrambi pubblicati in modalità open source con
       licenza AGPL-3.0 su GitHub
-      (<a href="https://github.com/AgID/cruscotto-italia" target="_blank" rel="noopener">Cruscotto Italia</a> ·
-      <a href="https://github.com/AgID/simba-chatbot" target="_blank" rel="noopener">SIMBA</a>);
+      (<a href="https://github.com/AgID/cruscotto-italia" target="_blank" rel="noopener">Cruscotto Italia<span class="sr-only"> (apre in nuova scheda)</span></a> ·
+      <a href="https://github.com/AgID/simba-chatbot" target="_blank" rel="noopener">SIMBA<span class="sr-only"> (apre in nuova scheda)</span></a>);
       i dati Cruscotto aggregati con licenza CC-BY 4.0 (compatibile con le
       licenze upstream IODL 2.0 e CC BY 3.0 IT delle fonti).
     </p>
@@ -1845,7 +1849,7 @@ footer a:hover { color: #fff !important; }
     <div class="colophon">
       <strong>Cruscotto Italia</strong><br>
       Iniziativa basata sui dati pubblici del Catalogo Nazionale
-      <a href="https://www.dati.gov.it" target="_blank" rel="noopener">dati.gov.it</a>.
+      <a href="https://www.dati.gov.it" target="_blank" rel="noopener">dati.gov.it<span class="sr-only"> (apre in nuova scheda)</span></a>.
     </div>
     <div>
       <h3>Progetto</h3>
@@ -1858,7 +1862,7 @@ footer a:hover { color: #fff !important; }
     <div>
       <h3>Contatti</h3>
       <ul>
-        <li><a href="https://www.dati.gov.it" target="_blank" rel="noopener">dati.gov.it</a></li>
+        <li><a href="https://www.dati.gov.it" target="_blank" rel="noopener">dati.gov.it<span class="sr-only"> (apre in nuova scheda)</span></a></li>
         <li><a href="mailto:dati@agid.gov.it">dati@agid.gov.it</a></li>
       </ul>
     </div>
@@ -1866,7 +1870,7 @@ footer a:hover { color: #fff !important; }
   <div class="wrap" style="display:block;margin-top:32px;padding-top:16px;border-top:1px solid #333">
     <div class="footer-bottom">
       <span>v2026.05.07.1 · Build cruscotto-italia 0.1.0</span>
-      <span>Contenuti <a href="https://creativecommons.org/licenses/by/4.0/deed.it" target="_blank" rel="noopener">CC-BY 4.0</a> · Codice AGPL-3.0 · 2026 AgID</span>
+      <span>Contenuti <a href="https://creativecommons.org/licenses/by/4.0/deed.it" target="_blank" rel="noopener">CC-BY 4.0<span class="sr-only"> (apre in nuova scheda)</span></a> · Codice AGPL-3.0 · 2026 AgID</span>
     </div>
   </div>
 </footer>
