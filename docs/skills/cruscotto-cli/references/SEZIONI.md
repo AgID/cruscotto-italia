@@ -44,7 +44,7 @@ I pesi indicati sono quelli di Matera (077014, 59k abitanti): scalano con la dim
 
 | Chiave | Fonte | Contenuto | Peso |
 |---|---|---|---|
-| `scuole` | MIUR | anagrafe scolastica, edifici, alunni | 31.0 KB |
+| `scuole` | MIUR | plessi (punti di erogazione), ordine/grado, indirizzi | 31.0 KB |
 | `runts` | RUNTS | enti del terzo settore | 48.8 KB |
 | `immobili_pa` | MEF (Patrimonio PA) | immobili di proprieta' pubblica | 56.4 KB |
 | `siope` | MEF-RGS SIOPE (siope.it) | pagamenti e incassi per codice gestionale, per anno, con saldo di cassa | 104 KB |
