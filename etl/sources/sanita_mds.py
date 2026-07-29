@@ -91,6 +91,7 @@ import requests
 import structlog
 
 from etl.lib import local_lookup, manifest
+from etl.lib.text import clean_text
 
 log = structlog.get_logger()
 
@@ -318,7 +319,7 @@ def parse_farmacie(csv_path: Path, ref_date: datetime) -> dict[str, list[dict]]:
 
             lat = _norm_coord(row.get("latitudine"))
             lon = _norm_coord(row.get("longitudine"))
-            tipo = (row.get("descrizione_tipologia") or "").strip()
+            tipo = clean_text(row.get("descrizione_tipologia"))
             # Normalizzazione case-mix "Dispensario stagionale" / "Stagionale"
             if tipo:
                 tipo = tipo.strip()
@@ -328,16 +329,17 @@ def parse_farmacie(csv_path: Path, ref_date: datetime) -> dict[str, list[dict]]:
                 tipo_norm = "Non specificata"
 
             by_istat[istat].append({
-                "nome":     (row.get("descrizione_farmacia") or "").strip()[:140],
+                "nome":     clean_text(row.get("descrizione_farmacia"), 140,
+                                       sostituzioni=True),
                 "tipo":     tipo_norm,
-                "indirizzo": (row.get("indirizzo") or "").strip(),
+                "indirizzo": clean_text(row.get("indirizzo"), sostituzioni=True),
                 "cap":      (row.get("cap") or "").strip(),
                 "lat":      round(lat, 6) if lat is not None else None,
                 "lon":      round(lon, 6) if lon is not None else None,
                 # anagrafica per arricchimento aggregato
                 "_provincia": (row.get("sigla_provincia") or "").strip(),
-                "_regione":   (row.get("regione") or "").strip(),
-                "_comune":    (row.get("comune") or "").strip(),
+                "_regione":   clean_text(row.get("regione")),
+                "_comune":    clean_text(row.get("comune")),
             })
 
     log.info("sanita_mds_farmacie_parsed",
@@ -365,14 +367,15 @@ def parse_parafarmacie(csv_path: Path, ref_date: datetime) -> dict[str, list[dic
             lon = _norm_coord(row.get("longitudine"))
 
             by_istat[istat].append({
-                "nome":     (row.get("sito_logistico") or "").strip()[:140],
-                "indirizzo": (row.get("indirizzo") or "").strip(),
+                "nome":     clean_text(row.get("sito_logistico"), 140,
+                                       sostituzioni=True),
+                "indirizzo": clean_text(row.get("indirizzo"), sostituzioni=True),
                 "cap":      (row.get("cap") or "").strip(),
                 "lat":      round(lat, 6) if lat is not None else None,
                 "lon":      round(lon, 6) if lon is not None else None,
                 "_provincia": (row.get("sigla_provincia") or "").strip(),
-                "_regione":   (row.get("regione") or "").strip(),
-                "_comune":    (row.get("comune") or "").strip(),
+                "_regione":   clean_text(row.get("regione")),
+                "_comune":    clean_text(row.get("comune")),
             })
 
     log.info("sanita_mds_parafarmacie_parsed",
