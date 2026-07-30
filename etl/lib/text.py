@@ -16,6 +16,7 @@ Il carattere "a con accento grave" corrotto e la coppia "A tilde" + NBSP
 mojibake. clean_text() impone l ordine corretto.
 """
 
+import html as _html
 import re
 
 # Caratteri che in italiano non compaiono mai isolati e segnalano mojibake
@@ -118,6 +119,49 @@ def normalizza_sostituzioni(s: str) -> str:
     return re.sub(r"\s+", " ", s).strip()
 
 
+# Entity HTML lasciate dalla fonte: "e commerciale" nei nomi delle farmacie (MdS,
+# 152 occorrenze su 140 comuni) e spazio unificatore nelle descrizioni dei beni ArCo
+# (766 occorrenze su 73 comuni). Il frontend le maschera, perche inserisce via
+# innerHTML e il browser le decodifica; il chatbot invece fa escape HTML per
+# sicurezza XSS, quindi l utente le legge alla lettera. Ma il difetto e nel DATO:
+# questi shard sono pubblicati come open data (cfr. dcat_catalog) e riusati da terzi.
+_ENTITY = re.compile(r"&(?:[A-Za-z][A-Za-z0-9]{1,31}|#[0-9]{1,7}|#[xX][0-9A-Fa-f]{1,6});")
+
+
+def decodifica_entity(s: str, max_giri: int = 3) -> str:
+    """Decodifica le entity HTML e normalizza lo spazio unificatore che ne deriva.
+
+    Deterministica e verificabile, a differenza di normalizza_sostituzioni(): una
+    entity ha un solo significato possibile. Una "e commerciale" isolata non e una
+    entity e resta intatta ("Via Garibaldi & Co").
+
+    Lo spazio unificatore prodotto dalla decodifica diventa spazio normale: in un
+    campo testuale di un open data e rumore invisibile. Il collasso degli spazi
+    multipli agisce solo sulle stringhe che contenevano entity.
+
+    ORDINE: va applicata DOPO fix_mojibake(), che usa lo spazio unificatore come
+    segnale per ricostruire i byte corrotti; anticiparla ne falserebbe il lavoro.
+    """
+    if not s or "&" not in s:
+        return s
+    if not _ENTITY.search(s):
+        return s
+    # La codifica puo essere ANNIDATA piu volte, esattamente come il mojibake:
+    # osservato "e commerciale" codificata tre volte nel dataset Farmacie del MdS
+    # (15 comuni). Un solo giro lascerebbe una entity ancora da sciogliere, quindi
+    # si itera finche il testo ne contiene, con lo stesso tetto di fix_mojibake().
+    out = s
+    for _ in range(max_giri):
+        nuovo = _html.unescape(out)
+        if nuovo == out:
+            break
+        out = nuovo
+        if not _ENTITY.search(out):
+            break
+    out = out.replace("\u00a0", " ")
+    return re.sub(r"[ \t]{2,}", " ", out)
+
+
 def clean_text(v, limite: int | None = None,
                sostituzioni: bool = False) -> str:
     """Pipeline standard per un campo testuale di una fonte: fix, strip, taglio.
@@ -128,6 +172,7 @@ def clean_text(v, limite: int | None = None,
     per questo e opt-in e non fa parte del comportamento predefinito.
     """
     s = fix_mojibake(v or "")
+    s = decodifica_entity(s)
     if sostituzioni:
         s = normalizza_sostituzioni(s)
     s = s.strip()

@@ -108,7 +108,7 @@ from pathlib import Path
 import requests
 import structlog
 
-from etl.lib import local_lookup, manifest
+from etl.lib import local_lookup, manifest, text
 
 log = structlog.get_logger(__name__)
 
@@ -303,6 +303,10 @@ def _clean_text(s: str | None) -> str | None:
     """
     if not s:
         return None
+    # Le entity HTML vanno sciolte PRIMA del collapse, cosi lo spazio unificatore
+    # che ne deriva viene assorbito qui. Stessa funzione usata dalle altre fonti:
+    # una sola implementazione, in etl/lib/text.py.
+    s = text.decodifica_entity(s)
     # collapse whitespace consecutivi (compresi \n, \t)
     s = " ".join(s.split())
     return s if s else None
