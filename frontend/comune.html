@@ -8461,15 +8461,17 @@ function renderAnncsuTab(d) {
     </div>
   `;
 
-  // Sezione chart: visibile solo se il comune ha conferito georef.
-  // Aosta (e altri comuni con 0% geo-ref) → nascondiamo entrambi i chart:
-  // il chart top10 sarebbe statisticamente valido ma fuorviante UX-mente
-  // (l'utente vede '0% geo-ref' e si aspetta che tutto il blocco sia vuoto).
+  // Sezione chart: il top 10 strade NON dipende dalla georeferenziazione.
+  // Il conteggio dei civici per strada viene dall'anagrafica ANNCSU e resta valido
+  // anche dove nessun civico ha coordinate: Aosta ha 0% geo-ref ma 8.034 civici su
+  // strade note. Prima l'intero blocco veniva nascosto per coerenza con la mappa
+  // vuota, sopprimendo un dato corretto invece di spiegarlo.
+  // Il chart dei METODI di georeferenziazione sparisce comunque da solo, perche a
+  // 0% metodi_georef e assente e hasMetodi resta falso.
   const topStrade = Array.isArray(k.top_10_strade) ? k.top_10_strade : [];
   const metodi = k.metodi_georef || {};
   const hasMetodi = Object.values(metodi).some(v => v > 0);
-  const hasGeoRef = (k.pct_geo_ref || 0) > 0;
-  const chartsBlock = (hasGeoRef && (topStrade.length || hasMetodi)) ? `
+  const chartsBlock = (topStrade.length || hasMetodi) ? `
     <div class="anncsu-charts">
       ${topStrade.length ? `
         <div class="anncsu-chart-col">
