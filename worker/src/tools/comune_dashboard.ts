@@ -403,6 +403,24 @@ interface DashboardShard {
   asia: unknown | null;
   pendolarismo: unknown | null;
   beni_culturali: unknown | null;
+  // Sezioni presenti nello shard ma mai dichiarate qui. L'omissione aveva
+  // costretto a un cast verso Record<string, unknown> per scrivere morfologia,
+  // che tsc segnalava come TS2352 (nessuna index signature su DashboardShard).
+  // Verificate contro lo shard reale il 31/07/2026: 31 chiavi, tutte coperte.
+  // NB: classificazione_sismica NON e una chiave di primo livello: dashboard.py
+  // la estrae e la annida dentro territorio.
+  scuole: unknown | null;
+  aria: unknown | null;
+  veicoli: unknown | null;
+  redditi: unknown | null;
+  immobili_pa: unknown | null;
+  anncsu: unknown | null;
+  sanita_mds: unknown | null;
+  censimento: unknown | null;
+  meteo: unknown | null;
+  morfologia: unknown | null;
+  bdap_kpi: unknown | null;
+  kpi_summary: Record<string, unknown> | null;
 }
 
 export const comuneDashboard: ToolDefinition = {
@@ -485,7 +503,7 @@ export const comuneDashboard: ToolDefinition = {
         fetchR2Json<Record<string, unknown>>(env, `morfologia/${resolvedIstat}/bounds.json`, { useKvCache: false }),
       ]);
       if (mStats) {
-        (shard as Record<string, unknown>).morfologia = { stats: mStats, bounds: mBounds ?? null };
+        shard.morfologia = { stats: mStats, bounds: mBounds ?? null };
       }
     } catch (_) {
       // morfologia non disponibile per questo comune, nessun blocco
