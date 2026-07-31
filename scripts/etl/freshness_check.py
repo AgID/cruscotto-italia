@@ -111,7 +111,8 @@ def eta_giorni(iso: str | None, ora: datetime) -> float | None:
         return None
 
 
-def eta_ultimo_run(source: str, ora: datetime, prefisso: str | None = None) -> float | None:
+def eta_ultimo_run(source: str, ora: datetime, prefisso: str | None = None,
+                   last_run_iso: str | None = None) -> float | None:
     """Da quanti giorni l'ETL non VIENE ESEGUITO, dai log del cron.
 
     Distinzione essenziale: manifest["last_run"] NON si aggiorna quando l'ETL
@@ -122,13 +123,23 @@ def eta_ultimo_run(source: str, ora: datetime, prefisso: str | None = None) -> f
       - manifest      -> "il dato e' cambiato?"  (fermo = spesso la fonte)
     Solo il primo e' un allarme.
     """
-    if not LOGDIR.is_dir():
-        return None
     recente = None
-    for f in LOGDIR.glob(f"{prefisso or source}-*.log*"):
-        mt = f.stat().st_mtime
-        if recente is None or mt > recente:
-            recente = mt
+    if LOGDIR.is_dir():
+        for f in LOGDIR.glob(f"{prefisso or source}-*.log*"):
+            mt = f.stat().st_mtime
+            if recente is None or mt > recente:
+                recente = mt
+    # Un run manuale (o un rerun fuori cron) non scrive in $LOG ma aggiorna il
+    # manifest: senza questa evidenza il check grida "non eseguito" su un ETL
+    # appena rilanciato a mano. E' successo il 29-31/07/2026 su siope.
+    # Non nasconde nulla: se l'ETL non gira davvero, nessuna delle due avanza.
+    if last_run_iso:
+        try:
+            t = datetime.fromisoformat(last_run_iso).timestamp()
+            if recente is None or t > recente:
+                recente = t
+        except (ValueError, TypeError):
+            pass
     return None if recente is None else (ora.timestamp() - recente) / 86400.0
 
 
@@ -233,6 +244,49 @@ CONTROLLI_CONTENUTO = {
 }
 
 
+STATO = OUT.parent / "freshness_state.json"
+
+
+def carica_stato() -> dict:
+    try:
+        return json.loads(STATO.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+
+
+def salva_stato(stato: dict) -> None:
+    try:
+        STATO.parent.mkdir(parents=True, exist_ok=True)
+        tmp = STATO.with_suffix(".json.tmp")
+        tmp.write_text(json.dumps(stato, indent=2, ensure_ascii=False), encoding="utf-8")
+        tmp.replace(STATO)
+    except OSError:
+        pass
+
+
+def grazia_per_fonte(nome: str, cadenza: float | None, stato: dict,
+                     ora: datetime) -> float | None:
+    """Giorni trascorsi da un cambio di cadenza, se la grazia e' ancora dovuta.
+
+    Registra la cadenza osservata per ogni fonte. Quando cambia, annota il
+    momento e concede un ciclo pieno prima di pretendere il rispetto della nuova
+    frequenza: nel frattempo il ritardo diventa una nota, non un allarme.
+    La grazia vale SOLO per la fonte che ha cambiato cadenza.
+    """
+    if cadenza is None:
+        return None
+    v = stato.get(nome) or {}
+    prec = v.get("cadenza")
+    if prec is None or abs(float(prec) - cadenza) > 0.01:
+        stato[nome] = {"cadenza": cadenza, "dal": ora.isoformat()}
+        return 0.0
+    try:
+        gg = (ora - datetime.fromisoformat(v["dal"])).total_seconds() / 86400.0
+    except (KeyError, ValueError, TypeError):
+        return None
+    return gg if gg < cadenza else None
+
+
 def telegram(testo: str) -> bool:
     tok = os.environ.get("TELEGRAM_BOT_TOKEN")
     chat = os.environ.get("TELEGRAM_CHAT_ID")
@@ -271,6 +325,15 @@ def main() -> int:
     sources = m.get("sources") or {}
     cad, logpfx = cadenze_da_cron()
     ora = datetime.now(timezone.utc)
+    # Quando si AUMENTA la frequenza di un job, il passato viene giudicato con
+    # la cadenza nuova: portando siope da mensile a settimanale il 29/07/2026 il
+    # check ha suonato per tre mattine su un ETL sano, perche' il primo lunedi
+    # utile non era ancora arrivato.
+    # La grazia e PER FONTE, non globale: un primo tentativo basato sull'mtime
+    # del crontab silenziava tutte le 25 fonti a ogni modifica del file, e nel
+    # test un bdap fermo da 90 giorni non veniva piu rilevato. Toccare il cron
+    # per una fonte non deve spegnere l'allarme sulle altre.
+    stato = carica_stato()
     righe, anomalie = [], []
 
     for nome in sorted(sources):
@@ -280,7 +343,8 @@ def main() -> int:
         c = cad.get(nome)
         e_sh, n_file = eta_shard(nome, ora)
 
-        e_run = eta_ultimo_run(nome, ora, logpfx.get(nome))
+        e_run = eta_ultimo_run(nome, ora, logpfx.get(nome), v.get("last_run"))
+        grazia = grazia_per_fonte(nome, c, stato, ora)
 
         problemi, note = [], []
         if st != "ok":
@@ -288,7 +352,11 @@ def main() -> int:
 
         # ANOMALIA: l'ETL non e' stato eseguito. E' il solo caso che grida.
         if c and e_run is not None and e_run > c * args.tolleranza:
-            problemi.append(f"non eseguito da {e_run:.0f}gg (cadenza {c:.0f}gg)")
+            if grazia is not None:
+                note.append(f"non eseguito da {e_run:.0f}gg, ma la cadenza e' cambiata "
+                            f"{grazia:.0f}gg fa: attendo un ciclo ({c:.0f}gg)")
+            else:
+                problemi.append(f"non eseguito da {e_run:.0f}gg (cadenza {c:.0f}gg)")
         elif c and e_run is None and c <= 31:
             # fonti frequenti senza alcun log: sospetto. Le annuali no, il log
             # e' stato ruotato via da tempo.
@@ -326,6 +394,7 @@ def main() -> int:
             print(f"{r['fonte']:<24}{r['status']:<9}{er:>9}{dt:>7}{cc:>8}{seg}"
                   f"{'; '.join(r['problemi'] + r['note'])}", flush=True)
 
+    salva_stato(stato)
     _con_note = [r for r in righe if r["note"] and not r["problemi"]]
     esito = {"generated_at": ora.isoformat(), "tolleranza": args.tolleranza,
              "n_fonti": len(righe), "n_anomalie": len(anomalie),
