@@ -11,7 +11,7 @@ l'intent dell'utente.
 
 ## Pacchetto corrente
 
-- **`cruscotto-italia-workflow-v2.6.1.zip`** — workflow del connettore MCP:
+- **`cruscotto-italia-workflow-v2.9.1.zip`** — workflow del connettore MCP:
   **6 tool** (`mcp_info`, `search_comune`, `comune_kpi` ~620 token con 55 KPI in
   24 gruppi tematici, `comune_dashboard` ~250K token con le sezioni dettagliate,
   `anncsu_civico_search`, `censimento_sezione_search`), **28 dataset** integrati

@@ -679,7 +679,7 @@ Fonte: `/data/morfologia/<istat>/<istat>_stats.json`.
 - `slope_mean` — pendenza media (gradi)
 - `slope_gt15_pct` — % superficie con pendenza >15°
 - `aspect_dom` — esposizione prevalente (N/NE/E/SE/S/SO/O/NO)
-- `solar_mean` — irraggiamento solare medio annuo (Wh/m²/giorno)
+- `solar_mean` — irraggiamento solare medio annuo (kWh/m²/anno)
 
 ### Caveat
 - Null per comuni non ancora processati dalla pipeline (attualmente ~7901/7904 disponibili).
@@ -746,4 +746,4 @@ Presente nella risposta `comune_dashboard` solo se il comune è stato processato
 ### Caveat
 - Dato assente se comune non ancora processato dalla pipeline one-shot.
 - Elaborazione da DTM 5m: accurata per comuni con rilievo significativo; per comuni pianeggianti (es. Lecce, quota -1÷59m) i valori di pendenza e geomorfologia sono numericamente corretti ma poco discriminanti.
-- `solar_mean` è una stima modellistica (4 giorni stagionali rappresentativi), non misura reale.
+- `solar_mean` è una stima modellistica **clear-sky** (cielo sereno), non una misura reale. La pipeline campiona 4 giorni — equinozi (80, 264) e solstizi (172, 355) — con `r.sun` a passo orario e annualizza: `(g_80+g_172+g_264+g_355)/4*365/1000`. Non vengono passati coefficienti di torbidità o nuvolosità: GRASS applica i default (Linke 3.0, albedo 0.2). I valori risultano quindi superiori del 20–25% rispetto a PVGIS o Atlante solare ENEA, che includono la copertura nuvolosa. Non utilizzabile per il dimensionamento di impianti fotovoltaici.

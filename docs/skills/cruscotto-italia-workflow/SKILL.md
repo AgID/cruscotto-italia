@@ -1,6 +1,6 @@
 ---
 name: cruscotto-italia-workflow
-version: 2.9.0
+version: 2.9.1
 description: Cruscotto Italia MCP (7896 comuni). Tool: comune_kpi (~55 KPI ~620 token); comune_dashboard (27 sezioni); search_comune; comune_opere_dettaglio; anncsu_civico_search; censimento_sezione_search. Sezioni: anagrafica, demografia POSAS, censimento profilo, turismo, PNRR, ISPRA suolo/idro/rifiuti/aria, DPC sismica, BDAP-MOP, SIOPE cassa (pagamenti+incassi+saldo), ANAC, MIUR scuole/plessi, ACI veicoli, MEF redditi/patrimonio, ANNCSU civici, MdS farmacie/ospedali, GSE ricarica EV, AGCOM FTTH, MIMIT carburanti, RUNTS, ISTAT ASIA, pendolarismo 2021, Basi Territoriali 2021, vars 2023 (127), MiC ArCo+Cultural-ON, meteo ItaliaMeteo, morfologia CNR-IRPI HR-DTM 5m (kpi_summary: morfologia_cnr con elev/slope/aspect/solar). Catasto AGE: fogli/particelle REST /data/catasto_full/. Trigger: ISTAT, BDAP, SIOPE, incassi, saldo cassa, ISPRA, sismica, PNRR, ANAC, MEF, ANNCSU, AGCOM, MIMIT, RUNTS, FTTH, pendolarismo, beni culturali, MiC, catasto, meteo, ItaliaMeteo, morfologia, DTM, rilievo, pendenza, geomorfologia, CNR-IRPI.
 ---
 
