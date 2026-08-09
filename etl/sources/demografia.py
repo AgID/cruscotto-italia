@@ -31,6 +31,7 @@ from __future__ import annotations
 import argparse
 import datetime
 import json
+import re
 import sys
 import tempfile
 import zipfile
@@ -41,6 +42,7 @@ import requests
 import structlog
 
 from etl.lib import manifest
+from etl.lib.shard_io import preserva_sezioni_esistenti, write_shard_preserving
 
 log = structlog.get_logger()
 
@@ -125,8 +127,172 @@ def pull_posas_auto_year(workdir: Path,
     )
 
 
-def build_demografia_shards(csv_path: Path, output_dir: Path) -> Path:
-    """Genera 1 file JSON per comune con matrice eta x sesso + KPI."""
+def titolo_posas(csv_path: Path) -> str:
+    """Legge la riga 1 del CSV POSAS, che e' un titolo e non l'header.
+
+    Il titolo dichiara anno di riferimento e, per le annate non ancora
+    definitive, la parola "stima". I file dal 2024 in poi hanno il BOM:
+    utf-8-sig lo gestisce e resta corretto anche sui file che non ce l'hanno.
+    """
+    with open(csv_path, encoding="utf-8-sig") as f:
+        return f.readline().strip().strip('"')
+
+
+def anno_da_titolo(titolo: str) -> int | None:
+    """Estrae l'anno di riferimento dal titolo POSAS (prima occorrenza 19xx/20xx)."""
+    m = re.search(r"(?:19|20)\d{2}", titolo)
+    return int(m.group(0)) if m else None
+
+
+def is_stima(titolo: str) -> bool:
+    """True se il titolo dichiara il dato come stima (anno non ancora chiuso)."""
+    return "stima" in titolo.lower()
+
+
+def pull_posas_anno(workdir: Path, year: int) -> Path | None:
+    """Scarica ed estrae il bulk POSAS di un anno specifico.
+
+    A differenza di pull_posas_auto_year NON solleva se l'anno non esiste:
+    ritorna None. Nella serie storica un anno mancante non e' un errore fatale,
+    e' solo un punto in meno.
+
+    Ogni anno viene estratto in una sottodirectory dedicata: estrarre annate
+    diverse nella stessa cartella farebbe raccogliere il CSV sbagliato.
+    """
+    extract_dir = workdir / "serie" / str(year)
+    extract_dir.mkdir(parents=True, exist_ok=True)
+
+    gia_estratti = list(extract_dir.glob("*.csv"))
+    if gia_estratti:
+        log.info("serie_csv_riusato", year=year, path=str(gia_estratti[0]))
+        return gia_estratti[0]
+
+    url = POSAS_URL_TEMPLATE.format(year=year)
+    try:
+        head = requests.head(url, timeout=30, allow_redirects=True)
+    except requests.RequestException as e:
+        log.warning("serie_head_failed", year=year, error=str(e))
+        return None
+    if head.status_code != 200:
+        log.info("serie_anno_non_disponibile", year=year,
+                 status=head.status_code)
+        return None
+
+    zip_path = workdir / "serie" / f"POSAS_{year}_it_Comuni.zip"
+    resp = requests.get(url, timeout=300, stream=True)
+    resp.raise_for_status()
+    bytes_written = 0
+    with open(zip_path, "wb") as f:
+        for chunk in resp.iter_content(chunk_size=65536):
+            f.write(chunk)
+            bytes_written += len(chunk)
+    log.info("serie_zip_saved", year=year, bytes=bytes_written)
+
+    with zipfile.ZipFile(zip_path) as zf:
+        zf.extractall(extract_dir)
+    csv_files = list(extract_dir.glob("*.csv"))
+    if not csv_files:
+        log.warning("serie_csv_assente", year=year)
+        return None
+    return csv_files[0]
+
+
+def leggi_totali_posas(csv_path: Path) -> dict[str, dict]:
+    """Estrae i soli totali comunali dal CSV POSAS (riga Eta=999).
+
+    ATTENZIONE: la riga con Eta=999 e' il totale gia' calcolato da ISTAT.
+    Sommare tutte le righe di un comune SENZA escluderla raddoppia i valori.
+    Qui si legge direttamente quella riga, che e' l'operazione inversa e
+    altrettanto valida (verificato: coincide con la somma 0-100).
+
+    La lettura e' per NOME di colonna: il tracciato POSAS cambia tra le annate
+    (20 colonne fino al 2025 con lo stato civile, 6 dal 2026), ma i nomi
+    "Totale maschi" / "Totale femmine" / "Totale" sono presenti in entrambi.
+    """
+    con = duckdb.connect()
+    try:
+        rows = con.execute(f"""
+            SELECT
+                "Codice comune" AS istat,
+                CAST("Totale maschi" AS INTEGER) AS m,
+                CAST("Totale femmine" AS INTEGER) AS f,
+                CAST("Totale" AS INTEGER) AS tot
+            FROM read_csv(
+                '{csv_path}',
+                delim=';',
+                header=true,
+                skip=1,
+                quote='"',
+                ignore_errors=true,
+                all_varchar=false
+            )
+            WHERE CAST("Età" AS INTEGER) = 999
+              AND "Codice comune" IS NOT NULL
+        """).fetchall()
+    finally:
+        con.close()
+    return {
+        r[0]: {"maschi": r[1] or 0, "femmine": r[2] or 0,
+               "popolazione": r[3] or 0}
+        for r in rows
+    }
+
+
+def build_serie_storica(workdir: Path, anno_ultimo: int, n_anni: int,
+                        csv_ultimo: Path | None = None) -> dict[str, list]:
+    """Serie storica della popolazione residente al 1 gennaio, per comune.
+
+    Il numero di comuni cambia nel tempo (fusioni e istituzioni): un comune
+    puo' non essere presente in tutte le annate. La serie di ogni comune
+    contiene solo i punti realmente disponibili, MAI zeri di riempimento
+    (uno zero e un dato mancante non sono la stessa cosa).
+
+    Il CSV dell'anno piu' recente e' gia' stato scaricato dal flusso
+    principale: viene riusato invece di riscaricarlo.
+    """
+    anni = list(range(anno_ultimo - n_anni + 1, anno_ultimo + 1))
+    serie: dict[str, list] = {}
+    for i, anno in enumerate(anni, 1):
+        step = f"[{i}/{len(anni)}]"
+        log.info("serie_anno_inizio", step=step, anno=anno)
+        if anno == anno_ultimo and csv_ultimo is not None:
+            csv_path = csv_ultimo
+        else:
+            csv_path = pull_posas_anno(workdir, anno)
+        if csv_path is None:
+            log.warning("serie_anno_saltato", step=step, anno=anno)
+            continue
+        stima = is_stima(titolo_posas(csv_path))
+        totali = leggi_totali_posas(csv_path)
+        for istat, d in totali.items():
+            serie.setdefault(istat, []).append({
+                "anno": anno,
+                "popolazione": d["popolazione"],
+                "maschi": d["maschi"],
+                "femmine": d["femmine"],
+                "stima": stima,
+            })
+        log.info("serie_anno_ok", step=step, anno=anno,
+                 comuni=len(totali), stima=stima)
+
+    for istat in serie:
+        serie[istat].sort(key=lambda p: p["anno"])
+    return serie
+
+
+def build_demografia_shards(csv_path: Path, output_dir: Path,
+                            anno: int | None = None,
+                            stima: bool | None = None,
+                            serie: dict[str, list] | None = None) -> Path:
+    """Genera 1 file JSON per comune con matrice eta x sesso + KPI + serie."""
+    titolo = titolo_posas(csv_path)
+    if anno is None:
+        anno = anno_da_titolo(titolo) or datetime.date.today().year
+    if stima is None:
+        stima = is_stima(titolo)
+    riferimento = f"1 gennaio {anno}" + (" (stima)" if stima else "")
+    log.info("demografia_riferimento", anno=anno, stima=stima,
+             riferimento=riferimento)
     output_dir.mkdir(parents=True, exist_ok=True)
     shard_dir = output_dir / "demografia"
     shard_dir.mkdir(parents=True, exist_ok=True)
@@ -224,9 +390,11 @@ def build_demografia_shards(csv_path: Path, output_dir: Path) -> Path:
         ]
 
         payload = {
-            "_etl_version": "0.2.0",
+            "_etl_version": "0.3.0",
             "_source": "ISTAT POSAS - Popolazione residente per eta e sesso",
-            "_riferimento": "1 gennaio 2026 (stima)",
+            "_riferimento": riferimento,
+            "_anno_riferimento": anno,
+            "_stima": stima,
             "istat_code": istat,
             "comune": d["comune"],
             "popolazione_totale": pop_tot,
@@ -246,10 +414,37 @@ def build_demografia_shards(csv_path: Path, output_dir: Path) -> Path:
             "piramide": piramide,
         }
 
+        punti = (serie or {}).get(istat)
+        if punti:
+            payload["serie_storica"] = {
+                "_fonte": "ISTAT POSAS",
+                "_nota": "popolazione residente al 1 gennaio di ciascun anno",
+                "punti": punti,
+            }
+
         shard_path = shard_dir / f"{istat}.json"
-        shard_path.write_text(
-            json.dumps(payload, ensure_ascii=False, separators=(",", ":")),
-            encoding="utf-8",
+        # La sezione dinamica e' di competenza dell'ETL D7B, non di questo:
+        # va riportata dallo shard esistente, altrimenti questo giro la
+        # cancella. NON va pero' marcata _stale_: quella marcatura significa
+        # "fetch fallito, dato vecchio", mentre qui si tratta semplicemente di
+        # un'altra fonte con un'altra cadenza, il cui dato puo' essere
+        # freschissimo.
+        if shard_path.exists():
+            try:
+                vecchio = json.loads(shard_path.read_text(encoding="utf-8"))
+            except Exception:
+                vecchio = {}
+            preserva_sezioni_esistenti(
+                payload, vecchio, ["dinamica"],
+                meta_map={"dinamica": "_anno_dati_dinamica"},
+            )
+            payload.pop("_stale_dinamica", None)
+
+        write_shard_preserving(
+            shard_path,
+            payload,
+            indent=None,
+            separators=(",", ":"),
         )
         n_written += 1
         total_bytes += shard_path.stat().st_size
@@ -273,6 +468,10 @@ def main() -> int:
     parser.add_argument("--workdir", type=Path, default=None,
                         help="Directory di lavoro per ZIP+CSV (default: tempdir).")
     parser.add_argument("--outdir", type=Path, default=Path("/var/www/cruscotto-italia/data"))
+    parser.add_argument("--anni-serie", type=int, default=5,
+                        help="Numero di annate POSAS nella serie storica (default 5).")
+    parser.add_argument("--no-serie", action="store_true",
+                        help="Salta la serie storica (solo fotografia corrente).")
     args = parser.parse_args()
 
     structlog.configure(processors=[
@@ -308,7 +507,24 @@ def main() -> int:
              csv=str(csv_path), year=year_used)
 
     try:
-        shard_dir = build_demografia_shards(csv_path, output_dir)
+        titolo = titolo_posas(csv_path)
+        anno_rif = (year_used or anno_da_titolo(titolo)
+                    or datetime.date.today().year)
+        stima_rif = is_stima(titolo)
+        log.info("posas_titolo", titolo=titolo, anno=anno_rif, stima=stima_rif)
+
+        serie = None
+        if not args.no_serie and args.anni_serie > 1:
+            serie_workdir = args.workdir or Path(
+                tempfile.mkdtemp(prefix="cruscotto-demografia-serie-")
+            )
+            serie = build_serie_storica(serie_workdir, anno_rif,
+                                        args.anni_serie, csv_ultimo=csv_path)
+            log.info("serie_storica_pronta", comuni=len(serie))
+
+        shard_dir = build_demografia_shards(csv_path, output_dir,
+                                            anno=anno_rif, stima=stima_rif,
+                                            serie=serie)
 
         # Manifest update (best-effort)
         shard_count = len(list(shard_dir.glob("*.json")))

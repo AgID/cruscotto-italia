@@ -342,8 +342,12 @@ footer a:hover { color: #fff !important; }
         <tr>
           <td>ISTAT</td>
           <td>
-            <strong>Demografia comunale (POSAS)</strong>
-            Popolazione residente per età e sesso al 1° gennaio di ogni anno.
+            <strong>Demografia comunale (POSAS e bilancio demografico)</strong>
+            Popolazione residente per età e sesso al 1° gennaio di ogni anno,
+            con la serie storica delle ultime cinque annate. Include la
+            dinamica demografica annuale dal bilancio demografico mensile
+            (fonte anagrafica ANPR): nati, morti, saldo naturale e saldi
+            migratori interno e con l'estero.
           </td>
           <td class="freq">annuale</td>
         </tr>
@@ -762,21 +766,21 @@ footer a:hover { color: #fff !important; }
       <h2 class="section-h">Cosa cercare e <em>dove</em>.</h2>
       <p>
         Ogni scheda comunale e' divisa in schede tematiche. Questo indice elenca
-        <strong>492 voci</strong> distribuite su <strong>24 schede</strong>:
+        <strong>500 voci</strong> distribuite su <strong>24 schede</strong>:
         per ogni termine trovi la scheda in cui il dato viene mostrato. Alcuni argomenti
         compaiono in piu' schede &mdash; le automobili, per esempio, stanno sia nel
         Censimento (auto possedute dalle famiglie) sia in Veicoli e incidenti
         (parco circolante ACI).
       </p>
       <details class="indice-acc">
-        <summary>Apri l'indice dei contenuti (492 voci)</summary>
+        <summary>Apri l'indice dei contenuti (500 voci)</summary>
         <div class="indice-body">
           <label class="indice-search-lab" for="indice-q">Filtra le voci</label>
           <input type="search" id="indice-q" class="indice-search"
                  placeholder="Scrivi un termine: catasto, tasse, farmacie&hellip;"
                  autocomplete="off" aria-describedby="indice-count">
           <p id="indice-count" class="indice-count" role="status" aria-live="polite">
-            492 voci
+            500 voci
           </p>
           <div class="indice-tab-wrap">
           <table class="indice-tab">
@@ -819,7 +823,7 @@ footer a:hover { color: #fff !important; }
             <tr><th scope="row">Altro (CPIA, ecc.)</th><td>Scuole</td></tr>
             <tr><th scope="row">ANAC</th><td>Contratti ANAC</td></tr>
             <tr><th scope="row">ANNCSU e Catasto</th><td>Panoramica</td></tr>
-            <tr><th scope="row">Anno</th><td>Meteo e Aria, SIOPE</td></tr>
+            <tr><th scope="row">Anno</th><td>Demografia, Meteo e Aria, SIOPE</td></tr>
             <tr><th scope="row">Anno scolastico</th><td>Scuole</td></tr>
             <tr><th scope="row">Anziani</th><td>Censimento 2023, Demografia</td></tr>
             <tr><th scope="row">Appalti</th><td>Contratti ANAC</td></tr>
@@ -932,6 +936,7 @@ footer a:hover { color: #fff !important; }
             <tr><th scope="row">Dichiarazioni IRPEF</th><td>Redditi e fisco</td></tr>
             <tr><th scope="row">Differenziata raccolta</th><td>Territorio</td></tr>
             <tr><th scope="row">Dimensione media</th><td>Imprese e addetti</td></tr>
+            <tr><th scope="row">Dinamica demografica — nati e morti</th><td>Demografia</td></tr>
             <tr><th scope="row">Diploma e oltre</th><td>Profilo</td></tr>
             <tr><th scope="row">Diploma maturità</th><td>Profilo</td></tr>
             <tr><th scope="row">Diplomati</th><td>Censimento 2023, Profilo</td></tr>
@@ -1068,12 +1073,13 @@ footer a:hover { color: #fff !important; }
             <tr><th scope="row">Monumenti</th><td>Beni culturali</td></tr>
             <tr><th scope="row">Morfologia</th><td>Territorio</td></tr>
             <tr><th scope="row">Morfologia del territorio</th><td>Territorio</td></tr>
-            <tr><th scope="row">Morti</th><td>Veicoli e incidenti</td></tr>
+            <tr><th scope="row">Morti</th><td>Demografia, Veicoli e incidenti</td></tr>
             <tr><th scope="row">Morti + feriti strada</th><td>Veicoli e incidenti</td></tr>
             <tr><th scope="row">Morti sulla strada</th><td>Veicoli e incidenti</td></tr>
             <tr><th scope="row">Moto</th><td>Veicoli e incidenti</td></tr>
             <tr><th scope="row">Musei</th><td>Beni culturali</td></tr>
             <tr><th scope="row">Natalità</th><td>Demografia</td></tr>
+            <tr><th scope="row">Nati</th><td>Demografia</td></tr>
             <tr><th scope="row">Natura intervento</th><td>Opere</td></tr>
             <tr><th scope="row">Neve</th><td>Meteo e Aria</td></tr>
             <tr><th scope="row">Neve al suolo</th><td>Meteo e Aria</td></tr>
@@ -1137,6 +1143,8 @@ footer a:hover { color: #fff !important; }
             <tr><th scope="row">Popolazione femmine per età</th><td>Censimento 2023</td></tr>
             <tr><th scope="row">Popolazione maschi per età</th><td>Censimento 2023</td></tr>
             <tr><th scope="row">Popolazione per età</th><td>Censimento 2023</td></tr>
+            <tr><th scope="row">Popolazione residente</th><td>Demografia</td></tr>
+            <tr><th scope="row">Popolazione residente — serie storica</th><td>Demografia</td></tr>
             <tr><th scope="row">Popolazione totale</th><td>Censimento 2023, Profilo</td></tr>
             <tr><th scope="row">Posti letto</th><td>Sanità, Turismo</td></tr>
             <tr><th scope="row">Posti letto totali</th><td>Sanità</td></tr>
@@ -1179,6 +1187,10 @@ footer a:hover { color: #fff !important; }
             <tr><th scope="row">Rifugi montagna</th><td>Turismo</td></tr>
             <tr><th scope="row">Rischio sismico</th><td>Territorio</td></tr>
             <tr><th scope="row">RUNTS</th><td>Terzo Settore</td></tr>
+            <tr><th scope="row">Saldi demografici per anno</th><td>Demografia</td></tr>
+            <tr><th scope="row">Saldo migratorio estero</th><td>Demografia</td></tr>
+            <tr><th scope="row">Saldo migratorio interno</th><td>Demografia</td></tr>
+            <tr><th scope="row">Saldo naturale</th><td>Demografia</td></tr>
             <tr><th scope="row">Saldo netto</th><td>Pendolarismo</td></tr>
             <tr><th scope="row">Sanità</th><td>Panoramica</td></tr>
             <tr><th scope="row">Scarica dati (ZIP</th><td>Panoramica</td></tr>
@@ -1494,7 +1506,7 @@ footer a:hover { color: #fff !important; }
           linguaggio naturale. È il modo
           per chi sta costruendo applicazioni intelligenti sopra i dati
           pubblici italiani. Per risposte più mirate è disponibile una
-          <strong><a href="https://cruscotto-italia.dati.gov.it/data/skills/cruscotto-italia-workflow-v2.9.1.zip" download><em>skill</em> opzionale (versione 2.9.1 del 05/08/2026)</a></strong>
+          <strong><a href="https://cruscotto-italia.dati.gov.it/data/skills/cruscotto-italia-workflow-v2.10.0.zip" download><em>skill</em> opzionale (versione 2.10.0 del 09/08/2026)</a></strong>
           (pacchetto ZIP caricabile in Claude.ai o via API) che documenta
           inventario dei tool, schema completo delle sezioni dati e
           pattern operativi suggeriti.
@@ -1502,7 +1514,7 @@ footer a:hover { color: #fff !important; }
         <p>
           <strong>Skill CLI per analisi ripetute.</strong> Per chi interroga
           i dati in modo sistematico è disponibile una
-          <strong><a href="https://cruscotto-italia.dati.gov.it/data/skills/cruscotto-cli-v0.1.5.zip" download><em>skill</em> CLI (versione 0.1.5 del 29/07/2026)</a></strong>:
+          <strong><a href="https://cruscotto-italia.dati.gov.it/data/skills/cruscotto-cli-v0.2.0.zip" download><em>skill</em> CLI (versione 0.2.0 del 09/08/2026)</a></strong>:
           un pacchetto ZIP con uno script Python 3 senza dipendenze che legge
           direttamente i file JSON pubblici, senza passare dall'endpoint MCP.
           Filtra i dati prima di leggerli, quindi una domanda mirata non

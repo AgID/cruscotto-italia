@@ -103,7 +103,7 @@ SHARDS_LOCAL = [
     ("pendolarismo", "/var/www/cruscotto-italia/data/pendolarismo/{istat}.json"),
 ]
 
-ETL_VERSION = "0.2.0"
+ETL_VERSION = "0.3.0"
 
 
 def fetch_json_local(path: str) -> dict | None:
@@ -174,6 +174,12 @@ def compute_kpi_summary(out: dict) -> dict:
     # Popolazione (riferimento per molti pro-capite/per-1000)
     pop = _safe(demo, "popolazione_totale")
 
+    # Dinamica demografica (ISTAT D7B): solo l'ultimo anno disponibile.
+    # La serie completa vive in demografia.dinamica.anni e resta fuori dai
+    # KPI, che per contratto non contengono time series.
+    anni_din = (demo.get("dinamica") or {}).get("anni") or []
+    ultimo_din = anni_din[-1] if anni_din else {}
+
     # Reddito: estrai ultimo anno disponibile
     anni_red = redditi.get("anni_disponibili") or []
     ultimo_anno_red = max(anni_red) if anni_red else None
@@ -221,6 +227,10 @@ def compute_kpi_summary(out: dict) -> dict:
             "indice_vecchiaia": demo.get("indice_vecchiaia"),
             "indice_dipendenza": demo.get("indice_dipendenza"),
             "riferimento": demo.get("_riferimento"),
+            "anno_dinamica": ultimo_din.get("anno"),
+            "nati": ultimo_din.get("nati"),
+            "morti": ultimo_din.get("morti"),
+            "saldo_naturale": ultimo_din.get("saldo_naturale"),
         },
         "istruzione_profilo": {
             "anno": _safe(profilo, "istruzione", "anno"),

@@ -2,53 +2,57 @@ sezione,campo,descrizione,unita,fonte,periodo,url_fonte,licenza_fonte
 _meta,_etl_version,Versione del pipeline ETL che ha generato lo shard,testo,Cruscotto Italia,corrente,{{SITE_URL}},CC BY 4.0
 _meta,_generated_at,Timestamp ISO 8601 di generazione dello shard,datetime,Cruscotto Italia,corrente,{{SITE_URL}},CC BY 4.0
 _meta,_missing,Lista delle sezioni dati assenti per questo comune,lista,Cruscotto Italia,corrente,{{SITE_URL}},CC BY 4.0
-anagrafica,istat_code,Codice ISTAT del comune (6 cifre),codice,ISTAT,corrente,https://www.istat.it/it/archivio/6789,CC BY 3.0 IT
-anagrafica,denominazione,Denominazione ufficiale del comune,testo,ISTAT,corrente,https://www.istat.it/it/archivio/6789,CC BY 3.0 IT
-anagrafica,provincia,Sigla provincia (2 lettere),codice,ISTAT,corrente,https://www.istat.it/it/archivio/6789,CC BY 3.0 IT
-anagrafica,regione,Nome regione amministrativa,testo,ISTAT,corrente,https://www.istat.it/it/archivio/6789,CC BY 3.0 IT
+anagrafica,istat_code,Codice ISTAT del comune (6 cifre),codice,ISTAT,corrente,https://www.istat.it/it/archivio/6789,CC BY 4.0
+anagrafica,denominazione,Denominazione ufficiale del comune,testo,ISTAT,corrente,https://www.istat.it/it/archivio/6789,CC BY 4.0
+anagrafica,provincia,Sigla provincia (2 lettere),codice,ISTAT,corrente,https://www.istat.it/it/archivio/6789,CC BY 4.0
+anagrafica,regione,Nome regione amministrativa,testo,ISTAT,corrente,https://www.istat.it/it/archivio/6789,CC BY 4.0
 anagrafica,codice_ipa,Codice IPA dell'ente nella PA,codice,IndicePA,corrente,https://indicepa.gov.it,CC BY 4.0
 anagrafica,codice_fiscale,Codice fiscale dell'ente comunale,codice,IndicePA,corrente,https://indicepa.gov.it,CC BY 4.0
 anagrafica,nome_categoria,Categoria IPA (Pubbliche Amministrazioni),testo,IndicePA,corrente,https://indicepa.gov.it,CC BY 4.0
 anagrafica,codice_catastale,Codice catastale Agenzia Entrate,codice,Agenzia Entrate,corrente,https://www.agenziaentrate.gov.it,CC BY 4.0
-anagrafica,kpi.popolazione,KPI aggregato popolazione totale,numero,ISTAT POSAS,1 gen anno corrente,https://demo.istat.it,CC BY 3.0 IT
+anagrafica,kpi.popolazione,KPI aggregato popolazione totale,numero,ISTAT POSAS,1 gen anno corrente,https://demo.istat.it,CC BY 4.0
 anagrafica,kpi.contratti,KPI aggregato n. contratti ANAC (può essere null),numero,ANAC,ultimo mese disponibile,https://dati.anticorruzione.it,CC BY 4.0
 anagrafica,kpi.opere,KPI aggregato n. opere pubbliche BDAP (può essere null),numero,BDAP MOP,annuale,https://bdap-opendata.rgs.mef.gov.it,IODL 2.0
 anagrafica,kpi.spese_siope,KPI aggregato n. voci di pagamento SIOPE (può essere null),numero,SIOPE,mensile cumulato,https://www.siope.it,CC BY 4.0
 anagrafica,kpi.coesione,KPI aggregato fondi coesione (può essere null),numero,OpenCoesione,corrente,https://opencoesione.gov.it,IODL 2.0
-demografia,popolazione_totale,Popolazione residente totale,numero,ISTAT POSAS,1 gennaio (stima),https://demo.istat.it,CC BY 3.0 IT
-demografia,maschi,Popolazione maschile residente,numero,ISTAT POSAS,1 gennaio (stima),https://demo.istat.it,CC BY 3.0 IT
-demografia,femmine,Popolazione femminile residente,numero,ISTAT POSAS,1 gennaio (stima),https://demo.istat.it,CC BY 3.0 IT
-demografia,pct_maschi,Percentuale popolazione maschile,percentuale,ISTAT POSAS,1 gennaio (stima),https://demo.istat.it,CC BY 3.0 IT
-demografia,pct_femmine,Percentuale popolazione femminile,percentuale,ISTAT POSAS,1 gennaio (stima),https://demo.istat.it,CC BY 3.0 IT
-demografia,eta_media,Età media della popolazione,anni,ISTAT POSAS,1 gennaio (stima),https://demo.istat.it,CC BY 3.0 IT
-demografia,indice_vecchiaia,Rapporto >=65 anni su 0-14 anni x100,indice,ISTAT POSAS,1 gennaio (stima),https://demo.istat.it,CC BY 3.0 IT
-demografia,indice_dipendenza,Rapporto popolazione non attiva su attiva x100,indice,ISTAT POSAS,1 gennaio (stima),https://demo.istat.it,CC BY 3.0 IT
-demografia,classi_eta,Distribuzione per classi quinquennali di età,dict,ISTAT POSAS,1 gennaio (stima),https://demo.istat.it,CC BY 3.0 IT
-demografia,piramide,Dati per istogramma piramide demografica M/F per classe,dict,ISTAT POSAS,1 gennaio (stima),https://demo.istat.it,CC BY 3.0 IT
-profilo,istruzione.terziario_n,Numero residenti 25-64 con titolo terziario,numero,ISTAT Censimento,ultimo censimento,https://esploradati.istat.it,CC BY 3.0 IT
-profilo,istruzione.terziario_pct,Percentuale residenti 25-64 con titolo terziario,percentuale,ISTAT Censimento,ultimo censimento,https://esploradati.istat.it,CC BY 3.0 IT
-profilo,istruzione.diploma_oltre_n,Numero residenti 25-64 con diploma o oltre,numero,ISTAT Censimento,ultimo censimento,https://esploradati.istat.it,CC BY 3.0 IT
-profilo,istruzione.dettaglio,Distribuzione per titolo (nessuno/elementare/media/diploma/laurea),dict,ISTAT Censimento,ultimo censimento,https://esploradati.istat.it,CC BY 3.0 IT
-profilo,lavoro.occupati_n,Numero occupati 25-64 anni,numero,ISTAT Censimento,ultimo censimento,https://esploradati.istat.it,CC BY 3.0 IT
-profilo,lavoro.in_cerca_n,Numero in cerca di occupazione 25-64 anni,numero,ISTAT Censimento,ultimo censimento,https://esploradati.istat.it,CC BY 3.0 IT
-profilo,lavoro.tasso_occupazione,Tasso di occupazione 25-64 anni,percentuale,ISTAT Censimento,ultimo censimento,https://esploradati.istat.it,CC BY 3.0 IT
-profilo,lavoro.tasso_disoccupazione,Tasso di disoccupazione 25-64 anni,percentuale,ISTAT Censimento,ultimo censimento,https://esploradati.istat.it,CC BY 3.0 IT
-profilo,lavoro.tasso_attivita,Tasso di attività 25-64 anni,percentuale,ISTAT Censimento,ultimo censimento,https://esploradati.istat.it,CC BY 3.0 IT
-profilo,famiglie.n_famiglie,Numero di famiglie residenti,numero,ISTAT Censimento,ultimo censimento,https://esploradati.istat.it,CC BY 3.0 IT
-profilo,famiglie.pop_in_famiglia,Popolazione in famiglie,numero,ISTAT Censimento,ultimo censimento,https://esploradati.istat.it,CC BY 3.0 IT
-profilo,famiglie.pop_in_convivenza,Popolazione in convivenze,numero,ISTAT Censimento,ultimo censimento,https://esploradati.istat.it,CC BY 3.0 IT
-profilo,famiglie.dim_media_famiglia,Dimensione media famiglie,numero,ISTAT Censimento,ultimo censimento,https://esploradati.istat.it,CC BY 3.0 IT
-profilo,mobilita,Dati pendolarismo (FROZEN al censimento 2019),dict,ISTAT Censimento 2019,2019,https://esploradati.istat.it,CC BY 3.0 IT
-profilo,cittadinanza,Italiani vs stranieri residenti,dict,ISTAT Censimento,ultimo censimento,https://esploradati.istat.it,CC BY 3.0 IT
-turismo,capacita_comune.totale_strutture,Numero totale strutture ricettive nel comune,numero,ISTAT Capacita ricettiva,annuale,https://esploradati.istat.it,CC BY 3.0 IT
-turismo,capacita_comune.totale_letti,Numero totale posti letto nel comune,numero,ISTAT Capacita ricettiva,annuale,https://esploradati.istat.it,CC BY 3.0 IT
-turismo,capacita_comune.totale_camere,Numero totale camere nel comune,numero,ISTAT Capacita ricettiva,annuale,https://esploradati.istat.it,CC BY 3.0 IT
-turismo,capacita_comune.indice_turisticita_per_100ab,Posti letto per 100 abitanti,indice,ISTAT,annuale,https://esploradati.istat.it,CC BY 3.0 IT
-turismo,capacita_comune.alberghi,Dettaglio strutture alberghiere (1-5 stelle + residence),dict,ISTAT Capacita ricettiva,annuale,https://esploradati.istat.it,CC BY 3.0 IT
-turismo,capacita_comune.extra_alberghiero,"Dettaglio strutture extra-alberghiere (B&B, agriturismi, ecc.)",dict,ISTAT Capacita ricettiva,annuale,https://esploradati.istat.it,CC BY 3.0 IT
-turismo,flussi_provincia,ATTENZIONE: dato provinciale NUTS3 non comunale (limite ISTAT),dict,ISTAT Movimento clienti,annuale,https://esploradati.istat.it,CC BY 3.0 IT
-turismo,flussi_provincia.arrivi_totali,Arrivi turistici nella provincia (NUTS3),numero,ISTAT,annuale,https://esploradati.istat.it,CC BY 3.0 IT
-turismo,flussi_provincia.presenze_totali,Presenze turistiche nella provincia (NUTS3),numero,ISTAT,annuale,https://esploradati.istat.it,CC BY 3.0 IT
+demografia,popolazione_totale,Popolazione residente totale,numero,ISTAT POSAS,1 gennaio (stima),https://demo.istat.it,CC BY 4.0
+demografia,maschi,Popolazione maschile residente,numero,ISTAT POSAS,1 gennaio (stima),https://demo.istat.it,CC BY 4.0
+demografia,femmine,Popolazione femminile residente,numero,ISTAT POSAS,1 gennaio (stima),https://demo.istat.it,CC BY 4.0
+demografia,pct_maschi,Percentuale popolazione maschile,percentuale,ISTAT POSAS,1 gennaio (stima),https://demo.istat.it,CC BY 4.0
+demografia,pct_femmine,Percentuale popolazione femminile,percentuale,ISTAT POSAS,1 gennaio (stima),https://demo.istat.it,CC BY 4.0
+demografia,eta_media,Età media della popolazione,anni,ISTAT POSAS,1 gennaio (stima),https://demo.istat.it,CC BY 4.0
+demografia,indice_vecchiaia,Rapporto >=65 anni su 0-14 anni x100,indice,ISTAT POSAS,1 gennaio (stima),https://demo.istat.it,CC BY 4.0
+demografia,indice_dipendenza,Rapporto popolazione non attiva su attiva x100,indice,ISTAT POSAS,1 gennaio (stima),https://demo.istat.it,CC BY 4.0
+demografia,classi_eta,Distribuzione per classi quinquennali di età,dict,ISTAT POSAS,1 gennaio (stima),https://demo.istat.it,CC BY 4.0
+demografia,piramide,Dati per istogramma piramide demografica M/F per classe,dict,ISTAT POSAS,1 gennaio (stima),https://demo.istat.it,CC BY 4.0
+demografia,_anno_riferimento,Anno di riferimento della fotografia POSAS,numero,ISTAT POSAS,1 gennaio,https://demo.istat.it,CC BY 4.0
+demografia,_stima,Vero se l'annata POSAS non e' ancora definitiva,booleano,ISTAT POSAS,1 gennaio,https://demo.istat.it,CC BY 4.0
+demografia,serie_storica,"Serie storica della popolazione residente al 1 gennaio, 5 annate; ogni punto ha anno, popolazione, maschi, femmine e il flag stima. I comuni istituiti per fusione hanno serie piu' corte: un anno assente significa comune inesistente, non popolazione zero",dict,ISTAT POSAS,"1 gennaio, ultime 5 annate",https://demo.istat.it,CC BY 4.0
+demografia,dinamica,"Dinamica demografica annuale: nati, morti, saldo naturale, saldo migratorio interno e con l'estero, popolazione a inizio e fine anno. Aggregati annuali dal bilancio demografico mensile. La popolazione di questa sezione non va concatenata tra anni diversi ne' confrontata con serie_storica nell'anno di una fusione: i perimetri comunali possono differire",dict,ISTAT D7B - bilancio demografico mensile (fonte anagrafica ANPR),"annuale, 2019-2024",https://demo.istat.it,CC BY 4.0
+profilo,istruzione.terziario_n,Numero residenti 25-64 con titolo terziario,numero,ISTAT Censimento,ultimo censimento,https://esploradati.istat.it,CC BY 4.0
+profilo,istruzione.terziario_pct,Percentuale residenti 25-64 con titolo terziario,percentuale,ISTAT Censimento,ultimo censimento,https://esploradati.istat.it,CC BY 4.0
+profilo,istruzione.diploma_oltre_n,Numero residenti 25-64 con diploma o oltre,numero,ISTAT Censimento,ultimo censimento,https://esploradati.istat.it,CC BY 4.0
+profilo,istruzione.dettaglio,Distribuzione per titolo (nessuno/elementare/media/diploma/laurea),dict,ISTAT Censimento,ultimo censimento,https://esploradati.istat.it,CC BY 4.0
+profilo,lavoro.occupati_n,Numero occupati 25-64 anni,numero,ISTAT Censimento,ultimo censimento,https://esploradati.istat.it,CC BY 4.0
+profilo,lavoro.in_cerca_n,Numero in cerca di occupazione 25-64 anni,numero,ISTAT Censimento,ultimo censimento,https://esploradati.istat.it,CC BY 4.0
+profilo,lavoro.tasso_occupazione,Tasso di occupazione 25-64 anni,percentuale,ISTAT Censimento,ultimo censimento,https://esploradati.istat.it,CC BY 4.0
+profilo,lavoro.tasso_disoccupazione,Tasso di disoccupazione 25-64 anni,percentuale,ISTAT Censimento,ultimo censimento,https://esploradati.istat.it,CC BY 4.0
+profilo,lavoro.tasso_attivita,Tasso di attività 25-64 anni,percentuale,ISTAT Censimento,ultimo censimento,https://esploradati.istat.it,CC BY 4.0
+profilo,famiglie.n_famiglie,Numero di famiglie residenti,numero,ISTAT Censimento,ultimo censimento,https://esploradati.istat.it,CC BY 4.0
+profilo,famiglie.pop_in_famiglia,Popolazione in famiglie,numero,ISTAT Censimento,ultimo censimento,https://esploradati.istat.it,CC BY 4.0
+profilo,famiglie.pop_in_convivenza,Popolazione in convivenze,numero,ISTAT Censimento,ultimo censimento,https://esploradati.istat.it,CC BY 4.0
+profilo,famiglie.dim_media_famiglia,Dimensione media famiglie,numero,ISTAT Censimento,ultimo censimento,https://esploradati.istat.it,CC BY 4.0
+profilo,mobilita,Dati pendolarismo (FROZEN al censimento 2019),dict,ISTAT Censimento 2019,2019,https://esploradati.istat.it,CC BY 4.0
+profilo,cittadinanza,Italiani vs stranieri residenti,dict,ISTAT Censimento,ultimo censimento,https://esploradati.istat.it,CC BY 4.0
+turismo,capacita_comune.totale_strutture,Numero totale strutture ricettive nel comune,numero,ISTAT Capacita ricettiva,annuale,https://esploradati.istat.it,CC BY 4.0
+turismo,capacita_comune.totale_letti,Numero totale posti letto nel comune,numero,ISTAT Capacita ricettiva,annuale,https://esploradati.istat.it,CC BY 4.0
+turismo,capacita_comune.totale_camere,Numero totale camere nel comune,numero,ISTAT Capacita ricettiva,annuale,https://esploradati.istat.it,CC BY 4.0
+turismo,capacita_comune.indice_turisticita_per_100ab,Posti letto per 100 abitanti,indice,ISTAT,annuale,https://esploradati.istat.it,CC BY 4.0
+turismo,capacita_comune.alberghi,Dettaglio strutture alberghiere (1-5 stelle + residence),dict,ISTAT Capacita ricettiva,annuale,https://esploradati.istat.it,CC BY 4.0
+turismo,capacita_comune.extra_alberghiero,"Dettaglio strutture extra-alberghiere (B&B, agriturismi, ecc.)",dict,ISTAT Capacita ricettiva,annuale,https://esploradati.istat.it,CC BY 4.0
+turismo,flussi_provincia,ATTENZIONE: dato provinciale NUTS3 non comunale (limite ISTAT),dict,ISTAT Movimento clienti,annuale,https://esploradati.istat.it,CC BY 4.0
+turismo,flussi_provincia.arrivi_totali,Arrivi turistici nella provincia (NUTS3),numero,ISTAT,annuale,https://esploradati.istat.it,CC BY 4.0
+turismo,flussi_provincia.presenze_totali,Presenze turistiche nella provincia (NUTS3),numero,ISTAT,annuale,https://esploradati.istat.it,CC BY 4.0
 pnrr,kpi.n_progetti,Numero totale progetti PNRR nel comune,numero,Italia Domani ReGiS,corrente,https://italiadomani.gov.it,CC BY 4.0
 pnrr,kpi.totale_finanziamento_pnrr,Totale finanziamento PNRR (euro),euro,Italia Domani ReGiS,corrente,https://italiadomani.gov.it,CC BY 4.0
 pnrr,kpi.totale_finanziamento_globale,Totale finanziamento globale incl. cofinanziamento (euro),euro,Italia Domani ReGiS,corrente,https://italiadomani.gov.it,CC BY 4.0
@@ -132,7 +136,7 @@ aria,ultimo_anno.no2.n_stazioni_oltre_limite_legge,Stazioni oltre limite legge (
 aria,ultimo_anno.no2.n_stazioni_oltre_limite_oms,Stazioni oltre limite OMS (10 ug/m3),numero,ISPRA SNPA,annuale,https://www.isprambiente.gov.it,CC BY 4.0
 aria,trend_decennale,Serie storica 10 anni medie PM10/PM2.5/NO2,dict,ISPRA SNPA,serie storica,https://www.isprambiente.gov.it,CC BY 4.0
 aria,stazioni_dettaglio,Dettaglio per stazione di tutti gli anni,lista,ISPRA SNPA,serie storica,https://www.isprambiente.gov.it,CC BY 4.0
-veicoli,popolazione,Popolazione di riferimento per tassi pro-capite,numero,ISTAT,annuale,https://demo.istat.it,CC BY 3.0 IT
+veicoli,popolazione,Popolazione di riferimento per tassi pro-capite,numero,ISTAT,annuale,https://demo.istat.it,CC BY 4.0
 veicoli,parco_veicoli.autovetture,Numero autovetture circolanti,numero,ACI LOD,31 dic,https://lod.aci.it,CC BY 4.0
 veicoli,parco_veicoli.autobus,Numero autobus circolanti,numero,ACI LOD,31 dic,https://lod.aci.it,CC BY 4.0
 veicoli,parco_veicoli.motocicli,Numero motocicli circolanti,numero,ACI LOD,31 dic,https://lod.aci.it,CC BY 4.0
@@ -141,11 +145,11 @@ veicoli,parco_veicoli.totale,Totale veicoli circolanti,numero,ACI LOD,31 dic,htt
 veicoli,parco_veicoli.euro,Distribuzione per classe Euro (0-6),dict,ACI LOD,31 dic,https://lod.aci.it,CC BY 4.0
 veicoli,parco_veicoli.euro.pct_inquinanti,% veicoli Euro 0-3 (inquinanti),percentuale,ACI LOD,31 dic,https://lod.aci.it,CC BY 4.0
 veicoli,parco_veicoli.tasso_motorizzazione_per_1000_ab,Veicoli per 1000 abitanti,tasso,ACI LOD + ISTAT,31 dic,https://lod.aci.it,CC BY 4.0
-veicoli,incidenti.ultimo_anno.incidenti,Numero incidenti stradali con lesioni,numero,ISTAT 41_983,annuale lug,https://esploradati.istat.it,CC BY 3.0 IT
-veicoli,incidenti.ultimo_anno.morti,Numero morti in incidenti,numero,ISTAT 41_983,annuale lug,https://esploradati.istat.it,CC BY 3.0 IT
-veicoli,incidenti.ultimo_anno.feriti,Numero feriti in incidenti,numero,ISTAT 41_983,annuale lug,https://esploradati.istat.it,CC BY 3.0 IT
-veicoli,incidenti.ultimo_anno.morti_per_10k_ab,Tasso mortalità stradale per 10k abitanti,tasso,ISTAT,annuale,https://esploradati.istat.it,CC BY 3.0 IT
-veicoli,incidenti.serie_storica,Serie storica 5 anni incidenti/morti/feriti,dict,ISTAT 41_983,serie storica,https://esploradati.istat.it,CC BY 3.0 IT
+veicoli,incidenti.ultimo_anno.incidenti,Numero incidenti stradali con lesioni,numero,ISTAT 41_983,annuale lug,https://esploradati.istat.it,CC BY 4.0
+veicoli,incidenti.ultimo_anno.morti,Numero morti in incidenti,numero,ISTAT 41_983,annuale lug,https://esploradati.istat.it,CC BY 4.0
+veicoli,incidenti.ultimo_anno.feriti,Numero feriti in incidenti,numero,ISTAT 41_983,annuale lug,https://esploradati.istat.it,CC BY 4.0
+veicoli,incidenti.ultimo_anno.morti_per_10k_ab,Tasso mortalità stradale per 10k abitanti,tasso,ISTAT,annuale,https://esploradati.istat.it,CC BY 4.0
+veicoli,incidenti.serie_storica,Serie storica 5 anni incidenti/morti/feriti,dict,ISTAT 41_983,serie storica,https://esploradati.istat.it,CC BY 4.0
 veicoli,iscrizioni.ultimo_anno,Nuove iscrizioni anno (totale + per alimentazione),dict,ACI,annuale gen,https://lod.aci.it,CC BY 4.0
 veicoli,iscrizioni.ultimo_anno.elettriche,Nuove iscrizioni veicoli elettrici,numero,ACI,annuale gen,https://lod.aci.it,CC BY 4.0
 veicoli,iscrizioni.ultimo_anno.ibride,Nuove iscrizioni veicoli ibridi,numero,ACI,annuale gen,https://lod.aci.it,CC BY 4.0
@@ -191,7 +195,7 @@ immobili_pa,kpi.pct_uso_terzi,Percentuale immobili dati in uso a soggetti terzi,
 immobili_pa,kpi.superficie_totale_mq,Superficie totale dichiarata (metri quadri),mq,MEF DE,31/12/2022,https://www.mef.gov.it/dipartimenti/entrate/patrimonio_immobiliare/,CC BY 4.0
 immobili_pa,kpi.mix_categoria,Conteggio immobili per ognuna delle 17 macro-categorie semantiche,dict,MEF DE,31/12/2022,https://www.mef.gov.it/dipartimenti/entrate/patrimonio_immobiliare/,CC BY 4.0
 immobili_pa,kpi.mix_natura,Conteggio per natura (FABBRICATO/TERRENO),dict,MEF DE,31/12/2022,https://www.mef.gov.it/dipartimenti/entrate/patrimonio_immobiliare/,CC BY 4.0
-immobili_pa,punti,"Campione fino a 500 punti stratificati per categoria con lat/lon/cat/tipo/sup/vincolo/uso_terzi",lista,MEF DE,31/12/2022,https://www.mef.gov.it/dipartimenti/entrate/patrimonio_immobiliare/,CC BY 4.0
+immobili_pa,punti,Campione fino a 500 punti stratificati per categoria con lat/lon/cat/tipo/sup/vincolo/uso_terzi,lista,MEF DE,31/12/2022,https://www.mef.gov.it/dipartimenti/entrate/patrimonio_immobiliare/,CC BY 4.0
 immobili_pa,punti[].lat,Latitudine WGS84 (6 decimali ~11cm),coord,MEF DE,31/12/2022,https://www.mef.gov.it/dipartimenti/entrate/patrimonio_immobiliare/,CC BY 4.0
 immobili_pa,punti[].lon,Longitudine WGS84 (6 decimali ~11cm),coord,MEF DE,31/12/2022,https://www.mef.gov.it/dipartimenti/entrate/patrimonio_immobiliare/,CC BY 4.0
 immobili_pa,punti[].cat,Categoria semantica (vedi mix_categoria per chiavi),codice,MEF DE,31/12/2022,https://www.mef.gov.it/dipartimenti/entrate/patrimonio_immobiliare/,CC BY 4.0
@@ -276,7 +280,7 @@ pun,kpi.pct_attivi,Percentuale di punti attivi su totale (0-100),percentuale,GSE
 pun,kpi.n_ac,Numero di punti a corrente alternata (AC),numero,GSE / MASE,quotidiana,https://www.piattaformaunicanazionale.it/idr,CC BY 4.0 ex art. 52 c.2 CAD
 pun,kpi.n_dc,Numero di punti a corrente continua (DC),numero,GSE / MASE,quotidiana,https://www.piattaformaunicanazionale.it/idr,CC BY 4.0 ex art. 52 c.2 CAD
 pun,kpi.potenza_tot_kw,Somma della potenza massima erogabile di tutti i punti del comune (kW),kW,GSE / MASE,quotidiana,https://www.piattaformaunicanazionale.it/idr,CC BY 4.0 ex art. 52 c.2 CAD
-pun,kpi.mix_potenza,"Mix per categoria potenza (Slow / Quick / Fast / HPC / Ultra fast) - oggetto chiave:conteggio",oggetto,GSE / MASE,quotidiana,https://www.piattaformaunicanazionale.it/idr,CC BY 4.0 ex art. 52 c.2 CAD
+pun,kpi.mix_potenza,Mix per categoria potenza (Slow / Quick / Fast / HPC / Ultra fast) - oggetto chiave:conteggio,oggetto,GSE / MASE,quotidiana,https://www.piattaformaunicanazionale.it/idr,CC BY 4.0 ex art. 52 c.2 CAD
 pun,punti,Lista dettagliata dei punti di ricarica del comune,lista,GSE / MASE,quotidiana,https://www.piattaformaunicanazionale.it/idr,CC BY 4.0 ex art. 52 c.2 CAD
 pun,punti[].id_evse,Identificativo univoco EVSE assegnato da GSE,testo,GSE / MASE,quotidiana,https://www.piattaformaunicanazionale.it/idr,CC BY 4.0 ex art. 52 c.2 CAD
 pun,punti[].lat,Latitudine WGS84 (6 decimali ~11cm),coord,GSE / MASE,quotidiana,https://www.piattaformaunicanazionale.it/idr,CC BY 4.0 ex art. 52 c.2 CAD
@@ -347,7 +351,7 @@ carburanti,punti.tipo,"Tipologia impianto: ""Stradale"" o ""Autostradale""",test
 carburanti,punti.lat,Latitudine WGS84 dell'impianto (arrotondata a 6 decimali ~11 cm),decimale,MIMIT,quotidiana,https://www.mimit.gov.it/it/open-data/elenco-dataset/carburanti-prezzi-praticati-e-anagrafica-degli-impianti,IODL 2.0
 carburanti,punti.lon,Longitudine WGS84 dell'impianto (arrotondata a 6 decimali),decimale,MIMIT,quotidiana,https://www.mimit.gov.it/it/open-data/elenco-dataset/carburanti-prezzi-praticati-e-anagrafica-degli-impianti,IODL 2.0
 carburanti,punti.indirizzo,Indirizzo dell'impianto come comunicato dal gestore al MIMIT,testo,MIMIT,quotidiana,https://www.mimit.gov.it/it/open-data/elenco-dataset/carburanti-prezzi-praticati-e-anagrafica-degli-impianti,IODL 2.0
-carburanti,punti.prezzi,"Dizionario con i prezzi correnti per i carburanti core: benzina_self benzina_serv gasolio_self gasolio_serv gpl metano hvo (chiavi presenti solo se l'impianto eroga quel carburante)",oggetto,MIMIT,quotidiana,https://www.mimit.gov.it/it/open-data/elenco-dataset/carburanti-prezzi-praticati-e-anagrafica-degli-impianti,IODL 2.0
+carburanti,punti.prezzi,Dizionario con i prezzi correnti per i carburanti core: benzina_self benzina_serv gasolio_self gasolio_serv gpl metano hvo (chiavi presenti solo se l'impianto eroga quel carburante),oggetto,MIMIT,quotidiana,https://www.mimit.gov.it/it/open-data/elenco-dataset/carburanti-prezzi-praticati-e-anagrafica-degli-impianti,IODL 2.0
 carburanti,punti.prezzi_extra,"Dizionario opzionale con i prezzi dei carburanti premium proprietari (Shell V-Power, Hi-Q Diesel, Supreme Diesel, Blue Diesel, Gasolio Premium)",oggetto,MIMIT,quotidiana,https://www.mimit.gov.it/it/open-data/elenco-dataset/carburanti-prezzi-praticati-e-anagrafica-degli-impianti,IODL 2.0
 carburanti,punti.ultimo_aggiornamento,"Data dell'ultimo aggiornamento prezzo per questo impianto (YYYY-MM-DD, dal campo dtComu del CSV prezzi)",data,MIMIT,quotidiana,https://www.mimit.gov.it/it/open-data/elenco-dataset/carburanti-prezzi-praticati-e-anagrafica-degli-impianti,IODL 2.0
 runts,_etl_version,Versione dell'ETL Cruscotto che ha generato lo shard RUNTS (es. 0.1.0),testo,Cruscotto Italia,quotidiana,{{SITE_URL}},CC BY 4.0
@@ -355,76 +359,76 @@ runts,_source,Etichetta della fonte istituzionale (RUNTS - Min. Lavoro e Politic
 runts,_source_url,URL della pagina pubblica del Min. Lavoro da cui viene scaricato il file XLSX bulk,testo,Min. Lavoro,quotidiana,https://servizi.lavoro.gov.it/runts/it-it/Lista-enti,CC BY 4.0 ex art. 52 c.2 D.Lgs 82/2005 (CAD); D.Lgs 117/2017 art. 53 pubblicita legale RUNTS
 runts,_snapshot_date,"Data dello snapshot del registro upstream nel formato YYYY-MM-DD, estratta dal nome del file XLSX (YYYYMMDD_iscritti_v1.0.xlsx)",data,Min. Lavoro,quotidiana,https://servizi.lavoro.gov.it/runts/it-it/Lista-enti,CC BY 4.0 ex art. 52 c.2 D.Lgs 82/2005 (CAD); D.Lgs 117/2017 art. 53 pubblicita legale RUNTS
 runts,_generated_at,Timestamp ISO 8601 di costruzione dello shard Cruscotto,datetime,Cruscotto Italia,quotidiana,{{SITE_URL}},CC BY 4.0
-runts,_enti_truncated,"Flag boolean true se la lista enti[] è stata cappata (solo Roma con 6.616 enti). Quando true sono presenti _enti_total e _enti_cap",boolean,Cruscotto Italia,quotidiana,{{SITE_URL}},CC BY 4.0
+runts,_enti_truncated,Flag boolean true se la lista enti[] è stata cappata (solo Roma con 6.616 enti). Quando true sono presenti _enti_total e _enti_cap,boolean,Cruscotto Italia,quotidiana,{{SITE_URL}},CC BY 4.0
 runts,_enti_total,Numero totale di enti del Terzo Settore nel comune (anche se enti[] è cappato). Coincide con kpi.n_totale quando non cappato,numero,Min. Lavoro,quotidiana,https://servizi.lavoro.gov.it/runts/it-it/Lista-enti,CC BY 4.0 ex art. 52 c.2 D.Lgs 82/2005 (CAD); D.Lgs 117/2017 art. 53 pubblicita legale RUNTS
 runts,_enti_cap,Soglia di cap applicata alla lista enti[] (fisso a 5000),numero,Cruscotto Italia,quotidiana,{{SITE_URL}},CC BY 4.0
-runts,kpi.n_totale,"Numero totale di enti del Terzo Settore con sede legale nel comune (D.Lgs 117/2017 art. 53). Include tutte le 6 sezioni: ODV APS EF IS SMS ETS. NB: il RUNTS registra la sede LEGALE non l'operatività",numero,Min. Lavoro,quotidiana,https://servizi.lavoro.gov.it/runts/it-it/Lista-enti,CC BY 4.0 ex art. 52 c.2 D.Lgs 82/2005 (CAD); D.Lgs 117/2017 art. 53 pubblicita legale RUNTS
+runts,kpi.n_totale,Numero totale di enti del Terzo Settore con sede legale nel comune (D.Lgs 117/2017 art. 53). Include tutte le 6 sezioni: ODV APS EF IS SMS ETS. NB: il RUNTS registra la sede LEGALE non l'operatività,numero,Min. Lavoro,quotidiana,https://servizi.lavoro.gov.it/runts/it-it/Lista-enti,CC BY 4.0 ex art. 52 c.2 D.Lgs 82/2005 (CAD); D.Lgs 117/2017 art. 53 pubblicita legale RUNTS
 runts,kpi.mix_sezione,"Dizionario count per sezione: chiavi tra {ODV APS EF IS SMS ETS}, valori = numero enti. Ordinato per count decrescente. Solo le sezioni presenti vengono incluse (non c'è la chiave se il comune non ha enti in quella sezione)",oggetto,Min. Lavoro,quotidiana,https://servizi.lavoro.gov.it/runts/it-it/Lista-enti,CC BY 4.0 ex art. 52 c.2 D.Lgs 82/2005 (CAD); D.Lgs 117/2017 art. 53 pubblicita legale RUNTS
 runts,kpi.n_5x1000,Numero enti del comune iscritti al beneficio 5x1000 (campo 5x1000 = 'Si' nel file RUNTS),numero,Min. Lavoro,quotidiana,https://servizi.lavoro.gov.it/runts/it-it/Lista-enti,CC BY 4.0 ex art. 52 c.2 D.Lgs 82/2005 (CAD); D.Lgs 117/2017 art. 53 pubblicita legale RUNTS
-runts,kpi.pct_5x1000,"Percentuale degli enti del comune iscritti al 5x1000 (1 decimale). Riferimento nazionale ~52%",percentuale,Cruscotto Italia,quotidiana,{{SITE_URL}},CC BY 4.0
+runts,kpi.pct_5x1000,Percentuale degli enti del comune iscritti al 5x1000 (1 decimale). Riferimento nazionale ~52%,percentuale,Cruscotto Italia,quotidiana,{{SITE_URL}},CC BY 4.0
 runts,kpi.n_rete_associativa,Numero enti del comune aderenti a una rete associativa RUNTS (campo Rete = 'Si' nel file),numero,Min. Lavoro,quotidiana,https://servizi.lavoro.gov.it/runts/it-it/Lista-enti,CC BY 4.0 ex art. 52 c.2 D.Lgs 82/2005 (CAD); D.Lgs 117/2017 art. 53 pubblicita legale RUNTS
-runts,kpi.iscrizioni_per_anno,"Dizionario YYYY -> count delle iscrizioni effettuate in quell'anno. NB: il picco 2022 è dovuto alla trasmigrazione dei registri preesistenti (Volontariato APS Onlus) e non a nuove costituzioni. L'anno corrente è parziale",oggetto,Min. Lavoro,quotidiana,https://servizi.lavoro.gov.it/runts/it-it/Lista-enti,CC BY 4.0 ex art. 52 c.2 D.Lgs 82/2005 (CAD); D.Lgs 117/2017 art. 53 pubblicita legale RUNTS
+runts,kpi.iscrizioni_per_anno,Dizionario YYYY -> count delle iscrizioni effettuate in quell'anno. NB: il picco 2022 è dovuto alla trasmigrazione dei registri preesistenti (Volontariato APS Onlus) e non a nuove costituzioni. L'anno corrente è parziale,oggetto,Min. Lavoro,quotidiana,https://servizi.lavoro.gov.it/runts/it-it/Lista-enti,CC BY 4.0 ex art. 52 c.2 D.Lgs 82/2005 (CAD); D.Lgs 117/2017 art. 53 pubblicita legale RUNTS
 runts,enti.cf,Codice fiscale dell'ente (11 o 16 caratteri),testo,Min. Lavoro,quotidiana,https://servizi.lavoro.gov.it/runts/it-it/Lista-enti,CC BY 4.0 ex art. 52 c.2 D.Lgs 82/2005 (CAD); D.Lgs 117/2017 art. 53 pubblicita legale RUNTS
 runts,enti.rep,ID di repertorio RUNTS dell'ente (univoco nazionale),testo,Min. Lavoro,quotidiana,https://servizi.lavoro.gov.it/runts/it-it/Lista-enti,CC BY 4.0 ex art. 52 c.2 D.Lgs 82/2005 (CAD); D.Lgs 117/2017 art. 53 pubblicita legale RUNTS
 runts,enti.denom,Denominazione completa dell'ente come iscritta al RUNTS,testo,Min. Lavoro,quotidiana,https://servizi.lavoro.gov.it/runts/it-it/Lista-enti,CC BY 4.0 ex art. 52 c.2 D.Lgs 82/2005 (CAD); D.Lgs 117/2017 art. 53 pubblicita legale RUNTS
-runts,enti.sez,"Sigla della sezione RUNTS in cui l'ente è iscritto: ODV (Organizzazione di Volontariato L. 266/1991) APS (Associazione di Promozione Sociale L. 383/2000) EF (Ente Filantropico novità RUNTS) IS (Impresa Sociale D.Lgs 112/2017) SMS (Società di Mutuo Soccorso L. 3818/1886) ETS (Altri Enti del Terzo Settore residuale)",testo,Min. Lavoro,quotidiana,https://servizi.lavoro.gov.it/runts/it-it/Lista-enti,CC BY 4.0 ex art. 52 c.2 D.Lgs 82/2005 (CAD); D.Lgs 117/2017 art. 53 pubblicita legale RUNTS
+runts,enti.sez,Sigla della sezione RUNTS in cui l'ente è iscritto: ODV (Organizzazione di Volontariato L. 266/1991) APS (Associazione di Promozione Sociale L. 383/2000) EF (Ente Filantropico novità RUNTS) IS (Impresa Sociale D.Lgs 112/2017) SMS (Società di Mutuo Soccorso L. 3818/1886) ETS (Altri Enti del Terzo Settore residuale),testo,Min. Lavoro,quotidiana,https://servizi.lavoro.gov.it/runts/it-it/Lista-enti,CC BY 4.0 ex art. 52 c.2 D.Lgs 82/2005 (CAD); D.Lgs 117/2017 art. 53 pubblicita legale RUNTS
 runts,enti.rapp,Cognome e nome del legale rappresentante dell'ente,testo,Min. Lavoro,quotidiana,https://servizi.lavoro.gov.it/runts/it-it/Lista-enti,CC BY 4.0 ex art. 52 c.2 D.Lgs 82/2005 (CAD); D.Lgs 117/2017 art. 53 pubblicita legale RUNTS
 runts,enti.rete,Flag boolean true se l'ente aderisce a una rete associativa RUNTS,boolean,Min. Lavoro,quotidiana,https://servizi.lavoro.gov.it/runts/it-it/Lista-enti,CC BY 4.0 ex art. 52 c.2 D.Lgs 82/2005 (CAD); D.Lgs 117/2017 art. 53 pubblicita legale RUNTS
 runts,enti.x1000,Flag boolean true se l'ente è iscritto al beneficio del 5x1000,boolean,Min. Lavoro,quotidiana,https://servizi.lavoro.gov.it/runts/it-it/Lista-enti,CC BY 4.0 ex art. 52 c.2 D.Lgs 82/2005 (CAD); D.Lgs 117/2017 art. 53 pubblicita legale RUNTS
 runts,enti.data_iscr,"Data di iscrizione dell'ente al RUNTS nel formato ISO YYYY-MM-DD. NB: ~52% degli enti nazionali ha data_iscr=2022 per via della trasmigrazione di Volontariato/APS/Onlus, non è il vero anno di costituzione",data,Min. Lavoro,quotidiana,https://servizi.lavoro.gov.it/runts/it-it/Lista-enti,CC BY 4.0 ex art. 52 c.2 D.Lgs 82/2005 (CAD); D.Lgs 117/2017 art. 53 pubblicita legale RUNTS
 asia,_etl_version,Versione dell'ETL Cruscotto che ha generato lo shard ASIA (es. 0.1.0),testo,Cruscotto Italia,annuale,{{SITE_URL}},CC BY 4.0
-asia,_source,"Etichetta della fonte istituzionale (ISTAT - Archivio Statistico Imprese Attive ASIA UL)",testo,Cruscotto Italia,annuale,{{SITE_URL}},CC BY 4.0
-asia,_source_url,"URL del data browser ISTAT dove è consultabile pubblicamente il dataflow SDMX 183_1163_DF_DICA_ASIAULP_TERRIFDATA_7 (granularità comunale × ATECO 2 cifre × classe addetti)",testo,ISTAT,annuale,"https://esploradati.istat.it/databrowser/#/it/dw/categories/IT1,Z0500DICA,1.0/DICA_ASIA/DICA_ASIAULP",CC BY 3.0 IT
-asia,_license,Licenza del dato upstream ISTAT,testo,ISTAT,annuale,https://www.istat.it/note-legali/,CC BY 3.0 IT
+asia,_source,Etichetta della fonte istituzionale (ISTAT - Archivio Statistico Imprese Attive ASIA UL),testo,Cruscotto Italia,annuale,{{SITE_URL}},CC BY 4.0
+asia,_source_url,URL del data browser ISTAT dove è consultabile pubblicamente il dataflow SDMX 183_1163_DF_DICA_ASIAULP_TERRIFDATA_7 (granularità comunale × ATECO 2 cifre × classe addetti),testo,ISTAT,annuale,"https://esploradati.istat.it/databrowser/#/it/dw/categories/IT1,Z0500DICA,1.0/DICA_ASIA/DICA_ASIAULP",CC BY 4.0
+asia,_license,Licenza del dato upstream ISTAT,testo,ISTAT,annuale,https://www.istat.it/note-legali/,CC BY 4.0
 asia,_generated_at,Timestamp ISO 8601 di costruzione dello shard Cruscotto,datetime,Cruscotto Italia,annuale,{{SITE_URL}},CC BY 4.0
-asia,_years_available,"Lista degli anni di riferimento disponibili nella serie storica (es. [2018, 2019, 2020, 2021, 2022, 2023]). ISTAT pubblica ASIA con latency ~2 anni",lista,ISTAT,annuale,https://www.istat.it/it/archivio/216767,CC BY 3.0 IT
-asia,_latest_year,"Anno più recente disponibile nello shard (max di _years_available). I KPI sintetici e i top settori sono calcolati su questo anno",numero,ISTAT,annuale,https://www.istat.it/it/archivio/216767,CC BY 3.0 IT
-asia,kpi.ul_totali,"Numero totale di unità locali (UL) attive nel comune nell'anno _latest_year. NB: ASIA conta UL non imprese giuridiche - un'impresa con sedi multiple compare in più comuni",numero,ISTAT,annuale,https://www.istat.it/it/archivio/216767,CC BY 3.0 IT
-asia,kpi.addetti_totali,Addetti media annua di tutte le UL del comune nell'anno _latest_year. Misura SDMX LUEMPDAA. Valore decimale (~media tra mesi),decimale,ISTAT,annuale,https://www.istat.it/it/archivio/216767,CC BY 3.0 IT
+asia,_years_available,"Lista degli anni di riferimento disponibili nella serie storica (es. [2018, 2019, 2020, 2021, 2022, 2023]). ISTAT pubblica ASIA con latency ~2 anni",lista,ISTAT,annuale,https://www.istat.it/it/archivio/216767,CC BY 4.0
+asia,_latest_year,Anno più recente disponibile nello shard (max di _years_available). I KPI sintetici e i top settori sono calcolati su questo anno,numero,ISTAT,annuale,https://www.istat.it/it/archivio/216767,CC BY 4.0
+asia,kpi.ul_totali,Numero totale di unità locali (UL) attive nel comune nell'anno _latest_year. NB: ASIA conta UL non imprese giuridiche - un'impresa con sedi multiple compare in più comuni,numero,ISTAT,annuale,https://www.istat.it/it/archivio/216767,CC BY 4.0
+asia,kpi.addetti_totali,Addetti media annua di tutte le UL del comune nell'anno _latest_year. Misura SDMX LUEMPDAA. Valore decimale (~media tra mesi),decimale,ISTAT,annuale,https://www.istat.it/it/archivio/216767,CC BY 4.0
 asia,kpi.addetti_per_ul,Dimensione media delle UL del comune = addetti_totali / ul_totali. Indicatore di concentrazione produttiva,decimale,Cruscotto Italia,annuale,{{SITE_URL}},CC BY 4.0
-asia,kpi.ul_yoy_pct,"Variazione percentuale anno-su-anno delle UL totali tra l'ultimo anno e il precedente. Poco significativo per comuni con UL totali < 10",percentuale,Cruscotto Italia,annuale,{{SITE_URL}},CC BY 4.0
-asia,kpi.mix_classe_addetti,"Dizionario con percentuale di UL per ciascuna classe dimensionale. Chiavi: W0_9 (1-9 addetti micro) W10_49 (10-49 piccole) W50_249 (50-249 medie) W_GE250 (250+ grandi). I valori sono percentuali sul totale UL del comune",oggetto,Cruscotto Italia,annuale,{{SITE_URL}},CC BY 4.0
+asia,kpi.ul_yoy_pct,Variazione percentuale anno-su-anno delle UL totali tra l'ultimo anno e il precedente. Poco significativo per comuni con UL totali < 10,percentuale,Cruscotto Italia,annuale,{{SITE_URL}},CC BY 4.0
+asia,kpi.mix_classe_addetti,Dizionario con percentuale di UL per ciascuna classe dimensionale. Chiavi: W0_9 (1-9 addetti micro) W10_49 (10-49 piccole) W50_249 (50-249 medie) W_GE250 (250+ grandi). I valori sono percentuali sul totale UL del comune,oggetto,Cruscotto Italia,annuale,{{SITE_URL}},CC BY 4.0
 asia,kpi.top_settori_ul,"Lista (max 10) dei settori ATECO 2 cifre con maggior numero di UL nel comune, ordinati per ul decrescente. Ogni voce: {code: ATECO 2 cifre, label: descrizione settore IT, ul: numero, addetti: media annua}",lista,Cruscotto Italia,annuale,{{SITE_URL}},CC BY 4.0
 asia,kpi.top_settori_addetti,"Lista (max 10) dei settori ATECO 2 cifre con maggior numero di addetti, ordinati per addetti decrescente. Stessa struttura di top_settori_ul. Spesso differisce dalla top per UL (es. industria pesante = poche UL ma molti addetti)",lista,Cruscotto Italia,annuale,{{SITE_URL}},CC BY 4.0
-asia,serie_storica.anni,Array di anni della serie storica (uguale a _years_available),lista,ISTAT,annuale,https://www.istat.it/it/archivio/216767,CC BY 3.0 IT
-asia,serie_storica.ul,Array parallelo a serie_storica.anni con il numero totale di UL del comune per ciascun anno (misura SDMX LU sul codice ATECO aggregato 0010 e classe TOTAL),lista,ISTAT,annuale,https://www.istat.it/it/archivio/216767,CC BY 3.0 IT
-asia,serie_storica.addetti,Array parallelo a serie_storica.anni con gli addetti media annua del comune per ciascun anno (misura SDMX LUEMPDAA sul codice ATECO aggregato 0010 e classe TOTAL),lista,ISTAT,annuale,https://www.istat.it/it/archivio/216767,CC BY 3.0 IT
-asia,ateco_dettaglio,"Ripartizione completa per anno → ATECO 2 cifre → classe addetti → {ul, addetti}. Struttura: {<anno>: {<ateco>: {<class>: {ul: numero, addetti: decimale}}}}. Anno = _latest_year. Class può essere TOTAL o W0_9 / W10_49 / W50_249 / W_GE250. Le combinazioni con valori zero possono essere omesse",oggetto,ISTAT,annuale,https://www.istat.it/it/archivio/216767,CC BY 3.0 IT
+asia,serie_storica.anni,Array di anni della serie storica (uguale a _years_available),lista,ISTAT,annuale,https://www.istat.it/it/archivio/216767,CC BY 4.0
+asia,serie_storica.ul,Array parallelo a serie_storica.anni con il numero totale di UL del comune per ciascun anno (misura SDMX LU sul codice ATECO aggregato 0010 e classe TOTAL),lista,ISTAT,annuale,https://www.istat.it/it/archivio/216767,CC BY 4.0
+asia,serie_storica.addetti,Array parallelo a serie_storica.anni con gli addetti media annua del comune per ciascun anno (misura SDMX LUEMPDAA sul codice ATECO aggregato 0010 e classe TOTAL),lista,ISTAT,annuale,https://www.istat.it/it/archivio/216767,CC BY 4.0
+asia,ateco_dettaglio,"Ripartizione completa per anno → ATECO 2 cifre → classe addetti → {ul, addetti}. Struttura: {<anno>: {<ateco>: {<class>: {ul: numero, addetti: decimale}}}}. Anno = _latest_year. Class può essere TOTAL o W0_9 / W10_49 / W50_249 / W_GE250. Le combinazioni con valori zero possono essere omesse",oggetto,ISTAT,annuale,https://www.istat.it/it/archivio/216767,CC BY 4.0
 pendolarismo,_etl_version,Versione dell'ETL Cruscotto che ha generato lo shard pendolarismo (es. 0.1.0),testo,Cruscotto Italia,decennale,{{SITE_URL}},CC BY 4.0
 pendolarismo,_source,Etichetta della fonte istituzionale (ISTAT - Matrice pendolarismo per lavoro 2021),testo,Cruscotto Italia,decennale,{{SITE_URL}},CC BY 4.0
-pendolarismo,_source_url,URL del file ZIP ISTAT contenente la matrice OD comune-comune (esploradati.istat.it/databrowser/DWL/PERMPOP/MATPEN),testo,ISTAT,decennale,https://esploradati.istat.it/databrowser/DWL/PERMPOP/MATPEN/matrix_pendoLAVORO_2021.zip,CC BY 3.0 IT
-pendolarismo,_license,Licenza upstream ISTAT,testo,ISTAT,decennale,https://www.istat.it/note-legali/,CC BY 3.0 IT
-pendolarismo,_anno_rilevazione,"Anno di riferimento del Censimento permanente ISTAT (2021). Pubblicato il 2 ottobre 2025",numero,ISTAT,decennale,https://www.istat.it/it/censimenti/popolazione-e-abitazioni,CC BY 3.0 IT
-pendolarismo,_motivo_spostamento,"Motivo dello spostamento giornaliero: 'lavoro' (matrice OD casa-lavoro). Possibile anche 'studio' in pubblicazioni future ISTAT",testo,ISTAT,decennale,https://www.istat.it/it/censimenti/popolazione-e-abitazioni,CC BY 3.0 IT
+pendolarismo,_source_url,URL del file ZIP ISTAT contenente la matrice OD comune-comune (esploradati.istat.it/databrowser/DWL/PERMPOP/MATPEN),testo,ISTAT,decennale,https://esploradati.istat.it/databrowser/DWL/PERMPOP/MATPEN/matrix_pendoLAVORO_2021.zip,CC BY 4.0
+pendolarismo,_license,Licenza upstream ISTAT,testo,ISTAT,decennale,https://www.istat.it/note-legali/,CC BY 4.0
+pendolarismo,_anno_rilevazione,Anno di riferimento del Censimento permanente ISTAT (2021). Pubblicato il 2 ottobre 2025,numero,ISTAT,decennale,https://www.istat.it/it/censimenti/popolazione-e-abitazioni,CC BY 4.0
+pendolarismo,_motivo_spostamento,Motivo dello spostamento giornaliero: 'lavoro' (matrice OD casa-lavoro). Possibile anche 'studio' in pubblicazioni future ISTAT,testo,ISTAT,decennale,https://www.istat.it/it/censimenti/popolazione-e-abitazioni,CC BY 4.0
 pendolarismo,_generated_at,Timestamp ISO 8601 di costruzione dello shard,datetime,Cruscotto Italia,decennale,{{SITE_URL}},CC BY 4.0
-pendolarismo,kpi.uscenti_totali,"Pendolari residenti nel comune che escono giornalmente per recarsi al lavoro fuori dal proprio comune di residenza",numero,Cruscotto Italia,decennale,{{SITE_URL}},CC BY 4.0
-pendolarismo,kpi.entranti_totali,"Pendolari che entrano nel comune da altri comuni per motivi di lavoro (somma su tutti i comuni origine)",numero,Cruscotto Italia,decennale,{{SITE_URL}},CC BY 4.0
+pendolarismo,kpi.uscenti_totali,Pendolari residenti nel comune che escono giornalmente per recarsi al lavoro fuori dal proprio comune di residenza,numero,Cruscotto Italia,decennale,{{SITE_URL}},CC BY 4.0
+pendolarismo,kpi.entranti_totali,Pendolari che entrano nel comune da altri comuni per motivi di lavoro (somma su tutti i comuni origine),numero,Cruscotto Italia,decennale,{{SITE_URL}},CC BY 4.0
 pendolarismo,kpi.saldo_netto,"Saldo migratorio giornaliero per lavoro: entranti_totali - uscenti_totali. Positivo indica attrattore di lavoro, negativo indica comune-dormitorio",numero,Cruscotto Italia,decennale,{{SITE_URL}},CC BY 4.0
-pendolarismo,kpi.auto_contenimento_pct,"Indice di auto-contenimento percentuale: quota di residenti che lavorano nel proprio comune di residenza sul totale dei lavoratori residenti. Valori alti (>70%) indicano economia locale autosufficiente",percentuale,Cruscotto Italia,decennale,{{SITE_URL}},CC BY 4.0
-pendolarismo,kpi.n_destinazioni,"Numero di comuni distinti verso cui i residenti del comune si recano per lavoro",numero,Cruscotto Italia,decennale,{{SITE_URL}},CC BY 4.0
-pendolarismo,kpi.n_origini,"Numero di comuni distinti da cui partono pendolari che entrano nel comune per lavoro",numero,Cruscotto Italia,decennale,{{SITE_URL}},CC BY 4.0
+pendolarismo,kpi.auto_contenimento_pct,Indice di auto-contenimento percentuale: quota di residenti che lavorano nel proprio comune di residenza sul totale dei lavoratori residenti. Valori alti (>70%) indicano economia locale autosufficiente,percentuale,Cruscotto Italia,decennale,{{SITE_URL}},CC BY 4.0
+pendolarismo,kpi.n_destinazioni,Numero di comuni distinti verso cui i residenti del comune si recano per lavoro,numero,Cruscotto Italia,decennale,{{SITE_URL}},CC BY 4.0
+pendolarismo,kpi.n_origini,Numero di comuni distinti da cui partono pendolari che entrano nel comune per lavoro,numero,Cruscotto Italia,decennale,{{SITE_URL}},CC BY 4.0
 pendolarismo,kpi.top_destinazioni,"Lista (max 10) delle destinazioni di pendolarismo più frequenti uscenti dal comune. Ogni voce: {istat: codice ISTAT 6 cifre comune destinazione, count: numero pendolari}. Ordinata per count decrescente",lista,Cruscotto Italia,decennale,{{SITE_URL}},CC BY 4.0
 pendolarismo,kpi.top_origini,"Lista (max 10) delle origini di pendolarismo più frequenti entranti nel comune. Ogni voce: {istat: codice ISTAT 6 cifre comune origine, count: numero pendolari}. Ordinata per count decrescente",lista,Cruscotto Italia,decennale,{{SITE_URL}},CC BY 4.0
 censimento,_etl_version,Versione dell'ETL Cruscotto che ha generato lo shard censimento (es. 0.2.0),testo,Cruscotto Italia,biennale,{{SITE_URL}},CC BY 4.0
 censimento,_source,Etichetta della fonte istituzionale (ISTAT - Basi Territoriali 2021 + Variabili censuarie 2023 del Censimento permanente),testo,Cruscotto Italia,biennale,{{SITE_URL}},CC BY 4.0
-censimento,_license,Licenza upstream ISTAT,testo,ISTAT,biennale,https://www.istat.it/note-legali/,CC BY 3.0 IT
-censimento,_version,Versione del rilascio ISTAT delle Basi Territoriali 2021 e variabili censuarie 2023,testo,ISTAT,biennale,https://www.istat.it/notizia/basi-territoriali-e-variabili-censuarie/,CC BY 3.0 IT
-censimento,_has_full,"Boolean true se per il comune esiste lo shard GeoJSON completo con geometrie + 127 variabili per sezione su /data/censimento_full/<istat>.geojson (lazy fetch frontend)",booleano,Cruscotto Italia,biennale,{{SITE_URL}},CC BY 4.0
+censimento,_license,Licenza upstream ISTAT,testo,ISTAT,biennale,https://www.istat.it/note-legali/,CC BY 4.0
+censimento,_version,Versione del rilascio ISTAT delle Basi Territoriali 2021 e variabili censuarie 2023,testo,ISTAT,biennale,https://www.istat.it/notizia/basi-territoriali-e-variabili-censuarie/,CC BY 4.0
+censimento,_has_full,Boolean true se per il comune esiste lo shard GeoJSON completo con geometrie + 127 variabili per sezione su /data/censimento_full/<istat>.geojson (lazy fetch frontend),booleano,Cruscotto Italia,biennale,{{SITE_URL}},CC BY 4.0
 censimento,_generated_at,Timestamp ISO 8601 di costruzione dello shard,datetime,Cruscotto Italia,biennale,{{SITE_URL}},CC BY 4.0
 censimento,kpi_comune.n_sezioni,"Numero di sezioni di censimento ricadenti nel territorio comunale (include anche sezioni 'no_vars' = aree non residenziali rilevate solo come poligoni: parchi, zone industriali, infrastrutture)",numero,Cruscotto Italia,biennale,{{SITE_URL}},CC BY 4.0
-censimento,kpi_comune.pop_totale,Popolazione residente totale aggregata dalle variabili P1 delle sezioni rilevate,numero,ISTAT,biennale,https://www.istat.it/notizia/basi-territoriali-e-variabili-censuarie/,CC BY 3.0 IT
-censimento,kpi_comune.pop_maschi,Popolazione maschile residente (somma P2 di tutte le sezioni rilevate),numero,ISTAT,biennale,https://www.istat.it/notizia/basi-territoriali-e-variabili-censuarie/,CC BY 3.0 IT
-censimento,kpi_comune.pop_femmine,Popolazione femminile residente (somma P3 di tutte le sezioni rilevate),numero,ISTAT,biennale,https://www.istat.it/notizia/basi-territoriali-e-variabili-censuarie/,CC BY 3.0 IT
-censimento,kpi_comune.famiglie_totali,Numero totale di famiglie (somma PF1 delle sezioni rilevate),numero,ISTAT,biennale,https://www.istat.it/notizia/basi-territoriali-e-variabili-censuarie/,CC BY 3.0 IT
-censimento,kpi_comune.abitazioni_totali,"Numero totale di abitazioni (somma A8 delle sezioni rilevate). Include sia occupate da residenti sia vuote o occupate da non-residenti",numero,ISTAT,biennale,https://www.istat.it/notizia/basi-territoriali-e-variabili-censuarie/,CC BY 3.0 IT
-censimento,kpi_comune.abitazioni_occupate,Numero di abitazioni occupate da almeno un residente (somma A2 delle sezioni rilevate),numero,ISTAT,biennale,https://www.istat.it/notizia/basi-territoriali-e-variabili-censuarie/,CC BY 3.0 IT
-censimento,kpi_comune.abitazioni_vuote,"Numero di abitazioni vuote o occupate solo da non-residenti (somma A3 delle sezioni rilevate). Comuni turistici alpini mostrano percentuali elevate (es. Cogne 75%) per le seconde case",numero,ISTAT,biennale,https://www.istat.it/notizia/basi-territoriali-e-variabili-censuarie/,CC BY 3.0 IT
-censimento,kpi_comune.stranieri_totali,Numero totale di residenti stranieri UE + Extra-UE (somma ST1 delle sezioni rilevate),numero,ISTAT,biennale,https://www.istat.it/notizia/basi-territoriali-e-variabili-censuarie/,CC BY 3.0 IT
-censimento,kpi_comune.stranieri_ue,Numero di residenti stranieri con cittadinanza UE (somma ST16 delle sezioni rilevate),numero,ISTAT,biennale,https://www.istat.it/notizia/basi-territoriali-e-variabili-censuarie/,CC BY 3.0 IT
-censimento,kpi_comune.stranieri_extra_ue,Numero di residenti stranieri con cittadinanza Extra-UE (somma ST19 delle sezioni rilevate),numero,ISTAT,biennale,https://www.istat.it/notizia/basi-territoriali-e-variabili-censuarie/,CC BY 3.0 IT
-censimento,kpi_comune.occupati_15_64,"Numero totale di occupati di età 15-64 (somma P101 delle sezioni rilevate). 'Occupato' secondo definizione censuaria ISTAT",numero,ISTAT,biennale,https://www.istat.it/notizia/basi-territoriali-e-variabili-censuarie/,CC BY 3.0 IT
-censimento,kpi_comune.occupati_maschi,Numero di occupati maschi 15-64 (somma P102 delle sezioni rilevate),numero,ISTAT,biennale,https://www.istat.it/notizia/basi-territoriali-e-variabili-censuarie/,CC BY 3.0 IT
-censimento,kpi_comune.occupati_femmine,Numero di occupate femmine 15-64 (somma P103 delle sezioni rilevate),numero,ISTAT,biennale,https://www.istat.it/notizia/basi-territoriali-e-variabili-censuarie/,CC BY 3.0 IT
+censimento,kpi_comune.pop_totale,Popolazione residente totale aggregata dalle variabili P1 delle sezioni rilevate,numero,ISTAT,biennale,https://www.istat.it/notizia/basi-territoriali-e-variabili-censuarie/,CC BY 4.0
+censimento,kpi_comune.pop_maschi,Popolazione maschile residente (somma P2 di tutte le sezioni rilevate),numero,ISTAT,biennale,https://www.istat.it/notizia/basi-territoriali-e-variabili-censuarie/,CC BY 4.0
+censimento,kpi_comune.pop_femmine,Popolazione femminile residente (somma P3 di tutte le sezioni rilevate),numero,ISTAT,biennale,https://www.istat.it/notizia/basi-territoriali-e-variabili-censuarie/,CC BY 4.0
+censimento,kpi_comune.famiglie_totali,Numero totale di famiglie (somma PF1 delle sezioni rilevate),numero,ISTAT,biennale,https://www.istat.it/notizia/basi-territoriali-e-variabili-censuarie/,CC BY 4.0
+censimento,kpi_comune.abitazioni_totali,Numero totale di abitazioni (somma A8 delle sezioni rilevate). Include sia occupate da residenti sia vuote o occupate da non-residenti,numero,ISTAT,biennale,https://www.istat.it/notizia/basi-territoriali-e-variabili-censuarie/,CC BY 4.0
+censimento,kpi_comune.abitazioni_occupate,Numero di abitazioni occupate da almeno un residente (somma A2 delle sezioni rilevate),numero,ISTAT,biennale,https://www.istat.it/notizia/basi-territoriali-e-variabili-censuarie/,CC BY 4.0
+censimento,kpi_comune.abitazioni_vuote,Numero di abitazioni vuote o occupate solo da non-residenti (somma A3 delle sezioni rilevate). Comuni turistici alpini mostrano percentuali elevate (es. Cogne 75%) per le seconde case,numero,ISTAT,biennale,https://www.istat.it/notizia/basi-territoriali-e-variabili-censuarie/,CC BY 4.0
+censimento,kpi_comune.stranieri_totali,Numero totale di residenti stranieri UE + Extra-UE (somma ST1 delle sezioni rilevate),numero,ISTAT,biennale,https://www.istat.it/notizia/basi-territoriali-e-variabili-censuarie/,CC BY 4.0
+censimento,kpi_comune.stranieri_ue,Numero di residenti stranieri con cittadinanza UE (somma ST16 delle sezioni rilevate),numero,ISTAT,biennale,https://www.istat.it/notizia/basi-territoriali-e-variabili-censuarie/,CC BY 4.0
+censimento,kpi_comune.stranieri_extra_ue,Numero di residenti stranieri con cittadinanza Extra-UE (somma ST19 delle sezioni rilevate),numero,ISTAT,biennale,https://www.istat.it/notizia/basi-territoriali-e-variabili-censuarie/,CC BY 4.0
+censimento,kpi_comune.occupati_15_64,Numero totale di occupati di età 15-64 (somma P101 delle sezioni rilevate). 'Occupato' secondo definizione censuaria ISTAT,numero,ISTAT,biennale,https://www.istat.it/notizia/basi-territoriali-e-variabili-censuarie/,CC BY 4.0
+censimento,kpi_comune.occupati_maschi,Numero di occupati maschi 15-64 (somma P102 delle sezioni rilevate),numero,ISTAT,biennale,https://www.istat.it/notizia/basi-territoriali-e-variabili-censuarie/,CC BY 4.0
+censimento,kpi_comune.occupati_femmine,Numero di occupate femmine 15-64 (somma P103 delle sezioni rilevate),numero,ISTAT,biennale,https://www.istat.it/notizia/basi-territoriali-e-variabili-censuarie/,CC BY 4.0
 censimento,kpi_comune.area_kmq,"Area territoriale del comune in chilometri quadrati (somma area_mq di tutte le sezioni, convertita in km², include anche le sezioni no_vars)",numero,Cruscotto Italia,biennale,{{SITE_URL}},CC BY 4.0
 censimento,distribuzioni_comune.eta_per_fascia,"Distribuzione popolazione per macro-fasce di età: dict con 3 chiavi {'0-14', '15-64', '65+'} aggregate dalle 16 fasce 5-anni P14-P29",dict,Cruscotto Italia,biennale,{{SITE_URL}},CC BY 4.0
 censimento,distribuzioni_comune.eta_5anni,"Distribuzione popolazione per 16 fasce di età 5 anni: dict con chiavi '0-4', '5-9', '10-14', ..., '70-74', '75+'. Aggregate dalle variabili P14-P29 (totale uomini+donne)",dict,Cruscotto Italia,biennale,{{SITE_URL}},CC BY 4.0
@@ -434,12 +438,12 @@ censimento,distribuzioni_comune.stranieri_eta,"Distribuzione popolazione stranie
 beni_culturali,kpi.n_totale,"Numero totale di beni culturali in questo comune. Unione di due fonti MiC: ArCo (beni immobili tutelati: chiese, palazzi, castelli, ville, archeologia, monumenti, parchi/giardini storici) + Cultural-ON DBUnico 2.0 (Luoghi della Cultura visitabili: musei, biblioteche, archivi con orari e contatti).",numero,MiC ICCD + Cultural-ON,mensile,https://dati.beniculturali.it/sparql,CC BY 4.0
 beni_culturali,kpi.n_arco,"Numero di beni provenienti dal catalogo ArCo (Architecture of Knowledge ICCD): patrimonio immobile tutelato dal MiC. Subset di n_totale, sottoinsieme con fonte='arco'.",numero,MiC ICCD,mensile,https://dati.beniculturali.it/sparql,CC BY 4.0
 beni_culturali,kpi.n_cultural_on,"Numero di Luoghi della Cultura visitabili da Cultural-ON DBUnico 2.0: musei, biblioteche, archivi, aree archeologiche con orari di apertura, contatti (telefono, email, sito) e scheda online. Subset di n_totale, sottoinsieme con fonte='cultural_on'.",numero,MiC Cultural-ON,mensile,https://dati.cultura.gov.it,CC BY 4.0
-beni_culturali,kpi.n_visitabili,"Beni effettivamente visitabili con orari/contatti pubblici. Comprende: (a) record Cultural-ON (fonte='cultural_on') e (b) record ArCo con link cis_link a una scheda Cultural-ON.",numero,MiC ICCD + Cultural-ON,mensile,https://dati.beniculturali.it/sparql,CC BY 4.0
+beni_culturali,kpi.n_visitabili,Beni effettivamente visitabili con orari/contatti pubblici. Comprende: (a) record Cultural-ON (fonte='cultural_on') e (b) record ArCo con link cis_link a una scheda Cultural-ON.,numero,MiC ICCD + Cultural-ON,mensile,https://dati.beniculturali.it/sparql,CC BY 4.0
 beni_culturali,kpi.n_con_coordinate,Numero di beni con geometria WKT POINT (latitudine/longitudine in EPSG:4326). Usato per mostrare il bene sulla mappa.,numero,MiC ICCD + Cultural-ON,mensile,https://dati.beniculturali.it/sparql,CC BY 4.0
 beni_culturali,kpi.n_senza_coordinate,"Beni catalogati senza geometria spaziale. Sono presenti nella lista ma non in mappa: dato testuale solo (nome, indirizzo, soprintendenza).",numero,MiC ICCD + Cultural-ON,mensile,https://dati.beniculturali.it/sparql,CC BY 4.0
 beni_culturali,kpi.mix_categoria,"Distribuzione dei beni nelle 11 macro-categorie normalizzate (chiesa, palazzo, castello, archeologia, museo, biblioteca, archivio, monumento, infrastruttura, parco_giardino, altro). Mapping unificato sia dei slug ICCD CulturalPropertyType (ArCo) sia delle categorie Cultural-ON DBUnico 2.0 nelle 11 macro.",dict,Cruscotto Italia,mensile,{{SITE_URL}},CC BY 4.0
-beni_culturali,kpi.pct_con_foto,"Percentuale di beni con foto. Per ArCo: predicato foaf:depiction (URL immagine ICCD). Per Cultural-ON: campo image DBUnico 2.0.",percentuale,MiC ICCD + Cultural-ON,mensile,https://dati.beniculturali.it/sparql,CC BY 4.0
-beni_culturali,kpi.pct_con_descrizione,"Percentuale di beni con descrizione testuale. Per ArCo: predicato dc:description (scheda storica-artistica catalografica ICCD). Per Cultural-ON: campo descrizione DBUnico 2.0.",percentuale,MiC ICCD + Cultural-ON,mensile,https://dati.beniculturali.it/sparql,CC BY 4.0
+beni_culturali,kpi.pct_con_foto,Percentuale di beni con foto. Per ArCo: predicato foaf:depiction (URL immagine ICCD). Per Cultural-ON: campo image DBUnico 2.0.,percentuale,MiC ICCD + Cultural-ON,mensile,https://dati.beniculturali.it/sparql,CC BY 4.0
+beni_culturali,kpi.pct_con_descrizione,Percentuale di beni con descrizione testuale. Per ArCo: predicato dc:description (scheda storica-artistica catalografica ICCD). Per Cultural-ON: campo descrizione DBUnico 2.0.,percentuale,MiC ICCD + Cultural-ON,mensile,https://dati.beniculturali.it/sparql,CC BY 4.0
 beni_culturali,luoghi[],"Lista dei beni del comune. Ogni elemento: id, denom, categoria (1 di 11 macro), fonte ('arco' o 'cultural_on'), lat, lon, indirizzo, image (URL foto), descrizione, tutela, soprintendenza (solo ArCo), cis_link (URL scheda Cultural-ON), telefono/email/website/prenotazione (solo Cultural-ON). Cap 30 nello shard base; lista completa in /data/beni_culturali_full/<istat>.json per comuni con piu' di 30 beni.",array,Cruscotto Italia,mensile,{{SITE_URL}},CC BY 4.0
 meteo_italiameteo,temperatura_2m,Temperatura dell'aria a 2 metri dal suolo in gradi Celsius per ogni step orario (0-72h),gradi C,ItaliaMeteo / Cineca,bi-giornaliera,https://meteohub.agenziaitaliameteo.it/,CC BY 4.0
 meteo_italiameteo,precipitazioni_totali,Precipitazioni totali accumulate in mm per ogni step orario (0-72h),mm,ItaliaMeteo / Cineca,bi-giornaliera,https://meteohub.agenziaitaliameteo.it/,CC BY 4.0

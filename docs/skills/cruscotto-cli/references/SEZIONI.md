@@ -26,7 +26,7 @@ I pesi indicati sono quelli di Matera (077014, 59k abitanti): scalano con la dim
 | `turismo` | ISTAT | capacita' ricettiva e movimento turistico | 1.5 KB |
 | `territorio` | ISPRA + DPC | consumo di suolo, dissesto idrogeologico, rifiuti, classificazione sismica | 4.1 KB |
 | `aria` | ISPRA SNPA | stazioni di monitoraggio, PM10, PM2.5, NO2, limiti di legge e OMS | 4.1 KB |
-| `demografia` | ISTAT POSAS | popolazione per eta' e sesso, serie storica | 5.0 KB |
+| `demografia` | ISTAT (POSAS + bilancio demografico D7B) | popolazione per eta' e sesso, serie storica 5 anni (stock, al 1 gennaio), dinamica annuale 2019-2024 (flussi: nati, morti, saldo naturale, saldi migratori) | 5.6 KB |
 | `redditi` | MEF | redditi dichiarati per fascia, patrimonio immobiliare | 6.9 KB |
 | `carburanti` | MIMIT | impianti di distribuzione e prezzi | 8.1 KB |
 

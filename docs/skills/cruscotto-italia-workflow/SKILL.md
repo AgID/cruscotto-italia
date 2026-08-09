@@ -1,7 +1,7 @@
 ---
 name: cruscotto-italia-workflow
-version: 2.9.1
-description: Cruscotto Italia MCP (7896 comuni). Tool: comune_kpi (~55 KPI ~620 token); comune_dashboard (27 sezioni); search_comune; comune_opere_dettaglio; anncsu_civico_search; censimento_sezione_search. Sezioni: anagrafica, demografia POSAS, censimento profilo, turismo, PNRR, ISPRA suolo/idro/rifiuti/aria, DPC sismica, BDAP-MOP, SIOPE cassa (pagamenti+incassi+saldo), ANAC, MIUR scuole/plessi, ACI veicoli, MEF redditi/patrimonio, ANNCSU civici, MdS farmacie/ospedali, GSE ricarica EV, AGCOM FTTH, MIMIT carburanti, RUNTS, ISTAT ASIA, pendolarismo 2021, Basi Territoriali 2021, vars 2023 (127), MiC ArCo+Cultural-ON, meteo ItaliaMeteo, morfologia CNR-IRPI HR-DTM 5m (kpi_summary: morfologia_cnr con elev/slope/aspect/solar). Catasto AGE: fogli/particelle REST /data/catasto_full/. Trigger: ISTAT, BDAP, SIOPE, incassi, saldo cassa, ISPRA, sismica, PNRR, ANAC, MEF, ANNCSU, AGCOM, MIMIT, RUNTS, FTTH, pendolarismo, beni culturali, MiC, catasto, meteo, ItaliaMeteo, morfologia, DTM, rilievo, pendenza, geomorfologia, CNR-IRPI.
+version: 2.10.0
+description: Cruscotto Italia MCP (7896 comuni). Tool: comune_kpi (~55 KPI ~620 token); comune_dashboard (27 sezioni); search_comune; anncsu_civico_search; censimento_sezione_search. Sezioni: anagrafica, demografia POSAS+D7B (serie storica, nati/morti), censimento profilo, turismo, PNRR, ISPRA suolo/idro/rifiuti/aria, DPC sismica, BDAP-MOP, SIOPE cassa (pagamenti+incassi+saldo), ANAC, MIUR scuole/plessi, ACI veicoli, MEF redditi/patrimonio, ANNCSU civici, MdS farmacie/ospedali, GSE ricarica EV, AGCOM FTTH, MIMIT carburanti, RUNTS, ISTAT ASIA, pendolarismo 2021, Basi Territoriali 2021, vars 2023 (127), MiC ArCo+Cultural-ON, meteo ItaliaMeteo, morfologia CNR-IRPI HR-DTM 5m (kpi_summary: morfologia_cnr con elev/slope/aspect/solar). Catasto AGE: fogli/particelle REST /data/catasto_full/. Trigger: ISTAT, BDAP, SIOPE, incassi, saldo cassa, ISPRA, sismica, PNRR, ANAC, MEF, ANNCSU, AGCOM, MIMIT, RUNTS, FTTH, pendolarismo, beni culturali, MiC, catasto, meteo, ItaliaMeteo, morfologia, DTM, pendenza, CNR-IRPI, natalita.
 ---
 
 # Cruscotto Italia workflow
@@ -54,7 +54,10 @@ Risposta strutturata in 25 gruppi tematici. Ogni gruppo contiene 2-7 campi scala
   "_etl_version": "0.1.0",
   "_missing": [],
   "anagrafica": {"istat", "nome", "provincia_sigla", "regione", "codice_fiscale", "codice_catastale"},
-  "demografia": {"popolazione", "maschi", "femmine", "eta_media", "indice_vecchiaia", "indice_dipendenza", "riferimento"},
+  "demografia": {"popolazione", "maschi", "femmine", "eta_media", "indice_vecchiaia", "indice_dipendenza", "riferimento", "anno_dinamica", "nati", "morti", "saldo_naturale"},
+  // nati/morti/saldo_naturale = ultimo anno del bilancio demografico D7B
+  // (ISTAT, fonte anagrafica ANPR). Sono scalari: la serie completa e la
+  // serie storica della popolazione stanno in comune_dashboard.demografia.
   "istruzione_profilo": {"anno", "pct_terziario", "pct_diploma_oltre"},
   "lavoro_profilo": {"anno", "tasso_occupazione", "tasso_disoccupazione", "tasso_attivita"},
   "redditi_mef": {"anno_fiscale", "n_contribuenti", "reddito_medio_eur", "imposta_netta_media_eur"},

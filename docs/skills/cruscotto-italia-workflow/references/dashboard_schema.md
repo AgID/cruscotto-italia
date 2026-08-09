@@ -30,6 +30,31 @@ Fonte: ISTAT POSAS (popolazione residente per età e sesso). Riferimento: 1 genn
 - `indice_vecchiaia` — pop65+/pop0-14 × 100
 - `indice_dipendenza` — (pop0-14 + pop65+) / pop15-64 × 100
 - `piramide` — array di 101 voci (età 0–100), ognuna con `eta`, `m`, `f`, `tot`
+- `_anno_riferimento` (int), `_stima` (bool) — l'annata POSAS più recente è una
+  stima, quelle chiuse sono definitive
+- `serie_storica` — stock. `punti`: array di 5 annate, ognuna con `anno`,
+  `popolazione`, `maschi`, `femmine`, `stima`. Popolazione al 1° gennaio.
+  I comuni istituiti per fusione hanno serie più corte: mancano gli anni in
+  cui il comune non esisteva. Non ci sono zeri di riempimento, quindi un anno
+  assente significa "comune inesistente", non "popolazione zero".
+- `dinamica` — flussi. Fonte: ISTAT D7B, bilancio demografico mensile, fonte
+  anagrafica ANPR. `anni`: array 2019–2024 (le uniche annate pubblicate
+  nell'area download), ognuna con `anno`, `nati`, `morti`, `saldo_naturale`,
+  `saldo_migratorio_interno`, `saldo_migratorio_estero`, `popolazione_inizio`,
+  `popolazione_fine`.
+
+**Stock e flussi non vanno mescolati.** Per la popolazione usare sempre
+`serie_storica` (POSAS), mai `dinamica.popolazione_inizio/fine`. Le due fonti
+coincidono al 1° gennaio su 7.895 comuni su 7.896, ma nell'anno di una fusione
+si riferiscono a perimetri diversi: per 018026 Campospinoso Albaredo nel 2023
+POSAS dà 1.093 (perimetro pre-fusione, fotografia pubblicata a dicembre 2022)
+e D7B dà 1.327 (perimetro già fuso, applicato retroattivamente). Dal 2024 le
+due fonti riallineano.
+
+Inoltre `popolazione_fine` di un anno NON coincide con `popolazione_inizio`
+del successivo, per effetto delle rettifiche post-censuarie applicate a inizio
+anno: i due valori vanno letti dentro il singolo anno, dove il bilancio
+chiude, e mai concatenati in una serie continua.
 
 ## `profilo`
 

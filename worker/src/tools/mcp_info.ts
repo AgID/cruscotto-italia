@@ -27,7 +27,7 @@ export const mcpInfo: ToolDefinition = {
     }
     return {
       service: "cruscotto-italia-mcp",
-      version: "0.18.0",
+      version: "0.19.0",
       protocol: "MCP 2024-11-05",
       datasets: 27,
       institutions: 17,
@@ -63,9 +63,10 @@ export const mcpInfo: ToolDefinition = {
         },
         istat: {
           canonical: "https://www.istat.it",
-          license: "CC-BY 3.0 IT",
+          license: "CC-BY 4.0",
           datasets: [
             "POSAS demografia",
+            "Bilancio demografico mensile D7B (nati, morti, saldi migratori; fonte anagrafica ANPR)",
             "Censimento permanente (profilo)",
             "Turismo (TUR_1, TUR_7)",
             "Archivio Statistico Imprese Attive - Unità Locali (ASIA UL)",
@@ -163,7 +164,7 @@ export const mcpInfo: ToolDefinition = {
         },
         istat_censimento: {
           canonical: "https://www.istat.it/notizia/basi-territoriali-e-variabili-censuarie/",
-          license: "CC-BY 3.0 IT",
+          license: "CC-BY 4.0",
           datasets: [
             "ISTAT - Basi Territoriali 2021 + Variabili censuarie 2023 del Censimento permanente. Geometrie delle 756.376 sezioni di censimento nazionali (poligoni WGS84 EPSG:4326 RFC 7946) accorpate per comune, integrate con 127 variabili demografiche/abitative per sezione (rilevazione al 31/12/2023): popolazione totale + sesso (P1-P3), 16 fasce eta' 5-anni per totale/maschi/femmine (P14-P82), titolo di studio (P86-P100 nessuno/elementare/media/diploma/terziario per sesso), occupati 15-64 (P101-P103), italiani per fascia eta' (IT1-IT12), stranieri UE/extra-UE per sesso/eta'/occupazione (ST1-ST33), famiglie per numero componenti 1-6+ e coabitanti (PF1, PF3-PF9), abitazioni occupate/vuote/totali e altri alloggi occupati (A2, A3, A5, A8), automobili di proprieta (NA1), paese di nascita e acquisizione della cittadinanza (EM1-EM6). Copertura 7904/7896 comuni (100% incluso TN/BZ). 262.434 sezioni 'no_vars' (35%) sono aree non residenziali (parchi, aree industriali, infrastrutture) non rilevate dal censimento permanente per assenza di residenti. KPI comune-level pre-calcolati in censimento/<istat>.json (~3-5 KB), geometrie complete in /data/censimento_full/<istat>.geojson lazy-fetch (30 KB - 3 MB). Aggiornamento biennale ISTAT: tornate 2021 e 2023, ultimo aggiornamento 09/06/2026.",
           ],

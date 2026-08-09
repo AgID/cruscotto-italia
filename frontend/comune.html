@@ -832,6 +832,15 @@ footer a{color:rgba(255,255,255,0.85);text-decoration:none}
 .fascia-n{color:var(--ink);font-weight:600;}
 .fascia-pct{color:var(--ink-mute);}
 .piramide-wrap{padding:14px 0;}
+.demo-serie-block{margin-top:26px;}
+.demo-din-table-wrap{overflow-x:auto;margin-top:14px;}
+.demo-din-table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:11px;}
+.demo-din-table caption{font-family:var(--serif);font-style:italic;font-size:13px;color:var(--ink-mute);text-align:left;padding-bottom:6px;}
+.demo-din-table th,.demo-din-table td{padding:5px 8px;border-bottom:1px solid var(--paper-2);text-align:left;white-space:nowrap;}
+.demo-din-table th{color:var(--ink-mute);text-transform:uppercase;letter-spacing:.04em;font-size:10px;font-weight:600;}
+.demo-din-table td.demo-din-num,.demo-din-table th.demo-din-num{text-align:right;}
+.demo-din-table td.demo-din-pos{color:var(--chart-success);}
+.demo-din-table td.demo-din-neg{color:var(--chart-danger);}
 .piramide-svg{width:100%;height:auto;display:block;max-width:560px;margin:0 auto;}
 @media (max-width:720px){
   .demo-grid{grid-template-columns:1fr;}
@@ -2536,14 +2545,210 @@ function renderDemografiaContent(container, data) {
       </div>
     </div>
 
+    ${renderDemografiaSerieBlock(data)}
+    ${renderDemografiaDinamicaBlock(data)}
+
     <div class="tab-footer">
       <strong>Fonte</strong>: <a href="https://demo.istat.it/" target="_blank" rel="noopener">ISTAT Demografia</a>
-      — POSAS (Popolazione e situazione anagrafica), stima al 1 gennaio 2026.
+      — POSAS (Popolazione e situazione anagrafica), ${data._riferimento || 'al 1 gennaio'}.
       <br>
       <em>Indice di vecchiaia</em>: rapporto tra over-65 e 0-14 anni, in percentuale (Italia ~190).
       <em>Indice di dipendenza</em>: non-attivi (0-14 + 65+) ogni 100 attivi (15-64). Italia ~58.
     </div>
   `;
+
+  // I chart vanno creati dopo che il canvas e' nel DOM e ha un layout.
+  setTimeout(() => {
+    renderDemografiaSerieChart(data);
+    renderDemografiaDinamicaChart(data);
+    // rigenera le tabelle-dati equivalenti per screen reader sui nuovi canvas
+    if (typeof addChartDataTables === 'function') addChartDataTables();
+  }, 0);
+}
+
+// Blocco stock: serie storica della popolazione residente (POSAS, 1 gennaio).
+// Separato dai flussi: stock e flussi non condividono l'asse.
+function renderDemografiaSerieBlock(data) {
+  const punti = data.serie_storica?.punti || [];
+  if (punti.length < 2) return '';
+  const primo = punti[0].anno;
+  const ultimo = punti[punti.length - 1].anno;
+  const haStima = punti.some(p => p.stima);
+  const delta = punti[punti.length - 1].popolazione - punti[0].popolazione;
+  const segno = delta > 0 ? '+' : '';
+  const pct = punti[0].popolazione
+    ? Math.round(delta / punti[0].popolazione * 1000) / 10
+    : null;
+  return `
+    <div class="demo-serie-block">
+      <h3 class="veicoli-col-h">Popolazione residente &mdash; serie storica</h3>
+      <div class="veicoli-trend-wrap">
+        <canvas id="demografia-serie-chart" role="img"
+                aria-label="Popolazione residente al 1 gennaio, dal ${primo} al ${ultimo}"
+                class="veicoli-trend-canvas"></canvas>
+      </div>
+      <div class="veicoli-euro-note">
+        ISTAT POSAS &middot; 1&deg; gennaio &middot; ${primo}&ndash;${ultimo}
+        ${haStima ? '&middot; ultimo anno stima' : ''}
+        &middot; variazione ${segno}${fmtNum(delta)}${pct != null ? ' (' + segno + pct + '%)' : ''}
+      </div>
+    </div>
+  `;
+}
+
+// Blocco flussi: dinamica demografica annuale (D7B, fonte anagrafica ANPR).
+// popolazione_inizio/fine NON sono esposte: lo stock e' gia' la serie POSAS e
+// i due archivi possono riferirsi a perimetri comunali diversi nell'anno di
+// una fusione, generando due numeri diversi per la stessa grandezza.
+function renderDemografiaDinamicaBlock(data) {
+  const anni = data.dinamica?.anni || [];
+  if (!anni.length) return '';
+  const primo = anni[0].anno;
+  const ultimo = anni[anni.length - 1].anno;
+  const righe = anni.map(a => `
+        <tr>
+          <td>${a.anno}</td>
+          <td class="demo-din-num">${fmtNum(a.nati)}</td>
+          <td class="demo-din-num">${fmtNum(a.morti)}</td>
+          <td class="demo-din-num ${a.saldo_naturale < 0 ? 'demo-din-neg' : 'demo-din-pos'}">${a.saldo_naturale > 0 ? '+' : ''}${fmtNum(a.saldo_naturale)}</td>
+          <td class="demo-din-num ${a.saldo_migratorio_interno < 0 ? 'demo-din-neg' : 'demo-din-pos'}">${a.saldo_migratorio_interno > 0 ? '+' : ''}${fmtNum(a.saldo_migratorio_interno)}</td>
+          <td class="demo-din-num ${a.saldo_migratorio_estero < 0 ? 'demo-din-neg' : 'demo-din-pos'}">${a.saldo_migratorio_estero > 0 ? '+' : ''}${fmtNum(a.saldo_migratorio_estero)}</td>
+        </tr>`).join('');
+  return `
+    <div class="demo-serie-block">
+      <h3 class="veicoli-col-h">Dinamica demografica &mdash; nati e morti</h3>
+      <div class="veicoli-trend-wrap">
+        <canvas id="demografia-dinamica-chart" role="img"
+                aria-label="Nati e morti per anno, dal ${primo} al ${ultimo}"
+                class="veicoli-trend-canvas"></canvas>
+      </div>
+      <div class="veicoli-euro-note">
+        ISTAT D7B &middot; bilancio demografico &middot; fonte anagrafica ANPR &middot; ${primo}&ndash;${ultimo}
+      </div>
+      <div class="demo-din-table-wrap">
+        <table class="demo-din-table">
+          <caption>Saldi demografici per anno</caption>
+          <thead>
+            <tr>
+              <th scope="col">Anno</th>
+              <th scope="col" class="demo-din-num">Nati</th>
+              <th scope="col" class="demo-din-num">Morti</th>
+              <th scope="col" class="demo-din-num">Saldo naturale</th>
+              <th scope="col" class="demo-din-num">Saldo migratorio interno</th>
+              <th scope="col" class="demo-din-num">Saldo migratorio estero</th>
+            </tr>
+          </thead>
+          <tbody>${righe}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+// Line: serie storica della popolazione residente
+function renderDemografiaSerieChart(data) {
+  const canvas = document.getElementById('demografia-serie-chart');
+  const punti = data.serie_storica?.punti || [];
+  if (!canvas || !window.Chart || punti.length < 2) return;
+  const c = resolveChartColors();
+  if (window.__demoSerieChartInstance) window.__demoSerieChartInstance.destroy();
+  window.__demoSerieChartInstance = new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels: punti.map(p => String(p.anno)),
+      datasets: [{
+        label: 'Popolazione residente',
+        data: punti.map(p => p.popolazione),
+        borderColor: c.blue[0],
+        backgroundColor: hexToRgba(c.blue[0], 0.10),
+        borderWidth: 2,
+        tension: 0.25,
+        pointRadius: 4,
+        fill: true,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => {
+              const p = punti[ctx.dataIndex];
+              return fmtNum(ctx.parsed.y) + (p && p.stima ? ' (stima)' : '');
+            },
+          },
+        },
+      },
+      scales: {
+        x: { ticks: { font: { family: 'var(--mono)', size: 10 } } },
+        y: {
+          ticks: {
+            font: { family: 'var(--mono)', size: 10 },
+            callback: (v) => fmtNum(v),
+          },
+        },
+      },
+    },
+  });
+}
+
+// Line a due serie: nati e morti. La forbice tra le curve e' l'informazione.
+function renderDemografiaDinamicaChart(data) {
+  const canvas = document.getElementById('demografia-dinamica-chart');
+  const anni = data.dinamica?.anni || [];
+  if (!canvas || !window.Chart || !anni.length) return;
+  const c = resolveChartColors();
+  if (window.__demoDinamicaChartInstance) window.__demoDinamicaChartInstance.destroy();
+  window.__demoDinamicaChartInstance = new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels: anni.map(a => String(a.anno)),
+      datasets: [
+        {
+          label: 'Nati',
+          data: anni.map(a => a.nati),
+          borderColor: c.success,
+          backgroundColor: hexToRgba(c.success, 0.10),
+          borderWidth: 2,
+          tension: 0.25,
+          pointRadius: 4,
+          fill: false,
+        },
+        {
+          label: 'Morti',
+          data: anni.map(a => a.morti),
+          borderColor: c.danger,
+          backgroundColor: hexToRgba(c.danger, 0.10),
+          borderWidth: 2,
+          tension: 0.25,
+          pointRadius: 4,
+          fill: false,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: true,
+          position: 'bottom',
+          labels: { font: { family: 'var(--mono)', size: 10 }, boxWidth: 12 },
+        },
+        tooltip: { callbacks: { label: (ctx) => ctx.dataset.label + ': ' + fmtNum(ctx.parsed.y) } },
+      },
+      scales: {
+        x: { ticks: { font: { family: 'var(--mono)', size: 10 } } },
+        y: {
+          beginAtZero: true,
+          ticks: { font: { family: 'var(--mono)', size: 10 }, callback: (v) => fmtNum(v) },
+        },
+      },
+    },
+  });
 }
 
 function renderFasciaBar(label, fascia) {
@@ -12026,7 +12231,9 @@ FONTI INTEGRATE
 - SIOPE                             Cassa: pagamenti + entrate + saldo_cassa (per_anno)
 - Italia Domani (PNRR)              Progetti del Piano (Sistema ReGiS)
 - ISPRA                             Consumo suolo, IdroGEO, rifiuti, SNPA qualità aria
-- ISTAT                             Demografia, profilo censimento, turismo, incidenti,
+- ISTAT                             Demografia (POSAS + bilancio demografico mensile D7B,
+                                    fonte anagrafica ANPR: nati, morti, saldi migratori),
+                                    profilo censimento, turismo, incidenti,
                                     ASIA UL imprese e addetti,
                                     Matrice pendolarismo per lavoro 2021 (Censimento permanente),
                                     Basi Territoriali 2021 + Variabili censuarie 2023 del
