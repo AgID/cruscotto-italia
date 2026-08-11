@@ -322,7 +322,7 @@ pre code {
 
   <div class="example"><strong>Confronto</strong>Confronta consumo di suolo e raccolta differenziata tra Bergamo e Brescia.</div>
 
-  <div class="example"><strong>Ricerca tematica</strong>Quali sono i 5 comuni con più progetti PNRR sulla missione M2 (Rivoluzione verde) tra Catanzaro, Cosenza, Crotone, Reggio Calabria e Vibo Valentia?</div>
+  <div class="example"><strong>Ricerca tematica</strong>Confronta i progetti PNRR sulla missione M2 (Rivoluzione verde) nei cinque capoluoghi calabresi: Catanzaro, Cosenza, Crotone, Reggio Calabria e Vibo Valentia.</div>
 
   <div class="example"><strong>Analisi finanziaria</strong>Quanto ha speso il comune di Lecce nel 2025 per voci legate al personale? Mostra le top-10 voci SIOPE.</div>
 
