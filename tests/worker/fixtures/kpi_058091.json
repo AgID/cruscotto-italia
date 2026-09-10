@@ -1,0 +1,201 @@
+{
+  "_generated_at": "2026-09-10T14:04:48+00:00",
+  "_etl_version": "0.3.0",
+  "_missing": [],
+  "anagrafica": {
+    "istat": "058091",
+    "nome": "Roma",
+    "provincia_sigla": "RM",
+    "regione": "Lazio",
+    "codice_fiscale": "02438750586",
+    "codice_catastale": "H501"
+  },
+  "demografia": {
+    "popolazione": 2745062,
+    "maschi": 1307339,
+    "femmine": 1437723,
+    "eta_media": 46.8,
+    "indice_vecchiaia": 212.4,
+    "indice_dipendenza": 56.1,
+    "riferimento": "1 gennaio 2026 (stima)",
+    "anno_dinamica": 2024,
+    "nati": 16688,
+    "morti": 29116,
+    "saldo_naturale": -12428
+  },
+  "istruzione_profilo": {
+    "anno": 2024,
+    "pct_terziario": 36.8,
+    "pct_diploma_oltre": 81
+  },
+  "lavoro_profilo": {
+    "anno": 2024,
+    "tasso_occupazione": 73.9,
+    "tasso_disoccupazione": 7,
+    "tasso_attivita": 79.5
+  },
+  "redditi_mef": {
+    "anno_fiscale": 2024,
+    "n_contribuenti": 1994045,
+    "reddito_medio_eur": 31423,
+    "imposta_netta_media_eur": 8685
+  },
+  "scuole_miur": {
+    "n_scuole": 1271,
+    "anno_scolastico": "2026/27",
+    "_nota": "n_scuole conta i plessi, cioe' i punti di erogazione del servizio censiti nell'anagrafe MIUR, non le istituzioni scolastiche autonome: un istituto comprensivo compare con tutti i suoi plessi. Le sedi di dirigenza sono nella sezione scuole del dashboard completo.",
+    "scuole_per_1000_ab": 0.46
+  },
+  "contratti_anac": {
+    "n_aggiudicazioni": 254,
+    "importo_totale_eur": 76920375,
+    "importo_per_abitante_eur": 28.02,
+    "ultima_aggiudicazione": "2026-04-15"
+  },
+  "opere_bdap": {
+    "n_progetti": 1329,
+    "importo_totale_eur": 2007296239,
+    "importo_per_abitante_eur": 731.24
+  },
+  "pnrr": {
+    "n_progetti": 285,
+    "n_concluso": 17,
+    "n_in_corso": 268,
+    "importo_assegnato_eur": 949347214,
+    "importo_per_abitante_eur": 345.84
+  },
+  "siope": {
+    "anno": 2025,
+    "totale_uscite_eur": 7912216920.96,
+    "uscite_per_abitante_eur": 2882.35,
+    "totale_incassi_eur": 7774903295.05,
+    "incassi_per_abitante_eur": 2832.32,
+    "saldo_cassa_eur": -137313625.91,
+    "mesi_disponibili": 12,
+    "parziale": false
+  },
+  "patrimonio_pa": {
+    "n_immobili": 30156,
+    "n_fabbricati": 29266,
+    "n_terreni": 890,
+    "superficie_totale_mq": 7247890
+  },
+  "ambiente": {
+    "superficie_kmq": 1288.188,
+    "consumo_suolo_pct": 23.7,
+    "raccolta_differenziata_pct": 48.03,
+    "rifiuti_kg_per_abitante": 598
+  },
+  "aria_ispra": {
+    "ha_stazione": true,
+    "anno": 2022,
+    "pm10_media": 24.8,
+    "pm25_media": 13.4,
+    "no2_media": 29.2
+  },
+  "turismo": {
+    "anno": 2024,
+    "totale_strutture": 24831,
+    "totale_letti": 299983,
+    "indice_turisticita_per_100ab": 10.9
+  },
+  "veicoli_aci": {
+    "anno": 2024,
+    "totale_veicoli": 2465217,
+    "autovetture": 1859222,
+    "tasso_motorizzazione_per_1000_ab": 677.3,
+    "pct_inquinanti": 20
+  },
+  "banda_larga_agcom": {
+    "famiglie_residenti": 1246485,
+    "copertura_ftth_pct": 97,
+    "copertura_ftth_20m_pct": 93,
+    "data_rilevazione": "31/12/2025"
+  },
+  "ricarica_ev_pun": {
+    "n_totale": 4018,
+    "n_attivi": 2795,
+    "pct_attivi": 69.6,
+    "potenza_totale_kw": 153438.6,
+    "punti_per_1000_ab": 1.02
+  },
+  "carburanti_mimit": {
+    "n_impianti": 945,
+    "n_pompe_bianche": 107,
+    "prezzo_medio_benzina_self": 2.063,
+    "prezzo_medio_gasolio_self": 2.173,
+    "impianti_per_1000_ab": 0.34
+  },
+  "civici_anncsu": {
+    "n_strade": 16213,
+    "n_civici": 516287,
+    "pct_geo_ref": 100,
+    "snapshot_date": "2026-08-03"
+  },
+  "terzo_settore_runts": {
+    "n_enti_totali": 7144,
+    "n_5x1000": 4537,
+    "pct_5x1000": 63.5,
+    "enti_per_1000_ab": 2.6,
+    "snapshot_date": "2026-09-07"
+  },
+  "imprese_asia": {
+    "anno": 2023,
+    "ul_totali": 303432,
+    "addetti_totali": 1109732.2,
+    "addetti_per_ul": 3.66,
+    "ul_yoy_pct": 1.32,
+    "ul_per_1000_ab": 110.54
+  },
+  "sanita_mds": {
+    "n_farmacie": 834,
+    "n_parafarmacie": 292,
+    "n_ospedali": 68,
+    "posti_letto_ospedalieri": 13731,
+    "farmacie_per_1000_ab": 0.3
+  },
+  "pendolarismo": {
+    "anno": 2021,
+    "uscenti_totali": 61376,
+    "entranti_totali": 277242,
+    "saldo_netto": 215866,
+    "auto_contenimento_pct": 93,
+    "n_destinazioni": 827,
+    "n_origini": 1601
+  },
+  "beni_culturali_mic": {
+    "n_beni_immobili": 888,
+    "n_visitabili": 243,
+    "n_con_coordinate": 852,
+    "n_senza_coordinate": 36,
+    "pct_con_foto": 96.8,
+    "pct_con_descrizione": 27.5,
+    "beni_per_1000_ab": 0.32,
+    "snapshot_date": "2026-09-05"
+  },
+  "meteo_italiameteo": {
+    "t2m_c": 20.5,
+    "t2m_max24h_c": 28.1,
+    "t2m_min24h_c": 19.2,
+    "prec_24h_mm": 120.5,
+    "umidita_pct": 99,
+    "vento_kmh": 30.9,
+    "vento_dir_deg": 25,
+    "raffica_max24h_kmh": 69,
+    "nuvolosita_pct": 100,
+    "neve_cm": 0,
+    "ww": 65,
+    "ww_desc": "Pioggia",
+    "run_utc": "2026091000",
+    "valid_time_utc": "2026-09-10T14:00:00Z"
+  },
+  "morfologia_cnr": {
+    "elev_min": -3,
+    "elev_max": 381,
+    "elev_mean": 66,
+    "slope_mean": 5.1,
+    "slope_gt15_pct": 6.3,
+    "aspect_dom": "O",
+    "solar_mean": 2056
+  }
+}

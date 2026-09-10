@@ -153,15 +153,22 @@ export async function handleMcp(
       try {
         const result = await tool.handler(args, env);
         _ctx.waitUntil(trackToolCall(req, env, params.name, args, "ok"));
-        // ChatGPT (OpenAI MCP custom connector) richiede structuredContent
-        // al top-level del tool result per i tool `search` e `fetch`.
-        // Per gli altri tool restiamo backward-compatible col formato MCP base.
-        // Ref: https://developers.openai.com/api/docs/mcp
-        const isOpenAICompat = params.name === "search" || params.name === "fetch";
+        // Risultati applicativi negativi ({error: "..."} restituiti dal
+        // handler, es. comune non trovato) -> isError:true (spec MCP), senza
+        // structuredContent: non sono conformi all'outputSchema del tool.
+        const isAppError = isPlainObject(result) && typeof result.error === "string";
         const responsePayload: Record<string, unknown> = {
           content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
         };
-        if (isOpenAICompat) {
+        if (isAppError) {
+          responsePayload.isError = true;
+          return rpcOk(body.id, responsePayload);
+        }
+        // structuredContent (spec 2025-06-18) per ogni tool che dichiara un
+        // outputSchema. `search` e `fetch` lo richiedono comunque per il
+        // connector ChatGPT: https://developers.openai.com/api/docs/mcp
+        const isOpenAICompat = params.name === "search" || params.name === "fetch";
+        if (tool.outputSchema || isOpenAICompat) {
           responsePayload.structuredContent = result;
         }
         return rpcOk(body.id, responsePayload);
@@ -247,6 +254,10 @@ async function trackToolCall(
   } catch {
     // Non-bloccante: errori silenziosi
   }
+}
+
+function isPlainObject(v: unknown): v is Record<string, unknown> {
+  return typeof v === "object" && v !== null && !Array.isArray(v);
 }
 
 /**

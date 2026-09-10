@@ -38,6 +38,7 @@ import type { Env } from "../index.js";
 import type { ToolDefinition } from "./index.js";
 import { fetchR2Json } from "../lib/r2cache.js";
 import { validateIstatCode, validateDenominazione, ValidationError } from "../lib/validate.js";
+import { comuneKpiOutputSchema } from "../schemas/comune_kpi_output.js";
 
 interface DashboardShardWithKpi {
   _etl_version: string;
@@ -79,6 +80,7 @@ export const comuneKpi: ToolDefinition = {
     },
     additionalProperties: false,
   },
+  outputSchema: comuneKpiOutputSchema,
   handler: async (args: Record<string, unknown>, env: Env) => {
     // Validazione vincolante CERT-AgID (paper 2026-04): no fallback,
     // ogni parametro verificato prima dell'uso. Lancia Error se invalido.
