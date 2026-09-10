@@ -9,7 +9,7 @@
  */
 
 import type { Env } from "./index.js";
-import { tools, type ToolName } from "./tools/index.js";
+import { tools, READ_ONLY_ANNOTATIONS, type ToolName } from "./tools/index.js";
 import { tryConsume } from "./lib/ratelimit.js";
 
 interface JsonRpcRequest {
@@ -26,8 +26,8 @@ interface JsonRpcResponse {
   error?: { code: number; message: string; data?: unknown };
 }
 
-const SUPPORTED_PROTOCOL_VERSIONS = ["2025-06-18", "2025-03-26", "2024-11-05"];
-const DEFAULT_PROTOCOL_VERSION = "2025-06-18";
+const SUPPORTED_PROTOCOL_VERSIONS = ["2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05"];
+const DEFAULT_PROTOCOL_VERSION = "2025-11-25";
 
 // CERT-AgID-VA-02 #2: costo per tool (token consumati dal rate limiter).
 const TOOL_COST: Record<string, number> = {
@@ -75,6 +75,25 @@ export async function handleMcp(
     return rpcError(body.id ?? null, -32600, "Invalid Request");
   }
 
+  // Streamable HTTP (spec 2025-06-18+): dopo initialize il client invia
+  // MCP-Protocol-Version su ogni richiesta. Se presente e non supportata,
+  // la spec richiede 400 (niente downgrade silenzioso). Se assente si
+  // assume la versione negoziata in initialize.
+  const hdrVersion = req.headers.get("mcp-protocol-version");
+  if (
+    body.method !== "initialize" &&
+    hdrVersion !== null &&
+    !SUPPORTED_PROTOCOL_VERSIONS.includes(hdrVersion)
+  ) {
+    return rpcError(
+      body.id ?? null,
+      -32600,
+      `Unsupported MCP-Protocol-Version: ${hdrVersion.slice(0, 20)}`,
+      { supported: SUPPORTED_PROTOCOL_VERSIONS },
+      400
+    );
+  }
+
   switch (body.method) {
     case "initialize": {
       const requestedVersion = (body.params as { protocolVersion?: unknown } | undefined)?.protocolVersion;
@@ -82,7 +101,7 @@ export async function handleMcp(
       return rpcOk(body.id, {
         protocolVersion: negotiatedVersion,
         capabilities: { tools: {} },
-        serverInfo: { name: "cruscotto-italia-mcp", version: "0.19.0" },
+        serverInfo: { name: "cruscotto-italia-mcp", version: "0.20.0" },
         instructions: SERVER_INSTRUCTIONS,
       });
     }
@@ -94,6 +113,7 @@ export async function handleMcp(
             name,
             description: def.description,
             inputSchema: def.inputSchema,
+            annotations: { ...READ_ONLY_ANNOTATIONS, ...(def.annotations ?? {}) },
           };
           if (def.outputSchema) {
             t.outputSchema = def.outputSchema;
@@ -109,6 +129,18 @@ export async function handleMcp(
       }
       const tool = tools[params.name];
       const args = (params.arguments ?? {}) as Record<string, unknown>;
+      // Enforcement runtime di additionalProperties:false. Gli inputSchema
+      // sono solo documentazione lato client: senza questo controllo un
+      // argomento non dichiarato verrebbe ignorato in silenzio.
+      const unknownArgs = unknownArgKeys(args, tool.inputSchema);
+      if (unknownArgs.length > 0) {
+        _ctx.waitUntil(trackToolCall(req, env, params.name, args, "validation_error"));
+        return rpcError(
+          body.id ?? null,
+          -32602,
+          `Invalid params: unknown argument(s) ${unknownArgs.join(", ")} for tool '${params.name}'`
+        );
+      }
       const cost = TOOL_COST[params.name] ?? 1;
       if (cost > 1 && !(await tryConsume(req, env, cost - 1))) {
         return rpcError(
@@ -221,6 +253,21 @@ async function trackToolCall(
   }
 }
 
+/**
+ * Chiavi di `args` non dichiarate in `inputSchema.properties`.
+ * Nomi troncati a 40 char per non riflettere input arbitrario nel messaggio.
+ */
+function unknownArgKeys(
+  args: Record<string, unknown>,
+  inputSchema: Record<string, unknown>
+): string[] {
+  const props = (inputSchema.properties ?? {}) as Record<string, unknown>;
+  return Object.keys(args)
+    .filter((k) => !(k in props))
+    .slice(0, 5)
+    .map((k) => `'${k.slice(0, 40)}'`);
+}
+
 function rpcOk(id: string | number | null | undefined, result: unknown): Response {
   const payload: JsonRpcResponse = { jsonrpc: "2.0", id: id ?? null, result };
   return new Response(JSON.stringify(payload), {
@@ -236,10 +283,12 @@ function rpcError(
   id: string | number | null,
   code: number,
   message: string,
-  data?: unknown
+  data?: unknown,
+  httpStatus = 200
 ): Response {
   const payload: JsonRpcResponse = { jsonrpc: "2.0", id, error: { code, message, data } };
   return new Response(JSON.stringify(payload), {
+    status: httpStatus,
     headers: {
       "Content-Type": "application/json",
       "Access-Control-Allow-Origin": "*",

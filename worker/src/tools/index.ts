@@ -53,10 +53,32 @@ export type ToolHandler = (
   env: Env
 ) => Promise<unknown>;
 
+export interface ToolAnnotations {
+  title?: string;
+  readOnlyHint?: boolean;
+  destructiveHint?: boolean;
+  idempotentHint?: boolean;
+  openWorldHint?: boolean;
+}
+
+/**
+ * Annotazioni di default (MCP spec 2025-03-26+): tutti i tool di questo
+ * server sono letture idempotenti su open data pubblici, senza effetti
+ * collaterali. I client le usano per decidere se chiedere conferma
+ * all'utente prima della chiamata.
+ */
+export const READ_ONLY_ANNOTATIONS: ToolAnnotations = {
+  readOnlyHint: true,
+  destructiveHint: false,
+  idempotentHint: true,
+  openWorldHint: false,
+};
+
 export interface ToolDefinition {
   description: string;
   inputSchema: Record<string, unknown>;
   outputSchema?: Record<string, unknown>;
+  annotations?: ToolAnnotations;
   handler: ToolHandler;
 }
 
