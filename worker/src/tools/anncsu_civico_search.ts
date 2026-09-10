@@ -21,6 +21,7 @@
 import type { Env } from "../index.js";
 import type { ToolDefinition } from "./index.js";
 import { fetchR2Json } from "../lib/r2cache.js";
+import { anncsuCivicoSearchOutputSchema } from "../schemas/anncsu_civico_search_output.js";
 import {
   validateIstatCode,
   validateOdonimo,
@@ -108,6 +109,7 @@ export const anncsuCivicoSearch: ToolDefinition = {
     required: ["istat_code"],
     additionalProperties: false,
   },
+  outputSchema: anncsuCivicoSearchOutputSchema,
   handler: async (args, env: Env) => {
     // Validazione vincolante CERT-AgID (paper 2026-04, raccomandazione 1).
     const istatCode = validateIstatCode(args.istat_code);

@@ -1,0 +1,23 @@
+{
+  "count": 2,
+  "query": "san teodoro",
+  "total_in_index": 7896,
+  "results": [
+    {
+      "istat_code": "083090",
+      "denominazione": "San Teodoro",
+      "provincia": "ME",
+      "regione": "Sicilia",
+      "codice_ipa": "c_i328",
+      "codice_fiscale": "95005740832"
+    },
+    {
+      "istat_code": "090092",
+      "denominazione": "San Teodoro",
+      "provincia": "SS",
+      "regione": "Sardegna",
+      "codice_ipa": "c_i32k",
+      "codice_fiscale": "80003270917"
+    }
+  ]
+}

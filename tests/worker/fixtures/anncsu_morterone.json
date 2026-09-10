@@ -1,0 +1,10 @@
+{
+  "anagrafica": {
+    "istat_code": "097055",
+    "denominazione": "Morterone"
+  },
+  "_source": "ANNCSU - Agenzia delle Entrate + ISTAT (Open Data UE 2023/138 HVD)",
+  "_note": "Comune non disponibile nello shard ANNCSU full: pct_geo_ref insufficiente o non ancora processato. Solo ~5.387 comuni su 7.918 hanno lo shard completo.",
+  "count": 0,
+  "results": []
+}

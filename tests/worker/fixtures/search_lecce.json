@@ -1,0 +1,31 @@
+{
+  "count": 3,
+  "query": "lecce",
+  "total_in_index": 7896,
+  "results": [
+    {
+      "istat_code": "075035",
+      "denominazione": "Lecce",
+      "provincia": "LE",
+      "regione": "Puglia",
+      "codice_ipa": "c_e506",
+      "codice_fiscale": "80008510754"
+    },
+    {
+      "istat_code": "066050",
+      "denominazione": "Lecce nei Marsi",
+      "provincia": "AQ",
+      "regione": "Abruzzo",
+      "codice_ipa": "c_e505",
+      "codice_fiscale": "81004960662"
+    },
+    {
+      "istat_code": "075013",
+      "denominazione": "Caprarica di Lecce",
+      "provincia": "LE",
+      "regione": "Puglia",
+      "codice_ipa": "c_b690",
+      "codice_fiscale": "80010610758"
+    }
+  ]
+}

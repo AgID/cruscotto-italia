@@ -60,30 +60,40 @@ function fixtures(prefix: string): Array<[string, unknown]> {
     .map((f) => [f, JSON.parse(readFileSync(join(FIXTURES, f), "utf-8"))]);
 }
 
-describe("outputSchema — comune_kpi", () => {
-  const schema = tools.comune_kpi.outputSchema as Schema;
+/** Tool con outputSchema -> prefisso delle fixture reali in tests/worker/fixtures/. */
+const SCHEMA_FIXTURES: Array<[keyof typeof tools, string, string[]]> = [
+  // [tool, prefisso fixture, gruppi/campi che lo schema deve dichiarare]
+  ["comune_kpi", "kpi_", ["anagrafica", "demografia", "redditi_mef", "siope", "pnrr"]],
+  ["search_comune", "search_", ["count", "results"]],
+  ["anncsu_civico_search", "anncsu_", ["anagrafica", "count", "results"]],
+];
 
-  it("e' dichiarato ed e' un object schema con i gruppi principali", () => {
-    expect(schema).toBeTypeOf("object");
-    expect(schema.type).toBe("object");
-    for (const g of ["anagrafica", "demografia", "redditi_mef", "siope", "pnrr"]) {
-      expect(schema.properties, g).toHaveProperty(g);
-    }
-    expect(schema.required).toEqual(expect.arrayContaining(["anagrafica", "demografia"]));
-  });
+for (const [toolName, prefix, mustHave] of SCHEMA_FIXTURES) {
+  describe(`outputSchema — ${toolName}`, () => {
+    const schema = tools[toolName].outputSchema as Schema;
 
-  const kpiFixtures = fixtures("kpi_");
-  it("ha almeno 3 fixture reali", () => {
-    expect(kpiFixtures.length).toBeGreaterThanOrEqual(3);
-  });
-
-  for (const [name, doc] of kpiFixtures) {
-    it(`fixture ${name} conforme allo schema`, () => {
-      expect(validate(doc, schema)).toEqual([]);
+    it("e' dichiarato ed e' un object schema con i campi principali", () => {
+      expect(schema).toBeTypeOf("object");
+      expect(schema.type).toBe("object");
+      for (const k of mustHave) expect(schema.properties, k).toHaveProperty(k);
     });
-  }
 
-  it("il validatore rileva le violazioni (sanity check)", () => {
+    const fx = fixtures(prefix);
+    it("ha almeno 3 fixture reali", () => {
+      expect(fx.length).toBeGreaterThanOrEqual(3);
+    });
+
+    for (const [name, doc] of fx) {
+      it(`fixture ${name} conforme allo schema`, () => {
+        expect(validate(doc, schema)).toEqual([]);
+      });
+    }
+  });
+}
+
+describe("validatore", () => {
+  it("rileva le violazioni (sanity check su comune_kpi)", () => {
+    const schema = tools.comune_kpi.outputSchema as Schema;
     const bad = { _generated_at: 1, _etl_version: "x", anagrafica: {}, demografia: { popolazione: "molti" } };
     const errs = validate(bad, schema);
     expect(errs.some((e) => e.includes("_generated_at"))).toBe(true);

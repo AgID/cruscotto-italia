@@ -1,0 +1,48 @@
+{
+  "anagrafica": {
+    "istat_code": "075035",
+    "denominazione": "Lecce"
+  },
+  "_source": "ANNCSU - Agenzia delle Entrate + ISTAT (Open Data UE 2023/138 HVD)",
+  "_snapshot_date": "2026-08-03",
+  "query": {
+    "odonimo": "Roma",
+    "civico": "5",
+    "limit": 3
+  },
+  "count": 3,
+  "_truncated": false,
+  "_total_civici_comune": 47977,
+  "results": [
+    {
+      "lat": 40.351254,
+      "lon": 18.17071,
+      "odonimo": "VIA DEL TEATRO ROMANO",
+      "civico": "5",
+      "esponente": null,
+      "quota_m": null,
+      "metodo": 4,
+      "metodo_label": "Ortofoto"
+    },
+    {
+      "lat": 40.371406,
+      "lon": 18.152762,
+      "odonimo": "VIA GIUSEPPE DE ROMA",
+      "civico": "5",
+      "esponente": null,
+      "quota_m": null,
+      "metodo": 4,
+      "metodo_label": "Ortofoto"
+    },
+    {
+      "lat": 40.354363,
+      "lon": 18.1767,
+      "odonimo": "VIA LIBORIO ROMANO",
+      "civico": "5",
+      "esponente": null,
+      "quota_m": null,
+      "metodo": 4,
+      "metodo_label": "Ortofoto"
+    }
+  ]
+}

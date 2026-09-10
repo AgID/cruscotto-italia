@@ -15,6 +15,7 @@ import type { Env } from "../index.js";
 import type { ToolDefinition } from "./index.js";
 import { fetchR2Json } from "../lib/r2cache.js";
 import { validateQuery, validateLimit } from "../lib/validate.js";
+import { searchComuneOutputSchema } from "../schemas/search_comune_output.js";
 
 interface ComuneIndexEntry {
   i: string;   // istat_code
@@ -37,6 +38,7 @@ export const searchComune: ToolDefinition = {
     required: ["query"],
     additionalProperties: false,
   },
+  outputSchema: searchComuneOutputSchema,
   handler: async (args: Record<string, unknown>, env: Env) => {
     // Validazione vincolante CERT-AgID (paper 2026-04, raccomandazione 1).
     const q = validateQuery(args.query ?? "").toLowerCase();
