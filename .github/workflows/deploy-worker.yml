@@ -1,9 +1,11 @@
 name: Deploy · Worker
 
 # Workflow disabilitato per default: il deploy live del Worker MCP
-# (cruscotto-italia-mcp.piersoftckan.biz) avviene da Aruba self-hosted
-# con `cd worker && npm run typecheck && npm run deploy` — NON via
-# GitHub Actions.
+# (cruscotto-italia-mcp.agid.workers.dev) avviene dalla VM AgID con
+# `cd worker && npm run deploy` (Node 22 via nvm) DOPO il commit interno:
+# lo script inietta BUILD_TREE = tree hash git di worker/, esposto in
+# mcp_info e /health per la verifica sul repo pubblico. Un deploy da
+# Actions non avrebbe il tree hash corretto. NON via GitHub Actions.
 #
 # Nota tecnica: questo workflow usa `deploy --env production`, ma per
 # il deploy attuale di Cruscotto Italia il comando corretto e' `npm run
