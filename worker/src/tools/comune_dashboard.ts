@@ -365,6 +365,7 @@ import type { Env } from "../index.js";
 import type { ToolDefinition } from "./index.js";
 import { fetchR2Json } from "../lib/r2cache.js";
 import { validateIstatCode, validateDenominazione, ValidationError } from "../lib/validate.js";
+import { comuneDashboardOutputSchema } from "../schemas/comune_dashboard_output.js";
 
 interface ComuneAnagrafica {
   istat_code: string;
@@ -442,6 +443,7 @@ export const comuneDashboard: ToolDefinition = {
     },
     additionalProperties: false,
   },
+  outputSchema: comuneDashboardOutputSchema,
   handler: async (args: Record<string, unknown>, env: Env) => {
     const istatCode = args.istat_code !== undefined
       ? validateIstatCode(args.istat_code)

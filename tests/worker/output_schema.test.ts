@@ -9,6 +9,7 @@ import { describe, it, expect, vi, afterEach } from "vitest";
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { tools } from "../../worker/src/tools/index.js";
+import { comuneDashboardSectionsDetail } from "../../worker/src/schemas/comune_dashboard_output.js";
 import { handleMcp } from "../../worker/src/mcp.js";
 import type { Env } from "../../worker/src/index.js";
 
@@ -68,6 +69,7 @@ const SCHEMA_FIXTURES: Array<[keyof typeof tools, string, string[]]> = [
   ["anncsu_civico_search", "anncsu_", ["anagrafica", "count", "results"]],
   ["censimento_sezione_search", "cens_", ["anagrafica", "mode", "risultato", "risultati"]],
   ["mcp_info", "info_", ["service", "version", "build", "sources", "manifest"]],
+  ["comune_dashboard", "dash_", ["anagrafica", "demografia", "siope", "kpi_summary", "morfologia"]],
 ];
 
 for (const [toolName, prefix, mustHave] of SCHEMA_FIXTURES) {
@@ -92,6 +94,20 @@ for (const [toolName, prefix, mustHave] of SCHEMA_FIXTURES) {
     }
   });
 }
+
+describe("comune_dashboard — dettaglio sezioni (secondo livello, non esposto)", () => {
+  for (const [name, doc] of fixtures("dash_")) {
+    it(`fixture ${name}: chiavi immediate di ogni sezione conformi`, () => {
+      const errs: string[] = [];
+      for (const [section, props] of Object.entries(comuneDashboardSectionsDetail)) {
+        const v = (doc as Record<string, unknown>)[section];
+        if (v === null || v === undefined) continue;
+        errs.push(...validate(v, { type: "object", properties: props as Record<string, Schema>, additionalProperties: true }, `$.${section}`));
+      }
+      expect(errs).toEqual([]);
+    });
+  }
+});
 
 describe("validatore", () => {
   it("rileva le violazioni (sanity check su comune_kpi)", () => {
