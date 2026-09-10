@@ -33,7 +33,7 @@ const DEFAULT_PROTOCOL_VERSION = "2025-11-25";
 // CERT-AgID-VA-02 #2: costo per tool (token consumati dal rate limiter).
 const TOOL_COST: Record<string, number> = {
   comune_dashboard: 10,
-  mcp_info: 10,
+  mcp_info: 2,
   anncsu_civico_search: 5,
   censimento_sezione_search: 3,
   search: 5,

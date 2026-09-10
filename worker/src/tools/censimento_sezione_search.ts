@@ -40,6 +40,7 @@ import type { Env } from "../index.js";
 import type { ToolDefinition } from "./index.js";
 import { fetchR2Json } from "../lib/r2cache.js";
 import { validateIstatCode, validateLimit } from "../lib/validate.js";
+import { censimentoSezioneSearchOutputSchema } from "../schemas/censimento_sezione_search_output.js";
 
 interface ComuniBundle {
   comuni: Record<string, { istat_code: string; denominazione: string }>;
@@ -193,6 +194,7 @@ export const censimentoSezioneSearch: ToolDefinition = {
     required: ["istat_code"],
     additionalProperties: false,
   },
+  outputSchema: censimentoSezioneSearchOutputSchema,
   handler: async (args, env: Env) => {
     // === Validazione input ===
     const istatCode = validateIstatCode(args.istat_code);

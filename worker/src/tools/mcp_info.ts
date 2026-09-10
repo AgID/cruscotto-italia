@@ -6,6 +6,7 @@
  */
 import type { Env } from "../index.js";
 import type { ToolDefinition } from "./index.js";
+import { mcpInfoOutputSchema } from "../schemas/mcp_info_output.js";
 
 export const mcpInfo: ToolDefinition = {
   description:
@@ -15,13 +16,14 @@ export const mcpInfo: ToolDefinition = {
     properties: {},
     additionalProperties: false,
   },
+  outputSchema: mcpInfoOutputSchema,
   handler: async (_args: Record<string, unknown>, env: Env) => {
     let manifest: Record<string, unknown> | null = null;
     try {
       const r = await fetch(`${env.DATA_BASE_URL}/manifest.json`, {
         cf: { cacheTtl: 3600, cacheEverything: true },
       });
-      if (r.ok) manifest = (await r.json()) as Record<string, unknown>;
+      if (r.ok) manifest = summarizeManifest((await r.json()) as ManifestRaw);
     } catch {
       /* manifest may not exist on first deploy */
     }
@@ -193,8 +195,45 @@ export const mcpInfo: ToolDefinition = {
           ],
         },
       },
-      manifest: manifest ?? { warning: "manifest not yet populated by ETL" },
+      manifest: manifest ?? { warning: "manifest not yet populated by ETL", sources: {} },
       generated_at: new Date().toISOString(),
     };
   },
 };
+
+interface ManifestRaw {
+  generated_at?: string;
+  etl_version?: string;
+  sources?: Record<string, { last_run?: string; status?: string; files?: Array<{ key?: string; size?: number; count?: number }> }>;
+}
+
+/**
+ * Sintesi del manifest ETL: per sorgente solo last_run, status, numero di
+ * file e byte totali. Il manifest completo elenca ogni shard per comune
+ * (7.896 voci con md5 per alcune sorgenti): restituito integrale, mcp_info
+ * pesava ~12 MB a chiamata. Il dettaglio resta in /data/manifest.json.
+ */
+function summarizeManifest(raw: ManifestRaw): Record<string, unknown> {
+  const sources: Record<string, unknown> = {};
+  for (const [name, src] of Object.entries(raw.sources ?? {})) {
+    const files = src.files ?? [];
+    let bytes = 0;
+    let nFiles = 0;
+    for (const f of files) {
+      bytes += typeof f.size === "number" ? f.size : 0;
+      nFiles += typeof f.count === "number" ? f.count : 1;
+    }
+    sources[name] = {
+      last_run: src.last_run ?? null,
+      status: src.status ?? null,
+      n_files: nFiles,
+      total_bytes: bytes,
+    };
+  }
+  return {
+    generated_at: raw.generated_at ?? null,
+    etl_version: raw.etl_version ?? null,
+    full_manifest: "/data/manifest.json",
+    sources,
+  };
+}

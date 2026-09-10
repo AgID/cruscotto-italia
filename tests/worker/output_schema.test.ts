@@ -66,6 +66,8 @@ const SCHEMA_FIXTURES: Array<[keyof typeof tools, string, string[]]> = [
   ["comune_kpi", "kpi_", ["anagrafica", "demografia", "redditi_mef", "siope", "pnrr"]],
   ["search_comune", "search_", ["count", "results"]],
   ["anncsu_civico_search", "anncsu_", ["anagrafica", "count", "results"]],
+  ["censimento_sezione_search", "cens_", ["anagrafica", "mode", "risultato", "risultati"]],
+  ["mcp_info", "info_", ["service", "version", "build", "sources", "manifest"]],
 ];
 
 for (const [toolName, prefix, mustHave] of SCHEMA_FIXTURES) {
