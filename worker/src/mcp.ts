@@ -11,6 +11,7 @@
 import type { Env } from "./index.js";
 import { tools, READ_ONLY_ANNOTATIONS, type ToolName } from "./tools/index.js";
 import { tryConsume } from "./lib/ratelimit.js";
+import { ValidationError } from "./lib/validate.js";
 
 interface JsonRpcRequest {
   jsonrpc: "2.0";
@@ -168,15 +169,10 @@ export async function handleMcp(
         // Distinguo validation error (CERT-AgID rec.1+4) da tool error
         // generico per consentire monitoraggio mirato dei tentativi di
         // input non validi (possibili attacchi SSRF/injection).
-        const errMsg = String(err);
-        const isValidationError =
-          errMsg.includes("must match pattern") ||
-          errMsg.includes("must be a string") ||
-          errMsg.includes("must be an integer") ||
-          errMsg.includes("must be in range") ||
-          errMsg.includes("must be a 6-digit") ||
-          errMsg.includes("contains forbidden sequence") ||
-          errMsg.includes("is required");
+        // Classificazione per tipo (ValidationError), non per testo del
+        // messaggio: riformulare un messaggio non cambia la categoria.
+        const errMsg = err instanceof Error ? err.message : String(err);
+        const isValidationError = err instanceof ValidationError;
         const trackStatus = isValidationError ? "validation_error" : "error";
         _ctx.waitUntil(trackToolCall(req, env, params.name, args, trackStatus));
         if (isValidationError) {
@@ -273,6 +269,7 @@ function rpcOk(id: string | number | null | undefined, result: unknown): Respons
   return new Response(JSON.stringify(payload), {
     headers: {
       "Content-Type": "application/json",
+      "X-Content-Type-Options": "nosniff",
       "Access-Control-Allow-Origin": "*",
       "Cache-Control": "private, max-age=60",
     },
@@ -291,6 +288,7 @@ function rpcError(
     status: httpStatus,
     headers: {
       "Content-Type": "application/json",
+      "X-Content-Type-Options": "nosniff",
       "Access-Control-Allow-Origin": "*",
       "Cache-Control": "no-store",
     },

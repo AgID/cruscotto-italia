@@ -16,6 +16,18 @@
  * controlli in caso di errore").
  */
 
+/**
+ * Errore di validazione input: il dispatcher JSON-RPC lo mappa su -32602
+ * (Invalid params) e lo traccia come validation_error, distinto dagli
+ * errori generici dei tool (-32000).
+ */
+export class ValidationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ValidationError";
+  }
+}
+
 /** Codice ISTAT comune: esattamente 6 cifre, no leading/trailing space. */
 const ISTAT_RE = /^\d{6}$/;
 
@@ -40,10 +52,10 @@ const FETCH_ID_RE = /^\d{6}$/;
  */
 export function validateIstatCode(value: unknown, paramName = "istat_code"): string {
   if (typeof value !== "string") {
-    throw new Error(`Parameter '${paramName}' must be a string, got ${typeof value}`);
+    throw new ValidationError(`Parameter '${paramName}' must be a string, got ${typeof value}`);
   }
   if (!ISTAT_RE.test(value)) {
-    throw new Error(
+    throw new ValidationError(
       `Parameter '${paramName}' must match pattern ${ISTAT_RE.source} (6 digits). ` +
       `Got: '${value.slice(0, 20)}${value.length > 20 ? "..." : ""}'`
     );
@@ -54,18 +66,18 @@ export function validateIstatCode(value: unknown, paramName = "istat_code"): str
 /** Valida denominazione comune. Lancia Error se invalida. */
 export function validateDenominazione(value: unknown, paramName = "denominazione"): string {
   if (typeof value !== "string") {
-    throw new Error(`Parameter '${paramName}' must be a string, got ${typeof value}`);
+    throw new ValidationError(`Parameter '${paramName}' must be a string, got ${typeof value}`);
   }
   const trimmed = value.trim();
   if (!DENOMINAZIONE_RE.test(trimmed)) {
-    throw new Error(
+    throw new ValidationError(
       `Parameter '${paramName}' must match pattern (alphanumeric + accents + ' - , . ( ) /, max 80 char). ` +
       `Got: '${trimmed.slice(0, 20)}${trimmed.length > 20 ? "..." : ""}'`
     );
   }
   // Anti path-traversal (difensivo, anche se '/' non è nella regex di denominazione)
   if (trimmed.includes("..") || trimmed.includes("//")) {
-    throw new Error(
+    throw new ValidationError(
       `Parameter '${paramName}' contains forbidden sequence.`
     );
   }
@@ -75,11 +87,11 @@ export function validateDenominazione(value: unknown, paramName = "denominazione
 /** Valida query libera per search_comune. */
 export function validateQuery(value: unknown, paramName = "query"): string {
   if (typeof value !== "string") {
-    throw new Error(`Parameter '${paramName}' must be a string, got ${typeof value}`);
+    throw new ValidationError(`Parameter '${paramName}' must be a string, got ${typeof value}`);
   }
   const trimmed = value.trim();
   if (!QUERY_RE.test(trimmed)) {
-    throw new Error(
+    throw new ValidationError(
       `Parameter '${paramName}' must match pattern (alphanumeric + accents + ' - , ., 3-50 char). ` +
       `Got: '${trimmed.slice(0, 20)}${trimmed.length > 20 ? "..." : ""}'`
     );
@@ -90,12 +102,12 @@ export function validateQuery(value: unknown, paramName = "query"): string {
 /** Valida odonimo (nome strada) ANNCSU. */
 export function validateOdonimo(value: unknown, paramName = "odonimo"): string {
   if (typeof value !== "string") {
-    throw new Error(`Parameter '${paramName}' must be a string, got ${typeof value}`);
+    throw new ValidationError(`Parameter '${paramName}' must be a string, got ${typeof value}`);
   }
   const trimmed = value.trim();
   if (trimmed.length === 0) return ""; // odonimo opzionale, vuoto = no filtro
   if (!ODONIMO_RE.test(trimmed)) {
-    throw new Error(
+    throw new ValidationError(
       `Parameter '${paramName}' must match pattern (alphanumeric + accents + ' - , . ( ) /, max 120 char). ` +
       `Got: '${trimmed.slice(0, 30)}${trimmed.length > 30 ? "..." : ""}'`
     );
@@ -104,7 +116,7 @@ export function validateOdonimo(value: unknown, paramName = "odonimo"): string {
   // '.' e '/' sono ammessi nella regex per nomi legittimi come 'S. Antonio'
   // o 'V. Tiziano / V. Caravaggio'.
   if (trimmed.includes("..") || trimmed.includes("//")) {
-    throw new Error(
+    throw new ValidationError(
       `Parameter '${paramName}' contains forbidden sequence ('..' or '//').`
     );
   }
@@ -114,12 +126,12 @@ export function validateOdonimo(value: unknown, paramName = "odonimo"): string {
 /** Valida numero civico (es. "5", "12/A"). */
 export function validateCivico(value: unknown, paramName = "civico"): string {
   if (typeof value !== "string") {
-    throw new Error(`Parameter '${paramName}' must be a string, got ${typeof value}`);
+    throw new ValidationError(`Parameter '${paramName}' must be a string, got ${typeof value}`);
   }
   const trimmed = value.trim();
   if (trimmed.length === 0) return ""; // civico opzionale, vuoto = no filtro
   if (!CIVICO_RE.test(trimmed)) {
-    throw new Error(
+    throw new ValidationError(
       `Parameter '${paramName}' must match pattern (alphanumeric + '/' + '-' + space, max 15 char). ` +
       `Got: '${trimmed.slice(0, 20)}${trimmed.length > 20 ? "..." : ""}'`
     );
@@ -138,10 +150,10 @@ export function validateLimit(
   if (value === undefined || value === null) return defaultValue;
   const n = Number(value);
   if (!Number.isFinite(n) || !Number.isInteger(n)) {
-    throw new Error(`Parameter '${paramName}' must be an integer, got ${typeof value}`);
+    throw new ValidationError(`Parameter '${paramName}' must be an integer, got ${typeof value}`);
   }
   if (n < min || n > max) {
-    throw new Error(`Parameter '${paramName}' must be in range [${min}, ${max}], got ${n}`);
+    throw new ValidationError(`Parameter '${paramName}' must be in range [${min}, ${max}], got ${n}`);
   }
   return n;
 }
@@ -149,10 +161,10 @@ export function validateLimit(
 /** Valida ID per il tool `fetch` (compat OpenAI): deve essere un ISTAT. */
 export function validateFetchId(value: unknown, paramName = "id"): string {
   if (typeof value !== "string") {
-    throw new Error(`Parameter '${paramName}' must be a string, got ${typeof value}`);
+    throw new ValidationError(`Parameter '${paramName}' must be a string, got ${typeof value}`);
   }
   if (!FETCH_ID_RE.test(value)) {
-    throw new Error(
+    throw new ValidationError(
       `Parameter '${paramName}' must be a 6-digit ISTAT code. Got: '${value.slice(0, 20)}'`
     );
   }

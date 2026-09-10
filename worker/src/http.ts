@@ -373,14 +373,23 @@ export async function handleHealth(_req: Request, env: Env): Promise<Response> {
 
   const status = { service: "cruscotto-italia-mcp", version: "0.20.0", r2: r2Ok, kv: kvOk, timestamp: new Date().toISOString() };
   return new Response(JSON.stringify(status), {
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", "X-Content-Type-Options": "nosniff" },
   });
+}
+
+/** Confronto a tempo costante (evita timing attack sul token admin). */
+function constantTimeEqual(a: string, b: string): boolean {
+  const enc = new TextEncoder();
+  const ba = enc.encode(a);
+  const bb = enc.encode(b);
+  if (ba.byteLength !== bb.byteLength) return false;
+  return crypto.subtle.timingSafeEqual(ba, bb);
 }
 
 export async function handleAdmin(req: Request, env: Env): Promise<Response> {
   // Auth: bearer token
-  const auth = req.headers.get("Authorization");
-  if (!env.ADMIN_TOKEN || auth !== `Bearer ${env.ADMIN_TOKEN}`) {
+  const auth = req.headers.get("Authorization") ?? "";
+  if (!env.ADMIN_TOKEN || !constantTimeEqual(auth, `Bearer ${env.ADMIN_TOKEN}`)) {
     return new Response("Unauthorized", { status: 401 });
   }
 
@@ -390,7 +399,7 @@ export async function handleAdmin(req: Request, env: Env): Promise<Response> {
     const list = await env.CACHE.list({ prefix: "q:" });
     await Promise.all(list.keys.map((k) => env.CACHE.delete(k.name)));
     return new Response(JSON.stringify({ purged: list.keys.length }), {
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "X-Content-Type-Options": "nosniff" },
     });
   }
 

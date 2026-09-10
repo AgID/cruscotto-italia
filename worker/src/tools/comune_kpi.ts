@@ -37,7 +37,7 @@
 import type { Env } from "../index.js";
 import type { ToolDefinition } from "./index.js";
 import { fetchR2Json } from "../lib/r2cache.js";
-import { validateIstatCode, validateDenominazione } from "../lib/validate.js";
+import { validateIstatCode, validateDenominazione, ValidationError } from "../lib/validate.js";
 
 interface DashboardShardWithKpi {
   _etl_version: string;
@@ -90,7 +90,7 @@ export const comuneKpi: ToolDefinition = {
       : undefined;
 
     if (!istatCode && !denominazione) {
-      throw new Error("Either 'istat_code' or 'denominazione' is required");
+      throw new ValidationError("Either 'istat_code' or 'denominazione' is required");
     }
 
     // 1. Risoluzione istat_code se non fornito (stesso pattern di comune_dashboard)
