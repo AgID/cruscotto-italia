@@ -25,6 +25,9 @@ export interface Env {
   RATE_LIMIT_RPM: string;
   ADMIN_TOKEN?: string;
   DATA_BASIC_AUTH?: string;
+  /** Iniettati da `npm run deploy` (--var): tree hash di worker/ e istante di build. */
+  BUILD_TREE?: string;
+  BUILD_TIME?: string;
 }
 export default {
   async fetch(req: Request, env: Env, ctx: ExecutionContext): Promise<Response> {

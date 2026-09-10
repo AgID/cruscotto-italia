@@ -8,7 +8,7 @@
   "type": "module",
   "scripts": {
     "dev": "wrangler dev",
-    "deploy": "wrangler deploy",
+    "deploy": "wrangler deploy --var BUILD_TREE:$(git rev-parse --short=12 HEAD:worker) --var BUILD_TIME:$(date -u +%Y-%m-%dT%H:%M:%SZ)",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest"

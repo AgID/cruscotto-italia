@@ -28,7 +28,16 @@ export const mcpInfo: ToolDefinition = {
     return {
       service: "cruscotto-italia-mcp",
       version: "0.20.0",
-      protocol: "MCP 2024-11-05",
+      protocol: "MCP 2025-11-25 (supportate anche 2025-06-18, 2025-03-26, 2024-11-05)",
+      build: {
+        // Tree hash git della cartella worker/: identico nel repo pubblico
+        // quando il codice deployato coincide con quello pubblicato.
+        // Verifica: git rev-parse <commit>:worker su AgID/cruscotto-italia
+        worker_tree: env.BUILD_TREE ?? null,
+        time: env.BUILD_TIME ?? null,
+        source: "https://github.com/AgID/cruscotto-italia/tree/main/worker",
+        verify: "git rev-parse <commit>:worker  ==  build.worker_tree",
+      },
       datasets: 27,
       institutions: 17,
       municipalities: 7918,
