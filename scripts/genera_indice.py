@@ -27,6 +27,7 @@ FE = os.path.join(ROOT, "frontend")
 COMUNE = os.path.join(FE, "comune.html")
 ABOUT = os.path.join(FE, "about.html")
 SINONIMI = os.path.join(FE, "indice_sinonimi.json")
+INDICE_JSON = os.path.join(FE, "indice_contenuti.json")
 
 MARK_START = "<!-- INDICE-CONTENUTI:START (generato da scripts/genera_indice.py) -->"
 MARK_END = "<!-- INDICE-CONTENUTI:END -->"
@@ -261,6 +262,24 @@ def normalizza(grezze):
     return out
 
 
+def scrivi_json(indice):
+    """frontend/indice_contenuti.json: stesse voci di about.html, con l ID della
+    tab (chiave di TAB_LABEL) invece dell etichetta. E la sorgente del lessico di
+    routing del chatbot (SEZ_TAB in static/index.html usa gli stessi id)."""
+    label2id = {v: k for k, v in TAB_LABEL.items()}
+    voci = []
+    for termine in sorted(indice, key=lambda x: x.lower()):
+        ids = sorted(label2id[l] for l in indice[termine] if l in label2id)
+        voci.append({"voce": termine, "schede": ids})
+    out = {"generato_da": "scripts/genera_indice.py", "n_voci": len(voci),
+           "schede": TAB_LABEL, "voci": voci}
+    tmp = INDICE_JSON + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as fh:
+        json.dump(out, fh, ensure_ascii=False, indent=1)
+    os.replace(tmp, INDICE_JSON)
+    print("      JSON: {} voci -> {}".format(len(voci), INDICE_JSON))
+
+
 def costruisci_html(indice):
     """Sezione about.html: descrizione + accordion + ricerca + tabella."""
     righe = []
@@ -347,6 +366,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--check", action="store_true", help="verifica senza scrivere")
     ap.add_argument("--scrivi", action="store_true", help="rigenera about.html")
+    ap.add_argument("--json", action="store_true",
+                    help="scrive anche frontend/indice_contenuti.json (voce -> id tab), usato dal chatbot come lessico di routing")
     args = ap.parse_args()
     if not (args.check or args.scrivi):
         ap.error("indicare --check oppure --scrivi")
@@ -397,8 +418,11 @@ def main():
         sys.exit(1)
     print("      OK: nessuna etichetta scoperta")
 
+    if args.json:
+        scrivi_json(indice)
+
     if args.check:
-        print("[5/5] --check: nessuna scrittura")
+        print("[5/5] --check: nessuna scrittura di about.html")
         return
 
     print("[5/5] scrittura " + ABOUT)

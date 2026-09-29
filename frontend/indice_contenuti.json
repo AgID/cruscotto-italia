@@ -1,0 +1,3088 @@
+{
+ "generato_da": "scripts/genera_indice.py",
+ "n_voci": 500,
+ "schede": {
+  "panoramica": "Panoramica",
+  "anncsu": "ANNCSU e Catasto",
+  "aria": "Meteo e Aria",
+  "banda-larga": "Banda larga",
+  "beni-culturali": "Beni culturali",
+  "censimento": "Censimento 2023",
+  "contratti": "Contratti ANAC",
+  "demografia": "Demografia",
+  "carburanti": "Distributori e prezzi",
+  "asia": "Imprese e addetti",
+  "opere": "Opere",
+  "patrimonio-pa": "Patrimonio PA",
+  "pendolarismo": "Pendolarismo",
+  "pnrr": "PNRR",
+  "profilo": "Profilo",
+  "pun": "Punti di ricarica",
+  "redditi": "Redditi e fisco",
+  "sanita": "Sanità",
+  "scuole": "Scuole",
+  "spese": "SIOPE",
+  "territorio": "Territorio",
+  "runts": "Terzo Settore",
+  "turismo": "Turismo",
+  "veicoli": "Veicoli e incidenti"
+ },
+ "voci": [
+  {
+   "voce": "% Abitazioni vuote",
+   "schede": [
+    "censimento"
+   ]
+  },
+  {
+   "voce": "% Donne occupate",
+   "schede": [
+    "censimento"
+   ]
+  },
+  {
+   "voce": "% Famiglie unipersonali",
+   "schede": [
+    "censimento"
+   ]
+  },
+  {
+   "voce": "% Laureati",
+   "schede": [
+    "censimento"
+   ]
+  },
+  {
+   "voce": "% Occupati 15-64",
+   "schede": [
+    "censimento"
+   ]
+  },
+  {
+   "voce": "% Popolazione 0-14",
+   "schede": [
+    "censimento"
+   ]
+  },
+  {
+   "voce": "% Popolazione 65+",
+   "schede": [
+    "censimento"
+   ]
+  },
+  {
+   "voce": "% Stranieri",
+   "schede": [
+    "censimento"
+   ]
+  },
+  {
+   "voce": "% Stranieri Extra-UE",
+   "schede": [
+    "censimento"
+   ]
+  },
+  {
+   "voce": "1 stella",
+   "schede": [
+    "turismo"
+   ]
+  },
+  {
+   "voce": "2 stelle",
+   "schede": [
+    "turismo"
+   ]
+  },
+  {
+   "voce": "3 stelle",
+   "schede": [
+    "turismo"
+   ]
+  },
+  {
+   "voce": "4 stelle",
+   "schede": [
+    "turismo"
+   ]
+  },
+  {
+   "voce": "5 stelle (lusso)",
+   "schede": [
+    "turismo"
+   ]
+  },
+  {
+   "voce": "5x1000",
+   "schede": [
+    "runts"
+   ]
+  },
+  {
+   "voce": "Abitanti",
+   "schede": [
+    "demografia"
+   ]
+  },
+  {
+   "voce": "Abitazioni",
+   "schede": [
+    "censimento"
+   ]
+  },
+  {
+   "voce": "Abitazioni: occupate vs vuote",
+   "schede": [
+    "censimento"
+   ]
+  },
+  {
+   "voce": "AC standard",
+   "schede": [
+    "pun"
+   ]
+  },
+  {
+   "voce": "ACI",
+   "schede": [
+    "veicoli"
+   ]
+  },
+  {
+   "voce": "Addetti",
+   "schede": [
+    "asia"
+   ]
+  },
+  {
+   "voce": "Addizionale comunale",
+   "schede": [
+    "redditi"
+   ]
+  },
+  {
+   "voce": "Addizionale comunale e imposta netta",
+   "schede": [
+    "redditi"
+   ]
+  },
+  {
+   "voce": "AGCOM",
+   "schede": [
+    "banda-larga"
+   ]
+  },
+  {
+   "voce": "Agenzia delle Entrate",
+   "schede": [
+    "anncsu"
+   ]
+  },
+  {
+   "voce": "Aggiudicazioni",
+   "schede": [
+    "contratti"
+   ]
+  },
+  {
+   "voce": "Agriturismi",
+   "schede": [
+    "turismo"
+   ]
+  },
+  {
+   "voce": "Alberghi",
+   "schede": [
+    "turismo"
+   ]
+  },
+  {
+   "voce": "Alberghieri",
+   "schede": [
+    "turismo"
+   ]
+  },
+  {
+   "voce": "Alluvioni",
+   "schede": [
+    "territorio"
+   ]
+  },
+  {
+   "voce": "Altitudine",
+   "schede": [
+    "territorio"
+   ]
+  },
+  {
+   "voce": "Altro (CPIA, ecc.)",
+   "schede": [
+    "scuole"
+   ]
+  },
+  {
+   "voce": "ANAC",
+   "schede": [
+    "contratti"
+   ]
+  },
+  {
+   "voce": "ANNCSU e Catasto",
+   "schede": [
+    "panoramica"
+   ]
+  },
+  {
+   "voce": "Anno",
+   "schede": [
+    "aria",
+    "demografia",
+    "spese"
+   ]
+  },
+  {
+   "voce": "Anno scolastico",
+   "schede": [
+    "scuole"
+   ]
+  },
+  {
+   "voce": "Anziani",
+   "schede": [
+    "censimento",
+    "demografia"
+   ]
+  },
+  {
+   "voce": "Appalti",
+   "schede": [
+    "contratti"
+   ]
+  },
+  {
+   "voce": "Apri mappa",
+   "schede": [
+    "banda-larga"
+   ]
+  },
+  {
+   "voce": "APS",
+   "schede": [
+    "runts"
+   ]
+  },
+  {
+   "voce": "Aree a pericolosità da frana",
+   "schede": [
+    "territorio"
+   ]
+  },
+  {
+   "voce": "Aree a pericolosità idraulica (alluvioni)",
+   "schede": [
+    "territorio"
+   ]
+  },
+  {
+   "voce": "Arrivi",
+   "schede": [
+    "turismo"
+   ]
+  },
+  {
+   "voce": "Arrivi annuali",
+   "schede": [
+    "turismo"
+   ]
+  },
+  {
+   "voce": "Arrivi turistici",
+   "schede": [
+    "turismo"
+   ]
+  },
+  {
+   "voce": "Artigiani",
+   "schede": [
+    "asia"
+   ]
+  },
+  {
+   "voce": "Asili",
+   "schede": [
+    "scuole"
+   ]
+  },
+  {
+   "voce": "Associazioni",
+   "schede": [
+    "runts"
+   ]
+  },
+  {
+   "voce": "ATECO",
+   "schede": [
+    "asia"
+   ]
+  },
+  {
+   "voce": "Auto",
+   "schede": [
+    "censimento",
+    "veicoli"
+   ]
+  },
+  {
+   "voce": "Auto Euro 0–3",
+   "schede": [
+    "veicoli"
+   ]
+  },
+  {
+   "voce": "Auto-contenimento",
+   "schede": [
+    "pendolarismo"
+   ]
+  },
+  {
+   "voce": "Automobili",
+   "schede": [
+    "censimento",
+    "veicoli"
+   ]
+  },
+  {
+   "voce": "Automobili di proprietà",
+   "schede": [
+    "censimento"
+   ]
+  },
+  {
+   "voce": "Autonomia organizzativa",
+   "schede": [
+    "scuole"
+   ]
+  },
+  {
+   "voce": "Avanzamento per",
+   "schede": [
+    "pnrr"
+   ]
+  },
+  {
+   "voce": "Aziende",
+   "schede": [
+    "asia"
+   ]
+  },
+  {
+   "voce": "B&B",
+   "schede": [
+    "turismo"
+   ]
+  },
+  {
+   "voce": "Bambini",
+   "schede": [
+    "censimento",
+    "demografia"
+   ]
+  },
+  {
+   "voce": "Banda larga",
+   "schede": [
+    "panoramica"
+   ]
+  },
+  {
+   "voce": "Bandi",
+   "schede": [
+    "contratti"
+   ]
+  },
+  {
+   "voce": "Basi territoriali e variabili",
+   "schede": [
+    "censimento"
+   ]
+  },
+  {
+   "voce": "BDAP",
+   "schede": [
+    "opere"
+   ]
+  },
+  {
+   "voce": "Beni cult.",
+   "schede": [
+    "territorio"
+   ]
+  },
+  {
+   "voce": "Beni culturali",
+   "schede": [
+    "panoramica"
+   ]
+  },
+  {
+   "voce": "Beni immobili pubblici dichiarati al MEF",
+   "schede": [
+    "patrimonio-pa"
+   ]
+  },
+  {
+   "voce": "Beni vincolati",
+   "schede": [
+    "beni-culturali"
+   ]
+  },
+  {
+   "voce": "Benzina",
+   "schede": [
+    "carburanti"
+   ]
+  },
+  {
+   "voce": "Benzina più economica",
+   "schede": [
+    "carburanti"
+   ]
+  },
+  {
+   "voce": "Benzina self service",
+   "schede": [
+    "carburanti"
+   ]
+  },
+  {
+   "voce": "Biblioteche",
+   "schede": [
+    "beni-culturali"
+   ]
+  },
+  {
+   "voce": "Bilancio del Comune",
+   "schede": [
+    "spese"
+   ]
+  },
+  {
+   "voce": "Biossido di azoto",
+   "schede": [
+    "aria"
+   ]
+  },
+  {
+   "voce": "Camere totali",
+   "schede": [
+    "turismo"
+   ]
+  },
+  {
+   "voce": "Campeggi",
+   "schede": [
+    "turismo"
+   ]
+  },
+  {
+   "voce": "Camping/Villaggi",
+   "schede": [
+    "turismo"
+   ]
+  },
+  {
+   "voce": "Cantieri",
+   "schede": [
+    "opere"
+   ]
+  },
+  {
+   "voce": "Capacità nel comune",
+   "schede": [
+    "turismo"
+   ]
+  },
+  {
+   "voce": "Capacità ricettiva",
+   "schede": [
+    "turismo"
+   ]
+  },
+  {
+   "voce": "Case",
+   "schede": [
+    "censimento"
+   ]
+  },
+  {
+   "voce": "Case in affitto",
+   "schede": [
+    "turismo"
+   ]
+  },
+  {
+   "voce": "Case per ferie",
+   "schede": [
+    "turismo"
+   ]
+  },
+  {
+   "voce": "Case vuote",
+   "schede": [
+    "censimento"
+   ]
+  },
+  {
+   "voce": "Cassa",
+   "schede": [
+    "spese"
+   ]
+  },
+  {
+   "voce": "Castelli",
+   "schede": [
+    "beni-culturali"
+   ]
+  },
+  {
+   "voce": "Catasto",
+   "schede": [
+    "anncsu"
+   ]
+  },
+  {
+   "voce": "Categorie distinte",
+   "schede": [
+    "contratti"
+   ]
+  },
+  {
+   "voce": "Cemento",
+   "schede": [
+    "territorio"
+   ]
+  },
+  {
+   "voce": "Censimento 2023",
+   "schede": [
+    "panoramica"
+   ]
+  },
+  {
+   "voce": "Centraline ARPA",
+   "schede": [
+    "aria"
+   ]
+  },
+  {
+   "voce": "Cerca una farmacia o parafarmacia",
+   "schede": [
+    "sanita"
+   ]
+  },
+  {
+   "voce": "Chiese",
+   "schede": [
+    "beni-culturali"
+   ]
+  },
+  {
+   "voce": "Choropleth — indicatore per sezione",
+   "schede": [
+    "censimento"
+   ]
+  },
+  {
+   "voce": "Cinque per mille",
+   "schede": [
+    "runts"
+   ]
+  },
+  {
+   "voce": "Cittadinanza",
+   "schede": [
+    "censimento",
+    "profilo"
+   ]
+  },
+  {
+   "voce": "Civici metrici",
+   "schede": [
+    "anncsu"
+   ]
+  },
+  {
+   "voce": "Civici nero",
+   "schede": [
+    "anncsu"
+   ]
+  },
+  {
+   "voce": "Civici rosso",
+   "schede": [
+    "anncsu"
+   ]
+  },
+  {
+   "voce": "Classi Euro",
+   "schede": [
+    "veicoli"
+   ]
+  },
+  {
+   "voce": "CNR-IRPI",
+   "schede": [
+    "territorio"
+   ]
+  },
+  {
+   "voce": "Codice",
+   "schede": [
+    "censimento"
+   ]
+  },
+  {
+   "voce": "Colonnine di ricarica",
+   "schede": [
+    "pun"
+   ]
+  },
+  {
+   "voce": "Composizione parco",
+   "schede": [
+    "veicoli"
+   ]
+  },
+  {
+   "voce": "Comune",
+   "schede": [
+    "carburanti",
+    "pendolarismo"
+   ]
+  },
+  {
+   "voce": "Con vincolo",
+   "schede": [
+    "patrimonio-pa"
+   ]
+  },
+  {
+   "voce": "Concentrazioni annuali PM10, PM2.5 e NO₂",
+   "schede": [
+    "aria"
+   ]
+  },
+  {
+   "voce": "Confronto prezzo medio",
+   "schede": [
+    "carburanti"
+   ]
+  },
+  {
+   "voce": "Consumo di suolo",
+   "schede": [
+    "territorio"
+   ]
+  },
+  {
+   "voce": "Contratti ANAC",
+   "schede": [
+    "panoramica"
+   ]
+  },
+  {
+   "voce": "Contribuenti",
+   "schede": [
+    "redditi"
+   ]
+  },
+  {
+   "voce": "Coordinate",
+   "schede": [
+    "territorio"
+   ]
+  },
+  {
+   "voce": "Coordinate fuori comune",
+   "schede": [
+    "sanita"
+   ]
+  },
+  {
+   "voce": "Coordinate Ministero della Salute",
+   "schede": [
+    "sanita"
+   ]
+  },
+  {
+   "voce": "Coordinate non affidabili",
+   "schede": [
+    "sanita"
+   ]
+  },
+  {
+   "voce": "Coordinate non disponibili",
+   "schede": [
+    "sanita"
+   ]
+  },
+  {
+   "voce": "Copertura DESI vs FTTH effettiva entro 20m",
+   "schede": [
+    "banda-larga"
+   ]
+  },
+  {
+   "voce": "Copertura di rete",
+   "schede": [
+    "banda-larga"
+   ]
+  },
+  {
+   "voce": "Copertura FTTH 20m",
+   "schede": [
+    "banda-larga"
+   ]
+  },
+  {
+   "voce": "Copertura FTTH DESI",
+   "schede": [
+    "banda-larga"
+   ]
+  },
+  {
+   "voce": "Costo effettivo",
+   "schede": [
+    "opere"
+   ]
+  },
+  {
+   "voce": "Costo previsto",
+   "schede": [
+    "opere"
+   ]
+  },
+  {
+   "voce": "CPV",
+   "schede": [
+    "contratti"
+   ]
+  },
+  {
+   "voce": "Crescita UL",
+   "schede": [
+    "asia"
+   ]
+  },
+  {
+   "voce": "CUP",
+   "schede": [
+    "opere",
+    "pnrr"
+   ]
+  },
+  {
+   "voce": "Data fine prevista",
+   "schede": [
+    "opere"
+   ]
+  },
+  {
+   "voce": "Data inizio",
+   "schede": [
+    "opere"
+   ]
+  },
+  {
+   "voce": "Data iscr.",
+   "schede": [
+    "runts"
+   ]
+  },
+  {
+   "voce": "Dati",
+   "schede": [
+    "anncsu",
+    "censimento",
+    "patrimonio-pa",
+    "redditi",
+    "sanita",
+    "veicoli"
+   ]
+  },
+  {
+   "voce": "Dati a terzi",
+   "schede": [
+    "patrimonio-pa"
+   ]
+  },
+  {
+   "voce": "Dati di pendolarismo",
+   "schede": [
+    "pendolarismo"
+   ]
+  },
+  {
+   "voce": "Dati non ancora caricati",
+   "schede": [
+    "panoramica"
+   ]
+  },
+  {
+   "voce": "Dato consolidato di Unione",
+   "schede": [
+    "territorio"
+   ]
+  },
+  {
+   "voce": "Dato non disaggregabile",
+   "schede": [
+    "territorio"
+   ]
+  },
+  {
+   "voce": "Day Hospital + Surgery",
+   "schede": [
+    "sanita"
+   ]
+  },
+  {
+   "voce": "DC fast",
+   "schede": [
+    "pun"
+   ]
+  },
+  {
+   "voce": "Degenza ordinaria",
+   "schede": [
+    "sanita"
+   ]
+  },
+  {
+   "voce": "Demanio",
+   "schede": [
+    "patrimonio-pa"
+   ]
+  },
+  {
+   "voce": "Demografia",
+   "schede": [
+    "panoramica"
+   ]
+  },
+  {
+   "voce": "Denominazione",
+   "schede": [
+    "runts"
+   ]
+  },
+  {
+   "voce": "Densità",
+   "schede": [
+    "censimento"
+   ]
+  },
+  {
+   "voce": "Densità popolazione",
+   "schede": [
+    "censimento"
+   ]
+  },
+  {
+   "voce": "Densità scolastica",
+   "schede": [
+    "scuole"
+   ]
+  },
+  {
+   "voce": "Descrizione",
+   "schede": [
+    "censimento"
+   ]
+  },
+  {
+   "voce": "Dettaglio per settore ATECO e classe dime",
+   "schede": [
+    "asia"
+   ]
+  },
+  {
+   "voce": "Dichiarazioni IRPEF",
+   "schede": [
+    "redditi"
+   ]
+  },
+  {
+   "voce": "Differenziata raccolta",
+   "schede": [
+    "territorio"
+   ]
+  },
+  {
+   "voce": "Dimensione media",
+   "schede": [
+    "asia"
+   ]
+  },
+  {
+   "voce": "Dinamica demografica — nati e morti",
+   "schede": [
+    "demografia"
+   ]
+  },
+  {
+   "voce": "Diploma e oltre",
+   "schede": [
+    "profilo"
+   ]
+  },
+  {
+   "voce": "Diploma maturità",
+   "schede": [
+    "profilo"
+   ]
+  },
+  {
+   "voce": "Diplomati",
+   "schede": [
+    "censimento",
+    "profilo"
+   ]
+  },
+  {
+   "voce": "Disoccupazione",
+   "schede": [
+    "profilo"
+   ]
+  },
+  {
+   "voce": "Dissesto idrogeologico",
+   "schede": [
+    "territorio"
+   ]
+  },
+  {
+   "voce": "Distributori di benzina",
+   "schede": [
+    "carburanti"
+   ]
+  },
+  {
+   "voce": "Distributori e prezzi",
+   "schede": [
+    "panoramica"
+   ]
+  },
+  {
+   "voce": "Distribuzione classi Euro (autovetture)",
+   "schede": [
+    "veicoli"
+   ]
+  },
+  {
+   "voce": "Distribuzione fasce di reddito",
+   "schede": [
+    "redditi"
+   ]
+  },
+  {
+   "voce": "Distribuzione per ordine",
+   "schede": [
+    "scuole"
+   ]
+  },
+  {
+   "voce": "Distribuzione posti letto per disciplina",
+   "schede": [
+    "sanita"
+   ]
+  },
+  {
+   "voce": "Edifici",
+   "schede": [
+    "territorio"
+   ]
+  },
+  {
+   "voce": "Elenco beni",
+   "schede": [
+    "beni-culturali"
+   ]
+  },
+  {
+   "voce": "Elenco enti",
+   "schede": [
+    "runts"
+   ]
+  },
+  {
+   "voce": "Enti del Terzo Settore",
+   "schede": [
+    "runts"
+   ]
+  },
+  {
+   "voce": "Enti del Terzo Settore iscritti al RUNTS",
+   "schede": [
+    "runts"
+   ]
+  },
+  {
+   "voce": "Entranti",
+   "schede": [
+    "pendolarismo"
+   ]
+  },
+  {
+   "voce": "Entrate del Comune",
+   "schede": [
+    "spese"
+   ]
+  },
+  {
+   "voce": "Esplora i progetti",
+   "schede": [
+    "opere"
+   ]
+  },
+  {
+   "voce": "Esposti a frane (P3+P4)",
+   "schede": [
+    "territorio"
+   ]
+  },
+  {
+   "voce": "Esposti ad alluvioni (P2 media)",
+   "schede": [
+    "territorio"
+   ]
+  },
+  {
+   "voce": "Eta media",
+   "schede": [
+    "demografia"
+   ]
+  },
+  {
+   "voce": "Età media",
+   "schede": [
+    "demografia"
+   ]
+  },
+  {
+   "voce": "Extra-alberghieri",
+   "schede": [
+    "turismo"
+   ]
+  },
+  {
+   "voce": "Extra-alberghiero",
+   "schede": [
+    "turismo"
+   ]
+  },
+  {
+   "voce": "Fabbricati",
+   "schede": [
+    "patrimonio-pa"
+   ]
+  },
+  {
+   "voce": "Famiglie",
+   "schede": [
+    "censimento",
+    "profilo",
+    "territorio"
+   ]
+  },
+  {
+   "voce": "Famiglie FTTH entro 20m",
+   "schede": [
+    "banda-larga"
+   ]
+  },
+  {
+   "voce": "Famiglie per numero componenti",
+   "schede": [
+    "censimento"
+   ]
+  },
+  {
+   "voce": "Famiglie raggiunte",
+   "schede": [
+    "banda-larga"
+   ]
+  },
+  {
+   "voce": "Famiglie, abitazioni e automobili",
+   "schede": [
+    "censimento"
+   ]
+  },
+  {
+   "voce": "Farmacie",
+   "schede": [
+    "sanita"
+   ]
+  },
+  {
+   "voce": "Farmacie attive",
+   "schede": [
+    "sanita"
+   ]
+  },
+  {
+   "voce": "Farmacie, parafarmacie e ospedali",
+   "schede": [
+    "sanita"
+   ]
+  },
+  {
+   "voce": "Fasce d'eta",
+   "schede": [
+    "demografia"
+   ]
+  },
+  {
+   "voce": "Fase attuale",
+   "schede": [
+    "pnrr"
+   ]
+  },
+  {
+   "voce": "Femmine",
+   "schede": [
+    "censimento"
+   ]
+  },
+  {
+   "voce": "Feriti",
+   "schede": [
+    "veicoli"
+   ]
+  },
+  {
+   "voce": "Fibra ottica",
+   "schede": [
+    "banda-larga"
+   ]
+  },
+  {
+   "voce": "Finanziamenti",
+   "schede": [
+    "opere",
+    "pnrr"
+   ]
+  },
+  {
+   "voce": "Finanziamento PNRR",
+   "schede": [
+    "pnrr"
+   ]
+  },
+  {
+   "voce": "Finanziamento totale",
+   "schede": [
+    "pnrr"
+   ]
+  },
+  {
+   "voce": "Fine prevista / effettiva",
+   "schede": [
+    "pnrr"
+   ]
+  },
+  {
+   "voce": "Flussi turistici",
+   "schede": [
+    "turismo"
+   ]
+  },
+  {
+   "voce": "Foglio catastale",
+   "schede": [
+    "anncsu"
+   ]
+  },
+  {
+   "voce": "Fondi europei",
+   "schede": [
+    "pnrr"
+   ]
+  },
+  {
+   "voce": "Fonte",
+   "schede": [
+    "contratti",
+    "demografia",
+    "opere",
+    "pnrr",
+    "profilo",
+    "scuole",
+    "spese",
+    "turismo"
+   ]
+  },
+  {
+   "voce": "Fonti",
+   "schede": [
+    "veicoli"
+   ]
+  },
+  {
+   "voce": "Frane",
+   "schede": [
+    "territorio"
+   ]
+  },
+  {
+   "voce": "Frane e alluvioni",
+   "schede": [
+    "territorio"
+   ]
+  },
+  {
+   "voce": "FTTH",
+   "schede": [
+    "banda-larga"
+   ]
+  },
+  {
+   "voce": "Fuori comune",
+   "schede": [
+    "profilo"
+   ]
+  },
+  {
+   "voce": "Gare",
+   "schede": [
+    "contratti"
+   ]
+  },
+  {
+   "voce": "Gasolio",
+   "schede": [
+    "carburanti"
+   ]
+  },
+  {
+   "voce": "Gasolio più economico",
+   "schede": [
+    "carburanti"
+   ]
+  },
+  {
+   "voce": "Gasolio self service",
+   "schede": [
+    "carburanti"
+   ]
+  },
+  {
+   "voce": "Geo-referenziati",
+   "schede": [
+    "anncsu",
+    "beni-culturali",
+    "patrimonio-pa"
+   ]
+  },
+  {
+   "voce": "Geomorf.",
+   "schede": [
+    "territorio"
+   ]
+  },
+  {
+   "voce": "GPL",
+   "schede": [
+    "carburanti"
+   ]
+  },
+  {
+   "voce": "Grandi 250+",
+   "schede": [
+    "runts"
+   ]
+  },
+  {
+   "voce": "GSE",
+   "schede": [
+    "pun"
+   ]
+  },
+  {
+   "voce": "Hotel",
+   "schede": [
+    "turismo"
+   ]
+  },
+  {
+   "voce": "HPC + Ultra fast",
+   "schede": [
+    "pun"
+   ]
+  },
+  {
+   "voce": "Immigrati",
+   "schede": [
+    "censimento",
+    "profilo"
+   ]
+  },
+  {
+   "voce": "Immobili pubblici",
+   "schede": [
+    "patrimonio-pa"
+   ]
+  },
+  {
+   "voce": "Importo medio",
+   "schede": [
+    "contratti"
+   ]
+  },
+  {
+   "voce": "Imposta netta media",
+   "schede": [
+    "redditi"
+   ]
+  },
+  {
+   "voce": "Imprese",
+   "schede": [
+    "asia",
+    "territorio"
+   ]
+  },
+  {
+   "voce": "Imprese e addetti",
+   "schede": [
+    "panoramica"
+   ]
+  },
+  {
+   "voce": "In rete associativa",
+   "schede": [
+    "runts"
+   ]
+  },
+  {
+   "voce": "Incassi",
+   "schede": [
+    "spese"
+   ]
+  },
+  {
+   "voce": "Incidenti",
+   "schede": [
+    "veicoli"
+   ]
+  },
+  {
+   "voce": "Incidenti stradali",
+   "schede": [
+    "veicoli"
+   ]
+  },
+  {
+   "voce": "Inclina +",
+   "schede": [
+    "territorio"
+   ]
+  },
+  {
+   "voce": "Inclina −",
+   "schede": [
+    "territorio"
+   ]
+  },
+  {
+   "voce": "Incrementi annuali",
+   "schede": [
+    "territorio"
+   ]
+  },
+  {
+   "voce": "Indice di vecchiaia",
+   "schede": [
+    "censimento",
+    "demografia"
+   ]
+  },
+  {
+   "voce": "Indice dipendenza",
+   "schede": [
+    "demografia"
+   ]
+  },
+  {
+   "voce": "Indice turisticità",
+   "schede": [
+    "turismo"
+   ]
+  },
+  {
+   "voce": "Indice vecchiaia",
+   "schede": [
+    "demografia"
+   ]
+  },
+  {
+   "voce": "Indirizzi",
+   "schede": [
+    "anncsu"
+   ]
+  },
+  {
+   "voce": "Indirizzi postali raggiunti",
+   "schede": [
+    "banda-larga"
+   ]
+  },
+  {
+   "voce": "Inizio previsto / effettivo",
+   "schede": [
+    "pnrr"
+   ]
+  },
+  {
+   "voce": "Inquinamento",
+   "schede": [
+    "aria"
+   ]
+  },
+  {
+   "voce": "Internet veloce",
+   "schede": [
+    "banda-larga"
+   ]
+  },
+  {
+   "voce": "IODL v2.0",
+   "schede": [
+    "sanita"
+   ]
+  },
+  {
+   "voce": "IRPEF",
+   "schede": [
+    "redditi"
+   ]
+  },
+  {
+   "voce": "Iscritti al 5x1000",
+   "schede": [
+    "runts"
+   ]
+  },
+  {
+   "voce": "Iscrizioni per anno",
+   "schede": [
+    "runts"
+   ]
+  },
+  {
+   "voce": "ISPRA",
+   "schede": [
+    "aria",
+    "territorio"
+   ]
+  },
+  {
+   "voce": "ISTAT",
+   "schede": [
+    "asia",
+    "censimento",
+    "demografia",
+    "pendolarismo",
+    "profilo",
+    "turismo"
+   ]
+  },
+  {
+   "voce": "Istituti tecnici",
+   "schede": [
+    "scuole"
+   ]
+  },
+  {
+   "voce": "Istruzione",
+   "schede": [
+    "censimento",
+    "profilo"
+   ]
+  },
+  {
+   "voce": "Italia",
+   "schede": [
+    "carburanti"
+   ]
+  },
+  {
+   "voce": "ItaliaMeteo",
+   "schede": [
+    "aria"
+   ]
+  },
+  {
+   "voce": "Italiani",
+   "schede": [
+    "profilo"
+   ]
+  },
+  {
+   "voce": "Laurea magistrale / Phd",
+   "schede": [
+    "profilo"
+   ]
+  },
+  {
+   "voce": "Laurea triennale / ITS",
+   "schede": [
+    "profilo"
+   ]
+  },
+  {
+   "voce": "Laureati",
+   "schede": [
+    "censimento",
+    "profilo"
+   ]
+  },
+  {
+   "voce": "Laureati 25-64",
+   "schede": [
+    "profilo"
+   ]
+  },
+  {
+   "voce": "Lavori pubblici",
+   "schede": [
+    "opere"
+   ]
+  },
+  {
+   "voce": "Lavoro",
+   "schede": [
+    "pendolarismo",
+    "profilo"
+   ]
+  },
+  {
+   "voce": "Licei",
+   "schede": [
+    "scuole"
+   ]
+  },
+  {
+   "voce": "Licenza elementare",
+   "schede": [
+    "profilo"
+   ]
+  },
+  {
+   "voce": "Licenza media",
+   "schede": [
+    "profilo"
+   ]
+  },
+  {
+   "voce": "Luoghi della Cultura visitabili",
+   "schede": [
+    "beni-culturali"
+   ]
+  },
+  {
+   "voce": "Mappa beni georeferenziati",
+   "schede": [
+    "beni-culturali"
+   ]
+  },
+  {
+   "voce": "Mappa degli impianti",
+   "schede": [
+    "carburanti"
+   ]
+  },
+  {
+   "voce": "Mappa dei civici geo-referenziati",
+   "schede": [
+    "anncsu"
+   ]
+  },
+  {
+   "voce": "Mappa dei presidi sanitari",
+   "schede": [
+    "sanita"
+   ]
+  },
+  {
+   "voce": "Mappa dei punti",
+   "schede": [
+    "patrimonio-pa",
+    "pun"
+   ]
+  },
+  {
+   "voce": "Mappa flussi pendolari",
+   "schede": [
+    "pendolarismo"
+   ]
+  },
+  {
+   "voce": "Mappe catastali",
+   "schede": [
+    "anncsu"
+   ]
+  },
+  {
+   "voce": "Maschi",
+   "schede": [
+    "censimento"
+   ]
+  },
+  {
+   "voce": "Medie 50-249",
+   "schede": [
+    "runts"
+   ]
+  },
+  {
+   "voce": "MEF",
+   "schede": [
+    "patrimonio-pa",
+    "redditi"
+   ]
+  },
+  {
+   "voce": "Metano",
+   "schede": [
+    "carburanti"
+   ]
+  },
+  {
+   "voce": "Meteo",
+   "schede": [
+    "aria"
+   ]
+  },
+  {
+   "voce": "Meteo e Aria",
+   "schede": [
+    "panoramica"
+   ]
+  },
+  {
+   "voce": "Meteo e qualità dell'aria",
+   "schede": [
+    "aria"
+   ]
+  },
+  {
+   "voce": "Micro 1-9",
+   "schede": [
+    "runts"
+   ]
+  },
+  {
+   "voce": "MIMIT",
+   "schede": [
+    "carburanti"
+   ]
+  },
+  {
+   "voce": "Ministero della Cultura",
+   "schede": [
+    "beni-culturali"
+   ]
+  },
+  {
+   "voce": "Ministero della Salute",
+   "schede": [
+    "sanita"
+   ]
+  },
+  {
+   "voce": "Missioni distinte",
+   "schede": [
+    "pnrr"
+   ]
+  },
+  {
+   "voce": "MIUR",
+   "schede": [
+    "scuole"
+   ]
+  },
+  {
+   "voce": "Mix dimensionale",
+   "schede": [
+    "asia"
+   ]
+  },
+  {
+   "voce": "Mix finanziamenti",
+   "schede": [
+    "opere"
+   ]
+  },
+  {
+   "voce": "Mix per categoria",
+   "schede": [
+    "beni-culturali",
+    "patrimonio-pa"
+   ]
+  },
+  {
+   "voce": "Mix per categoria di potenza",
+   "schede": [
+    "pun"
+   ]
+  },
+  {
+   "voce": "Mix per sezione",
+   "schede": [
+    "runts"
+   ]
+  },
+  {
+   "voce": "Mix tecnologico delle celle 20×20m",
+   "schede": [
+    "banda-larga"
+   ]
+  },
+  {
+   "voce": "Mobilità",
+   "schede": [
+    "profilo"
+   ]
+  },
+  {
+   "voce": "Monumenti",
+   "schede": [
+    "beni-culturali"
+   ]
+  },
+  {
+   "voce": "Morfologia",
+   "schede": [
+    "territorio"
+   ]
+  },
+  {
+   "voce": "Morfologia del territorio",
+   "schede": [
+    "territorio"
+   ]
+  },
+  {
+   "voce": "Morti",
+   "schede": [
+    "demografia",
+    "veicoli"
+   ]
+  },
+  {
+   "voce": "Morti + feriti strada",
+   "schede": [
+    "veicoli"
+   ]
+  },
+  {
+   "voce": "Morti sulla strada",
+   "schede": [
+    "veicoli"
+   ]
+  },
+  {
+   "voce": "Moto",
+   "schede": [
+    "veicoli"
+   ]
+  },
+  {
+   "voce": "Musei",
+   "schede": [
+    "beni-culturali"
+   ]
+  },
+  {
+   "voce": "Natalità",
+   "schede": [
+    "demografia"
+   ]
+  },
+  {
+   "voce": "Nati",
+   "schede": [
+    "demografia"
+   ]
+  },
+  {
+   "voce": "Natura intervento",
+   "schede": [
+    "opere"
+   ]
+  },
+  {
+   "voce": "Neve",
+   "schede": [
+    "aria"
+   ]
+  },
+  {
+   "voce": "Neve al suolo",
+   "schede": [
+    "aria"
+   ]
+  },
+  {
+   "voce": "Nuclei familiari",
+   "schede": [
+    "censimento",
+    "profilo"
+   ]
+  },
+  {
+   "voce": "Numeri civici",
+   "schede": [
+    "anncsu"
+   ]
+  },
+  {
+   "voce": "Numero civico",
+   "schede": [
+    "anncsu"
+   ]
+  },
+  {
+   "voce": "Numero famiglie",
+   "schede": [
+    "profilo"
+   ]
+  },
+  {
+   "voce": "Nuove elettr.+ibride",
+   "schede": [
+    "veicoli"
+   ]
+  },
+  {
+   "voce": "Nuovo cemento",
+   "schede": [
+    "territorio"
+   ]
+  },
+  {
+   "voce": "Nuvolosità",
+   "schede": [
+    "aria"
+   ]
+  },
+  {
+   "voce": "Occupati 15-64",
+   "schede": [
+    "censimento"
+   ]
+  },
+  {
+   "voce": "Occupati 15–64 e cittadini italiani",
+   "schede": [
+    "censimento"
+   ]
+  },
+  {
+   "voce": "Occupazione",
+   "schede": [
+    "censimento",
+    "profilo"
+   ]
+  },
+  {
+   "voce": "Odonimi",
+   "schede": [
+    "anncsu"
+   ]
+  },
+  {
+   "voce": "ODV",
+   "schede": [
+    "runts"
+   ]
+  },
+  {
+   "voce": "Onlus",
+   "schede": [
+    "runts"
+   ]
+  },
+  {
+   "voce": "Opere",
+   "schede": [
+    "panoramica"
+   ]
+  },
+  {
+   "voce": "Opere BDAP",
+   "schede": [
+    "panoramica"
+   ]
+  },
+  {
+   "voce": "Opere pubbliche",
+   "schede": [
+    "opere"
+   ]
+  },
+  {
+   "voce": "Ospedali",
+   "schede": [
+    "sanita"
+   ]
+  },
+  {
+   "voce": "Ostelli",
+   "schede": [
+    "turismo"
+   ]
+  },
+  {
+   "voce": "P1 bassa",
+   "schede": [
+    "territorio"
+   ]
+  },
+  {
+   "voce": "P1 moderata",
+   "schede": [
+    "territorio"
+   ]
+  },
+  {
+   "voce": "P2 media",
+   "schede": [
+    "territorio"
+   ]
+  },
+  {
+   "voce": "P3 alta",
+   "schede": [
+    "territorio"
+   ]
+  },
+  {
+   "voce": "P3 elevata",
+   "schede": [
+    "territorio"
+   ]
+  },
+  {
+   "voce": "P4 molto elevata",
+   "schede": [
+    "territorio"
+   ]
+  },
+  {
+   "voce": "Paese di nascita e cittadinanza",
+   "schede": [
+    "censimento"
+   ]
+  },
+  {
+   "voce": "Pagamenti",
+   "schede": [
+    "spese"
+   ]
+  },
+  {
+   "voce": "Panoramica",
+   "schede": [
+    "panoramica"
+   ]
+  },
+  {
+   "voce": "Parafarmacie",
+   "schede": [
+    "sanita"
+   ]
+  },
+  {
+   "voce": "Parco circolante",
+   "schede": [
+    "veicoli"
+   ]
+  },
+  {
+   "voce": "Particella",
+   "schede": [
+    "anncsu"
+   ]
+  },
+  {
+   "voce": "Particella catastale",
+   "schede": [
+    "anncsu"
+   ]
+  },
+  {
+   "voce": "Partite IVA",
+   "schede": [
+    "asia"
+   ]
+  },
+  {
+   "voce": "Patrimonio PA",
+   "schede": [
+    "panoramica"
+   ]
+  },
+  {
+   "voce": "Pendenza",
+   "schede": [
+    "territorio"
+   ]
+  },
+  {
+   "voce": "Pendenze",
+   "schede": [
+    "territorio"
+   ]
+  },
+  {
+   "voce": "Pendolari",
+   "schede": [
+    "pendolarismo"
+   ]
+  },
+  {
+   "voce": "Pendolari totali",
+   "schede": [
+    "profilo"
+   ]
+  },
+  {
+   "voce": "Pendolarismo",
+   "schede": [
+    "panoramica"
+   ]
+  },
+  {
+   "voce": "Per lavoro",
+   "schede": [
+    "profilo"
+   ]
+  },
+  {
+   "voce": "Per stato",
+   "schede": [
+    "opere"
+   ]
+  },
+  {
+   "voce": "Per studio",
+   "schede": [
+    "profilo"
+   ]
+  },
+  {
+   "voce": "Permanenza media",
+   "schede": [
+    "turismo"
+   ]
+  },
+  {
+   "voce": "Persone",
+   "schede": [
+    "territorio"
+   ]
+  },
+  {
+   "voce": "Piccole 10-49",
+   "schede": [
+    "runts"
+   ]
+  },
+  {
+   "voce": "Pioggia",
+   "schede": [
+    "aria"
+   ]
+  },
+  {
+   "voce": "Piramide dell'età",
+   "schede": [
+    "demografia"
+   ]
+  },
+  {
+   "voce": "Piramide demografica",
+   "schede": [
+    "demografia"
+   ]
+  },
+  {
+   "voce": "Piramide età",
+   "schede": [
+    "censimento"
+   ]
+  },
+  {
+   "voce": "Plessi scolastici",
+   "schede": [
+    "scuole"
+   ]
+  },
+  {
+   "voce": "PM10",
+   "schede": [
+    "aria"
+   ]
+  },
+  {
+   "voce": "PM2.5",
+   "schede": [
+    "aria"
+   ]
+  },
+  {
+   "voce": "PNRR",
+   "schede": [
+    "pnrr"
+   ]
+  },
+  {
+   "voce": "Pompe bianche",
+   "schede": [
+    "carburanti"
+   ]
+  },
+  {
+   "voce": "Pop. a rischio frane",
+   "schede": [
+    "territorio"
+   ]
+  },
+  {
+   "voce": "Pop. in famiglia",
+   "schede": [
+    "profilo"
+   ]
+  },
+  {
+   "voce": "Popolazione",
+   "schede": [
+    "censimento",
+    "demografia",
+    "profilo"
+   ]
+  },
+  {
+   "voce": "Popolazione al",
+   "schede": [
+    "demografia"
+   ]
+  },
+  {
+   "voce": "Popolazione femmine per età",
+   "schede": [
+    "censimento"
+   ]
+  },
+  {
+   "voce": "Popolazione maschi per età",
+   "schede": [
+    "censimento"
+   ]
+  },
+  {
+   "voce": "Popolazione per età",
+   "schede": [
+    "censimento"
+   ]
+  },
+  {
+   "voce": "Popolazione residente",
+   "schede": [
+    "demografia"
+   ]
+  },
+  {
+   "voce": "Popolazione residente — serie storica",
+   "schede": [
+    "demografia"
+   ]
+  },
+  {
+   "voce": "Popolazione totale",
+   "schede": [
+    "censimento",
+    "profilo"
+   ]
+  },
+  {
+   "voce": "Posti letto",
+   "schede": [
+    "sanita",
+    "turismo"
+   ]
+  },
+  {
+   "voce": "Posti letto totali",
+   "schede": [
+    "sanita"
+   ]
+  },
+  {
+   "voce": "Posti letto turistici",
+   "schede": [
+    "turismo"
+   ]
+  },
+  {
+   "voce": "Potenza totale",
+   "schede": [
+    "pun"
+   ]
+  },
+  {
+   "voce": "Precipitazioni 24h",
+   "schede": [
+    "aria"
+   ]
+  },
+  {
+   "voce": "Presenze (notti)",
+   "schede": [
+    "turismo"
+   ]
+  },
+  {
+   "voce": "Presenze turistiche",
+   "schede": [
+    "turismo"
+   ]
+  },
+  {
+   "voce": "Prezzi aggiornati",
+   "schede": [
+    "carburanti"
+   ]
+  },
+  {
+   "voce": "Prezzo carburanti",
+   "schede": [
+    "carburanti"
+   ]
+  },
+  {
+   "voce": "Prima aggiudicazione",
+   "schede": [
+    "contratti"
+   ]
+  },
+  {
+   "voce": "Produzione e raccolta rifiuti",
+   "schede": [
+    "territorio"
+   ]
+  },
+  {
+   "voce": "Profilo",
+   "schede": [
+    "panoramica",
+    "territorio"
+   ]
+  },
+  {
+   "voce": "Profilo del",
+   "schede": [
+    "profilo"
+   ]
+  },
+  {
+   "voce": "Progetti",
+   "schede": [
+    "pnrr"
+   ]
+  },
+  {
+   "voce": "Progetti PNRR",
+   "schede": [
+    "pnrr"
+   ]
+  },
+  {
+   "voce": "Progetti totali",
+   "schede": [
+    "pnrr"
+   ]
+  },
+  {
+   "voce": "Pronto soccorso",
+   "schede": [
+    "sanita"
+   ]
+  },
+  {
+   "voce": "Protezione Civile",
+   "schede": [
+    "territorio"
+   ]
+  },
+  {
+   "voce": "Pubblicità legale.",
+   "schede": [
+    "runts"
+   ]
+  },
+  {
+   "voce": "Punti di ricarica",
+   "schede": [
+    "panoramica"
+   ]
+  },
+  {
+   "voce": "Qualità dell'aria",
+   "schede": [
+    "aria"
+   ]
+  },
+  {
+   "voce": "Qualità dell'aria — ISPRA SNPA",
+   "schede": [
+    "aria"
+   ]
+  },
+  {
+   "voce": "Quota",
+   "schede": [
+    "territorio"
+   ]
+  },
+  {
+   "voce": "Raccolta differenziata",
+   "schede": [
+    "territorio"
+   ]
+  },
+  {
+   "voce": "Rappresentante",
+   "schede": [
+    "runts"
+   ]
+  },
+  {
+   "voce": "Redditi",
+   "schede": [
+    "redditi"
+   ]
+  },
+  {
+   "voce": "Redditi e fisco",
+   "schede": [
+    "panoramica"
+   ]
+  },
+  {
+   "voce": "Reddito medio",
+   "schede": [
+    "redditi"
+   ]
+  },
+  {
+   "voce": "Reddito medio — serie storica",
+   "schede": [
+    "redditi"
+   ]
+  },
+  {
+   "voce": "Reparti ospedalieri",
+   "schede": [
+    "sanita"
+   ]
+  },
+  {
+   "voce": "Reset",
+   "schede": [
+    "territorio"
+   ]
+  },
+  {
+   "voce": "Residenze TA",
+   "schede": [
+    "turismo"
+   ]
+  },
+  {
+   "voce": "Ricalcolate via ANNCSU",
+   "schede": [
+    "sanita"
+   ]
+  },
+  {
+   "voce": "Ricarica rapida",
+   "schede": [
+    "pun"
+   ]
+  },
+  {
+   "voce": "Riferimento temporale",
+   "schede": [
+    "territorio"
+   ]
+  },
+  {
+   "voce": "Riferimento territoriale",
+   "schede": [
+    "turismo"
+   ]
+  },
+  {
+   "voce": "Rifiuti",
+   "schede": [
+    "territorio"
+   ]
+  },
+  {
+   "voce": "Rifiuti urbani totali",
+   "schede": [
+    "territorio"
+   ]
+  },
+  {
+   "voce": "Rifugi montagna",
+   "schede": [
+    "turismo"
+   ]
+  },
+  {
+   "voce": "Rischio sismico",
+   "schede": [
+    "territorio"
+   ]
+  },
+  {
+   "voce": "RUNTS",
+   "schede": [
+    "runts"
+   ]
+  },
+  {
+   "voce": "Saldi demografici per anno",
+   "schede": [
+    "demografia"
+   ]
+  },
+  {
+   "voce": "Saldo migratorio estero",
+   "schede": [
+    "demografia"
+   ]
+  },
+  {
+   "voce": "Saldo migratorio interno",
+   "schede": [
+    "demografia"
+   ]
+  },
+  {
+   "voce": "Saldo naturale",
+   "schede": [
+    "demografia"
+   ]
+  },
+  {
+   "voce": "Saldo netto",
+   "schede": [
+    "pendolarismo"
+   ]
+  },
+  {
+   "voce": "Sanità",
+   "schede": [
+    "panoramica"
+   ]
+  },
+  {
+   "voce": "Scarica dati (ZIP",
+   "schede": [
+    "panoramica"
+   ]
+  },
+  {
+   "voce": "Scuola dell'infanzia",
+   "schede": [
+    "scuole"
+   ]
+  },
+  {
+   "voce": "Scuola primaria",
+   "schede": [
+    "scuole"
+   ]
+  },
+  {
+   "voce": "Scuole",
+   "schede": [
+    "panoramica",
+    "scuole"
+   ]
+  },
+  {
+   "voce": "Sec. II° grado",
+   "schede": [
+    "scuole"
+   ]
+  },
+  {
+   "voce": "Sec. I° grado",
+   "schede": [
+    "scuole"
+   ]
+  },
+  {
+   "voce": "Senza titolo",
+   "schede": [
+    "profilo"
+   ]
+  },
+  {
+   "voce": "Serie storica unità locali e addetti",
+   "schede": [
+    "asia"
+   ]
+  },
+  {
+   "voce": "Settore ATECO",
+   "schede": [
+    "asia"
+   ]
+  },
+  {
+   "voce": "Settore CUP",
+   "schede": [
+    "pnrr"
+   ]
+  },
+  {
+   "voce": "Settori economici",
+   "schede": [
+    "asia"
+   ]
+  },
+  {
+   "voce": "Sezione",
+   "schede": [
+    "runts"
+   ]
+  },
+  {
+   "voce": "Sezione prevalente",
+   "schede": [
+    "runts"
+   ]
+  },
+  {
+   "voce": "Sezioni di censimento",
+   "schede": [
+    "censimento"
+   ]
+  },
+  {
+   "voce": "SIOPE",
+   "schede": [
+    "spese"
+   ]
+  },
+  {
+   "voce": "Siti archeologici",
+   "schede": [
+    "beni-culturali"
+   ]
+  },
+  {
+   "voce": "Solare",
+   "schede": [
+    "territorio"
+   ]
+  },
+  {
+   "voce": "Solo media o meno",
+   "schede": [
+    "profilo"
+   ]
+  },
+  {
+   "voce": "Sotto 15.000 €",
+   "schede": [
+    "redditi"
+   ]
+  },
+  {
+   "voce": "Sottosettore",
+   "schede": [
+    "opere"
+   ]
+  },
+  {
+   "voce": "Spese del Comune",
+   "schede": [
+    "spese"
+   ]
+  },
+  {
+   "voce": "Spostamenti casa-lavoro",
+   "schede": [
+    "pendolarismo"
+   ]
+  },
+  {
+   "voce": "Stabilimenti ospedalieri",
+   "schede": [
+    "sanita"
+   ]
+  },
+  {
+   "voce": "Stato avanzamento",
+   "schede": [
+    "pnrr"
+   ]
+  },
+  {
+   "voce": "Stazioni di monitoraggio",
+   "schede": [
+    "aria"
+   ]
+  },
+  {
+   "voce": "Strade",
+   "schede": [
+    "anncsu"
+   ]
+  },
+  {
+   "voce": "Strade bilingui",
+   "schede": [
+    "anncsu"
+   ]
+  },
+  {
+   "voce": "Strade, civici e catasto",
+   "schede": [
+    "anncsu"
+   ]
+  },
+  {
+   "voce": "Stranieri",
+   "schede": [
+    "censimento",
+    "profilo"
+   ]
+  },
+  {
+   "voce": "Stranieri UE ed Extra-UE",
+   "schede": [
+    "censimento"
+   ]
+  },
+  {
+   "voce": "Stranieri: UE vs Extra-UE",
+   "schede": [
+    "censimento"
+   ]
+  },
+  {
+   "voce": "Strutture totali",
+   "schede": [
+    "turismo"
+   ]
+  },
+  {
+   "voce": "Submisura",
+   "schede": [
+    "pnrr"
+   ]
+  },
+  {
+   "voce": "Suolo",
+   "schede": [
+    "territorio"
+   ]
+  },
+  {
+   "voce": "Suolo consumato",
+   "schede": [
+    "territorio"
+   ]
+  },
+  {
+   "voce": "Suolo consumato 2024",
+   "schede": [
+    "territorio"
+   ]
+  },
+  {
+   "voce": "Superficie comunale",
+   "schede": [
+    "territorio"
+   ]
+  },
+  {
+   "voce": "Superficie del comune",
+   "schede": [
+    "territorio"
+   ]
+  },
+  {
+   "voce": "Superficie totale",
+   "schede": [
+    "patrimonio-pa"
+   ]
+  },
+  {
+   "voce": "Tabella completa variabili ISTAT",
+   "schede": [
+    "censimento"
+   ]
+  },
+  {
+   "voce": "Tasse",
+   "schede": [
+    "redditi"
+   ]
+  },
+  {
+   "voce": "Tasso di attività",
+   "schede": [
+    "profilo"
+   ]
+  },
+  {
+   "voce": "Tasso di motorizzazione",
+   "schede": [
+    "veicoli"
+   ]
+  },
+  {
+   "voce": "Tasso disoccupazione",
+   "schede": [
+    "profilo"
+   ]
+  },
+  {
+   "voce": "Tasso motorizzazione",
+   "schede": [
+    "veicoli"
+   ]
+  },
+  {
+   "voce": "Tasso occupazione",
+   "schede": [
+    "profilo"
+   ]
+  },
+  {
+   "voce": "Temperatura",
+   "schede": [
+    "aria"
+   ]
+  },
+  {
+   "voce": "Terremoti",
+   "schede": [
+    "territorio"
+   ]
+  },
+  {
+   "voce": "Terreni",
+   "schede": [
+    "patrimonio-pa"
+   ]
+  },
+  {
+   "voce": "Terreni pubblici",
+   "schede": [
+    "patrimonio-pa"
+   ]
+  },
+  {
+   "voce": "Territorio",
+   "schede": [
+    "panoramica"
+   ]
+  },
+  {
+   "voce": "Terziario",
+   "schede": [
+    "profilo"
+   ]
+  },
+  {
+   "voce": "Terzo Settore",
+   "schede": [
+    "panoramica"
+   ]
+  },
+  {
+   "voce": "Tipologie di reddito",
+   "schede": [
+    "redditi"
+   ]
+  },
+  {
+   "voce": "Titolo di studio",
+   "schede": [
+    "censimento",
+    "profilo"
+   ]
+  },
+  {
+   "voce": "Top 10 comuni di destinazione dei pendolari",
+   "schede": [
+    "pendolarismo"
+   ]
+  },
+  {
+   "voce": "Top 10 comuni di origine dei pendolari",
+   "schede": [
+    "pendolarismo"
+   ]
+  },
+  {
+   "voce": "Top 10 destinazioni pendolari",
+   "schede": [
+    "pendolarismo"
+   ]
+  },
+  {
+   "voce": "Top 10 origini pendolari",
+   "schede": [
+    "pendolarismo"
+   ]
+  },
+  {
+   "voce": "Top 10 settori ATECO per unità locali",
+   "schede": [
+    "asia"
+   ]
+  },
+  {
+   "voce": "Top categorie merceologiche (CPV)",
+   "schede": [
+    "contratti"
+   ]
+  },
+  {
+   "voce": "Top settori d'investimento",
+   "schede": [
+    "opere"
+   ]
+  },
+  {
+   "voce": "Toponomastica",
+   "schede": [
+    "anncsu"
+   ]
+  },
+  {
+   "voce": "Totale",
+   "schede": [
+    "beni-culturali"
+   ]
+  },
+  {
+   "voce": "Totale enti",
+   "schede": [
+    "runts"
+   ]
+  },
+  {
+   "voce": "Totale immobili",
+   "schede": [
+    "patrimonio-pa"
+   ]
+  },
+  {
+   "voce": "Totale impianti",
+   "schede": [
+    "carburanti"
+   ]
+  },
+  {
+   "voce": "Totale punti",
+   "schede": [
+    "pun"
+   ]
+  },
+  {
+   "voce": "Trasporti",
+   "schede": [
+    "pendolarismo"
+   ]
+  },
+  {
+   "voce": "Turismo",
+   "schede": [
+    "panoramica"
+   ]
+  },
+  {
+   "voce": "Turisti stranieri",
+   "schede": [
+    "turismo"
+   ]
+  },
+  {
+   "voce": "Tutte",
+   "schede": [
+    "runts"
+   ]
+  },
+  {
+   "voce": "Tutte le bandiere",
+   "schede": [
+    "carburanti"
+   ]
+  },
+  {
+   "voce": "Tutti",
+   "schede": [
+    "beni-culturali",
+    "patrimonio-pa",
+    "pun"
+   ]
+  },
+  {
+   "voce": "Tutti i carburanti",
+   "schede": [
+    "carburanti"
+   ]
+  },
+  {
+   "voce": "Ultima aggiudicazione",
+   "schede": [
+    "contratti"
+   ]
+  },
+  {
+   "voce": "Ultimo aggiornamento",
+   "schede": [
+    "spese"
+   ]
+  },
+  {
+   "voce": "Umidità relativa",
+   "schede": [
+    "aria"
+   ]
+  },
+  {
+   "voce": "Unità locali",
+   "schede": [
+    "asia"
+   ]
+  },
+  {
+   "voce": "Unità locali e addetti per settore ATECO",
+   "schede": [
+    "asia"
+   ]
+  },
+  {
+   "voce": "Unità locali per classe",
+   "schede": [
+    "asia"
+   ]
+  },
+  {
+   "voce": "Uscenti",
+   "schede": [
+    "pendolarismo"
+   ]
+  },
+  {
+   "voce": "Valore",
+   "schede": [
+    "censimento"
+   ]
+  },
+  {
+   "voce": "Variabili censuarie per famiglia di indicatori",
+   "schede": [
+    "censimento"
+   ]
+  },
+  {
+   "voce": "Veicoli",
+   "schede": [
+    "panoramica"
+   ]
+  },
+  {
+   "voce": "Veicoli e incidenti",
+   "schede": [
+    "panoramica"
+   ]
+  },
+  {
+   "voce": "Veicoli elettrici",
+   "schede": [
+    "pun",
+    "veicoli"
+   ]
+  },
+  {
+   "voce": "Vento",
+   "schede": [
+    "aria"
+   ]
+  },
+  {
+   "voce": "Vento a 10 metri",
+   "schede": [
+    "aria"
+   ]
+  },
+  {
+   "voce": "Vie e strade",
+   "schede": [
+    "anncsu"
+   ]
+  },
+  {
+   "voce": "Vocazione formativa Sec. II° grado",
+   "schede": [
+    "scuole"
+   ]
+  },
+  {
+   "voce": "Voci di cassa",
+   "schede": [
+    "spese"
+   ]
+  },
+  {
+   "voce": "Volontariato",
+   "schede": [
+    "runts"
+   ]
+  },
+  {
+   "voce": "Zona sismica",
+   "schede": [
+    "territorio"
+   ]
+  },
+  {
+   "voce": "Zona' + subLabel + '",
+   "schede": [
+    "territorio"
+   ]
+  },
+  {
+   "voce": "★ Solo i più economici del comune",
+   "schede": [
+    "carburanti"
+   ]
+  }
+ ]
+}
