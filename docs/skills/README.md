@@ -11,7 +11,7 @@ l'intent dell'utente.
 
 ## Pacchetto corrente
 
-- **`cruscotto-italia-workflow-v2.9.1.zip`** — workflow del connettore MCP:
+- **`cruscotto-italia-workflow-v2.10.0.zip`** — workflow del connettore MCP:
   **6 tool** (`mcp_info`, `search_comune`, `comune_kpi` ~620 token con 55 KPI in
   24 gruppi tematici, `comune_dashboard` ~250K token con le sezioni dettagliate,
   `anncsu_civico_search`, `censimento_sezione_search`), **28 dataset** integrati
@@ -24,10 +24,13 @@ l'intent dell'utente.
   Ultima aggiunta rispetto alla 2.5.0: morfologia del territorio CNR-IRPI
   HR-DTM 5m (`kpi_summary.morfologia_cnr` con quota, pendenza, esposizione,
   irraggiamento) e meteo ItaliaMeteo ICON-2I.
+  Versione 2.10.0: demografia POSAS+D7B con serie storica della popolazione e
+  dinamica demografica (nati, morti, saldo naturale) in `comune_kpi` come
+  scalari dell'ultimo anno, serie complete in `comune_dashboard`.
 
 ## Skill CLI (eseguibile)
 
-- **`cruscotto-cli-v0.1.2.zip`** — a differenza dei pacchetti `cruscotto-italia-workflow`,
+- **`cruscotto-cli-v0.2.0.zip`** — a differenza dei pacchetti `cruscotto-italia-workflow`,
   questa skill **contiene codice eseguibile** (`scripts/cruscotto.py`, solo stdlib
   Python 3) e non documenta il connettore MCP: interroga direttamente gli shard
   JSON statici, via HTTPS pubblico oppure da filesystem locale
@@ -55,6 +58,16 @@ l'intent dell'utente.
   invocazione e' un processo separato e il rischio reale sono le richieste
   parallele. La skill dichiara inoltre che non esistono aggregati regionali o
   provinciali e vieta di ricostruirli scaricando interi territori.
+  Versione 0.2.0: allineamento alla skill workflow 2.10.0 (serie storica e
+  dinamica demografica).
+
+- `cruscotto-cli-v0.1.5.zip` (storico)
+
+- `cruscotto-cli-v0.1.4.zip` (storico)
+
+- `cruscotto-cli-v0.1.3.zip` (storico)
+
+- `cruscotto-cli-v0.1.2.zip` (storico)
 
 - `cruscotto-cli-v0.1.1.zip` (storico)
 
@@ -63,6 +76,8 @@ l'intent dell'utente.
 ## Pacchetti storici
 
 Le versioni precedenti restano disponibili per audit:
+
+- `cruscotto-italia-workflow-v2.9.1.zip`
 
 - `cruscotto-italia-workflow-v2.5.0.zip`
 

@@ -1,5 +1,7 @@
 # Cruscotto Italia
 
+🇮🇹 Italiano · [🇬🇧 English](README.en.md)
+
 > Piattaforma istituzionale di trasparenza data-driven per i comuni italiani.
 > Federa i principali dataset pubblicati dagli enti istituzionali nazionali e
 > li ricompone per comune, esponendo un'interfaccia web pubblica e un endpoint
@@ -22,18 +24,23 @@ Cercando un comune ("Lecce") si ottiene una vista a 360° su:
 - 🎓 **Profilo socioeconomico** (ISTAT Censimento permanente)
 - 🏨 **Turismo** (ISTAT capacità ricettiva + flussi provinciali)
 - 🏫 **Scuole** (MIUR — Anagrafe scuole statali)
+- 👶 **Dinamica demografica** (ISTAT D7B — bilancio demografico mensile: nati, morti, saldo naturale e migratorio, fonte ANPR)
 - 🌫️ **Qualità dell'aria** (ISPRA SNPA — PM10/PM2.5/NO2)
+- 🏞️ **Territorio** (ISPRA — consumo di suolo, IdroGEO frane e alluvioni, rifiuti urbani)
+- 🌋 **Classificazione sismica** (Dipartimento Protezione Civile)
+- ⛰️ **Morfologia del territorio** (CNR-IRPI — HR-DTM 5 m: quota, pendenza, esposizione, geomorfologia, irraggiamento solare)
 - 🚗 **Parco veicoli e incidenti** (ISTAT 41_993 + ACI LOD)
 - 💶 **Redditi e fisco** (MEF — Dichiarazioni IRPEF)
 - 🏛️ **Patrimonio immobiliare PA** (MEF DE — Beni Immobili Pubblici)
 - 🏠 **Civici e strade** (ANNCSU — Agenzia delle Entrate, Open Data HVD)
 - 💊 **Sanità territoriale** (Ministero della Salute — farmacie, parafarmacie, posti letto ospedalieri)
 - ⚡ **Punti di ricarica veicoli elettrici** (GSE/MASE — Piattaforma Unica Nazionale)
+- 📶 **Banda larga** (AGCOM Broadband Map — copertura FTTH/FTTC/FWA per comune)
 - ⛽ **Distributori carburante e prezzi** (MIMIT — Osservatorio Prezzi Carburanti)
 - 🤝 **Enti del Terzo Settore** (Ministero del Lavoro — RUNTS, D.Lgs 117/2017: ODV, APS, EF, IS, SMS, ETS)
 - 🏭 **Imprese e addetti** (ISTAT — ASIA UL, serie 2018-2023)
 - 🚌 **Pendolarismo** (ISTAT Censimento permanente 2021 — matrice OD origine/destinazione lavoro)
-- 🗺️ **Censimento sezioni 2021** (ISTAT Basi Territoriali — 756.376 sezioni di censimento con 119 variabili demografiche/abitative per sezione)
+- 🗺️ **Censimento per sezione** (ISTAT Basi Territoriali 2021 + variabili censuarie 2023 — ~756.000 sezioni di censimento con 127 variabili demografiche/abitative per sezione)
 - 🏛️ **Beni culturali** (MiC — ICCD ArCo per beni immobili tutelati: chiese, palazzi, castelli, archeologia, ville, monumenti, soprintendenze; Cultural-ON DBUnico 2.0 per Luoghi della Cultura visitabili: musei, biblioteche, archivi con orari e contatti)
 - 🗺️ **Cartografia catastale** (Agenzia delle Entrate — Catasto Terreni INSPIRE: particelle e fogli di mappa per 19 regioni italiane, dataset bulk semestrale CC BY 4.0)
 - 🌤️ **Previsioni meteorologiche** (ItaliaMeteo — ICON-2I, griglia 2,2 km: temperatura, precipitazioni, vento, neve, nuvolosità, 73 step orari 0–72h, aggiornamento bi-giornaliero, CC BY 4.0 HVD Meteorologici)
@@ -41,6 +48,10 @@ Cercando un comune ("Lecce") si ottiene una vista a 360° su:
 L'elenco completo, con licenze, frequenze di aggiornamento e link diretti
 alle fonti istituzionali, è disponibile nella pagina pubblica `about.html`
 del sito.
+
+I dati sono inoltre esposti come **catalogo DCAT-AP_IT** (un `dcat:Dataset`
+per comune, generato da `etl/sources/dcat_catalog.py`) per l'harvesting
+su [dati.gov.it](https://www.dati.gov.it).
 
 Tutto ricomposto sulla **spina dorsale anagrafica ISTAT comuni** (~7.896
 comuni) integrata con `IPA` (Indice dei domicili digitali della Pubblica
@@ -59,9 +70,9 @@ Amministrazione, AgID).
                                    ▼
                   ┌────────────────────────────────────────┐
                   │  Cloudflare Worker (MCP server)        │
-                  │  cruscotto-italia-mcp.dati.gov.it      │
-                  │  - 6 tool MCP (search_comune,          │
-                  │    comune_dashboard, ecc.)             │
+                  │  cruscotto-italia-mcp.agid.workers.dev │
+                  │  - 6 tool MCP + 2 di compatibilità     │
+                  │    ChatGPT (search/fetch)              │
                   │  - JSON-RPC 2.0 stateless              │
                   └────────────────┬───────────────────────┘
                                    │ HTTPS pull
@@ -70,8 +81,8 @@ Amministrazione, AgID).
                   │  VM AgID (FastWeb)                     │
                   │  - nginx serve /var/www/.../data/*     │
                   │  - cron /etc/cron.d/cruscotto-etl      │
-                  │  - 19 ETL Python (daily/weekly/monthly │
-                  │    /annual/semestrale)                 │
+                  │  - 29 ETL Python (bi-daily/daily/weekly│
+                  │    /monthly/annual/semestrale)         │
                   │  - pull_artifact.py (daily 07:30 UTC)  │
                   │    scarica i 3 ETL ISTAT da Actions    │
                   └────────────┬───────────────────────────┘
@@ -89,7 +100,7 @@ Amministrazione, AgID).
    │  Salute · MIMIT · GSE   │         │                          │
    │  AGCOM · Lavoro · MiC   │         │  Output: artifact ZIP    │
    │  AdE Catasto INSPIRE    │         │  scaricato dalla VM via  │
-   │                         │         │  GitHub API + pull_artifact.py │
+   │  DPC · CNR-IRPI · Meteo │         │  GitHub API + pull_artifact.py │
    └─────────────────────────┘         └──────────────────────────┘
 ```
 
@@ -141,7 +152,7 @@ per consentire l'interrogazione dei dati civici da chatbot AI compatibili
 
 **Endpoint pubblico** (Worker AgID): `https://cruscotto-italia-mcp.agid.workers.dev/mcp`
 
-**Tool esposti** (6):
+**Tool esposti** (6 semantici + 2 di compatibilità):
 
 - `mcp_info` — metadata del servizio, elenco fonti integrate, licenze
 - `search_comune` — ricerca per nome → codice ISTAT (gestione omonimi)
@@ -153,10 +164,18 @@ per consentire l'interrogazione dei dati civici da chatbot AI compatibili
   banda larga, beni culturali, ecc.)
 - `anncsu_civico_search` — query puntuali sui numeri civici certificati
   con filtri server-side (odonimo, civico)
-- `censimento_sezione_search` — ranking o lookup sulle 119 variabili
-  censuarie raw del Censimento Permanente 2021 a livello di singola
+- `censimento_sezione_search` — ranking o lookup sulle 127 variabili
+  censuarie raw del Censimento Permanente 2023 a livello di singola
   sezione di censimento sub-comunale (modalità lookup con `sez_id` o
   ranking con `var_name` ± `denominator_var` per percentuali)
+- `search` e `fetch` — schema fisso richiesto dal connettore MCP
+  personalizzato di ChatGPT; wrappano `search_comune` e `comune_dashboard`
+
+Il server implementa la spec MCP 2025-11-25 (JSON-RPC 2.0 stateless,
+Streamable HTTP): ogni tool dichiara `outputSchema`, restituisce
+`structuredContent` ed è annotato read-only. `mcp_info` e `/health`
+espongono la versione del Worker e il tree hash git di `worker/`
+(`BUILD_TREE`), verificabile sul repo con `git rev-parse <commit>:worker`.
 
 La **cartografia catastale** (particelle e fogli AGE) è invece esposta
 come REST sul percorso `/data/catasto_full/<istat>_map.geojson.gz` e
@@ -177,8 +196,10 @@ comuni grandi). Per pattern d'uso e esempi vedi la skill MCP Claude
 È disponibile una skill Claude che documenta l'uso del connettore
 (inventario dei 6 tool, schema di `comune_dashboard`, pattern operativi
 e caveat per sezione, accesso REST alla cartografia catastale). Versione
-corrente: `https://cruscotto-italia.dati.gov.it/data/skills/cruscotto-italia-workflow-v2.9.1.zip`
-(elenco completo con storici in `docs/skills/README.md`).
+corrente: `https://cruscotto-italia.dati.gov.it/data/skills/cruscotto-italia-workflow-v2.10.0.zip`.
+È disponibile anche `cruscotto-cli-v0.2.0.zip`, una skill eseguibile che
+interroga gli shard JSON statici senza passare dal server MCP (elenco
+completo con storici in `docs/skills/README.md`).
 
 ### Esempi di domande supportate
 
@@ -210,7 +231,7 @@ corrente: `https://cruscotto-italia.dati.gov.it/data/skills/cruscotto-italia-wor
 
 ### Prerequisiti
 
-- Node.js ≥ 20
+- Node.js ≥ 22 (richiesto da vitest 5 e dalla CI del Worker)
 - Python ≥ 3.12
 - `wrangler` CLI (`npm i -g wrangler`) per il Worker
 
@@ -276,24 +297,28 @@ cruscotto-italia/
 │
 ├── frontend/                 ← single-file HTML (vanilla JS)
 │   ├── index.html
-│   ├── comune.html           ← vista comune-centric, 22 tab
-│   ├── about.html            ← elenco fonti + metodologia
+│   ├── comune.html           ← vista comune-centric, 21 tab
+│   ├── about.html            ← elenco fonti + metodologia + indice "Cosa cercare e dove"
+│   ├── indice_sinonimi.json  ← sinonimi per l'indice dei contenuti
 │   └── vendor/               ← Chart.js, Leaflet, JSZip, pako (SHA-384)
 │
 ├── etl/                      ← Python ETL pipeline
 │   ├── requirements.txt
 │   ├── pyproject.toml        ← ruff + mypy + pytest config
-│   ├── sources/              ← un modulo per fonte (19 ETL VM + 3 ETL ISTAT su Actions)
+│   ├── sources/              ← un modulo per fonte (26 ETL VM + 3 ETL ISTAT su Actions)
 │   │   ├── anagrafica.py        ← spina dorsale ISTAT comuni + IPA
 │   │   ├── anac.py              ← contratti pubblici (OCDS)
 │   │   ├── bdap.py              ← BDAP-MOP opere pubbliche
 │   │   ├── siope.py             ← SIOPE uscite+entrate multi-anno (siope.it)
 │   │   ├── pnrr_progetti.py     ← progetti PNRR (Italia Domani/ReGiS)
 │   │   ├── demografia.py        ← popolazione (POSAS)
+│   │   ├── demografia_flussi.py ← dinamica demografica ISTAT D7B (nati/morti)
 │   │   ├── istat_profilo.py     ← Censimento permanente *via Actions*
 │   │   ├── istat_turismo.py     ← capacità + flussi turistici
 │   │   ├── territorio.py        ← ISPRA Suolo, IdroGEO, Rifiuti
 │   │   ├── aria.py              ← ISPRA SNPA qualità aria
+│   │   ├── classificazione_sismica.py ← DPC classificazione sismica
+│   │   ├── build_meteo.py       ← ItaliaMeteo ICON-2I previsioni
 │   │   ├── scuole.py            ← MIUR anagrafe scuole statali
 │   │   ├── veicoli.py           ← ISTAT + ACI LOD
 │   │   ├── redditi.py           ← MEF Federalismo Fiscale (IRPEF)
@@ -310,6 +335,7 @@ cruscotto-italia/
 │   │   ├── beni_culturali.py    ← MiC ICCD ArCo (beni immobili tutelati)
 │   │   ├── cultural_on.py       ← MiC Cultural-ON DBUnico 2.0 (Luoghi della Cultura)
 │   │   ├── catasto_age.py       ← AdE Catasto Terreni INSPIRE (particelle + fogli)
+│   │   ├── dcat_catalog.py      ← catalogo DCAT-AP_IT per harvesting dati.gov.it
 │   │   └── dashboard.py         ← aggregator unified shard (A1)
 │   └── lib/
 │       ├── local_lookup.py   ← utility lookup local-first
@@ -318,6 +344,7 @@ cruscotto-italia/
 │       └── manifest.py
 │
 ├── scripts/
+│   ├── genera_indice.py      ← genera l'indice "Cosa cercare e dove" di about.html
 │   └── etl/
 │       └── pull_artifact.py  ← scarica artifact GitHub dei 3 ETL ISTAT
 │
@@ -329,6 +356,7 @@ cruscotto-italia/
 │   ├── etl-istat_profilo-refresh.yml ← producer ISTAT profilo, output artifact
 │   ├── etl-asia-refresh.yml          ← producer ISTAT ASIA, output artifact
 │   ├── etl-pendolarismo-refresh.yml  ← producer ISTAT pendolarismo
+│   ├── etl-aci-refresh.yml           ← scarica i CSV ACI LOD (ETL veicoli resta sulla VM)
 │   ├── deploy-worker.yml         ← deploy Cloudflare Worker su push main
 │   ├── deploy-frontend.yml       ← sync frontend (legacy, in dismissione)
 │   └── ci.yml                    ← CI lint & test (ruff, mypy, pytest, tsc)
@@ -347,7 +375,7 @@ Il `comune_dashboard` di ogni comune contiene un campo top-level
 ha eseguito l'ultimo rebuild dell'aggregato A1. Esempio di verifica:
 
 ```bash
-curl -s -X POST "https://cruscotto-italia-mcp.dati.gov.it/mcp" \
+curl -s -X POST "https://cruscotto-italia-mcp.agid.workers.dev/mcp" \
   -H "Content-Type: application/json" \
   -d '{"jsonrpc":"2.0","method":"tools/call","id":1,
        "params":{"name":"comune_dashboard","arguments":{"istat_code":"075035"}}}' \
@@ -393,7 +421,7 @@ e nella pagina pubblica `about.html` con link diretti alle fonti.
 - **Accessibilità WCAG 2.1 AA**: criteri verificati con Pa11y +
   Axe-Core su tutte le pagine pubbliche, inclusa la cartografia
   catastale (script `scripts/pa11y-catasto.sh`). Dichiarazione di
-  accessibilità pubblicata in `accessibilita.html`.
+  accessibilità: <https://form.agid.gov.it/agid/Cruscotto_Italia/dichiarazione>.
 - **Sicurezza**: HTTPS forzato, HSTS preload-ready, CSP restrictive,
   security headers completi (X-Frame-Options, X-Content-Type-Options,
   Referrer-Policy, Permissions-Policy), `server_tokens off` su nginx,
