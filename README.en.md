@@ -43,6 +43,7 @@ Searching for a municipality ("Lecce") returns a 360° view of:
 - 🗺️ **Census by enumeration area** (ISTAT Territorial Bases 2021 + 2023 census variables — ~756,000 enumeration areas with 127 demographic/housing variables each)
 - 🏛️ **Cultural heritage** (Ministry of Culture — ICCD ArCo for protected immovable heritage: churches, palaces, castles, archaeology, villas, monuments, superintendencies; Cultural-ON DBUnico 2.0 for visitable cultural venues: museums, libraries, archives with opening hours and contacts)
 - 🗺️ **Cadastral cartography** (Revenue Agency — Land Registry INSPIRE: parcels and map sheets for 19 Italian regions, six-monthly bulk dataset, CC BY 4.0)
+- 🏘️ **Property market values** (Revenue Agency — OMI: sale and rental values in €/m² by homogeneous sub-municipal zone, broken down by property type, intended use and state of repair, with the geographic boundaries of each zone; ~27,000 zones across ~7,890 municipalities, six-monthly, CC BY 4.0)
 - 🌤️ **Weather forecasts** (ItaliaMeteo — ICON-2I, 2.2 km grid: temperature, precipitation, wind, snow, cloud cover, 73 hourly steps 0–72h, updated twice a day, CC BY 4.0 HVD Meteorological)
 
 The full list, with licences, update frequencies and direct links to the
@@ -120,6 +121,7 @@ Full architectural details: [`DESIGN.md`](DESIGN.md) ·
 | **Monthly** (5th of the month, 04:00 UTC) | registry, BDAP-MOP, SIOPE, ANNCSU, AGCOM broadband, cultural heritage (ArCo + Cultural-ON) | AgID VM cron | automatic |
 | **Annual** (1 Feb / 1 Apr / 1 Jul, 04:00 UTC) | POSAS demographics, census profile, tourism, territory, schools, vehicles, IRPEF income, public real estate | AgID VM cron | automatic |
 | **Six-monthly** (1 March / 1 September, 03:00 UTC) | Revenue Agency cadastral cartography (parcels + sheets, 19 regions) | AgID VM cron | automatic |
+| **Six-monthly** (20 March / 20 October, 03:00 UTC) | Revenue Agency OMI property values (zones + boundaries); the Agency publishes by 15 March and 15 October | AgID VM cron | automatic |
 | **Decennial** (manual, next 2031) | census Territorial Bases (enumeration areas + 127 variables) | manual run `python -m etl.sources.censimento` on the VM | `workflow_dispatch` |
 | **ISTAT refresh** (manual) | istat_profilo, asia, pendolarismo | GitHub Actions `ubuntu-latest` | `workflow_dispatch` |
 
@@ -308,7 +310,7 @@ cruscotto-italia/
 ├── etl/                      ← Python ETL pipeline
 │   ├── requirements.txt
 │   ├── pyproject.toml        ← ruff + mypy + pytest config
-│   ├── sources/              ← one module per source (26 ETLs on the VM + 3 ISTAT ETLs on Actions)
+│   ├── sources/              ← one module per source (27 ETLs on the VM + 3 ISTAT ETLs on Actions)
 │   │   ├── anagrafica.py        ← ISTAT municipal registry backbone + IPA
 │   │   ├── anac.py              ← public contracts (OCDS)
 │   │   ├── bdap.py              ← BDAP-MOP public works
@@ -338,6 +340,7 @@ cruscotto-italia/
 │   │   ├── beni_culturali.py    ← Ministry of Culture ICCD ArCo (protected immovable heritage)
 │   │   ├── cultural_on.py       ← Ministry of Culture Cultural-ON DBUnico 2.0 (cultural venues)
 │   │   ├── catasto_age.py       ← Revenue Agency Land Registry INSPIRE (parcels + sheets)
+│   │   ├── omi.py               ← Revenue Agency OMI property values by zone
 │   │   ├── dcat_catalog.py      ← DCAT-AP_IT catalogue for dati.gov.it harvesting
 │   │   └── dashboard.py         ← unified shard aggregator (A1)
 │   └── lib/
