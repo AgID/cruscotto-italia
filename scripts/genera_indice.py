@@ -76,7 +76,8 @@ TAB_LABEL = {
     "demografia": "Demografia", "carburanti": "Distributori e prezzi",
     "asia": "Imprese e addetti", "opere": "Opere", "patrimonio-pa": "Patrimonio PA",
     "pendolarismo": "Pendolarismo", "pnrr": "PNRR", "profilo": "Profilo",
-    "pun": "Punti di ricarica", "redditi": "Redditi e fisco", "sanita": "Sanità",
+    "pun": "Punti di ricarica", "omi": "Quotazioni immobiliari",
+    "redditi": "Redditi e fisco", "sanita": "Sanità",
     "scuole": "Scuole", "spese": "SIOPE", "territorio": "Territorio",
     "runts": "Terzo Settore", "turismo": "Turismo", "veicoli": "Veicoli e incidenti",
 }
@@ -95,6 +96,7 @@ ANCORE = {
     "renderPunFilters": "pun", "renderSanitaTab": "sanita",
     "renderAnncsuTab": "anncsu", "renderCensimentoTab": "censimento",
     "renderVeicoliTab": "veicoli", "renderOpereTab": "opere",
+    "renderOmiTab": "omi", "initOmi": "omi",
     "renderAriaTabSkeleton": "aria", "renderPendolarismoTab": "pendolarismo",
     "renderRuntsTab": "runts", "renderAsiaTab": "asia",
     "initSanitaMap": "sanita", "renderSanitaMapBlock": "sanita", "miniRender": "sanita",
@@ -115,6 +117,8 @@ FIX = {
     "Vento (10m": "Vento a 10 metri",
     "Scuola dell": "Scuola dell'infanzia",
     "Strade, civici e": "Strade, civici e catasto",
+    "Valori di mercato per": "Valori di mercato per zona omogenea",
+    "Zone più care — compravendita residenziale (€/m²": "Zone più care per compravendita residenziale",
     "Capacita ricettiva e": "Capacita ricettiva",
     "Capacità ricettiva e": "Capacità ricettiva",
     "Farmacie, parafarmacie e": "Farmacie, parafarmacie e ospedali",
@@ -172,6 +176,8 @@ DROP = {
     "Anno di riferimento", "Con foto", "Con descrizione", "Dati AGCOM", "Vista",
     "% famiglie", "Elettr. + ibride", "Termiche / altro", "Tot. Addetti", "Tot. UL",
     "Pop. 9+", "Dim. media", "Dim. famiglia",
+    # OMI: frammenti dai paragrafi di avviso, non etichette
+    "<strong> </strong> <br>", "Attenzione", "Dati", "Stato", "Sup.",
 }
 
 RX_LABEL = [

@@ -1439,6 +1439,40 @@ footer a{color:rgba(255,255,255,0.85);text-decoration:none}
 .censimento-bar-legend .dot{display:inline-block;width:10px;height:10px;border-radius:2px;vertical-align:middle;margin-right:5px;}
 .censimento-bar-legend .dot-occ{background:#1B7BBC;}
 .censimento-bar-legend .dot-vuo{background:#E89400;}
+/* --- OMI: quotazioni immobiliari per zona --- */
+.omi-disclaimer{font-size:13px;line-height:1.55;border-left:3px solid var(--accent);padding-left:12px;margin:12px 0 16px;}
+.omi-warn{font-size:13px;line-height:1.55;background:var(--paper-2);border-radius:6px;padding:10px 14px;margin:12px 0;}
+.omi-chart-wrap{margin:28px 0 16px;}
+.omi-chart-box{height:300px;position:relative;}
+.omi-map-wrap{margin:28px 0 16px;}
+.omi-map-controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 12px;font-family:var(--mono);font-size:13px;}
+.omi-map-controls select{font-family:var(--mono);font-size:13px;padding:6px 10px;border:1px solid rgba(0,0,0,.14);border-radius:6px;background:var(--paper);}
+.omi-map{height:480px;border-radius:8px;overflow:hidden;background:#eef2f5;position:relative;z-index:0;isolation:isolate;touch-action:none;}
+.omi-map-loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--ink-mute);font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.06em;background:#eef2f5;z-index:2;}
+.leaflet-tooltip.omi-tooltip{width:280px!important;white-space:normal!important;overflow-wrap:anywhere;line-height:1.35;padding:7px 10px;}
+.omi-legend{display:flex;flex-wrap:wrap;gap:14px;margin:12px 0 0;font-family:var(--mono);font-size:13px;color:var(--ink-mute);text-transform:uppercase;letter-spacing:.05em;}
+.omi-legend-item{display:inline-flex;align-items:center;gap:6px;}
+.omi-legend-dot{display:inline-block;width:14px;height:14px;border-radius:2px;border:1px solid rgba(0,0,0,.08);}
+.omi-legend-unit{font-weight:600;color:var(--ink);}
+.omi-table-wrap{margin:28px 0 16px;}
+.omi-zona-attiva{display:flex;flex-direction:column;gap:4px;margin:0 0 14px;padding:12px 16px;background:var(--paper-2);border-left:3px solid var(--accent);border-radius:0 6px 6px 0;}
+.omi-zona-cod{font-family:var(--mono);font-size:20px;font-weight:700;color:var(--accent);}
+.omi-zona-diz{font-size:15px;line-height:1.45;}
+.omi-zona-meta{font-family:var(--mono);font-size:12px;color:var(--ink-mute);text-transform:uppercase;letter-spacing:.05em;}
+.omi-table-controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 12px;font-family:var(--mono);font-size:13px;}
+.omi-table-controls select{font-family:var(--mono);font-size:13px;padding:6px 10px;border:1px solid rgba(0,0,0,.14);border-radius:6px;background:var(--paper);}
+.omi-reset{font-family:var(--mono);font-size:12px;padding:6px 12px;border:1px solid var(--accent);border-radius:6px;background:var(--paper);color:var(--accent);cursor:pointer;text-transform:uppercase;letter-spacing:.05em;}
+.omi-reset:hover{background:var(--paper-2);}
+.omi-table-wrap-scroll{overflow-x:auto;}
+.omi-table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:14px;}
+.omi-table th, .omi-table td{padding:8px 14px;text-align:left;border-bottom:1px solid rgba(0,0,0,.04);white-space:nowrap;}
+.omi-table th{font-size:12px;color:var(--ink-mute);text-transform:uppercase;letter-spacing:.06em;background:var(--paper-2);font-weight:600;}
+.omi-table td a{font-weight:700;color:var(--accent);text-decoration:none;}
+.omi-table td a:hover{text-decoration:underline;}
+@media (max-width:720px){
+  .omi-map{height:340px;}
+  .omi-chart-box{height:260px;}
+}
 .censimento-map-section{margin:28px 0 16px;}
 .censimento-controls{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:10px 0 14px;padding:14px 16px;background:var(--paper-2);border-left:3px solid var(--accent);border-radius:4px;}
 .censimento-controls label{font-family:var(--mono);font-size:13px;color:var(--ink,#0c1b3d);font-weight:700;text-transform:uppercase;letter-spacing:.08em;}
@@ -2026,6 +2060,8 @@ function renderComune(data) {
   window.__sanitaInited = false;
   window.__punData = k.pun || null;
   window.__punInited = false;
+  window.__omiData = k.omi || null;
+  window.__omiInited = false;
   window.__bandaLargaData = k.agcom_bbmap || null;
   window.__bandaLargaInited = false;
   window.__carburantiData = k.carburanti || null;
@@ -2058,6 +2094,7 @@ function renderComune(data) {
     { id: 'pnrr', label: 'PNRR', kpi: '<span data-tab-pnrr-count><span class="tab-spinner"></span></span>' },
     { id: 'profilo', label: `Profilo ${PROFILO_YEAR}`, kpi: '<span data-tab-profilo-pct><span class="tab-spinner"></span></span>' },
     { id: 'pun', label: 'Punti di ricarica', kpi: k.pun?.kpi?.n_attivi != null ? fmtNum(k.pun.kpi.n_attivi) : '—' },
+    { id: 'omi', label: 'Quotazioni immobiliari', kpi: k.omi?.kpi?.residenziale_medio != null ? '\u20ac' + fmtNum(Math.round(k.omi.kpi.residenziale_medio)) : '\u2014' },
     { id: 'redditi', label: 'Redditi e fisco', kpi: k.redditi?.anni?.[String(k.redditi.anni_disponibili?.slice(-1)[0])]?.reddito_complessivo?.medio != null ? '€' + fmtNum(k.redditi.anni[String(k.redditi.anni_disponibili.slice(-1)[0])].reddito_complessivo.medio) : '—' },
     { id: 'sanita', label: 'Sanità', kpi: k.sanita_mds?.farmacie?.kpi?.n_totale != null ? fmtNum(k.sanita_mds.farmacie.kpi.n_totale) : '—' },
     { id: 'scuole', label: 'Scuole', kpi: k.scuole?.kpi?.n_scuole != null ? fmtNum(k.scuole.kpi.n_scuole) : '—' },
@@ -2100,7 +2137,7 @@ function renderComune(data) {
       <div class="tab-pane active" id="pane-panoramica">
         <div class="section-title">§ Panoramica</div>
         <h2 class="section-h">Vista <em>360°</em> del comune.</h2>
-        <p class="section-sub">Sintesi delle 16 fonti istituzionali integrate. Clicca un indicatore per andare al dettaglio.</p>
+        <p class="section-sub">Sintesi delle fonti istituzionali integrate. Clicca un indicatore per andare al dettaglio.</p>
         <div class="kpi-cards">
 
           <div class="kpi-card ${k.anncsu?.kpi?.n_strade != null ? '' : 'tbd'}" data-go-tab="anncsu" tabindex="0" role="button" aria-label="Vai alla tab ANNCSU">
@@ -2161,6 +2198,12 @@ function renderComune(data) {
             <div class="kpi-card-lab">Punti di ricarica</div>
             <div class="kpi-card-val">${k.pun?.kpi?.n_attivi != null ? fmtNum(k.pun.kpi.n_attivi) : '—'}</div>
             <div class="kpi-card-sub">${k.pun?.kpi?.n_totale != null ? 'attivi su ' + fmtNum(k.pun.kpi.n_totale) : 'nessuno registrato'}</div>
+          </div>
+
+          <div class="kpi-card ${k.omi?.kpi?.residenziale_medio != null ? '' : 'tbd'}" data-go-tab="omi" tabindex="0" role="button" aria-label="Vai alla tab Quotazioni immobiliari">
+            <div class="kpi-card-lab">Quotazioni immobiliari</div>
+            <div class="kpi-card-val">${k.omi?.kpi?.residenziale_medio != null ? '€' + fmtNum(Math.round(k.omi.kpi.residenziale_medio)) : '—'}</div>
+            <div class="kpi-card-sub">${k.omi?.kpi?.n_zone != null ? '€/m² medio · ' + fmtNum(k.omi.kpi.n_zone) + ' zone OMI' : 'nessuna quotazione'}</div>
           </div>
 
           <div class="kpi-card ${k.redditi?.anni?.[String(k.redditi.anni_disponibili?.slice(-1)[0])]?.reddito_complessivo?.medio != null ? '' : 'tbd'}" data-go-tab="redditi" tabindex="0" role="button" aria-label="Vai alla tab Redditi e fisco">
@@ -2239,6 +2282,7 @@ function renderComune(data) {
       ${renderSanitaTab(k.sanita_mds)}
       ${renderAnncsuTab(k.anncsu)}
       ${renderCensimentoTab(k.censimento)}
+      ${renderOmiTab(k.omi)}
       ${renderPunTab(k.pun)}
       ${renderBandaLargaTab(k.agcom_bbmap, a, k.territorio)}
       ${renderCarburantiTab(k.carburanti)}
@@ -9804,6 +9848,9 @@ const CENSIMENTO_INDICATORS = {
   },
 };
 
+
+
+
 // Calcola valore dell'indicatore per una feature. Ritorna null se dato assente
 // o denominatore = 0. Per le formule vedere HANDOFF sezione 8.3.
 function _censimentoComputeIndicator(feature, indicator) {
@@ -10507,6 +10554,448 @@ function _censimentoChartFamiglie(v) {
     }
   });
 }
+// ─────────────────────────────────────────────────────────────────────────
+// OMI — Quotazioni immobiliari per zona omogenea (Agenzia delle Entrate)
+// Shard: omi/<istat>.json · Perimetri: omi_full/<istat>.geojson (join su "zona")
+// ─────────────────────────────────────────────────────────────────────────
+
+const OMI_FULL_BASE = (location.origin + '/data/omi_full');
+
+// Tipologie abitative: escludono box e posti auto, che abbasserebbero le
+// statistiche residenziali senza rappresentare il mercato della casa.
+const OMI_ABITATIVE = new Set([
+  'Abitazioni civili', 'Abitazioni di tipo economico',
+  'Abitazioni signorili', 'Ville e Villini'
+]);
+
+// Stessa scala blu del censimento. Una palette verde era stata provata per
+// distinguere le due choropleth, ma sulle tile OSM il verde si confonde con
+// parchi, boschi e aree verdi: su Roma le zone erano quasi illeggibili. Il
+// blu non ha equivalenti nella cartografia di base (l'acqua si riconosce
+// come tale) ed e' gia' verificato per contrasto.
+const OMI_PALETTE = ['#deebf7', '#9ecae1', '#4292c6', '#2171b5', '#08519c'];
+const OMI_NA_COLOR = '#cccccc';
+
+const OMI_FASCE = {
+  B: 'Centrale', C: 'Semicentrale', D: 'Periferica',
+  E: 'Suburbana', R: 'Extraurbana'
+};
+
+const OMI_METRICHE = {
+  cv_max: { label: 'Compravendita, valore massimo', unit: '€/m²', decimals: 0 },
+  cv_min: { label: 'Compravendita, valore minimo',  unit: '€/m²', decimals: 0 },
+  loc_max:{ label: 'Locazione, canone massimo',     unit: '€/m² al mese', decimals: 1 },
+};
+
+// Valore di una zona per la metrica scelta: massimo (o minimo) fra le sole
+// tipologie abitative del residenziale. null se la zona non ne ha.
+function _omiValoreZona(zona, metrica) {
+  const righe = (zona.destinazioni && zona.destinazioni['Residenziale']) || [];
+  const vals = righe
+    .filter(r => OMI_ABITATIVE.has(r.tipologia))
+    .map(r => r[metrica])
+    .filter(v => v != null);
+  if (!vals.length) return null;
+  return metrica === 'cv_min' ? Math.min(...vals) : Math.max(...vals);
+}
+
+function _omiBreakpoints(values) {
+  const v = values.filter(x => x != null).sort((a, b) => a - b);
+  if (v.length < 2) return null;
+  const q = f => v[Math.min(v.length - 1, Math.floor(f * v.length))];
+  const b = [q(0.2), q(0.4), q(0.6), q(0.8)];
+  return b.every((x, i) => i === 0 || x >= b[i - 1]) ? b : null;
+}
+
+function _omiColorFor(value, breaks) {
+  if (value == null || !breaks) return OMI_NA_COLOR;
+  for (let i = 0; i < breaks.length; i++) if (value <= breaks[i]) return OMI_PALETTE[i];
+  return OMI_PALETTE[OMI_PALETTE.length - 1];
+}
+
+// Le dizioni OMI delle grandi citta' sono l'elenco completo degli odonimi
+// ("NERVI TU.A (V.CAPOLUNGO-V.S.ILARIO-V.M.SALA-...)"): nel tooltip vanno
+// troncate, altrimenti la finestrella esce dal riquadro della mappa.
+function _omiTronca(s, max = 44) {
+  if (!s) return '';
+  const t = s.length > max ? s.slice(0, max - 1).trimEnd() + '…' : s;
+  // "V.SESTRI-V.MENOTTI-V.PUCCINI" non ha spazi: senza un punto di a capo
+  // il browser manda tutto su una riga sola o spezza lettera per lettera.
+  return t.replace(/-/g, '-\u200b');
+}
+
+function _omiFmt(v, decimals) {
+  if (v == null) return '—';
+  return decimals ? v.toFixed(decimals).replace('.', ',') : fmtNum(Math.round(v));
+}
+
+function renderOmiTab(d) {
+  if (!d || !d.zone || !d.zone.length) {
+    return `
+      <div class="tab-pane" id="pane-omi">
+        <div class="section-title">§ Quotazioni immobiliari OMI</div>
+        <h2 class="section-h">Dati <em>non disponibili</em>.</h2>
+        <p class="muted">
+          L'Osservatorio del Mercato Immobiliare non pubblica quotazioni per questo comune.
+          Le quotazioni OMI riguardano i comuni censiti negli archivi catastali e l'elenco
+          puo' variare fra semestri per effetto di variazioni circoscrizionali.
+        </p>
+      </div>`;
+  }
+
+  const k = d.kpi || {};
+  const zone = d.zone;
+
+  const cards = [
+    { lab: 'Zone OMI', val: fmtNum(k.n_zone || zone.length), unit: '' },
+    { lab: 'Residenziale, minimo', val: _omiFmt(k.residenziale_min, 0), unit: '€/m²' },
+    { lab: 'Residenziale, medio',  val: _omiFmt(k.residenziale_medio, 0), unit: '€/m²' },
+    { lab: 'Residenziale, massimo', val: _omiFmt(k.residenziale_max, 0), unit: '€/m²' },
+  ];
+  if (k.zona_piu_cara) {
+    cards.push({ lab: 'Zona più cara', val: k.zona_piu_cara.zona,
+                 unit: _omiFmt(k.zona_piu_cara.valore, 0) + ' €/m²' });
+  }
+  if (k.zona_piu_economica) {
+    cards.push({ lab: 'Zona più economica', val: k.zona_piu_economica.zona,
+                 unit: _omiFmt(k.zona_piu_economica.valore, 0) + ' €/m²' });
+  }
+  const cardsHtml = cards.map(c => `
+    <div class="kpi-card">
+      <div class="kpi-card-lab">${c.lab}</div>
+      <div class="kpi-card-val">${c.val}${c.unit ? `<span class="kpi-card-unit">${c.unit}</span>` : ''}</div>
+    </div>
+  `).join('');
+
+  // Avviso superficie mista: con L e N compresenti i euro/m2 non sono
+  // confrontabili fra zone, quindi la choropleth sarebbe fuorviante.
+  const avvisoSup = k.sup_mista ? `
+    <p class="muted omi-warn">
+      <strong>Attenzione:</strong> in questo comune convivono quotazioni riferite a
+      superficie lorda (L) e netta (N). I valori al metro quadro non sono direttamente
+      confrontabili fra zone diverse.
+    </p>` : '';
+
+  const nSenzaPerimetro = k.ha_perimetri === false;
+  const mapBlock = nSenzaPerimetro ? `
+    <p class="muted">
+      I perimetri delle zone non sono disponibili per questo comune nel semestre
+      ${d._data_period || 'corrente'}: la mappa non puo' essere mostrata.
+    </p>` : `
+    <div class="omi-map-wrap">
+      <h3 class="section-h-small">Mappa delle zone OMI</h3>
+      <div class="omi-map-controls">
+        <label for="omi-metrica">Metrica:</label>
+        <select id="omi-metrica" aria-label="Scegli la metrica rappresentata sulla mappa">
+          ${Object.entries(OMI_METRICHE).map(([id, m], i) =>
+            `<option value="${id}" ${i === 0 ? 'selected' : ''}>${m.label}</option>`).join('')}
+        </select>
+      </div>
+      <div id="omi-map" class="omi-map" role="region"
+           aria-label="Mappa delle zone OMI del comune">
+        <p class="omi-map-loading" data-omi-loading>Caricamento dei perimetri…</p>
+      </div>
+      <div id="omi-legend" class="omi-legend" role="group" aria-label="Legenda dei valori"></div>
+      <p class="muted" id="omi-map-note">
+        Clicca una zona per filtrare la tabella sottostante. Zone in grigio: nessuna
+        quotazione residenziale per la metrica scelta.
+      </p>
+    </div>`;
+
+  // Grafico: top 10 zone per valore + riga di sintesi sulle restanti.
+  const ordinate = zone
+    .map(z => ({ zona: z.zona, dizione: z.dizione, val: _omiValoreZona(z, 'cv_max') }))
+    .filter(x => x.val != null)
+    .sort((a, b) => b.val - a.val);
+  const chartBlock = ordinate.length >= 2 ? `
+    <div class="omi-chart-wrap">
+      <h3 class="section-h-small">Zone più care — compravendita residenziale (€/m²)</h3>
+      <div class="omi-chart-box">
+        <canvas id="omi-top-chart" aria-label="Valore massimo di compravendita per zona" role="img"></canvas>
+      </div>
+      ${ordinate.length > 10 ? `<p class="muted">Mostrate le 10 zone più care su ${fmtNum(ordinate.length)} con quotazione residenziale. Le altre ${fmtNum(ordinate.length - 10)} sono nella tabella.</p>` : ''}
+    </div>` : '';
+
+  // Tabella completa, filtrabile per destinazione.
+  const destinazioniPresenti = [...new Set(zone.flatMap(z => Object.keys(z.destinazioni || {})))].sort();
+  const righe = [];
+  zone.forEach(z => {
+    Object.entries(z.destinazioni || {}).forEach(([dest, lista]) => {
+      lista.forEach(r => righe.push({ z, dest, r }));
+    });
+  });
+  const tabellaBlock = `
+    <div class="omi-table-wrap">
+      <h3 class="section-h-small">Tutte le quotazioni</h3>
+      <div id="omi-zona-attiva" class="omi-zona-attiva" hidden aria-live="polite"></div>
+      <div class="omi-table-controls">
+        <label for="omi-dest-filter">Destinazione d'uso:</label>
+        <select id="omi-dest-filter" aria-label="Filtra per destinazione d'uso">
+          <option value="">Tutte</option>
+          ${destinazioniPresenti.map(x => `<option value="${x}">${x}</option>`).join('')}
+        </select>
+        <button type="button" id="omi-reset-zona" class="omi-reset" hidden>
+          Mostra tutte le zone
+        </button>
+      </div>
+      <div class="omi-table-wrap-scroll">
+        <table class="omi-table">
+          <caption class="visually-hidden">Quotazioni OMI per zona, destinazione d'uso, tipologia e stato di conservazione</caption>
+          <thead>
+            <tr>
+              <th scope="col">Zona</th><th scope="col">Fascia</th>
+              <th scope="col">Destinazione</th><th scope="col">Tipologia</th>
+              <th scope="col">Stato</th>
+              <th scope="col">Compravendita €/m²</th>
+              <th scope="col">Sup.</th>
+              <th scope="col">Locazione €/m² mese</th>
+              <th scope="col">Sup.</th>
+            </tr>
+          </thead>
+          <tbody id="omi-tbody">
+            ${righe.map(({ z, dest, r }) => `
+              <tr data-omi-zona="${z.zona}" data-omi-dest="${dest}">
+                <td><a href="${z.url_omi}" target="_blank" rel="noopener"
+                       title="${z.dizione}">${z.zona}</a></td>
+                <td>${OMI_FASCE[z.fascia] || z.fascia || '—'}</td>
+                <td>${dest}</td>
+                <td>${r.tipologia}</td>
+                <td>${r.stato}</td>
+                <td>${_omiFmt(r.cv_min, 0)} – ${_omiFmt(r.cv_max, 0)}</td>
+                <td>${r.sup_cv || '—'}</td>
+                <td>${_omiFmt(r.loc_min, 1)} – ${_omiFmt(r.loc_max, 1)}</td>
+                <td>${r.sup_loc || '—'}</td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+      <p class="muted">
+        Superficie: <strong>L</strong> lorda, <strong>N</strong> netta.
+        Il codice zona rimanda alla scheda ufficiale dell'Agenzia delle Entrate.
+      </p>
+    </div>`;
+
+  return `
+    <div class="tab-pane" id="pane-omi">
+      <div class="section-title">§ Quotazioni immobiliari OMI</div>
+      <h2 class="section-h">Valori di mercato per <em>zona omogenea</em>.</h2>
+      <p class="muted">
+        Fonte: <a href="https://www.agenziaentrate.gov.it/portale/schede/fabbricatiterreni/omi/banche-dati/quotazioni-immobiliari" target="_blank" rel="noopener">Agenzia delle Entrate — Osservatorio del Mercato Immobiliare</a>,
+        semestre ${d._data_period || '—'}. Licenza CC-BY 4.0, attribuzione
+        «${d._attribution || 'Agenzia delle Entrate – OMI'}». Aggiornamento semestrale.
+      </p>
+      <p class="muted omi-disclaimer">
+        Le quotazioni OMI forniscono indicazioni di valore <strong>di larga massima</strong>
+        e non sostituiscono la stima puntuale di un tecnico professionista. Nei comuni con
+        carente dinamica di mercato derivano da indagine indiretta. Le zone OMI
+        <strong>non coincidono</strong> con le microzone catastali del D.P.R. 138/1998.
+      </p>
+      ${avvisoSup}
+      <div class="kpi-cards">${cardsHtml}</div>
+      ${chartBlock}
+      ${mapBlock}
+      ${tabellaBlock}
+    </div>
+  `;
+}
+
+// Init tab OMI: chart top-10 + mappa choropleth. Lazy al primo click sulla tab.
+async function initOmi(istat, d) {
+  if (!d || !d.zone || !d.zone.length) return;
+
+  // ---- 1) Chart.js: top 10 zone per compravendita max
+  const canvas = document.getElementById('omi-top-chart');
+  if (canvas && window.Chart) {
+    const top = d.zone
+      .map(z => ({ zona: z.zona, dizione: z.dizione, val: _omiValoreZona(z, 'cv_max') }))
+      .filter(x => x.val != null)
+      .sort((a, b) => b.val - a.val)
+      .slice(0, 10);
+    if (top.length) {
+      new Chart(canvas.getContext('2d'), {
+        type: 'bar',
+        data: {
+          labels: top.map(x => x.zona),
+          datasets: [{ data: top.map(x => x.val), backgroundColor: OMI_PALETTE[3],
+                       borderWidth: 0, barThickness: 'flex', maxBarThickness: 20 }]
+        },
+        options: {
+          indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: { callbacks: {
+              title: (ctx) => { const t = top[ctx[0].dataIndex]; return `${t.zona} — ${t.dizione}`; },
+              label: (ctx) => `${fmtNum(ctx.parsed.x)} €/m²`
+            } }
+          },
+          scales: {
+            x: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' },
+                 ticks: { font: { family: 'var(--mono)', size: 10 }, callback: (v) => fmtNum(v) } },
+            y: { grid: { display: false },
+                 ticks: { font: { family: 'var(--mono)', size: 10 }, autoSkip: false } }
+          }
+        }
+      });
+    }
+  }
+
+  // ---- 2) Filtri tabella (indipendenti dalla mappa: funzionano comunque)
+  const tbody = document.getElementById('omi-tbody');
+  const selDest = document.getElementById('omi-dest-filter');
+  const btnReset = document.getElementById('omi-reset-zona');
+  let zonaAttiva = '';
+
+  const boxZona = document.getElementById('omi-zona-attiva');
+
+  function applicaFiltri() {
+    if (!tbody) return;
+    const dest = selDest ? selDest.value : '';
+    tbody.querySelectorAll('tr').forEach(tr => {
+      const okZona = !zonaAttiva || tr.dataset.omiZona === zonaAttiva;
+      const okDest = !dest || tr.dataset.omiDest === dest;
+      tr.hidden = !(okZona && okDest);
+    });
+    if (btnReset) btnReset.hidden = !zonaAttiva;
+
+    // Intestazione con la dizione PER INTERO: nel tooltip e' troncata per
+    // stare nel riquadro, qui c'e' lo spazio per leggerla tutta ed e' il
+    // solo punto in cui l'utente capisce che tabella sta guardando.
+    if (boxZona) {
+      const z = zonaAttiva ? d.zone.find(x => x.zona === zonaAttiva) : null;
+      if (!z) {
+        boxZona.hidden = true;
+        boxZona.innerHTML = '';
+      } else {
+        boxZona.hidden = false;
+        boxZona.innerHTML =
+          `<span class="omi-zona-cod">${z.zona}</span>` +
+          `<span class="omi-zona-diz">${z.dizione}</span>` +
+          `<span class="omi-zona-meta">fascia ${OMI_FASCE[z.fascia] || z.fascia || '—'}` +
+          ` · <a href="${z.url_omi}" target="_blank" rel="noopener">scheda ufficiale OMI</a></span>`;
+      }
+    }
+  }
+  if (selDest) selDest.addEventListener('change', applicaFiltri);
+  if (btnReset) btnReset.addEventListener('click', () => { zonaAttiva = ''; applicaFiltri(); });
+
+  // ---- 3) Mappa choropleth
+  const mapEl = document.getElementById('omi-map');
+  if (!mapEl) return;
+  const loadingEl = mapEl.querySelector('[data-omi-loading]');
+
+  let fc;
+  try {
+    const res = await fetch(`${OMI_FULL_BASE}/${istat}.geojson`);
+    if (!res.ok) {
+      if (loadingEl) loadingEl.textContent = 'Perimetri non disponibili per questo comune.';
+      return;
+    }
+    fc = await res.json();
+  } catch (err) {
+    if (loadingEl) loadingEl.textContent = 'Errore di rete nel caricamento dei perimetri.';
+    return;
+  }
+  if (!fc || !Array.isArray(fc.features) || !fc.features.length) {
+    if (loadingEl) loadingEl.textContent = 'Nessun perimetro trovato.';
+    return;
+  }
+
+  // Indice zona -> dati, per agganciare geometrie e quotazioni
+  const perZona = {};
+  d.zone.forEach(z => { perZona[z.zona] = z; });
+
+  const map = L.map(mapEl, { scrollWheelZoom: false, zoomControl: true });
+  map.on('focus', () => map.scrollWheelZoom.enable());
+  map.on('blur',  () => map.scrollWheelZoom.disable());
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+  }).addTo(map);
+
+  let metrica = 'cv_max';
+  let breaks = null;
+
+  function valoreFeature(f) {
+    const z = perZona[(f.properties || {}).zona];
+    return z ? _omiValoreZona(z, metrica) : null;
+  }
+
+  function ricalcola() {
+    breaks = _omiBreakpoints(fc.features.map(valoreFeature));
+  }
+
+  function disegnaLegenda() {
+    const el = document.getElementById('omi-legend');
+    if (!el) return;
+    const m = OMI_METRICHE[metrica];
+    if (!breaks) { el.innerHTML = '<span class="muted">Valori insufficienti per una scala.</span>'; return; }
+    const soglie = [null, ...breaks];
+    el.innerHTML = soglie.map((lo, i) => {
+      const hi = breaks[i];
+      const txt = i === 0 ? `fino a ${_omiFmt(breaks[0], m.decimals)}`
+                : (hi != null ? `${_omiFmt(lo, m.decimals)} – ${_omiFmt(hi, m.decimals)}`
+                              : `oltre ${_omiFmt(lo, m.decimals)}`);
+      return `<span class="omi-legend-item">
+                <span class="omi-legend-dot" style="background:${OMI_PALETTE[i]}"></span>${txt}
+              </span>`;
+    }).join('') + `<span class="omi-legend-unit">${m.unit}</span>`;
+  }
+
+  ricalcola();
+  const layer = L.geoJSON(fc, {
+    style: (f) => ({
+      fillColor: _omiColorFor(valoreFeature(f), breaks),
+      fillOpacity: 0.7, weight: 1, color: '#555', opacity: 0.6
+    }),
+    onEachFeature: (f, lyr) => {
+      const nome = (f.properties || {}).zona;
+      const z = perZona[nome];
+      const m = OMI_METRICHE[metrica];
+      lyr.bindTooltip(
+        `<strong>${nome}</strong>${z ? ' — ' + _omiTronca(z.dizione) : ''}<br>` +
+        `${_omiFmt(valoreFeature(f), m.decimals)} ${m.unit}`,
+        { sticky: true, className: 'omi-tooltip' }
+      );
+      lyr.on('click', () => {
+        zonaAttiva = nome;
+        applicaFiltri();
+        requestAnimationFrame(() => {
+          const t = document.querySelector('.omi-table-wrap');
+          if (t) t.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+      });
+    }
+  }).addTo(map);
+
+  // maxZoom: senza, su comuni molto estesi (Genova 30 km di costa, Roma
+  // 1.285 km2) il fit arretrava fino a mostrare mezza regione, con le zone
+  // schiacciate e illeggibili.
+  try { map.fitBounds(layer.getBounds(), { padding: [20, 20], maxZoom: 13 }); }
+  catch (e) { map.setView([41.9, 12.5], 6); }
+  if (loadingEl) loadingEl.remove();
+  disegnaLegenda();
+
+  const selMetrica = document.getElementById('omi-metrica');
+  if (selMetrica) {
+    selMetrica.addEventListener('change', () => {
+      metrica = selMetrica.value;
+      ricalcola();
+      layer.setStyle((f) => ({
+        fillColor: _omiColorFor(valoreFeature(f), breaks),
+        fillOpacity: 0.7, weight: 1, color: '#555', opacity: 0.6
+      }));
+      layer.eachLayer(lyr => {
+        const f = lyr.feature, nome = (f.properties || {}).zona, z = perZona[nome];
+        const m = OMI_METRICHE[metrica];
+        lyr.setTooltipContent(
+          `<strong>${nome}</strong>${z ? ' — ' + _omiTronca(z.dizione) : ''}<br>` +
+          `${_omiFmt(valoreFeature(f), m.decimals)} ${m.unit}`);
+      });
+      disegnaLegenda();
+    });
+  }
+}
+
 
 
 function renderVeicoliTab(v) {
@@ -11129,6 +11618,17 @@ function bindTabSwitching() {
             }
           }, 0);
           window.__anncsuInited = true;
+        }
+      }
+
+      // Lazy-init chart + mappa choropleth OMI al primo click
+      if (tab.dataset.tab === 'omi') {
+        if (window.__omiData && !window.__omiInited) {
+          const istatParam = new URLSearchParams(window.location.search).get('istat');
+          if (istatParam) {
+            setTimeout(() => initOmi(istatParam, window.__omiData), 0);
+            window.__omiInited = true;
+          }
         }
       }
 
@@ -12022,6 +12522,7 @@ function adaptDashboardToOverview(d) {
       sanita_mds: d.sanita_mds,    // pass-through completo per renderSanitaTab
       anncsu: d.anncsu,  // pass-through completo per renderAnncsuTab
       censimento: d.censimento,  // pass-through completo per renderCensimentoTab
+      omi: d.omi,  // pass-through completo per renderOmiTab
       pun: d.pun,  // pass-through completo per renderPunTab
       agcom_bbmap: d.agcom_bbmap,  // pass-through completo per renderBandaLargaTab
       carburanti: d.carburanti,    // pass-through completo per renderCarburantiTab

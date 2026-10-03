@@ -24,6 +24,7 @@ Sorgenti accorpate:
 - sanita_mds/<istat>.json        (Min. Salute - farmacie, parafarmacie, posti letto ospedalieri)
 - pun/<istat>.json               (GSE/MASE - Piattaforma Unica Nazionale punti di ricarica)
 - agcom_bbmap/<istat>.json       (AGCOM - Broadband Map, copertura banda larga)
+- omi/<istat>.json              (Agenzia Entrate - OMI, quotazioni immobiliari)
 - carburanti/<istat>.json        (MIMIT - Osservatorio Prezzi Carburanti, anagrafica impianti + prezzi praticati)
 - runts/<istat>.json             (Min. Lavoro - Registro Unico Nazionale Terzo Settore, enti iscritti)
 - censimento/<istat>.json        (ISTAT Censimento permanente 2021 - KPI sezioni + distribuzioni)
@@ -88,6 +89,7 @@ SHARDS = [
     ("sanita_mds", "sanita_mds/{istat}.json"),
     ("pun",        "pun/{istat}.json"),
     ("agcom_bbmap","agcom_bbmap/{istat}.json"),
+    ("omi",        "omi/{istat}.json"),
     ("carburanti", "carburanti/{istat}.json"),
     ("runts",      "runts/{istat}.json"),
     ("asia",       "asia/{istat}.json"),

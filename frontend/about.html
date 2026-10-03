@@ -702,6 +702,28 @@ footer a:hover { color: #fff !important; }
           </td>
           <td class="freq">semestrale</td>
         </tr>
+        <tr data-fonte-row="AGE-OMI">
+          <td>Agenzia delle Entrate</td>
+          <td>
+            <strong>OMI &mdash; Quotazioni immobiliari per zona omogenea</strong>
+            Osservatorio del Mercato Immobiliare: per ogni zona territoriale
+            omogenea interna al comune, intervallo minimo/massimo in euro al
+            metro quadro dei valori di compravendita e di locazione, per
+            tipologia immobiliare, destinazione d'uso (residenziale,
+            commerciale, produttiva, terziaria) e stato di conservazione.
+            &Egrave; l'unico dato economico di Cruscotto con granularit&agrave;
+            <strong>sub-comunale</strong>: circa 27.000 zone su ~7.890 comuni.
+            Include i perimetri geografici delle zone, mostrati come mappa
+            tematica. Le quotazioni forniscono indicazioni di valore
+            <strong>di larga massima</strong> e non sostituiscono la stima
+            puntuale di un tecnico professionista; nei comuni con carente
+            dinamica di mercato derivano da indagine indiretta. Le zone OMI non
+            coincidono con le microzone catastali del D.P.R.&nbsp;138/1998.
+            Aggiornamento <strong>semestrale</strong>.
+            Licenza <strong>CC-BY 4.0</strong>.
+          </td>
+          <td class="freq">semestrale</td>
+        </tr>
         <tr data-fonte-row="CNR-IRPI-DTM">
           <td>CNR-IRPI</td>
           <td>
@@ -766,21 +788,21 @@ footer a:hover { color: #fff !important; }
       <h2 class="section-h">Cosa cercare e <em>dove</em>.</h2>
       <p>
         Ogni scheda comunale e' divisa in schede tematiche. Questo indice elenca
-        <strong>500 voci</strong> distribuite su <strong>24 schede</strong>:
+        <strong>546 voci</strong> distribuite su <strong>25 schede</strong>:
         per ogni termine trovi la scheda in cui il dato viene mostrato. Alcuni argomenti
         compaiono in piu' schede &mdash; le automobili, per esempio, stanno sia nel
         Censimento (auto possedute dalle famiglie) sia in Veicoli e incidenti
         (parco circolante ACI).
       </p>
       <details class="indice-acc">
-        <summary>Apri l'indice dei contenuti (500 voci)</summary>
+        <summary>Apri l'indice dei contenuti (546 voci)</summary>
         <div class="indice-body">
           <label class="indice-search-lab" for="indice-q">Filtra le voci</label>
           <input type="search" id="indice-q" class="indice-search"
                  placeholder="Scrivi un termine: catasto, tasse, farmacie&hellip;"
                  autocomplete="off" aria-describedby="indice-count">
           <p id="indice-count" class="indice-count" role="status" aria-live="polite">
-            500 voci
+            546 voci
           </p>
           <div class="indice-tab-wrap">
           <table class="indice-tab">
@@ -806,12 +828,14 @@ footer a:hover { color: #fff !important; }
             <tr><th scope="row">5x1000</th><td>Terzo Settore</td></tr>
             <tr><th scope="row">Abitanti</th><td>Demografia</td></tr>
             <tr><th scope="row">Abitazioni</th><td>Censimento 2023</td></tr>
+            <tr><th scope="row">Abitazioni signorili</th><td>Quotazioni immobiliari</td></tr>
             <tr><th scope="row">Abitazioni: occupate vs vuote</th><td>Censimento 2023</td></tr>
             <tr><th scope="row">AC standard</th><td>Punti di ricarica</td></tr>
             <tr><th scope="row">ACI</th><td>Veicoli e incidenti</td></tr>
             <tr><th scope="row">Addetti</th><td>Imprese e addetti</td></tr>
             <tr><th scope="row">Addizionale comunale</th><td>Redditi e fisco</td></tr>
             <tr><th scope="row">Addizionale comunale e imposta netta</th><td>Redditi e fisco</td></tr>
+            <tr><th scope="row">Affitto al metro quadro</th><td>Quotazioni immobiliari</td></tr>
             <tr><th scope="row">AGCOM</th><td>Banda larga</td></tr>
             <tr><th scope="row">Agenzia delle Entrate</th><td>ANNCSU e Catasto</td></tr>
             <tr><th scope="row">Aggiudicazioni</th><td>Contratti ANAC</td></tr>
@@ -862,12 +886,15 @@ footer a:hover { color: #fff !important; }
             <tr><th scope="row">Biblioteche</th><td>Beni culturali</td></tr>
             <tr><th scope="row">Bilancio del Comune</th><td>SIOPE</td></tr>
             <tr><th scope="row">Biossido di azoto</th><td>Meteo e Aria</td></tr>
+            <tr><th scope="row">Box e posti auto</th><td>Quotazioni immobiliari</td></tr>
             <tr><th scope="row">Camere totali</th><td>Turismo</td></tr>
             <tr><th scope="row">Campeggi</th><td>Turismo</td></tr>
             <tr><th scope="row">Camping/Villaggi</th><td>Turismo</td></tr>
+            <tr><th scope="row">Canone di locazione</th><td>Quotazioni immobiliari</td></tr>
             <tr><th scope="row">Cantieri</th><td>Opere</td></tr>
             <tr><th scope="row">Capacità nel comune</th><td>Turismo</td></tr>
             <tr><th scope="row">Capacità ricettiva</th><td>Turismo</td></tr>
+            <tr><th scope="row">Capannoni</th><td>Quotazioni immobiliari</td></tr>
             <tr><th scope="row">Case</th><td>Censimento 2023</td></tr>
             <tr><th scope="row">Case in affitto</th><td>Turismo</td></tr>
             <tr><th scope="row">Case per ferie</th><td>Turismo</td></tr>
@@ -892,6 +919,10 @@ footer a:hover { color: #fff !important; }
             <tr><th scope="row">Codice</th><td>Censimento 2023</td></tr>
             <tr><th scope="row">Colonnine di ricarica</th><td>Punti di ricarica</td></tr>
             <tr><th scope="row">Composizione parco</th><td>Veicoli e incidenti</td></tr>
+            <tr><th scope="row">Compravendita</th><td>Quotazioni immobiliari</td></tr>
+            <tr><th scope="row">Compravendita €/m²</th><td>Quotazioni immobiliari</td></tr>
+            <tr><th scope="row">Compravendita, valore massimo</th><td>Censimento 2023</td></tr>
+            <tr><th scope="row">Compravendita, valore minimo</th><td>Censimento 2023</td></tr>
             <tr><th scope="row">Comune</th><td>Distributori e prezzi, Pendolarismo</td></tr>
             <tr><th scope="row">Con vincolo</th><td>Patrimonio PA</td></tr>
             <tr><th scope="row">Concentrazioni annuali PM10, PM2.5 e NO₂</th><td>Meteo e Aria</td></tr>
@@ -908,6 +939,7 @@ footer a:hover { color: #fff !important; }
             <tr><th scope="row">Copertura di rete</th><td>Banda larga</td></tr>
             <tr><th scope="row">Copertura FTTH 20m</th><td>Banda larga</td></tr>
             <tr><th scope="row">Copertura FTTH DESI</th><td>Banda larga</td></tr>
+            <tr><th scope="row">Costo affitto</th><td>Quotazioni immobiliari</td></tr>
             <tr><th scope="row">Costo effettivo</th><td>Opere</td></tr>
             <tr><th scope="row">Costo previsto</th><td>Opere</td></tr>
             <tr><th scope="row">CPV</th><td>Contratti ANAC</td></tr>
@@ -916,7 +948,6 @@ footer a:hover { color: #fff !important; }
             <tr><th scope="row">Data fine prevista</th><td>Opere</td></tr>
             <tr><th scope="row">Data inizio</th><td>Opere</td></tr>
             <tr><th scope="row">Data iscr.</th><td>Terzo Settore</td></tr>
-            <tr><th scope="row">Dati</th><td>ANNCSU e Catasto, Censimento 2023, Patrimonio PA, Redditi e fisco, Sanità, Veicoli e incidenti</td></tr>
             <tr><th scope="row">Dati a terzi</th><td>Patrimonio PA</td></tr>
             <tr><th scope="row">Dati di pendolarismo</th><td>Pendolarismo</td></tr>
             <tr><th scope="row">Dati non ancora caricati</th><td>Panoramica</td></tr>
@@ -932,6 +963,8 @@ footer a:hover { color: #fff !important; }
             <tr><th scope="row">Densità popolazione</th><td>Censimento 2023</td></tr>
             <tr><th scope="row">Densità scolastica</th><td>Scuole</td></tr>
             <tr><th scope="row">Descrizione</th><td>Censimento 2023</td></tr>
+            <tr><th scope="row">Destinazione</th><td>Quotazioni immobiliari</td></tr>
+            <tr><th scope="row">Destinazione d&#x27;uso</th><td>Quotazioni immobiliari</td></tr>
             <tr><th scope="row">Dettaglio per settore ATECO e classe dime</th><td>Imprese e addetti</td></tr>
             <tr><th scope="row">Dichiarazioni IRPEF</th><td>Redditi e fisco</td></tr>
             <tr><th scope="row">Differenziata raccolta</th><td>Territorio</td></tr>
@@ -960,6 +993,7 @@ footer a:hover { color: #fff !important; }
             <tr><th scope="row">Esposti ad alluvioni (P2 media)</th><td>Territorio</td></tr>
             <tr><th scope="row">Eta media</th><td>Demografia</td></tr>
             <tr><th scope="row">Età media</th><td>Demografia</td></tr>
+            <tr><th scope="row">Euro al metro quadro</th><td>Quotazioni immobiliari</td></tr>
             <tr><th scope="row">Extra-alberghieri</th><td>Turismo</td></tr>
             <tr><th scope="row">Extra-alberghiero</th><td>Turismo</td></tr>
             <tr><th scope="row">Fabbricati</th><td>Patrimonio PA</td></tr>
@@ -972,6 +1006,8 @@ footer a:hover { color: #fff !important; }
             <tr><th scope="row">Farmacie attive</th><td>Sanità</td></tr>
             <tr><th scope="row">Farmacie, parafarmacie e ospedali</th><td>Sanità</td></tr>
             <tr><th scope="row">Fasce d&#x27;eta</th><td>Demografia</td></tr>
+            <tr><th scope="row">Fascia</th><td>Quotazioni immobiliari</td></tr>
+            <tr><th scope="row">Fascia centrale</th><td>Quotazioni immobiliari</td></tr>
             <tr><th scope="row">Fase attuale</th><td>PNRR</td></tr>
             <tr><th scope="row">Femmine</th><td>Censimento 2023</td></tr>
             <tr><th scope="row">Feriti</th><td>Veicoli e incidenti</td></tr>
@@ -1042,17 +1078,21 @@ footer a:hover { color: #fff !important; }
             <tr><th scope="row">Licei</th><td>Scuole</td></tr>
             <tr><th scope="row">Licenza elementare</th><td>Profilo</td></tr>
             <tr><th scope="row">Licenza media</th><td>Profilo</td></tr>
+            <tr><th scope="row">Locazione €/m² mese</th><td>Quotazioni immobiliari</td></tr>
+            <tr><th scope="row">Locazione, canone massimo</th><td>Censimento 2023</td></tr>
             <tr><th scope="row">Luoghi della Cultura visitabili</th><td>Beni culturali</td></tr>
             <tr><th scope="row">Mappa beni georeferenziati</th><td>Beni culturali</td></tr>
             <tr><th scope="row">Mappa degli impianti</th><td>Distributori e prezzi</td></tr>
             <tr><th scope="row">Mappa dei civici geo-referenziati</th><td>ANNCSU e Catasto</td></tr>
             <tr><th scope="row">Mappa dei presidi sanitari</th><td>Sanità</td></tr>
             <tr><th scope="row">Mappa dei punti</th><td>Patrimonio PA, Punti di ricarica</td></tr>
+            <tr><th scope="row">Mappa delle zone OMI</th><td>Quotazioni immobiliari</td></tr>
             <tr><th scope="row">Mappa flussi pendolari</th><td>Pendolarismo</td></tr>
             <tr><th scope="row">Mappe catastali</th><td>ANNCSU e Catasto</td></tr>
             <tr><th scope="row">Maschi</th><td>Censimento 2023</td></tr>
             <tr><th scope="row">Medie 50-249</th><td>Terzo Settore</td></tr>
             <tr><th scope="row">MEF</th><td>Patrimonio PA, Redditi e fisco</td></tr>
+            <tr><th scope="row">Mercato immobiliare</th><td>Quotazioni immobiliari</td></tr>
             <tr><th scope="row">Metano</th><td>Distributori e prezzi</td></tr>
             <tr><th scope="row">Meteo</th><td>Meteo e Aria</td></tr>
             <tr><th scope="row">Meteo e Aria</th><td>Panoramica</td></tr>
@@ -1076,11 +1116,13 @@ footer a:hover { color: #fff !important; }
             <tr><th scope="row">Morti</th><td>Demografia, Veicoli e incidenti</td></tr>
             <tr><th scope="row">Morti + feriti strada</th><td>Veicoli e incidenti</td></tr>
             <tr><th scope="row">Morti sulla strada</th><td>Veicoli e incidenti</td></tr>
+            <tr><th scope="row">Mostra tutte le zone</th><td>Quotazioni immobiliari</td></tr>
             <tr><th scope="row">Moto</th><td>Veicoli e incidenti</td></tr>
             <tr><th scope="row">Musei</th><td>Beni culturali</td></tr>
             <tr><th scope="row">Natalità</th><td>Demografia</td></tr>
             <tr><th scope="row">Nati</th><td>Demografia</td></tr>
             <tr><th scope="row">Natura intervento</th><td>Opere</td></tr>
+            <tr><th scope="row">Negozi</th><td>Quotazioni immobiliari</td></tr>
             <tr><th scope="row">Neve</th><td>Meteo e Aria</td></tr>
             <tr><th scope="row">Neve al suolo</th><td>Meteo e Aria</td></tr>
             <tr><th scope="row">Nuclei familiari</th><td>Censimento 2023, Profilo</td></tr>
@@ -1095,11 +1137,13 @@ footer a:hover { color: #fff !important; }
             <tr><th scope="row">Occupazione</th><td>Censimento 2023, Profilo</td></tr>
             <tr><th scope="row">Odonimi</th><td>ANNCSU e Catasto</td></tr>
             <tr><th scope="row">ODV</th><td>Terzo Settore</td></tr>
+            <tr><th scope="row">OMI</th><td>Quotazioni immobiliari</td></tr>
             <tr><th scope="row">Onlus</th><td>Terzo Settore</td></tr>
             <tr><th scope="row">Opere</th><td>Panoramica</td></tr>
             <tr><th scope="row">Opere BDAP</th><td>Panoramica</td></tr>
             <tr><th scope="row">Opere pubbliche</th><td>Opere</td></tr>
             <tr><th scope="row">Ospedali</th><td>Sanità</td></tr>
+            <tr><th scope="row">Osservatorio del Mercato Immobiliare</th><td>Quotazioni immobiliari</td></tr>
             <tr><th scope="row">Ostelli</th><td>Turismo</td></tr>
             <tr><th scope="row">P1 bassa</th><td>Territorio</td></tr>
             <tr><th scope="row">P1 moderata</th><td>Territorio</td></tr>
@@ -1154,6 +1198,9 @@ footer a:hover { color: #fff !important; }
             <tr><th scope="row">Presenze (notti)</th><td>Turismo</td></tr>
             <tr><th scope="row">Presenze turistiche</th><td>Turismo</td></tr>
             <tr><th scope="row">Prezzi aggiornati</th><td>Distributori e prezzi</td></tr>
+            <tr><th scope="row">Prezzi delle case</th><td>Quotazioni immobiliari</td></tr>
+            <tr><th scope="row">Prezzo al metro quadro</th><td>Quotazioni immobiliari</td></tr>
+            <tr><th scope="row">Prezzo al mq</th><td>Quotazioni immobiliari</td></tr>
             <tr><th scope="row">Prezzo carburanti</th><td>Distributori e prezzi</td></tr>
             <tr><th scope="row">Prima aggiudicazione</th><td>Contratti ANAC</td></tr>
             <tr><th scope="row">Produzione e raccolta rifiuti</th><td>Territorio</td></tr>
@@ -1168,7 +1215,10 @@ footer a:hover { color: #fff !important; }
             <tr><th scope="row">Punti di ricarica</th><td>Panoramica</td></tr>
             <tr><th scope="row">Qualità dell&#x27;aria</th><td>Meteo e Aria</td></tr>
             <tr><th scope="row">Qualità dell&#x27;aria — ISPRA SNPA</th><td>Meteo e Aria</td></tr>
+            <tr><th scope="row">Quanto costa la casa</th><td>Quotazioni immobiliari</td></tr>
             <tr><th scope="row">Quota</th><td>Territorio</td></tr>
+            <tr><th scope="row">Quotazioni immobiliari</th><td>Panoramica, Quotazioni immobiliari</td></tr>
+            <tr><th scope="row">Quotazioni OMI</th><td>Quotazioni immobiliari</td></tr>
             <tr><th scope="row">Raccolta differenziata</th><td>Territorio</td></tr>
             <tr><th scope="row">Rappresentante</th><td>Terzo Settore</td></tr>
             <tr><th scope="row">Redditi</th><td>Redditi e fisco</td></tr>
@@ -1178,6 +1228,9 @@ footer a:hover { color: #fff !important; }
             <tr><th scope="row">Reparti ospedalieri</th><td>Sanità</td></tr>
             <tr><th scope="row">Reset</th><td>Territorio</td></tr>
             <tr><th scope="row">Residenze TA</th><td>Turismo</td></tr>
+            <tr><th scope="row">Residenziale, massimo</th><td>Quotazioni immobiliari</td></tr>
+            <tr><th scope="row">Residenziale, medio</th><td>Quotazioni immobiliari</td></tr>
+            <tr><th scope="row">Residenziale, minimo</th><td>Quotazioni immobiliari</td></tr>
             <tr><th scope="row">Ricalcolate via ANNCSU</th><td>Sanità</td></tr>
             <tr><th scope="row">Ricarica rapida</th><td>Punti di ricarica</td></tr>
             <tr><th scope="row">Riferimento temporale</th><td>Territorio</td></tr>
@@ -1246,6 +1299,7 @@ footer a:hover { color: #fff !important; }
             <tr><th scope="row">Territorio</th><td>Panoramica</td></tr>
             <tr><th scope="row">Terziario</th><td>Profilo</td></tr>
             <tr><th scope="row">Terzo Settore</th><td>Panoramica</td></tr>
+            <tr><th scope="row">Tipologia</th><td>Quotazioni immobiliari</td></tr>
             <tr><th scope="row">Tipologie di reddito</th><td>Redditi e fisco</td></tr>
             <tr><th scope="row">Titolo di studio</th><td>Censimento 2023, Profilo</td></tr>
             <tr><th scope="row">Top 10 comuni di destinazione dei pendolari</th><td>Pendolarismo</td></tr>
@@ -1266,8 +1320,10 @@ footer a:hover { color: #fff !important; }
             <tr><th scope="row">Turisti stranieri</th><td>Turismo</td></tr>
             <tr><th scope="row">Tutte</th><td>Terzo Settore</td></tr>
             <tr><th scope="row">Tutte le bandiere</th><td>Distributori e prezzi</td></tr>
+            <tr><th scope="row">Tutte le quotazioni</th><td>Quotazioni immobiliari</td></tr>
             <tr><th scope="row">Tutti</th><td>Beni culturali, Patrimonio PA, Punti di ricarica</td></tr>
             <tr><th scope="row">Tutti i carburanti</th><td>Distributori e prezzi</td></tr>
+            <tr><th scope="row">Uffici</th><td>Quotazioni immobiliari</td></tr>
             <tr><th scope="row">Ultima aggiudicazione</th><td>Contratti ANAC</td></tr>
             <tr><th scope="row">Ultimo aggiornamento</th><td>SIOPE</td></tr>
             <tr><th scope="row">Umidità relativa</th><td>Meteo e Aria</td></tr>
@@ -1276,6 +1332,9 @@ footer a:hover { color: #fff !important; }
             <tr><th scope="row">Unità locali per classe</th><td>Imprese e addetti</td></tr>
             <tr><th scope="row">Uscenti</th><td>Pendolarismo</td></tr>
             <tr><th scope="row">Valore</th><td>Censimento 2023</td></tr>
+            <tr><th scope="row">Valore di mercato</th><td>Quotazioni immobiliari</td></tr>
+            <tr><th scope="row">Valore immobiliare</th><td>Quotazioni immobiliari</td></tr>
+            <tr><th scope="row">Valori di mercato per zona omogenea</th><td>Quotazioni immobiliari</td></tr>
             <tr><th scope="row">Variabili censuarie per famiglia di indicatori</th><td>Censimento 2023</td></tr>
             <tr><th scope="row">Veicoli</th><td>Panoramica</td></tr>
             <tr><th scope="row">Veicoli e incidenti</th><td>Panoramica</td></tr>
@@ -1283,11 +1342,20 @@ footer a:hover { color: #fff !important; }
             <tr><th scope="row">Vento</th><td>Meteo e Aria</td></tr>
             <tr><th scope="row">Vento a 10 metri</th><td>Meteo e Aria</td></tr>
             <tr><th scope="row">Vie e strade</th><td>ANNCSU e Catasto</td></tr>
+            <tr><th scope="row">Ville e villini</th><td>Quotazioni immobiliari</td></tr>
             <tr><th scope="row">Vocazione formativa Sec. II° grado</th><td>Scuole</td></tr>
             <tr><th scope="row">Voci di cassa</th><td>SIOPE</td></tr>
             <tr><th scope="row">Volontariato</th><td>Terzo Settore</td></tr>
+            <tr><th scope="row">Zona</th><td>Quotazioni immobiliari</td></tr>
+            <tr><th scope="row">Zona OMI</th><td>Quotazioni immobiliari</td></tr>
+            <tr><th scope="row">Zona piu cara</th><td>Quotazioni immobiliari</td></tr>
+            <tr><th scope="row">Zona più cara</th><td>Quotazioni immobiliari</td></tr>
+            <tr><th scope="row">Zona più economica</th><td>Quotazioni immobiliari</td></tr>
             <tr><th scope="row">Zona sismica</th><td>Territorio</td></tr>
             <tr><th scope="row">Zona&#x27; + subLabel + &#x27;</th><td>Territorio</td></tr>
+            <tr><th scope="row">Zone OMI</th><td>Quotazioni immobiliari</td></tr>
+            <tr><th scope="row">Zone omogenee</th><td>Quotazioni immobiliari</td></tr>
+            <tr><th scope="row">Zone più care per compravendita residenziale</th><td>Quotazioni immobiliari</td></tr>
             <tr><th scope="row">★ Solo i più economici del comune</th><td>Distributori e prezzi</td></tr>
             </tbody>
           </table>
@@ -1627,6 +1695,15 @@ footer a:hover { color: #fff !important; }
           visualizzati come layer sulla mappa dei numeri civici.
         </div>
         <div class="aggiorna-when">~febbraio · ~agosto</div>
+      </div>
+      <div class="aggiorna-row">
+        <div class="aggiorna-cadence">Semestrale</div>
+        <div class="aggiorna-what">
+          <strong>OMI (Agenzia delle Entrate)</strong> &mdash; quotazioni
+          immobiliari e perimetri delle zone omogenee: valori al metro quadro
+          di compravendita e locazione per ogni zona del comune.
+        </div>
+        <div class="aggiorna-when">entro il 15 marzo · entro il 15 ottobre</div>
       </div>
       <div class="aggiorna-row">
         <div class="aggiorna-cadence">Annuale</div>
