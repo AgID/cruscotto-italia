@@ -12753,6 +12753,10 @@ FONTI INTEGRATE
                                     (chiese, palazzi, castelli, ville, archeologia, monumenti, parchi storici)
 - Agenzia delle Entrate             Cartografia catastale INSPIRE — fogli e particelle
                                     (CC-BY 4.0, copertura 19 regioni esclusa Provincia Autonoma TN/BZ)
+- Agenzia delle Entrate             OMI — quotazioni immobiliari per zona omogenea: valori di
+                                    compravendita e locazione in €/m² per tipologia, destinazione
+                                    d'uso e stato di conservazione, con i perimetri delle zone
+                                    (CC-BY 4.0, 24.101 zone quotate in 7.885 comuni, semestrale)
 - ItaliaMeteo / Cineca              Previsioni ICON-2I — temperatura, precipitazioni, vento,
                                     neve, nuvolosita’, codice meteo WMO (73 step orari 0–72h,
                                     aggiornamento bi-giornaliero, CC BY 4.0 HVD Meteorologici)
@@ -12789,6 +12793,10 @@ dimensione del file:
 - catasto AGE: NON incluso nello ZIP (dataset pesante, 0.5-67 MB per
   comune). Disponibile solo via endpoint REST GeoJSON (vedi sezione
   ESEMPI ACCESSO REST qui sotto).
+- OMI: le quotazioni per zona sono incluse per intero in
+  dati-completi.json. I perimetri geografici delle zone NON sono
+  nello ZIP (fino a 1.4 MB per comune): endpoint REST
+  /data/omi_full/<istat>.geojson, in join sul campo "zona".
 
 ESEMPI ACCESSO REST
 -------------------
@@ -12797,6 +12805,10 @@ Base URL: ${window.location.origin}
 
 # ANNCSU - tutti i numeri civici geo-referenziati del comune (JSON)
 curl -s ${window.location.origin}/data/anncsu_full/${istat}.json
+
+# OMI - perimetri delle zone omogenee (GeoJSON, EPSG:4326)
+# Join con dati-completi.json sul campo properties.zona
+curl -s ${window.location.origin}/data/omi_full/${istat}.geojson
 
 # Catasto - fogli del comune (GeoJSON gzippato, EPSG:4326)
 curl -s ${window.location.origin}/data/catasto_full/${istat}_map.geojson.gz | gunzip

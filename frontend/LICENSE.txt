@@ -93,6 +93,14 @@ FONTI ORIGINARIE E LORO LICENZE
   esposizione, geomorfologia r.geomorphon, irraggiamento
   solare r.sun) in ambiente GRASS GIS headless.
   Dato statico (one-shot). ............................ CC BY 4.0
+- Agenzia delle Entrate (OMI - Osservatorio del Mercato
+  Immobiliare): quotazioni semestrali di compravendita e
+  locazione in euro/mq per zona territoriale omogenea,
+  per tipologia immobiliare, destinazione d'uso e stato
+  di conservazione, con i perimetri geografici delle
+  zone. Attribuzione obbligatoria:
+  "Agenzia delle Entrate - OMI". Valori di larga massima,
+  non sostitutivi della stima di un tecnico. ......... CC BY 4.0
 - OpenStreetMap (cartografia) ........................ ODbL
 
 Per il dettaglio dei dataset e degli URL originari delle fonti,

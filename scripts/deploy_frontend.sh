@@ -36,6 +36,11 @@ DRY_RUN="${DRY_RUN:-0}"
 # data/, dove CICO lo legge da filesystem (vedi lessico_indice.py).
 PAGINE=(index.html comune.html about.html accessibilita.html)
 
+# File statici serviti dal vhost e inclusi nello ZIP "Scarica dati":
+# comune.html li recupera via fetch quando costruisce l'archivio. Erano
+# fuori dal deploy e andavano installati a mano.
+STATICI=(LICENSE.txt METADATI.csv)
+
 cd "$REPO"
 
 if [ ! -d "$DEST" ]; then
@@ -78,6 +83,22 @@ for f in "${PAGINE[@]}"; do
   rm -f "$TMP"
   echo "  ${f}: copiato (${N} occorrenze di versione aggiornate)"
 done
+
+# ── file statici dello ZIP: nessuna sostituzione di versione ──────────────
+if [ $# -eq 0 ]; then
+  for f in "${STATICI[@]}"; do
+    if [ ! -f "${SRC}/${f}" ]; then
+      echo "  SALTO ${f}: non esiste in ${SRC}"
+      continue
+    fi
+    if [ "$DRY_RUN" = "1" ]; then
+      echo "  ${f} -> ${DEST}/ (statico)"
+    else
+      sudo install -o www-data -g www-data -m 644 "${SRC}/${f}" "${DEST}/${f}"
+      echo "  ${f}: copiato (statico)"
+    fi
+  done
+fi
 
 # ── indice dei contenuti: destinazione diversa, nessuna sostituzione ──────
 if [ $# -eq 0 ] && [ -f "${SRC}/indice_contenuti.json" ]; then
