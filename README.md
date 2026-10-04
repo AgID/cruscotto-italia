@@ -43,7 +43,7 @@ Cercando un comune ("Lecce") si ottiene una vista a 360° su:
 - 🗺️ **Censimento per sezione** (ISTAT Basi Territoriali 2021 + variabili censuarie 2023 — ~756.000 sezioni di censimento con 127 variabili demografiche/abitative per sezione)
 - 🏛️ **Beni culturali** (MiC — ICCD ArCo per beni immobili tutelati: chiese, palazzi, castelli, archeologia, ville, monumenti, soprintendenze; Cultural-ON DBUnico 2.0 per Luoghi della Cultura visitabili: musei, biblioteche, archivi con orari e contatti)
 - 🗺️ **Cartografia catastale** (Agenzia delle Entrate — Catasto Terreni INSPIRE: particelle e fogli di mappa per 19 regioni italiane, dataset bulk semestrale CC BY 4.0)
-- 🏘️ **Quotazioni immobiliari** (Agenzia delle Entrate — OMI: valori di compravendita e locazione in €/m² per zona omogenea sub-comunale, per tipologia, destinazione d'uso e stato di conservazione, con i perimetri geografici delle zone; ~27.000 zone su ~7.890 comuni, semestrale, CC BY 4.0)
+- 🏘️ **Quotazioni immobiliari** (Agenzia delle Entrate — OMI: valori di compravendita e locazione in €/m² per zona omogenea sub-comunale, per tipologia, destinazione d'uso e stato di conservazione, con i perimetri geografici delle zone; 24.101 zone quotate in 7.885 comuni, semestrale, CC BY 4.0)
 - 🌤️ **Previsioni meteorologiche** (ItaliaMeteo — ICON-2I, griglia 2,2 km: temperatura, precipitazioni, vento, neve, nuvolosità, 73 step orari 0–72h, aggiornamento bi-giornaliero, CC BY 4.0 HVD Meteorologici)
 
 L'elenco completo, con licenze, frequenze di aggiornamento e link diretti
@@ -119,7 +119,7 @@ Dettagli architetturali completi: [`DESIGN.md`](DESIGN.md) ·
 | **Monthly** (5° del mese 04:00 UTC) | anagrafica, BDAP-MOP, SIOPE, ANNCSU, AGCOM banda larga, beni culturali (ArCo + Cultural-ON) | cron VM AgID | automatico |
 | **Annual** (1 feb / 1 apr / 1 lug, 04:00 UTC) | demografia POSAS, profilo Censimento, turismo, territorio, scuole, veicoli, redditi IRPEF, immobili PA | cron VM AgID | automatico |
 | **Semestrale** (1 marzo / 1 settembre, 03:00 UTC) | cartografia catastale AGE (particelle + fogli, 19 regioni) | cron VM AgID | automatico |
-| **Semestrale** (20 marzo / 20 ottobre, 03:00 UTC) | quotazioni OMI AGE (zone + perimetri); l'Agenzia pubblica entro il 15 marzo e il 15 ottobre | cron VM AgID | automatico |
+| **Semestrale** (sentinella giornaliera 03:00 UTC) | quotazioni OMI AGE (zone + perimetri): `omi_semestrale.sh` interroga ogni giorno l'elenco dei semestri pubblicati e avvia la raccolta solo quando ne compare uno nuovo (l'Agenzia pubblica entro il 15 marzo e il 15 ottobre, senza data fissa) | cron VM AgID | automatico |
 | **Decennale** (manuale, prossimo 2031) | censimento Basi Territoriali (sezioni + 119 vars) | run manuale `python -m etl.sources.censimento` su VM | `workflow_dispatch` |
 | **ISTAT refresh** (manuale) | istat_profilo, asia, pendolarismo | GitHub Actions `ubuntu-latest` | `workflow_dispatch` |
 
