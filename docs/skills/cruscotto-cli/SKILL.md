@@ -1,7 +1,7 @@
 ---
 name: cruscotto-cli
-version: 0.2.0
-description: Interroga via CLI i dati aperti di Cruscotto Italia (AgID) per tutti i comuni italiani, leggendo direttamente gli shard JSON statici senza passare dal server MCP. Usa questa skill quando servono dati ufficiali su un comune italiano - popolazione, demografia (serie storica, nati e morti), censimento 2023, redditi, veicoli, scuole/plessi, sanita', opere pubbliche, cassa SIOPE (pagamenti e incassi), appalti, PNRR, turismo, qualita' dell'aria, morfologia, beni culturali, civici e toponomastica, carburanti, banda larga, terzo settore, immobili pubblici, pendolarismo, meteo - oppure quando si citano fonti come ISTAT, BDAP, SIOPE, ANAC, ISPRA, MEF, MIUR, ACI, ANNCSU, AGCOM, MIMIT, RUNTS, MiC, Ministero della Salute. Copre 7896 comuni, 31 sezioni tematiche piu' tre archivi estesi. Preferibile all'MCP quando serve una query mirata su pochi campi, un confronto tra comuni o un ranking, perche' filtra i dati prima di caricarli in contesto ed evita di leggere shard da centinaia di KB.
+version: 0.3.0
+description: Interroga via CLI i dati aperti di Cruscotto Italia (AgID) per tutti i comuni italiani, leggendo direttamente gli shard JSON statici senza passare dal server MCP. Usa questa skill quando servono dati ufficiali su un comune - popolazione, demografia (serie storica, nati e morti), censimento 2023, redditi, veicoli, scuole/plessi, sanita', opere pubbliche, cassa SIOPE (pagamenti e incassi), appalti, PNRR, turismo, qualita' dell'aria, morfologia, beni culturali, civici e toponomastica, carburanti, banda larga, terzo settore, immobili pubblici, pendolarismo, meteo, quotazioni immobiliari OMI - oppure quando si citano fonti come ISTAT, BDAP, SIOPE, ANAC, ISPRA, MEF, MIUR, ACI, ANNCSU, AGCOM, MIMIT, RUNTS, MiC, Ministero della Salute, OMI. Copre 7896 comuni, 32 sezioni piu' tre archivi estesi. Preferibile all'MCP quando serve una query mirata su pochi campi, un confronto tra comuni o un ranking, perche' filtra i dati prima di caricarli in contesto ed evita di leggere shard da centinaia di KB.
 license: CC-BY-4.0
 ---
 
@@ -45,6 +45,25 @@ python3 scripts/cruscotto.py sez 077014 aria        # una sezione intera
 python3 scripts/cruscotto.py sez 077014 opere --top 5   # sezione pesante, liste troncate
 python3 scripts/cruscotto.py q 077014 redditi.anni[0]   # path dot-notation
 ```
+
+### Quotazioni immobiliari OMI
+
+Comando dedicato: la sezione `omi` è pesante (245 KB per Roma) e `sez omi --top` tronca l'array delle zone senza poter filtrare.
+
+```bash
+python3 scripts/cruscotto.py omi Lecce --kpi                        # KPI comunali
+python3 scripts/cruscotto.py omi Lecce --zona "centro storico"      # per codice zona o testo nella dizione
+python3 scripts/cruscotto.py omi Genova --zona D22 --tipologia negozi
+python3 scripts/cruscotto.py omi Roma --dest commerciale --top 20
+```
+
+Tre cose da sapere per non sbagliare le letture:
+
+- **La chiave di una riga è `tipologia` + `stato`, non la sola tipologia.** La stessa tipologia compare più volte con stati di conservazione diversi: a Genova zona D22 *Negozi NORMALE* vale 1550-3000 €/m² e *Negozi OTTIMO* 3500-6900. Deduplicare per tipologia perde righe.
+- **I KPI `residenziale_*` escludono box e posti auto**: sono calcolati sulle sole tipologie abitative (civili, economiche, signorili, ville e villini), che altrimenti sarebbero trascinate verso il basso.
+- **Se `sup_mista` è `true`** nel comune convivono superficie lorda e netta e i €/m² non sono confrontabili fra zone: il comando lo segnala nella nota finale.
+
+I valori sono **di larga massima** e non sostituiscono la stima di un tecnico. Le zone OMI non coincidono con le microzone catastali del D.P.R. 138/1998. I perimetri geografici stanno in `/data/omi_full/<istat>.geojson` (join su `properties.zona`), non esposti dalla CLI perché sono geometrie.
 
 ### Archivi estesi
 

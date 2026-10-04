@@ -50,6 +50,7 @@ I pesi indicati sono quelli di Matera (077014, 59k abitanti): scalano con la dim
 | `siope` | MEF-RGS SIOPE (siope.it) | pagamenti e incassi per codice gestionale, per anno, con saldo di cassa | 104 KB |
 | `opere` | BDAP-MOP | progetti di opere pubbliche, CUP, costi, finanziamenti | 104.3 KB |
 | `anncsu` | ANNCSU | strade e numeri civici (sintesi) | 117.8 KB |
+| `omi` | Agenzia Entrate OMI | quotazioni per zona omogenea, tipologia e stato (usa il comando `omi`) | 51 KB Lecce, 245 KB Roma |
 
 ## Sezioni derivate
 

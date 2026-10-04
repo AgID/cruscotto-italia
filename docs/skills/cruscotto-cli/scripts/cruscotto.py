@@ -17,7 +17,7 @@ WINDOW = int(os.environ.get("CRUSCOTTO_WINDOW", "600"))
 MAXCOM = int(os.environ.get("CRUSCOTTO_MAX_COMUNI", "12"))
 MININT = float(os.environ.get("CRUSCOTTO_MIN_INTERVAL", "0.5"))
 
-HEAVY = {"anncsu", "opere", "siope", "immobili_pa", "runts", "scuole"}
+HEAVY = {"anncsu", "opere", "siope", "immobili_pa", "runts", "scuole", "omi"}
 
 
 def _den_registry():
@@ -415,6 +415,52 @@ def cmd_full(a):
     {"beni": cmd_full_beni, "anncsu": cmd_full_anncsu, "censimento": cmd_full_censimento}[a.fonte](a, istat)
 
 
+def cmd_omi(a):
+    """Quotazioni OMI filtrate. Senza filtro lo shard di Roma e' 245 KB.
+
+    La chiave di una riga e' tipologia+stato, non la sola tipologia: la
+    stessa tipologia compare piu' volte con stati diversi e valori molto
+    distanti, quindi le righe NON vanno deduplicate per tipologia.
+    """
+    d = dashboard(resolve(a.comune))
+    omi = d.get("omi")
+    if not omi:
+        _err("nessuna quotazione OMI per questo comune")
+    if a.kpi:
+        return out(omi.get("kpi"))
+
+    zone = omi.get("zone", [])
+    if a.zona:
+        q = norm(a.zona)
+        zone = [z for z in zone if norm(z.get("zona", "")) == q or q in norm(z.get("dizione", ""))]
+    if not zone:
+        return out([], nota="nessuna zona corrispondente")
+
+    righe = []
+    for z in zone:
+        for dest, lista in (z.get("destinazioni") or {}).items():
+            if a.dest and norm(a.dest) not in norm(dest):
+                continue
+            for r in lista:
+                if a.tipologia and norm(a.tipologia) not in norm(r.get("tipologia", "")):
+                    continue
+                righe.append({
+                    "zona": z.get("zona"), "fascia": z.get("fascia"),
+                    "dizione": z.get("dizione"), "destinazione": dest,
+                    "tipologia": r.get("tipologia"), "stato": r.get("stato"),
+                    "cv_min": r.get("cv_min"), "cv_max": r.get("cv_max"),
+                    "sup_cv": r.get("sup_cv"),
+                    "loc_min": r.get("loc_min"), "loc_max": r.get("loc_max"),
+                })
+    if not (a.zona or a.dest or a.tipologia or a.top):
+        _err("filtro obbligatorio: --kpi, --zona X, --dest Y, --tipologia Z oppure --top N")
+
+    nota = str(len(righe)) + " righe corrispondenti"
+    if (omi.get("kpi") or {}).get("sup_mista"):
+        nota += " | ATTENZIONE: superficie lorda e netta compresenti, i euro/mq non sono confrontabili fra zone"
+    out(righe[:a.top] if a.top else righe, nota=nota)
+
+
 def cmd_vars(a):
     with open(os.path.join(_REF, "censimento_vars.json"), encoding="utf-8") as f:
         lab = json.load(f)
@@ -458,6 +504,15 @@ def main():
     x.add_argument("--force-den", dest="force_den", action="store_true",
                    help="forza un rapporto fuori registro (sconsigliato)")
     x.set_defaults(fn=cmd_full)
+
+    x = s.add_parser("omi", help="quotazioni immobiliari per zona omogenea (Agenzia Entrate)")
+    x.add_argument("comune")
+    x.add_argument("--kpi", action="store_true", help="solo i KPI comunali")
+    x.add_argument("--zona", help="codice zona (B3) o testo nella dizione (centro storico)")
+    x.add_argument("--dest", help="destinazione: residenziale | commerciale | produttiva | terziaria")
+    x.add_argument("--tipologia", help="tipologia immobiliare, anche parziale (abitazioni, box, negozi)")
+    x.add_argument("--top", type=int, default=0)
+    x.set_defaults(fn=cmd_omi)
 
     x = s.add_parser("vars", help="dizionario delle 127 variabili censuarie")
     x.add_argument("cerca", nargs="?"); x.set_defaults(fn=cmd_vars)

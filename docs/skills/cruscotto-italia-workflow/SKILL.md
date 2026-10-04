@@ -1,7 +1,7 @@
 ---
 name: cruscotto-italia-workflow
-version: 2.10.0
-description: Cruscotto Italia MCP (7896 comuni). Tool: comune_kpi (~55 KPI ~620 token); comune_dashboard (27 sezioni); search_comune; anncsu_civico_search; censimento_sezione_search. Sezioni: anagrafica, demografia POSAS+D7B (serie storica, nati/morti), censimento profilo, turismo, PNRR, ISPRA suolo/idro/rifiuti/aria, DPC sismica, BDAP-MOP, SIOPE cassa (pagamenti+incassi+saldo), ANAC, MIUR scuole/plessi, ACI veicoli, MEF redditi/patrimonio, ANNCSU civici, MdS farmacie/ospedali, GSE ricarica EV, AGCOM FTTH, MIMIT carburanti, RUNTS, ISTAT ASIA, pendolarismo 2021, Basi Territoriali 2021, vars 2023 (127), MiC ArCo+Cultural-ON, meteo ItaliaMeteo, morfologia CNR-IRPI HR-DTM 5m (kpi_summary: morfologia_cnr con elev/slope/aspect/solar). Catasto AGE: fogli/particelle REST /data/catasto_full/. Trigger: ISTAT, BDAP, SIOPE, incassi, saldo cassa, ISPRA, sismica, PNRR, ANAC, MEF, ANNCSU, AGCOM, MIMIT, RUNTS, FTTH, pendolarismo, beni culturali, MiC, catasto, meteo, ItaliaMeteo, morfologia, DTM, pendenza, CNR-IRPI, natalita.
+version: 2.11.0
+description: Cruscotto Italia MCP (7896 comuni). Tool: comune_kpi (~55 KPI ~620 token); comune_dashboard (27 sezioni); search_comune; anncsu_civico_search; censimento_sezione_search. Sezioni: anagrafica, demografia POSAS+D7B (serie storica, nati/morti), censimento profilo, turismo, PNRR, ISPRA suolo/idro/rifiuti/aria, DPC sismica, BDAP-MOP, SIOPE cassa (pagamenti+incassi+saldo), ANAC, MIUR scuole/plessi, ACI veicoli, MEF redditi/patrimonio, ANNCSU civici, MdS farmacie/ospedali, GSE ricarica EV, AGCOM FTTH, MIMIT carburanti, RUNTS, ISTAT ASIA, pendolarismo 2021, Basi Territoriali 2021, vars 2023 (127), MiC ArCo+Cultural-ON, meteo ItaliaMeteo, morfologia CNR-IRPI DTM 5m, OMI quotazioni immobiliari per zona. Catasto AGE: fogli/particelle REST /data/catasto_full/. Trigger: ISTAT, BDAP, SIOPE, incassi, saldo cassa, ISPRA, sismica, PNRR, ANAC, MEF, ANNCSU, AGCOM, MIMIT, RUNTS, FTTH, pendolarismo, beni culturali, MiC, catasto, meteo, morfologia, DTM, natalita, OMI, quotazioni, mercato immobiliare, euro/mq.
 ---
 
 # Cruscotto Italia workflow
@@ -9,7 +9,7 @@ description: Cruscotto Italia MCP (7896 comuni). Tool: comune_kpi (~55 KPI ~620 
 Reference + workflow patterns for the Cruscotto Italia MCP connector.
 
 - **Server**: `cruscotto-italia-mcp.agid.workers.dev` (Cloudflare Worker)
-- **Datasets integrati**: **28** (anagrafica, demografia, censimento profilo annuale, turismo, PNRR, territorio ISPRA, classificazione sismica DPC, opere BDAP-MOP, SIOPE cassa multi-anno (pagamenti + incassi + saldo), scuole MIUR, aria ISPRA SNPA, parco veicoli ISTAT, incidenti ISTAT, iscrizioni ACI, redditi MEF, patrimonio immobili PA MEF DE, civici ANNCSU, sanità territoriale Ministero Salute, punti di ricarica EVSE PUN GSE/MASE, banda larga AGCOM BBmap, distributori carburanti MIMIT, enti Terzo Settore RUNTS Min. Lavoro, imprese e addetti ISTAT ASIA UL, matrice pendolarismo lavoro 2021 Censimento permanente, **Basi Territoriali 2021 e Variabili censuarie 2023 con 127 variabili per sezione di censimento**, **beni culturali immobili tutelati ArCo MiC con ~113k record nazionali: chiese, palazzi, castelli, archeologia, ville, monumenti, soprintendenze**, meteo ItaliaMeteo ICON-2I, **morfologia del territorio CNR-IRPI HR-DTM 5m one-shot**)
+- **Datasets integrati**: **29** (anagrafica, demografia, censimento profilo annuale, turismo, PNRR, territorio ISPRA, classificazione sismica DPC, opere BDAP-MOP, SIOPE cassa multi-anno (pagamenti + incassi + saldo), scuole MIUR, aria ISPRA SNPA, parco veicoli ISTAT, incidenti ISTAT, iscrizioni ACI, redditi MEF, patrimonio immobili PA MEF DE, civici ANNCSU, sanità territoriale Ministero Salute, punti di ricarica EVSE PUN GSE/MASE, banda larga AGCOM BBmap, distributori carburanti MIMIT, enti Terzo Settore RUNTS Min. Lavoro, imprese e addetti ISTAT ASIA UL, matrice pendolarismo lavoro 2021 Censimento permanente, **Basi Territoriali 2021 e Variabili censuarie 2023 con 127 variabili per sezione di censimento**, **beni culturali immobili tutelati ArCo MiC con ~113k record nazionali: chiese, palazzi, castelli, archeologia, ville, monumenti, soprintendenze**, meteo ItaliaMeteo ICON-2I, **morfologia del territorio CNR-IRPI HR-DTM 5m one-shot**, **quotazioni immobiliari OMI Agenzia delle Entrate: 24.101 zone omogenee sub-comunali in 7.885 comuni**)
 - **Istituzioni fonte**: **18** (ANAC, BDAP, Italia Domani, ISTAT, ISPRA, MIUR, ACI, MEF Dipartimento Finanze, MEF Dipartimento Economia, Agenzia Entrate, Ministero della Salute, GSE / MASE, AGCOM, MIMIT, Ministero del Lavoro e Politiche Sociali, **Ministero della Cultura (MiC) — ICCD/ArCo**, Dipartimento della Protezione Civile, **CNR-IRPI**)
 - **Comuni coperti**: ~7.918
 
@@ -83,7 +83,8 @@ Risposta strutturata in 25 gruppi tematici. Ogni gruppo contiene 2-7 campi scala
   "sanita_mds": {"n_farmacie", "n_parafarmacie", "n_ospedali", "posti_letto_ospedalieri", "farmacie_per_1000_ab"},
   "censimento": {"n_sezioni", "pop_totale", "famiglie_totali", "abitazioni_totali", "stranieri_totali", "occupati_15_64", "area_kmq", "densita_ab_per_kmq"},
   "beni_culturali_mic": {"n_beni_immobili", "n_visitabili", "n_con_coordinate", "n_senza_coordinate", "pct_con_foto", "pct_con_descrizione", "beni_per_1000_ab", "snapshot_date"},
-  "morfologia": {"elev_min", "elev_max", "elev_mean", "slope_mean", "slope_gt15_pct", "aspect_dom", "aspect_dom_pct", "tri_mean", "geo_versanti", "geo_creste", "geo_impluvi", "geo_pianori", "solar_mean"}  // null se comune non ancora processato
+  "morfologia": {"elev_min", "elev_max", "elev_mean", "slope_mean", "slope_gt15_pct", "aspect_dom", "aspect_dom_pct", "tri_mean", "geo_versanti", "geo_creste", "geo_impluvi", "geo_pianori", "solar_mean"},  // null se comune non ancora processato
+  "quotazioni_omi": {"n_zone", "residenziale_min", "residenziale_medio", "residenziale_max", "sup_mista", "zona_piu_cara", "zona_piu_cara_valore"}  // euro/mq, solo tipologie abitative
 }
 ```
 
@@ -297,6 +298,13 @@ User: *"Quanti monumenti tutelati ci sono a Matera?"* / *"Top 10 comuni per beni
 
 - **morfologia (CNR-IRPI HR-DTM 5m)**: dato one-shot (pipeline non periodica). Shard separato `/data/morfologia/<istat>/<istat>_stats.json` — non incluso nel dashboard shard R2 ma fetchato e allegato dal Worker in risposta a `comune_dashboard`. Se il comune non è ancora stato processato, il campo `morfologia` è assente dalla risposta (non è null, è proprio assente). Progressivo: ~7.895 comuni in elaborazione. Non aggiornato periodicamente salvo nuova versione DTM CNR-IRPI. Licenza CC BY 4.0.
 
+- **omi (Agenzia delle Entrate — Osservatorio del Mercato Immobiliare)**: quotazioni semestrali in €/m² per **zona omogenea interna al comune** — l'unico dato economico del Cruscotto con granularità **sub-comunale**. 24.101 zone quotate in 7.885 comuni (11 scoperti). Tre trappole da conoscere prima di usarlo:
+  1. **La chiave di una riga è `tipologia` + `stato`, non la sola tipologia.** La stessa tipologia compare più volte con stati di conservazione diversi e valori molto distanti (a Genova zona D22: *Negozi NORMALE* 1550-3000 €/m², *Negozi OTTIMO* 3500-6900). Raggruppare per tipologia perde righe silenziosamente.
+  2. **I KPI `residenziale_*` escludono box e posti auto**, che abbasserebbero la media senza rappresentare il mercato della casa: sono calcolati sulle sole tipologie abitative (civili, economiche, signorili, ville e villini).
+  3. **Se `kpi.sup_mista` è `true`**, nel comune convivono quotazioni riferite a superficie **lorda (L)** e **netta (N)**: i €/m² non sono confrontabili fra zone né con altri comuni. Nei ranking nazionali vanno segnalati o esclusi.
+
+  Le zone OMI **non coincidono** con le microzone catastali del D.P.R. 138/1998. I valori sono **di larga massima** e non sostituiscono la stima di un tecnico; nei comuni con carente dinamica di mercato derivano da indagine indiretta. Perimetri geografici: `/data/omi_full/<istat>.geojson` (FeatureCollection WGS84, join su `properties.zona`), non nel dashboard shard. Aggiornamento semestrale: l'Agenzia pubblica entro il 15 marzo e il 15 ottobre. Licenza CC BY 4.0, attribuzione obbligatoria «Agenzia delle Entrate - OMI».
+
 ## Endpoint REST aggiuntivi
 
 **Base URL di TUTTI gli endpoint REST `/data/...`**: `https://cruscotto-italia.dati.gov.it`
@@ -311,6 +319,16 @@ Endpoint disponibili (anteporre sempre il Base URL sopra):
 
 - `GET /data/anncsu_full/<istat>.json` — dataset completo civici per comune (per Roma 515.815, Milano ~280.000). Usalo solo se serve davvero il dato completo; per query puntuali usa `anncsu_civico_search` che evita di buttare 500k civici nel context LLM.
 - `GET /data/censimento_full/<istat>.geojson` — FeatureCollection EPSG:4326 (WGS84) di tutte le sezioni di censimento del comune, con poligoni georeferenziati + 127 variabili demografiche/abitative raw per sezione (P1-P103, IT1-IT12, ST1-ST33, PF1, PF3-PF9, A2/A3/A5/A8, NA1, EM1-EM6). Dimensioni: ~30 KB (Morterone) — ~3 MB (Roma 13.000 sezioni). Usalo solo per query che richiedono il dettaglio per sezione (densità, mappe choropleth, filtri territoriali sub-comunali); per gli aggregati comune-level basta `comune_dashboard.censimento` (~3 KB).
+
+### Perimetri zone OMI (Agenzia delle Entrate, CC-BY 4.0)
+
+`GET /data/omi_full/<istat>.geojson` — FeatureCollection WGS84 (EPSG:4326) con i poligoni delle zone omogenee del comune. 7.882 comuni, mediana 33 KB, massimo 1,4 MB (Roma). Coordinate a 5 decimali (~1 m).
+
+`properties`: `{codcom, zona, nome}`. Il **join con le quotazioni è su `zona`** (es. `"B3"`), non su `codcom`. L'attributo `LINKZONA` del KML originale è sempre vuoto alla fonte: non usarlo.
+
+Geometrie `Polygon` o `MultiPolygon`, con anelli interni dove la zona ha enclave.
+
+Disallineamenti noti, fisiologici perché le anagrafiche AE e ISTAT si aggiornano in momenti diversi: 3 comuni hanno quotazioni ma non perimetri, 3 hanno perimetri ma non quotazioni, 1 comune OMI (M439 Castegnero Nanto, fuso il 21/02/2026) non è ancora in anagrafica Cruscotto.
 
 ### Catasto Agenzia delle Entrate (cartografia INSPIRE, CC-BY 4.0)
 
