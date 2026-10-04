@@ -221,6 +221,13 @@ async function trackToolCall(
     if (ua.includes("claude")) client = "claude";
     else if (ua.includes("chatgpt") || ua.includes("openai")) client = "chatgpt";
     else if (ua.includes("cursor")) client = "cursor";
+    // Agenti che si dichiarano (bot, crawler, archivi open data): si registra
+    // una etichetta di CATEGORIA, mai il nome del progetto o il contatto
+    // presenti nello user-agent. Nei blob AE non vanno identificativi: la
+    // retention e di circa 90 giorni e non e purgabile.
+    else if (/bot|crawler|spider|harvest|raccolta|archivio/.test(ua)) client = "bot-dichiarato";
+    // Runtime HTTP generico, stessa famiglia di python/node/curl.
+    else if (ua.includes("java")) client = "java";
     else if (ua.includes("python") || ua.includes("requests") || ua.includes("httpx")) client = "python";
     else if (ua.includes("node") || ua.includes("undici")) client = "node";
     else if (ua.includes("curl") || ua.includes("wget")) client = "curl";
