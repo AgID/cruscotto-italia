@@ -29,7 +29,7 @@ export const mcpInfo: ToolDefinition = {
     }
     return {
       service: "cruscotto-italia-mcp",
-      version: "0.20.0",
+      version: "0.21.0",
       protocol: "MCP 2025-11-25 (supportate anche 2025-06-18, 2025-03-26, 2024-11-05)",
       build: {
         // Tree hash git della cartella worker/: identico nel repo pubblico
@@ -192,6 +192,13 @@ export const mcpInfo: ToolDefinition = {
           license: "CC-BY 4.0 - HVD Meteorologici (Regolamento UE 2023/138)",
           datasets: [
             "ItaliaMeteo ICON-2I - previsioni numeriche su griglia 2.2km: temperatura 2m, precipitazioni totali, umidita' relativa, vento 10m (U/V), raffica massima, copertura nuvolosa, altezza neve, codice meteo WMO. 73 step orari (0-72h), corse 00 e 12 UTC. Copertura 7.895/7.895 comuni (100%). Aggiornamento bi-giornaliero (03:30 e 14:30 UTC). Agenzia Nazionale per la Meteorologia e Climatologia (ItaliaMeteo) + Cineca.",
+          ],
+        },
+        age_omi: {
+          canonical: "https://www.agenziaentrate.gov.it/portale/schede/fabbricatiterreni/omi/banche-dati/quotazioni-immobiliari",
+          license: "CC-BY 4.0 - attribuzione obbligatoria \"Agenzia delle Entrate - OMI\"",
+          datasets: [
+            "Agenzia delle Entrate - Osservatorio del Mercato Immobiliare (OMI): quotazioni semestrali per zona territoriale omogenea, l'unico dato economico del Cruscotto con granularita' SUB-comunale. Per ogni zona: intervallo minimo-massimo in euro/mq del valore di mercato (compravendita) e del canone di locazione, distinti per tipologia immobiliare (abitazioni civili/economiche/signorili, ville e villini, box e posti auto, negozi, magazzini, uffici, laboratori, capannoni), destinazione d'uso (Residenziale, Commerciale, Produttiva, Terziaria) e stato di conservazione (NORMALE, OTTIMO, SCADENTE). La chiave di una riga e' tipologia+stato: la stessa tipologia puo' comparire piu' volte con stati diversi, e usare la sola tipologia come chiave perde righe. I KPI comune-level (residenziale min/medio/max) sono calcolati sulle sole tipologie abitative, esclusi box e posti auto che abbasserebbero la media senza rappresentare il mercato della casa. Se kpi.sup_mista e' true nel comune convivono quotazioni riferite a superficie lorda (L) e netta (N) e i valori al mq NON sono confrontabili fra zone ne' fra comuni: nei ranking vanno segnalati o esclusi. Le zone OMI non coincidono con le microzone catastali del D.P.R. 138/1998. I perimetri geografici delle zone sono su /data/omi_full/<istat>.geojson (FeatureCollection WGS84, join su properties.zona). Copertura 7885/7896 comuni, 24.101 zone quotate. Le quotazioni forniscono indicazioni di valore di larga massima e non sostituiscono la stima puntuale di un tecnico professionista; nei comuni con carente dinamica di mercato derivano da indagine indiretta. Aggiornamento semestrale: l'Agenzia pubblica entro il 15 marzo (2o semestre precedente) ed entro il 15 ottobre (1o semestre corrente).",
           ],
         },
       },

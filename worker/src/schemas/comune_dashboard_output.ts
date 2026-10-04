@@ -221,6 +221,14 @@ export const comuneDashboardOutputSchema: Record<string, unknown> = {
       "description": "CNR-IRPI HR-DTM 5m: statistiche di quota/pendenza/esposizione e bounds",
       "additionalProperties": true
     },
+    "omi": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "description": "Agenzia Entrate OMI: quotazioni immobiliari per zona omogenea sub-comunale. kpi + array zone con destinazioni d'uso, tipologie, stato di conservazione e intervalli di compravendita e locazione in euro/mq. I perimetri geografici delle zone NON sono qui: endpoint REST /data/omi_full/<istat>.geojson, join su properties.zona. Attribuzione obbligatoria: Agenzia delle Entrate - OMI",
+      "additionalProperties": true
+    },
     "pendolarismo": {
       "type": [
         "object",
@@ -1637,6 +1645,32 @@ export const comuneDashboardSectionsDetail: Record<string, Record<string, unknow
     "stats": {
       "type": [
         "object",
+        "null"
+      ]
+    }
+  },
+  "omi": {
+    "_data_period": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "codcom": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "kpi": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "zone": {
+      "type": [
+        "array",
         "null"
       ]
     }

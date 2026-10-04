@@ -34,6 +34,15 @@
     "tasso_disoccupazione": 7,
     "tasso_attivita": 79.5
   },
+  "quotazioni_omi": {
+    "n_zone": 213,
+    "residenziale_min": 800.0,
+    "residenziale_medio": 2910.4,
+    "residenziale_max": 11000.0,
+    "sup_mista": false,
+    "zona_piu_cara": "B31",
+    "zona_piu_cara_valore": 11000.0
+  },
   "redditi_mef": {
     "anno_fiscale": 2024,
     "n_contribuenti": 1994045,

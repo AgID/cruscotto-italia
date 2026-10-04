@@ -831,6 +831,65 @@ export const comuneKpiOutputSchema: Record<string, unknown> = {
       },
       "additionalProperties": true
     },
+    "quotazioni_omi": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "description": "Agenzia Entrate OMI: quotazioni immobiliari per zona omogenea sub-comunale. Valori di compravendita in euro/mq calcolati sulle sole tipologie abitative (civili, economiche, signorili, ville e villini), esclusi box e posti auto. Attribuzione obbligatoria: Agenzia delle Entrate - OMI",
+      "properties": {
+        "n_zone": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Zone OMI del comune con almeno una quotazione"
+        },
+        "residenziale_min": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Valore minimo di compravendita, euro/mq"
+        },
+        "residenziale_medio": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Media dei valori minimi e massimi, euro/mq"
+        },
+        "residenziale_max": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Valore massimo di compravendita, euro/mq"
+        },
+        "sup_mista": {
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "description": "Vero se nel comune convivono superficie lorda (L) e netta (N): in quel caso i valori al mq NON sono confrontabili fra zone, ne' con altri comuni, e vanno usati con cautela nei ranking"
+        },
+        "zona_piu_cara": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Codice della zona con il valore massimo (es. B31)"
+        },
+        "zona_piu_cara_valore": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Valore della zona piu' cara, euro/mq"
+        }
+      },
+      "additionalProperties": true
+    },
     "redditi_mef": {
       "type": [
         "object",

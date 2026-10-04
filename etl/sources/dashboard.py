@@ -172,6 +172,7 @@ def compute_kpi_summary(out: dict) -> dict:
     beni_culturali = out.get("beni_culturali") or {}
     meteo = out.get("meteo") or {}
     morfologia = out.get("morfologia") or {}
+    omi = ((out.get("omi") or {}).get("kpi")) or {}
 
     # Popolazione (riferimento per molti pro-capite/per-1000)
     pop = _safe(demo, "popolazione_totale")
@@ -418,6 +419,21 @@ def compute_kpi_summary(out: dict) -> dict:
             "slope_gt15_pct":morfologia.get("slope_gt15_pct"),
             "aspect_dom":    morfologia.get("aspect_dom"),
             "solar_mean":    morfologia.get("solar_mean"),
+        },
+        # Quotazioni OMI: i tre valori sono calcolati sulle sole tipologie
+        # abitative (civili, economiche, signorili, ville e villini), senza
+        # box e posti auto che abbasserebbero la media senza rappresentare
+        # il mercato della casa. sup_mista segnala i comuni in cui convivono
+        # superficie lorda e netta: li' i euro/mq non sono confrontabili fra
+        # zone, e un ranking che li mescola e' fuorviante.
+        "quotazioni_omi": {
+            "n_zone":             omi.get("n_zone"),
+            "residenziale_min":   omi.get("residenziale_min"),
+            "residenziale_medio": omi.get("residenziale_medio"),
+            "residenziale_max":   omi.get("residenziale_max"),
+            "sup_mista":          omi.get("sup_mista"),
+            "zona_piu_cara":      (omi.get("zona_piu_cara") or {}).get("zona"),
+            "zona_piu_cara_valore": (omi.get("zona_piu_cara") or {}).get("valore"),
         },
     }
     return summary

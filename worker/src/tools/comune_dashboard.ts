@@ -36,6 +36,12 @@
  *                                   Licenza CC BY 4.0 ex art. 52 c.2 CAD
  *                                   (open by default). 66.619 PdR su 5.185
  *                                   comuni (65,7%). Aggiornamento quotidiano.)
+ *   - omi/<istat>.json             (Agenzia delle Entrate - OMI, Osservatorio
+ *                                   del Mercato Immobiliare. Licenza CC BY 4.0
+ *                                   dichiarata dall'Agenzia; attribuzione
+ *                                   obbligatoria "Agenzia delle Entrate - OMI".
+ *                                   24.101 zone quotate in 7.885 comuni.
+ *                                   Aggiornamento semestrale.)
  *   - agcom_bbmap/<istat>.json     (AGCOM - Broadband Map ex art. 22 Codice
  *                                   Comunicazioni Elettroniche. Licenza
  *                                   CC BY 4.0 ex art. 52 c.2 CAD (open by
@@ -220,6 +226,33 @@
  *                                       //   Coverage: 5185/7896 comuni (65,7%),
  *                                       //   66619 PdR totali. Aggiornamento
  *                                       //   quotidiano via GSE S3 (Cognito guest).
+ *     "omi": { ... } | null            // Agenzia Entrate OMI - quotazioni per zona
+ *                                       //   omogenea sub-comunale:
+ *                                       //   { _data_period: "2025/2",
+ *                                       //     kpi: { n_zone, residenziale_min,
+ *                                       //            residenziale_medio,
+ *                                       //            residenziale_max, sup_mista,
+ *                                       //            zona_piu_cara,
+ *                                       //            zona_piu_economica },
+ *                                       //     zone: [{ zona, fascia, dizione,
+ *                                       //              url_omi, destinazioni: {
+ *                                       //                Residenziale|Commerciale|
+ *                                       //                Produttiva|Terziaria: [
+ *                                       //                  { tipologia, stato,
+ *                                       //                    cv_min, cv_max, sup_cv,
+ *                                       //                    loc_min, loc_max,
+ *                                       //                    sup_loc } ] } }] }
+ *                                       //   La chiave di riga e' tipologia+stato:
+ *                                       //   la stessa tipologia puo' comparire
+ *                                       //   piu' volte con stati diversi.
+ *                                       //   sup_mista=true: superficie lorda e
+ *                                       //   netta compresenti, i euro/mq NON sono
+ *                                       //   confrontabili fra zone.
+ *                                       //   Perimetri geografici NON qui:
+ *                                       //   /data/omi_full/<istat>.geojson,
+ *                                       //   join su properties.zona.
+ *                                       //   Valori di larga massima, non
+ *                                       //   sostitutivi della stima di un tecnico.
  *     "agcom_bbmap": { ... } | null    // AGCOM Broadband Map (BBmap) - reportistica
  *                                       //   consistenze rete cablata, art. 22 CCE:
  *                                       //   { _data_period: "31/12/2025",
@@ -420,13 +453,14 @@ interface DashboardShard {
   censimento: unknown | null;
   meteo: unknown | null;
   morfologia: unknown | null;
+  omi: unknown | null;
   bdap_kpi: unknown | null;
   kpi_summary: Record<string, unknown> | null;
 }
 
 export const comuneDashboard: ToolDefinition = {
   description:
-    "Vista completa di un comune italiano (~250K token). Usa comune_kpi per domande puntuali o confronti; usa questo tool solo per array dettagliati: ANAC top-CPV, BDAP settori, PNRR missioni, SIOPE time-series pagamenti e incassi, serie storica della popolazione e dinamica demografica annuale (nati, morti, saldi migratori), civici ANNCSU, EV, ospedali, ATECO, censimento sezioni. Sezioni: anagrafica, demografia (POSAS + serie storica popolazione 5 annate + dinamica D7B 2019-2024), profilo ISTAT, turismo, PNRR, territorio (ISPRA+sismica DPC), qualita_aria, opere BDAP, cassa SIOPE (pagamenti, incassi, saldo), contratti ANAC, scuole MIUR, veicoli+incidenti ACI, redditi MEF, immobili PA, civici ANNCSU, sanita MdS, EV GSE, FTTH AGCOM, carburanti MIMIT, RUNTS, imprese ASIA, pendolarismo 2021, meteo ItaliaMeteo ICON-2I, morfologia CNR-IRPI DTM5m (elevazione/pendenza/esposizione/geomorfologia/solare), censimento 2021 sezioni (119 var, geometrie via /data/censimento_full/<istat>.geojson). Richiede istat_code 6 cifre. Se hai solo nome, chiama prima search_comune. Schema completo: skill cruscotto-italia-workflow.",
+    "Vista completa di un comune italiano (~250K token). Usa comune_kpi per domande puntuali o confronti; usa questo tool solo per array dettagliati: ANAC top-CPV, BDAP settori, PNRR missioni, SIOPE time-series pagamenti e incassi, serie storica della popolazione e dinamica demografica annuale (nati, morti, saldi migratori), civici ANNCSU, EV, ospedali, ATECO, censimento sezioni. Sezioni: anagrafica, demografia (POSAS + serie storica popolazione 5 annate + dinamica D7B 2019-2024), profilo ISTAT, turismo, PNRR, territorio (ISPRA+sismica DPC), qualita_aria, opere BDAP, cassa SIOPE (pagamenti, incassi, saldo), contratti ANAC, scuole MIUR, veicoli+incidenti ACI, redditi MEF, immobili PA, civici ANNCSU, sanita MdS, EV GSE, FTTH AGCOM, carburanti MIMIT, RUNTS, imprese ASIA, pendolarismo 2021, meteo ItaliaMeteo ICON-2I, morfologia CNR-IRPI DTM5m (elevazione/pendenza/esposizione/geomorfologia/solare), censimento 2021 sezioni (119 var, geometrie via /data/censimento_full/<istat>.geojson), quotazioni immobiliari OMI per zona omogenea sub-comunale (compravendita e locazione in euro/mq per tipologia e destinazione d'uso; perimetri via /data/omi_full/<istat>.geojson). Richiede istat_code 6 cifre. Se hai solo nome, chiama prima search_comune. Schema completo: skill cruscotto-italia-workflow.",
   inputSchema: {
     type: "object",
     properties: {
