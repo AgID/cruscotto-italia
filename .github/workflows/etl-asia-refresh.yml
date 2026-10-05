@@ -42,9 +42,12 @@ on:
         required: false
         default: false
         type: boolean
-  # schedule:
-  #   # 15 dicembre, 02:00 UTC (decommentare se serve automazione annuale)
-  #   - cron: '0 2 15 12 *'
+  # Schedule attivato il 05/10/2026 (prima solo manuale). Sfalsato di due
+  # settimane rispetto al profilo per non sommare il carico su ISTAT.
+  schedule:
+    - cron: '0 1 15 2 *'
+    - cron: '0 1 15 4 *'
+    - cron: '0 1 15 7 *'
 
 permissions:
   contents: read

@@ -30,9 +30,13 @@ on:
         required: false
         default: false
         type: boolean
-  # schedule:
-  #   # 1 dicembre, 03:00 UTC (decommentare se serve automazione)
-  #   - cron: '0 3 1 12 *'
+  # Schedule attivato il 05/10/2026: senza, il profilo si aggiornava solo a
+  # mano. L'ETL risolve da solo l'ultimo anno pubblicato (resolve_anni);
+  # la VM scarica l'artifact ogni giorno alle 07:30 UTC (pull_artifact).
+  schedule:
+    - cron: '0 1 1 2 *'
+    - cron: '0 1 1 4 *'
+    - cron: '0 1 1 7 *'
 
 permissions:
   contents: read
@@ -41,7 +45,7 @@ jobs:
   refresh:
     name: ETL istat_profilo + artifact upload
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 240   # download ISTAT a blocchi da 35 comuni (~900 richieste)
 
     steps:
       - uses: actions/checkout@v4
