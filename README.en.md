@@ -25,7 +25,7 @@ Searching for a municipality ("Lecce") returns a 360° view of:
 - 🏨 **Tourism** (ISTAT accommodation capacity + provincial flows)
 - 🏫 **Schools** (MIUR — registry of state schools)
 - 👶 **Demographic dynamics** (ISTAT D7B — monthly demographic balance: births, deaths, natural and migration balance, source ANPR)
-- 🌫️ **Air quality** (ISPRA SNPA — PM10/PM2.5/NO2)
+- 🌫️ **Air quality** (ISPRA SNPA — PM10/PM2.5/NO2 per station: historical series + Environmental Data Yearbook for recent years)
 - 🏞️ **Land and territory** (ISPRA — land consumption, IdroGEO landslides and floods, municipal waste)
 - 🌋 **Seismic classification** (Civil Protection Department)
 - ⛰️ **Terrain morphology** (CNR-IRPI — 5 m HR-DTM: elevation, slope, aspect, geomorphology, solar irradiance)
@@ -328,7 +328,7 @@ cruscotto-italia/
 │   │   ├── istat_profilo.py     ← permanent census *via Actions*
 │   │   ├── istat_turismo.py     ← tourism capacity + flows
 │   │   ├── territorio.py        ← ISPRA land consumption, IdroGEO, waste
-│   │   ├── aria.py              ← ISPRA SNPA air quality
+│   │   ├── aria.py              ← ISPRA SNPA air quality (historical series + Yearbook)
 │   │   ├── classificazione_sismica.py ← Civil Protection seismic classification
 │   │   ├── build_meteo.py       ← ItaliaMeteo ICON-2I forecasts
 │   │   ├── scuole.py            ← MIUR state school registry

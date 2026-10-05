@@ -25,7 +25,7 @@ Cercando un comune ("Lecce") si ottiene una vista a 360° su:
 - 🏨 **Turismo** (ISTAT capacità ricettiva + flussi provinciali)
 - 🏫 **Scuole** (MIUR — Anagrafe scuole statali)
 - 👶 **Dinamica demografica** (ISTAT D7B — bilancio demografico mensile: nati, morti, saldo naturale e migratorio, fonte ANPR)
-- 🌫️ **Qualità dell'aria** (ISPRA SNPA — PM10/PM2.5/NO2)
+- 🌫️ **Qualità dell'aria** (ISPRA SNPA — PM10/PM2.5/NO2 per stazione: serie storiche + Annuario dei dati ambientali per gli anni recenti)
 - 🏞️ **Territorio** (ISPRA — consumo di suolo, IdroGEO frane e alluvioni, rifiuti urbani)
 - 🌋 **Classificazione sismica** (Dipartimento Protezione Civile)
 - ⛰️ **Morfologia del territorio** (CNR-IRPI — HR-DTM 5 m: quota, pendenza, esposizione, geomorfologia, irraggiamento solare)
@@ -325,7 +325,7 @@ cruscotto-italia/
 │   │   ├── istat_profilo.py     ← Censimento permanente *via Actions*
 │   │   ├── istat_turismo.py     ← capacità + flussi turistici
 │   │   ├── territorio.py        ← ISPRA Suolo, IdroGEO, Rifiuti
-│   │   ├── aria.py              ← ISPRA SNPA qualità aria
+│   │   ├── aria.py              ← ISPRA SNPA qualità aria (serie storiche + Annuario)
 │   │   ├── classificazione_sismica.py ← DPC classificazione sismica
 │   │   ├── build_meteo.py       ← ItaliaMeteo ICON-2I previsioni
 │   │   ├── scuole.py            ← MIUR anagrafe scuole statali
