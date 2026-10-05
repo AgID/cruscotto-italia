@@ -32,12 +32,15 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import csv
+import io
 import json
 import re
 import sys
 import tempfile
 import urllib.error
 import urllib.request
+from datetime import datetime
 from pathlib import Path
 
 import duckdb
@@ -53,8 +56,15 @@ SDMX_AGENCY = "IT1"
 SDMX_VERSION = "1.0"
 UA = "cruscotto-italia/1.0 (+https://cruscotto-italia.dati.gov.it)"
 
-# Anno di riferimento
-ANNO = 2024
+# Anno di riferimento: risolto a runtime per ciascun dataflow (resolve_anni).
+# Fino al 05/10/2026 era cablato a 2024 mentre ISTAT aveva gia pubblicato il
+# 2025 sia per la capacita comunale sia per i flussi provinciali.
+ANNO_FALLBACK = 2024
+ANNO_CAP = ANNO_FALLBACK   # capacita ricettiva comunale (TUR_1)
+ANNO_FL = ANNO_FALLBACK    # flussi provinciali (TUR_7)
+# Sonde leggere per la scoperta dell'anno: un solo comune / una sola
+# provincia (Lecce), ~15 s ciascuna invece dell'availableconstraint (minuti).
+SONDA_KEY = {"capacita": "A.075035.........", "flussi": "A.ITF45........."}
 
 # 2 dataflow turismo
 DATAFLOWS = [
@@ -65,16 +75,16 @@ DATAFLOWS = [
         #         COUNTRY_RES_GUESTS.LOCALITY_TYPE.URBANIZ_DEGREE.COASTAL_AREA.SIZE_BY_NUMBER_ROOMS
         # key wildcard = A + 10 punti
         "key": "A..........",
-        "year_start": ANNO,
-        "year_end": ANNO,
+        "year_start": ANNO_FALLBACK,
+        "year_end": ANNO_FALLBACK,
     },
     {
         "name": "flussi",
         "id": "122_54_DF_DCSC_TUR_7",
         # Stesso schema 11 dim
         "key": "A..........",
-        "year_start": ANNO,
-        "year_end": ANNO,
+        "year_start": ANNO_FALLBACK,
+        "year_end": ANNO_FALLBACK,
     },
 ]
 
@@ -140,9 +150,48 @@ def download_url(url: str, out: Path, accept: str, force: bool = False) -> Path:
     return out
 
 
+def _anno_disponibile(df: dict, anno: int) -> bool:
+    """True se ISTAT ha osservazioni di quell'anno per la sonda del dataflow.
+
+    Si controlla TIME_PERIOD == anno: chiedendo startPeriod=endPeriod=anno
+    ISTAT puo restituire anche l'anno successivo.
+    """
+    url = sdmx_data_url(df["id"], SONDA_KEY[df["name"]], anno, anno)
+    req = urllib.request.Request(url, headers={
+        "Accept": "application/vnd.sdmx.data+csv;version=1.0.0", "User-Agent": UA})
+    with urllib.request.urlopen(req, timeout=180) as resp:
+        text = resp.read().decode("utf-8", "replace")
+    rows = csv.DictReader(io.StringIO(text))
+    return any(r.get("TIME_PERIOD") == str(anno) and (r.get("OBS_VALUE") or "").strip()
+               for r in rows)
+
+
+def resolve_anni() -> None:
+    """Imposta ANNO_CAP / ANNO_FL e gli anni dei DATAFLOWS all'ultimo anno
+    pubblicato (dall'anno precedente all'indietro fino a ANNO_FALLBACK)."""
+    global ANNO_CAP, ANNO_FL
+    for df in DATAFLOWS:
+        trovato = None
+        for anno in range(datetime.now().year - 1, ANNO_FALLBACK - 1, -1):
+            try:
+                if _anno_disponibile(df, anno):
+                    trovato = anno
+                    break
+            except Exception as e:
+                log.warning("istat_anno_probe_failed", source=df["name"], anno=anno,
+                            error=str(e)[:200])
+        if trovato is None:
+            trovato = ANNO_FALLBACK
+            log.warning("istat_anno_resolve_failed", source=df["name"], fallback=trovato)
+        df["year_start"] = df["year_end"] = trovato
+        log.info("istat_anno_resolved", source=df["name"], anno=trovato)
+    ANNO_CAP = DATAFLOWS[0]["year_start"]
+    ANNO_FL = DATAFLOWS[1]["year_start"]
+
+
 def download_dataflow_csv(df: dict, cache_dir: Path, force: bool = False) -> Path:
-    """Scarica CSV bulk del dataflow."""
-    out = cache_dir / f"{df['name']}.csv"
+    """Scarica CSV bulk del dataflow (cache con l'anno nel nome)."""
+    out = cache_dir / f"{df['name']}_{df['year_start']}.csv"
     url = sdmx_data_url(df["id"], df["key"], df["year_start"], df["year_end"])
     return download_url(url, out, "application/vnd.sdmx.data+csv;version=1.0.0",
                         force=force)
@@ -217,7 +266,7 @@ def build_turismo_shards(cache_dir: Path, output_dir: Path) -> Path:
 
     # 2) Carica i 2 CSV
     for df in DATAFLOWS:
-        csv_path = cache_dir / f"{df['name']}.csv"
+        csv_path = cache_dir / f"{df['name']}_{df['year_start']}.csv"
         if not csv_path.exists():
             log.warning("istat_csv_missing", source=df["name"], path=str(csv_path))
             continue
@@ -242,7 +291,7 @@ def build_turismo_shards(cache_dir: Path, output_dir: Path) -> Path:
     # DATA_TYPE: BEDS | NUM_EST | BED_RMS
     # TYPE_ACCOMMODATION: ALL | HOTELLIKE | OTHER | singole categorie
     log.info("istat_aggregating", section="capacita")
-    capacita = con.execute("""
+    capacita = con.execute(f"""
         SELECT
             REF_AREA AS istat,
             DATA_TYPE,
@@ -257,6 +306,7 @@ def build_turismo_shards(cache_dir: Path, output_dir: Path) -> Path:
           AND COASTAL_AREA = 'ALL'
           AND SIZE_BY_NUMBER_ROOMS = 'TOT'
           AND OBS_VALUE IS NOT NULL
+          AND TIME_PERIOD = '{ANNO_CAP}'
           AND DATA_TYPE IN ('BEDS', 'NUM_EST', 'BED_RMS')
     """).fetchall()
     log.info("istat_capacita_rows", rows=len(capacita))
@@ -278,7 +328,7 @@ def build_turismo_shards(cache_dir: Path, output_dir: Path) -> Path:
     # DATA_TYPE: AR (arrivi) | NI (presenze - notti)
     # COUNTRY_RES_GUESTS: IT | WORLD | WRL_X_ITA
     log.info("istat_aggregating", section="flussi")
-    flussi = con.execute("""
+    flussi = con.execute(f"""
         SELECT
             REF_AREA AS prov,
             DATA_TYPE,
@@ -295,6 +345,7 @@ def build_turismo_shards(cache_dir: Path, output_dir: Path) -> Path:
           AND DATA_TYPE IN ('AR', 'NI')
           AND COUNTRY_RES_GUESTS IN ('IT', 'WORLD', 'WRL_X_ITA')
           AND OBS_VALUE IS NOT NULL
+          AND TIME_PERIOD = '{ANNO_FL}'
     """).fetchall()
     log.info("istat_flussi_rows", rows=len(flussi))
 
@@ -422,7 +473,7 @@ def build_shard(istat, prov_nuts3, prov_nome, cap_data, fl_data, pop):
         }
 
     sez_capacita = {
-        "anno": ANNO,
+        "anno": ANNO_CAP,
         "totale_strutture":         totale_strutture,
         "totale_letti":             totale_letti,
         "totale_camere":            totale_camere,
@@ -461,7 +512,7 @@ def build_shard(istat, prov_nuts3, prov_nome, cap_data, fl_data, pop):
         stranieri_pct = round(100.0 * arrivi_str / arrivi_tot, 1)
 
     sez_flussi = {
-        "anno": ANNO,
+        "anno": ANNO_FL,
         "_warning": "Dato a livello provinciale (NUTS3), non comunale: ISTAT non pubblica i flussi turistici per singolo comune.",
         "provincia_nuts3": prov_nuts3,
         "provincia_nome":  prov_nome,
@@ -516,6 +567,7 @@ def main() -> int:
 
     try:
         # 1) Download dei 2 CSV (capacita + flussi) + 1 XML (CL_ITTER107)
+        resolve_anni()
         for df in DATAFLOWS:
             download_dataflow_csv(df, cache_dir, force=args.no_cache)
         download_codelist_xml(cache_dir, force=args.no_cache)
