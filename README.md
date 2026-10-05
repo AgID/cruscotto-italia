@@ -35,7 +35,7 @@ Cercando un comune ("Lecce") si ottiene una vista a 360° su:
 - 🏠 **Civici e strade** (ANNCSU — Agenzia delle Entrate, Open Data HVD)
 - 💊 **Sanità territoriale** (Ministero della Salute — farmacie, parafarmacie, posti letto ospedalieri)
 - ⚡ **Punti di ricarica veicoli elettrici** (GSE/MASE — Piattaforma Unica Nazionale)
-- 📶 **Banda larga** (AGCOM Broadband Map — copertura FTTH/FTTC/FWA per comune)
+- 📶 **Banda larga** (AGCOM Broadband Map — copertura FTTH/FTTC per comune)
 - ⛽ **Distributori carburante e prezzi** (MIMIT — Osservatorio Prezzi Carburanti)
 - 🤝 **Enti del Terzo Settore** (Ministero del Lavoro — RUNTS, D.Lgs 117/2017: ODV, APS, EF, IS, SMS, ETS)
 - 🏭 **Imprese e addetti** (ISTAT — ASIA UL, serie 2018-2023)
@@ -116,7 +116,7 @@ Dettagli architetturali completi: [`DESIGN.md`](DESIGN.md) ·
 | **Daily** (08:00 UTC) | PUN punti ricarica, MIMIT carburanti, dashboard rebuild | cron VM AgID | automatico |
 | **Daily Pull-Artifact** (07:30 UTC) | scarica artifact dei 3 ETL ISTAT da GitHub Actions | cron VM AgID | automatico |
 | **Weekly** (lunedì 04:00 UTC) | ANAC OCDS, PNRR, sanità MdS, RUNTS, dashboard | cron VM AgID | automatico |
-| **Monthly** (5° del mese 04:00 UTC) | anagrafica, BDAP-MOP, SIOPE, ANNCSU, AGCOM banda larga, beni culturali (ArCo + Cultural-ON) | cron VM AgID | automatico |
+| **Monthly** (5° del mese 04:00 UTC) | anagrafica, BDAP-MOP, SIOPE, ANNCSU, AGCOM banda larga (08:00 UTC), beni culturali (ArCo + Cultural-ON) | cron VM AgID | automatico |
 | **Annual** (1 feb / 1 apr / 1 lug, 04:00 UTC) | demografia POSAS, profilo Censimento, turismo, territorio, scuole, veicoli, redditi IRPEF, immobili PA | cron VM AgID | automatico |
 | **Semestrale** (1 marzo / 1 settembre, 03:00 UTC) | cartografia catastale AGE (particelle + fogli, 19 regioni) | cron VM AgID | automatico |
 | **Semestrale** (sentinella giornaliera 03:00 UTC) | quotazioni OMI AGE (zone + perimetri): `omi_semestrale.sh` interroga ogni giorno l'elenco dei semestri pubblicati e avvia la raccolta solo quando ne compare uno nuovo (l'Agenzia pubblica entro il 15 marzo e il 15 ottobre, senza data fissa) | cron VM AgID | automatico |
@@ -389,6 +389,11 @@ In condizioni operative normali `_generated_at` è recente (≤ 24h) e
 `_missing` è vuoto o contiene solo source dove il comune non ha dati
 upstream (es. comuni piccolissimi senza colonnine di ricarica o
 distributori carburanti).
+
+Attenzione: `_generated_at` dice quando è stato ricostruito l'aggregato,
+non a quale periodo si riferiscono i dati. Le sezioni con un periodo di
+riferimento lo espongono in `_data_period` (es. `agcom_bbmap`, `omi`):
+è quello da guardare per sapere se una fonte è aggiornata.
 
 ---
 

@@ -35,7 +35,7 @@ Searching for a municipality ("Lecce") returns a 360° view of:
 - 🏠 **House numbers and streets** (ANNCSU — Revenue Agency, HVD open data)
 - 💊 **Local healthcare** (Ministry of Health — pharmacies, para-pharmacies, hospital beds)
 - ⚡ **EV charging points** (GSE/MASE — National Single Platform, PUN)
-- 📶 **Broadband** (AGCOM Broadband Map — FTTH/FTTC/FWA coverage per municipality)
+- 📶 **Broadband** (AGCOM Broadband Map — FTTH/FTTC coverage per municipality)
 - ⛽ **Fuel stations and prices** (MIMIT — Fuel Price Observatory)
 - 🤝 **Third-sector organisations** (Ministry of Labour — RUNTS national register, Legislative Decree 117/2017: ODV, APS, EF, IS, SMS, ETS)
 - 🏭 **Businesses and employees** (ISTAT — ASIA UL, 2018-2023 series)
@@ -118,7 +118,7 @@ Full architectural details: [`DESIGN.md`](DESIGN.md) ·
 | **Daily** (08:00 UTC) | PUN charging points, MIMIT fuel prices, dashboard rebuild | AgID VM cron | automatic |
 | **Daily pull-artifact** (07:30 UTC) | downloads the artifacts of the 3 ISTAT ETLs from GitHub Actions | AgID VM cron | automatic |
 | **Weekly** (Monday 04:00 UTC) | ANAC OCDS, NRRP, Ministry of Health, RUNTS, dashboard | AgID VM cron | automatic |
-| **Monthly** (5th of the month, 04:00 UTC) | registry, BDAP-MOP, SIOPE, ANNCSU, AGCOM broadband, cultural heritage (ArCo + Cultural-ON) | AgID VM cron | automatic |
+| **Monthly** (5th of the month, 04:00 UTC) | registry, BDAP-MOP, SIOPE, ANNCSU, AGCOM broadband (08:00 UTC), cultural heritage (ArCo + Cultural-ON) | AgID VM cron | automatic |
 | **Annual** (1 Feb / 1 Apr / 1 Jul, 04:00 UTC) | POSAS demographics, census profile, tourism, territory, schools, vehicles, IRPEF income, public real estate | AgID VM cron | automatic |
 | **Six-monthly** (1 March / 1 September, 03:00 UTC) | Revenue Agency cadastral cartography (parcels + sheets, 19 regions) | AgID VM cron | automatic |
 | **Six-monthly** (daily sentinel at 03:00 UTC) | Revenue Agency OMI property values (zones + boundaries): `omi_semestrale.sh` polls the list of published half-years daily and starts the harvest only when a new one appears (the Agency publishes by 15 March and 15 October, with no fixed date) | AgID VM cron | automatic |
@@ -392,6 +392,11 @@ Under normal operating conditions `_generated_at` is recent (≤ 24h) and
 `_missing` is empty or lists only sources for which the municipality has no
 upstream data (e.g. very small municipalities with no charging points or fuel
 stations).
+
+Note: `_generated_at` tells when the aggregate was rebuilt, not which period
+the data refers to. Sections with a reference period expose it in
+`_data_period` (e.g. `agcom_bbmap`, `omi`): check that field to know whether
+a source is up to date.
 
 ---
 
