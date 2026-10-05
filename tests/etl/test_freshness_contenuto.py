@@ -62,3 +62,10 @@ def test_campo_mancante_non_rompe(fc, tmp_path):
     _scrivi(tmp_path, "turismo/077014.json", {"altro": 1})
     out = fc.controlli_contenuto("istat_turismo", _ora("2026-10-05"))
     assert out and "fallito" in out[0]
+
+
+def test_aria_anno_minimo(fc, tmp_path):
+    _scrivi(tmp_path, "aria/075035.json", {"_anno_dati": 2022})
+    assert fc.controlli_contenuto("aria", _ora("2026-10-05"))          # il guasto di oggi
+    _scrivi(tmp_path, "aria/075035.json", {"_anno_dati": 2024})
+    assert fc.controlli_contenuto("aria", _ora("2026-10-05")) == []

@@ -5,10 +5,11 @@ anno secondo la Decisione UE 2011/850/EU. Le serie storiche aggregano i
 rilevamenti delle stazioni di monitoraggio gestite da Regioni e Province
 Autonome (rete SNPA: ISPRA + ARPA/APPA regionali).
 
-Inquinanti coperti:
-  - PM10  (2002-2022)  - particolato grossolano,  limite legge 40 ug/m3 annua
-  - PM2.5 (2004-2022)  - particolato fine,        limite legge 25 ug/m3 annua
-  - NO2   (2001-2022)  - biossido di azoto,       limite legge 40 ug/m3 annua
+Inquinanti coperti (serie storiche CSV fino al 2022 + Annuario ISPRA per
+gli anni successivi, oggi 2024; il 2023 non e piu online e resta vuoto):
+  - PM10  - particolato grossolano,  limite legge 40 ug/m3 annua
+  - PM2.5 - particolato fine,        limite legge 25 ug/m3 annua
+  - NO2   - biossido di azoto,       limite legge 40 ug/m3 annua
   - O3    (2002-2022)  - ozono,                   obiettivo lungo termine
 
 Granularita': stazione di monitoraggio, aggregata per comune via id_comune
@@ -95,6 +96,8 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import os
+import re
 import sys
 from collections import defaultdict
 from datetime import datetime, timezone
@@ -134,7 +137,32 @@ CACHE_DIR = Path("/tmp/cruscotto-aria-cache")
 
 # Anno di riferimento "ultimo_anno" del shard. Aggiornare quando ISPRA
 # pubblichera' i dati 2023/2024.
+# Anno di riferimento: ricalcolato a runtime come anno piu recente presente
+# nei dati (serie storiche + Annuario). Il valore qui e solo il default.
 ANNO_RIFERIMENTO = 2022
+
+# Annuario ISPRA (portale indicatori ambientali): le serie storiche CSV sopra
+# sono ferme al 2022 lato ISPRA (verificato il 05/10/2026), mentre l'Annuario
+# pubblica ogni anno la "Tabella 1 - Stazioni di monitoraggio: dati e
+# parametri statistici" dell'ultimo anno (dati 2024 pubblicati a dicembre
+# 2025), con gli stessi identificativi (id_comune a 7 cifre, station_eu_code).
+# L'edizione precedente non resta online: il 2023 manca e nel trend e vuoto.
+ANNUARIO_BASE = "https://indicatoriambientali.isprambiente.it"
+ANNUARIO_PAGINE: dict[str, tuple[str, str]] = {
+    # inquinante -> (pagina dell'indicatore, sigla nel nome del file)
+    "pm10": ("/it/qualita-dellaria/qualita-dell-aria-ambiente-particolato-pm10", "PM10"),
+    "pm25": ("/it/qualita-dellaria/qualita-dellaria-ambiente-particolato-pm25", "PM25"),
+    "no2":  ("/it/qualita-dellaria/qualita-dellaria-ambiente-biossido-di-azoto-no2", "NO2"),
+}
+# Classi di concentrazione (fascia "(a;b]") come nel campo range_y delle serie
+# storiche: verificate su tutto lo storico 2001-2022, zero eccezioni.
+FASCE: dict[str, list[float]] = {
+    "pm10": [0, 15, 20, 30, 40],
+    "pm25": [0, 5, 10, 15, 20, 25],
+    "no2":  [0, 10, 20, 30, 40],
+}
+_ZONA = {"U": "URBANA", "S": "SUBURBANA", "R": "RURALE"}
+_STAZ = {"F": "FONDO", "T": "TRAFFICO", "I": "INDUSTRIALE"}
 
 # Numero anni nel trend_decennale (2013-2022 = 10 anni se ANNO_RIFERIMENTO=2022).
 TREND_ANNI = 10
@@ -306,6 +334,133 @@ def parse_csv(csv_path: Path) -> list[dict]:
              rows=len(rows), skipped_no_istat=skipped_no_istat,
              skipped_no_lat=skipped_no_lat)
     return rows
+
+
+# ============================================================================
+# Annuario ISPRA: anni successivi alle serie storiche
+# ============================================================================
+
+def fascia_da_media(ink: str, media: float | None) -> str:
+    """Fascia "(a;b]" della media annua, stesse classi di range_y."""
+    if media is None:
+        return ""
+    soglie = FASCE[ink]
+    for a, b in zip(soglie, [*soglie[1:], None], strict=True):
+        if b is None or a < media <= b:
+            return f"({a};{'Inf' if b is None else b}]"
+    return ""
+
+
+def fetch_annuario(ink: str, no_cache: bool = False) -> tuple[Path, int] | None:
+    """Scarica la Tabella 1 piu recente dell'Annuario per l'inquinante.
+
+    Il link si legge dalla pagina dell'indicatore: il percorso contiene la
+    data di pubblicazione e cambia a ogni edizione. None se non trovata.
+    """
+    pagina, sigla = ANNUARIO_PAGINE[ink]
+    headers = {"User-Agent": "Mozilla/5.0 Cruscotto-Italia/1.0 (+https://cruscotto-italia.dati.gov.it)"}
+    try:
+        r = requests.get(ANNUARIO_BASE + pagina, headers=headers, timeout=60)
+        r.raise_for_status()
+    except requests.RequestException as e:
+        log.warning("aria_annuario_pagina_ko", inquinante=ink, error=str(e)[:200])
+        return None
+    rx = re.compile(r'href="([^"]*TABELLA(?:_|%20| )*1_' + sigla + r'_(\d{4})[^"]*\.xlsx)"', re.I)
+    trovati = sorted((int(m.group(2)), m.group(1)) for m in rx.finditer(r.text))
+    if not trovati:
+        log.warning("aria_annuario_tabella_assente", inquinante=ink)
+        return None
+    anno, href = trovati[-1]
+    out = CACHE_DIR / f"annuario_{ink}_{anno}.xlsx"
+    if not out.exists() or no_cache:
+        url = href if href.startswith("http") else ANNUARIO_BASE + href
+        d = requests.get(url, headers=headers, timeout=120)
+        d.raise_for_status()
+        part = out.with_suffix(".xlsx.part")
+        part.write_bytes(d.content)
+        os.replace(part, out)
+    log.info("aria_annuario", inquinante=ink, anno=anno, path=str(out))
+    return out, anno
+
+
+def coordinate_storiche(data: dict[str, list[dict]]) -> dict[str, tuple[float, float]]:
+    """station_eu_code -> (lat, lon) dalle serie storiche di tutti gli inquinanti."""
+    coord: dict[str, tuple[float, float]] = {}
+    for righe in data.values():
+        for r in righe:
+            if r["station_eu_code"] and r["lat"] and r["lon"]:
+                coord[r["station_eu_code"]] = (r["lat"], r["lon"])
+    return coord
+
+
+def parse_annuario(path: Path, ink: str, anno: int,
+                   coord: dict[str, tuple[float, float]]) -> list[dict]:
+    """Righe della Tabella 1 nella stessa forma di parse_csv()."""
+    import openpyxl
+    ws = openpyxl.load_workbook(path, read_only=True, data_only=True).worksheets[0]
+    righe = list(ws.iter_rows(values_only=True))
+    h = [str(c or "").strip().lower() for c in righe[0]]
+
+    def col(prefisso: str) -> int | None:
+        return next((i for i, x in enumerate(h) if x.startswith(prefisso)), None)
+
+    c = {"idc": col("id_comune"), "eu": col("station_eu_code"), "reg": col("regione"),
+         "prov": col("provincia"), "com": col("comune"), "nome": col("nome stazione"),
+         "zona": col("tipo zona"), "staz": col("tipo stazione"), "media": col("valore medio annuo"),
+         "sup": col("giorni di superamento del valore limite giornaliero"),
+         "n": col("numero di dati validi")}
+    for k in ("idc", "eu", "media"):
+        if c[k] is None:
+            raise RuntimeError(f"Annuario {ink} {anno}: colonna obbligatoria {k} assente ({h})")
+
+    def num(v):
+        try:
+            return float(str(v).replace(",", "."))
+        except (TypeError, ValueError):
+            return None
+
+    out, senza_istat, senza_coord = [], 0, 0
+    for r in righe[1:]:
+        if not r or c["eu"] >= len(r) or not r[c["eu"]] or num(r[c["idc"]]) is None:
+            continue                                   # riga unita di misura / vuota
+        istat = parse_id_comune_to_istat(num(r[c["idc"]]))
+        if istat is None:
+            senza_istat += 1
+            continue
+        eu = str(r[c["eu"]]).strip()
+        if eu not in coord:
+            senza_coord += 1
+            continue
+        g = lambda k, r=r: r[c[k]] if c[k] is not None and c[k] < len(r) else None  # noqa: E731
+        zona = str(g("zona") or "").strip().upper()
+        staz = str(g("staz") or "").strip().upper()
+        zona = _ZONA.get(zona, zona)
+        staz = _STAZ.get(staz, staz)
+        media = num(g("media"))
+        sup = num(g("sup")) if ink == "pm10" else None
+        n = num(g("n"))
+        out.append({
+            "station_eu_code": eu,
+            "nome_stazione":   str(g("nome") or "").strip(),
+            "istat_code":      istat,
+            "regione":         str(g("reg") or "").strip(),
+            "provincia":       str(g("prov") or "").strip(),
+            "comune":          str(g("com") or "").strip(),
+            "lat":             coord[eu][0],
+            "lon":             coord[eu][1],
+            "tipo_zona":       zona,
+            "tipo_stazione":   staz,
+            "tipo_combinato":  (zona[:1] + staz[:1]) if zona and staz else "",
+            "anno":            anno,
+            "media_yy":        media,
+            "sup50":           int(sup) if sup is not None else None,
+            "n_giorni_validi": int(n) if n is not None else None,
+            "fascia":          fascia_da_media(ink, media),
+            "copertura":       None,
+        })
+    log.info("aria_annuario_parsed", inquinante=ink, anno=anno, righe=len(out),
+             senza_istat=senza_istat, senza_coordinate=senza_coord)
+    return out
 
 
 # ============================================================================
@@ -663,6 +818,24 @@ def main() -> int:
         data: dict[str, list[dict]] = {}
         for ink, p in csv_paths.items():
             data[ink] = parse_csv(p)
+
+        # 2b. Anni successivi dall'Annuario ISPRA (le serie storiche sono ferme)
+        coord = coordinate_storiche(data)
+        for ink in INQUINANTI_URLS:
+            if ink not in ANNUARIO_PAGINE:
+                continue
+            esito = fetch_annuario(ink, no_cache=args.no_cache)
+            if esito is None:
+                continue
+            path, anno = esito
+            if anno <= max((r["anno"] for r in data[ink]), default=0):
+                continue                               # anno gia nelle serie storiche
+            data[ink].extend(parse_annuario(path, ink, anno, coord))
+
+        # Anno di riferimento = anno piu recente presente nei dati
+        global ANNO_RIFERIMENTO
+        ANNO_RIFERIMENTO = max(r["anno"] for righe in data.values() for r in righe)
+        log.info("aria_anno_riferimento", anno=ANNO_RIFERIMENTO)
 
         # 3. Build shards
         log.info("aria_building_shards", output_dir=str(shard_dir))

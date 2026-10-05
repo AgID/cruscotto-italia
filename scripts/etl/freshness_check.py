@@ -426,6 +426,8 @@ CONTROLLI_CONTENUTO = {
     "immobili_pa": _anno_minimo("immobili_pa/077014.json",
                                 lambda d: d["anno_rilevazione"], 4, "rilevazione immobili MEF"),
     "territorio": _anno_minimo("territorio/077014.json", _anno_suolo, 2, "consumo di suolo"),
+    # Annuario ISPRA: dati N pubblicati a dicembre N+1 (2024 -> dic 2025)
+    "aria": _anno_minimo("aria/075035.json", lambda d: d["_anno_dati"], 3, "qualita dell'aria ISPRA"),
     "demografia": _anno_minimo("demografia/077014.json",
                                lambda d: d["_anno_riferimento"], 1, "popolazione POSAS"),
     "sanita_mds": _anno_minimo("sanita_mds/077014.json",
