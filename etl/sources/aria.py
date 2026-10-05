@@ -23,8 +23,9 @@ Uso:
   python -m etl.sources.aria
   python -m etl.sources.aria --no-cache              # forza re-download CSV
 
-Cadenza: annuale - ISPRA aggiorna a gennaio dell'anno N+2 (es. dati 2024
-pubblicati gennaio 2026). Pianificare cron in etl-annual.yml.
+Cadenza: annuale - l'Annuario ISPRA pubblica i dati dell'anno N a dicembre
+dell'anno N+1 (dati 2024 pubblicati a dicembre 2025). Cron: finestre annuali
+della VM (1 feb / 1 apr / 1 lug), che trovano l'edizione di dicembre.
 
 Note mapping ISPRA -> ISTAT:
   Il campo id_comune ISPRA e' un float a 7 cifre del tipo
@@ -47,7 +48,7 @@ Schema shard aria/<istat>.json (v0.1.0):
   "_source": "ISPRA SNPA - Qualita' dell'aria",
   "_generated_at": "ISO-8601",
   "_anno_dati": 2022,
-  "_aggiornamento_atteso": "annuale (gennaio dell'anno N+2)",
+  "_aggiornamento_atteso": "annuale (dicembre dell'anno N+1, Annuario ISPRA)",
   "istat_code": "001027",
   "n_stazioni": 1,
   "stazioni": [
@@ -590,7 +591,7 @@ def build_shards(
             "_source": "ISPRA SNPA - Qualita' dell'aria (Decisione UE 2011/850/EU)",
             "_generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
             "_anno_dati": ANNO_RIFERIMENTO,
-            "_aggiornamento_atteso": "annuale (gennaio dell'anno N+2)",
+            "_aggiornamento_atteso": "annuale (dicembre dell'anno N+1, Annuario ISPRA)",
             "istat_code": istat,
             "regione": anag.get("regione"),
             "provincia": anag.get("provincia"),
