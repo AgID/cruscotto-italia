@@ -31,6 +31,7 @@ import os
 import sys
 import tempfile
 import time
+from datetime import datetime, timezone
 from pathlib import Path
 
 import duckdb
@@ -56,6 +57,17 @@ BDAP_DUMP = "https://bdap-opendata.rgs.mef.gov.it/SpodCkanApi/api/3/datastore/du
 # riscarica sempre, i rilanci manuali ravvicinati riusano il file.
 # Fino al 05/10/2026 la cache non scadeva mai (riusato il file del 05/09).
 CACHE_MAX_DAYS = 20
+
+
+def data_download(csv_path: Path) -> str:
+    """Giorno (UTC, ISO) in cui il CSV e stato scaricato da BDAP.
+
+    E l'unica data onesta disponibile: il dump BDAP non espone ne
+    Last-Modified ne una data di estrazione. Con la cache a scadenza
+    coincide col download mensile. Da mostrare come data del dato, al
+    posto di _generated_at (ora di rigenerazione, non del dato).
+    """
+    return datetime.fromtimestamp(csv_path.stat().st_mtime, timezone.utc).date().isoformat()
 
 
 def pull_csv(workdir: Path, uuid: str, name: str, force: bool = False) -> Path:
@@ -230,6 +242,7 @@ def aggregate_progetti(progetti_csv: Path, output_dir: Path) -> Path:
                 "_etl_version": "0.1.0",
                 "_source": "BDAP MOP - Progetti Opere Pubbliche - Totale",
                 "_dataset_uuid": DATASET_PROGETTI_TOTALE,
+                "_data_download": data_download(progetti_csv),
                 "data": output,
             },
             ensure_ascii=False,
@@ -280,7 +293,9 @@ def build_dettagli_shard(
         for istat, c in bundle["comuni"].items()
         if c.get("codice_fiscale")
     }
+    dl_date = data_download(progetti_csv)
     log.info("bdap_shard_start",
+             data_download=dl_date,
              n_comuni_with_cf=len(cf_to_istat),
              only_2025=only_2025)
 
@@ -361,6 +376,7 @@ def build_dettagli_shard(
             "_etl_version": "0.2.0",
             "_source": "BDAP MOP - Progetti Opere Pubbliche - Totale (dettaglio)",
             "_filter": "only_2025" if only_2025 else "all",
+            "_data_download": dl_date,
             "istat_code": istat,
             "codice_fiscale": cf,
             "n_progetti": len(projects),

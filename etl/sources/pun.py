@@ -590,6 +590,9 @@ def build_shards(records: list[dict],
                 "_source_url":   SOURCE_URL,
                 "_license":      LICENSE_STR,
                 "_generated_at": now_iso,
+                # PUN e un'API in diretta: la data del dato e il giorno
+                # dell'estrazione. Il frontend mostra questa, non _generated_at.
+                "_snapshot_date": now_iso[:10],
                 "punti":         [],
             }
         shards[istat]["punti"].append(punto)
