@@ -100,6 +100,7 @@ import duckdb
 import structlog
 
 from etl.lib import local_lookup, manifest
+from etl.lib.istat_sdmx import attendi_turno_istat
 
 log = structlog.get_logger()
 
@@ -138,6 +139,7 @@ def resolve_years() -> None:
         req = urllib.request.Request(url, headers={
             "Accept": "application/vnd.sdmx.data+csv;version=1.0.0", "User-Agent": UA})
         try:
+            attendi_turno_istat()  # limite ISTAT: 5 query/minuto per IP
             with urllib.request.urlopen(req, timeout=180) as resp:
                 text = resp.read().decode("utf-8", "replace")
         except urllib.error.HTTPError as e:
@@ -316,6 +318,7 @@ def download_chunk(istat_codes: list[str],
         try:
             t0 = time.time()
             req = urllib.request.Request(url, headers=headers)
+            attendi_turno_istat()  # limite ISTAT: 5 query/minuto per IP
             with urllib.request.urlopen(req, timeout=180) as resp:
                 data = resp.read()
             elapsed = time.time() - t0

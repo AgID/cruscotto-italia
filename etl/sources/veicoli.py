@@ -680,16 +680,36 @@ def main() -> int:
     parser.add_argument("--outdir", type=Path, default=DEFAULT_OUTDIR,
                         help=f"Output dir per shard locali (default: {DEFAULT_OUTDIR})")
     parser.add_argument("--no-cache", action="store_true")
+    parser.add_argument("--riusa-istat", action="store_true",
+                        help="Non interroga ISTAT: parco e incidenti restano quelli "
+                             "degli shard esistenti (es. IP bloccato da ISTAT)")
     args = parser.parse_args()
 
     log.info("etl_veicoli_start", version=ETL_VERSION)
     use_cache = not args.no_cache
 
-    csv_parco = fetch_istat_parco(anno=ANNO_PARCO, use_cache=use_cache)
-    parco_by_istat = parse_istat_parco(csv_parco)
-
-    csv_incid = fetch_istat_incidenti(anni=ANNI_INCIDENTI, use_cache=use_cache)
-    incidenti_by_istat = parse_istat_incidenti(csv_incid)
+    # Un problema ISTAT (limite 5 query/minuto, blocco IP di 1-2 giorni, il
+    # 05/10/2026) non deve impedire l'aggiornamento delle iscrizioni ACI: con
+    # dict vuoti, write_shards_local preserva parco e incidenti dai file
+    # esistenti (_PROTECTED_KEYS) marcandoli come non aggiornati.
+    parco_by_istat: dict[str, dict] = {}
+    incidenti_by_istat: dict[str, dict] = {}
+    if args.riusa_istat:
+        log.warning("istat_saltato", motivo="--riusa-istat",
+                    nota="parco e incidenti preservati dagli shard esistenti")
+    else:
+        try:
+            csv_parco = fetch_istat_parco(anno=ANNO_PARCO, use_cache=use_cache)
+            parco_by_istat = parse_istat_parco(csv_parco)
+        except Exception as e:
+            log.error("istat_parco_non_disponibile", error=str(e)[:300],
+                      nota="preservato il parco degli shard esistenti")
+        try:
+            csv_incid = fetch_istat_incidenti(anni=ANNI_INCIDENTI, use_cache=use_cache)
+            incidenti_by_istat = parse_istat_incidenti(csv_incid)
+        except Exception as e:
+            log.error("istat_incidenti_non_disponibili", error=str(e)[:300],
+                      nota="preservati gli incidenti degli shard esistenti")
 
     # ACI - ciclo su tutti gli anni
     from etl.sources.pnrr_progetti import load_nome_to_istat

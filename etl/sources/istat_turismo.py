@@ -47,7 +47,7 @@ import duckdb
 import structlog
 
 from etl.lib import local_lookup, manifest
-from etl.lib.istat_sdmx import scarica_a_blocchi
+from etl.lib.istat_sdmx import attendi_turno_istat, scarica_a_blocchi
 
 log = structlog.get_logger()
 
@@ -138,6 +138,7 @@ def download_url(url: str, out: Path, accept: str, force: bool = False) -> Path:
         url, headers={"Accept": accept, "User-Agent": UA},
     )
     try:
+        attendi_turno_istat()  # limite ISTAT: 5 query/minuto per IP
         with urllib.request.urlopen(req, timeout=600) as resp:
             data = resp.read()
     except urllib.error.HTTPError as e:
@@ -160,6 +161,7 @@ def _anno_disponibile(df: dict, anno: int) -> bool:
     url = sdmx_data_url(df["id"], SONDA_KEY[df["name"]], anno, anno)
     req = urllib.request.Request(url, headers={
         "Accept": "application/vnd.sdmx.data+csv;version=1.0.0", "User-Agent": UA})
+    attendi_turno_istat()  # limite ISTAT: 5 query/minuto per IP
     with urllib.request.urlopen(req, timeout=180) as resp:
         text = resp.read().decode("utf-8", "replace")
     rows = csv.DictReader(io.StringIO(text))

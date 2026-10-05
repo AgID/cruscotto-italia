@@ -10,6 +10,13 @@ Limite ISTAT sui codici per richiesta: 35 passano, 50 danno 400 Bad
 Request (misurato il 05/10/2026 su 41_983). Il blocco predefinito e 35,
 come asia.py.
 
+LIMITE UFFICIALE ISTAT: 5 query al minuto per IP, oltre scatta un blocco
+di 1-2 giorni (istat.it, pagina "Web Services SDMX"). Il 05/10/2026 a ~8
+richieste/minuto la VM e stata bloccata. Ogni richiesta ISTAT del progetto
+deve passare da attendi_turno_istat(): intervallo minimo 13 s (~4,6/min),
+condiviso tra PROCESSI con un file di lock, perche nelle finestre annuali
+del cron profilo, ASIA, turismo e veicoli possono sovrapporsi.
+
 Regole ISTAT da rispettare: richieste in SEQUENZA (il parallelismo ha gia'
 portato a un blocco dell'IP, vedi asia.py) e pausa tra un blocco e l'altro.
 
@@ -32,6 +39,34 @@ from pathlib import Path
 import requests
 
 ACCEPT_CSV = "application/vnd.sdmx.data+csv;version=1.0.0"
+INTERVALLO_MIN_S = 13.0
+_FILE_TURNO = Path(os.environ.get("ISTAT_TURNO_FILE", "/tmp/cruscotto-istat-turno"))
+
+
+def attendi_turno_istat() -> None:
+    """Blocca finche non sono passati INTERVALLO_MIN_S dall'ultima richiesta
+    ISTAT fatta da QUALSIASI processo sulla macchina, poi registra l'ora.
+
+    Il file contiene il timestamp dell'ultima richiesta; flock rende atomico
+    leggi-attendi-scrivi tra processi diversi.
+    """
+    import fcntl
+    _FILE_TURNO.touch(exist_ok=True)
+    with open(_FILE_TURNO, "r+") as fh:
+        fcntl.flock(fh, fcntl.LOCK_EX)
+        try:
+            fh.seek(0)
+            ultimo = float(fh.read().strip() or 0)
+        except ValueError:
+            ultimo = 0.0
+        attesa = ultimo + INTERVALLO_MIN_S - time.time()
+        if attesa > 0:
+            time.sleep(attesa)
+        fh.seek(0)
+        fh.truncate()
+        fh.write(f"{time.time():.3f}")
+        fh.flush()
+        fcntl.flock(fh, fcntl.LOCK_UN)
 
 
 def chiave_con_codici(chiave: str, codici: list[str]) -> str:
@@ -77,6 +112,7 @@ def scarica_a_blocchi(base_dataflow: str, chiave: str, anno_inizio: int, anno_fi
         testo = None
         for n in range(1, tentativi + 1):
             try:
+                attendi_turno_istat()
                 r = requests.get(url, headers=headers, timeout=timeout)
                 if r.status_code == 404:      # nessun dato per il blocco
                     testo = ""
@@ -105,8 +141,6 @@ def scarica_a_blocchi(base_dataflow: str, chiave: str, anno_inizio: int, anno_fi
         if log and (k % 10 == 0 or k == n_blocchi):
             log.info("istat_blocchi_progress", blocchi=f"{k}/{n_blocchi}",
                      riusati=riusati, secondi=round(time.time() - t0))
-        if k < n_blocchi and pausa > 0:
-            time.sleep(pausa)
 
     # Unione dei blocchi in un unico CSV con una sola intestazione
     part = out.with_suffix(out.suffix + ".part")
