@@ -711,6 +711,8 @@ def build_aggregato(
     top_peggiori: dict[str, list[dict]] = {ink: [] for ink in INQUINANTI_URLS.keys()}
 
     for f in sorted(shard_dir.glob("*.json")):
+        if not (f.stem.isdigit() and len(f.stem) == 6):
+            continue                       # aria-aggregato.json e altri file non-shard
         try:
             shard = json.loads(f.read_text())
         except Exception:
@@ -803,7 +805,11 @@ def main() -> int:
     args = parser.parse_args()
 
     output_dir = Path(args.outdir)
-    shard_dir = output_dir / "shards"
+    # Gli shard vanno in aria/<istat>.json, dove li legge il dashboard
+    # (SECTIONS: "aria/{istat}.json"). Fino al 05/10/2026 andavano in
+    # aria/shards/: nessuno li leggeva, e in produzione restava la copia
+    # manuale del 10/05/2026 (dati 2022) anche dopo il run del 1 luglio.
+    shard_dir = output_dir
     aggr_path = output_dir / "aria-aggregato.json"
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -839,7 +845,19 @@ def main() -> int:
 
         # 3. Build shards
         log.info("aria_building_shards", output_dir=str(shard_dir))
+        inizio_scrittura = datetime.now(timezone.utc).timestamp() - 1
         n_comuni, inquinanti_summary = build_shards(data, shard_dir)
+
+        # Shard non riscritti in questo run (comuni senza piu stazioni, o la
+        # copia manuale del 10/05/2026): resterebbero con un anno vecchio.
+        if args.limit is None:
+            obsoleti = [f for f in shard_dir.glob("*.json")
+                        if f.stem.isdigit() and len(f.stem) == 6
+                        and f.stat().st_mtime < inizio_scrittura]
+            for f in obsoleti:
+                f.unlink()
+            log.info("aria_shard_obsoleti_rimossi", n=len(obsoleti),
+                     istat=sorted(f.stem for f in obsoleti)[:20])
         log.info("aria_shards_built", n_comuni=n_comuni)
 
         # 4. Build aggregato
