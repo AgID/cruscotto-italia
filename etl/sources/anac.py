@@ -80,6 +80,79 @@ def pull_anac_month(workdir: Path, year: int, month: int) -> Path:
 # ----------------------------------------------------------------------------
 # Transform (1 month JSON → 1 Parquet of awards)
 # ----------------------------------------------------------------------------
+def _riduci_release(r: dict) -> dict:
+    """Solo i campi usati dalla query di conversione (struttura uniforme)."""
+    awards = []
+    for a in r.get("awards") or []:
+        it = (a.get("items") or [{}])[0] or {}
+        awards.append({
+            "id": a.get("id"), "status": a.get("status"), "date": a.get("date"),
+            "value": {"amount": (a.get("value") or {}).get("amount"),
+                      "currency": (a.get("value") or {}).get("currency")},
+            "items": [{"classification": {"id": (it.get("classification") or {}).get("id"),
+                                          "description": (it.get("classification") or {}).get("description")},
+                       "description": it.get("description")}],
+        })
+    t = r.get("tender") or {}
+    b = r.get("buyer") or {}
+    return {"ocid": r.get("ocid"), "id": r.get("id"),
+            "buyer": {"id": b.get("id"), "name": b.get("name")},
+            "tender": {"mainProcurementCategory": t.get("mainProcurementCategory"),
+                       "procurementMethodDetails": t.get("procurementMethodDetails")},
+            "awards": awards}
+
+
+def json_a_righe(json_path: Path, out_path: Path, blocco: int = 8 << 20) -> int:
+    """Converte il pacchetto OCDS {"releases": [...]} in un JSON a righe
+    ({"r": release ridotta} per riga), leggendo in streaming.
+
+    Perche: i file mensili 2025 pesano 3-5 GB (05/10/2026) e DuckDB li
+    leggeva come UN oggetto JSON con limite di 2 GB. Solo libreria
+    standard: raw_decode su un buffer che scorre.
+    """
+    dec = json.JSONDecoder()
+    n = 0
+    part = out_path.with_suffix(out_path.suffix + ".part")
+    with open(json_path, encoding="utf-8") as fi, open(part, "w", encoding="utf-8") as fo:
+        buf = ""
+        while '"releases"' not in buf:
+            dati = fi.read(blocco)
+            if not dati:
+                raise RuntimeError(f"{json_path.name}: chiave releases non trovata")
+            buf += dati
+        pos = buf.index("[", buf.index('"releases"')) + 1
+        fine_file = False
+        while True:
+            while pos < len(buf) and buf[pos] in " \t\r\n,":
+                pos += 1
+            if pos >= len(buf):
+                if fine_file:
+                    raise RuntimeError(f"{json_path.name}: array releases non chiuso")
+                dati = fi.read(blocco)
+                fine_file = not dati
+                buf, pos = buf[pos:] + dati, 0
+                continue
+            if buf[pos] == "]":
+                break
+            try:
+                obj, fine = dec.raw_decode(buf, pos)
+            except json.JSONDecodeError:
+                if fine_file:
+                    raise
+                dati = fi.read(blocco)
+                fine_file = not dati
+                buf, pos = buf[pos:] + dati, 0
+                continue
+            fo.write(json.dumps({"r": _riduci_release(obj)}, ensure_ascii=False))
+            fo.write("\n")
+            n += 1
+            pos = fine
+            if pos > blocco:                        # scarta la parte gia letta
+                buf, pos = buf[pos:], 0
+    os.replace(part, out_path)
+    return n
+
+
 def transform_anac_month(json_path: Path, output_dir: Path) -> Path:
     """Parse OCDS JSON and produce Parquet with one row per award."""
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -90,6 +163,10 @@ def transform_anac_month(json_path: Path, output_dir: Path) -> Path:
         return pq_path
 
     log.info("anac_transforming", json=str(json_path))
+    righe_path = json_path.with_suffix(".righe.json")
+    pq_tmp = pq_path.with_suffix(".parquet.part")
+    n_rel = json_a_righe(json_path, righe_path)
+    log.info("anac_json_a_righe", releases=n_rel, bytes=righe_path.stat().st_size)
     con = duckdb.connect()
 
     # Estrazione: una riga per award. Conserva CF, nome, importo, data, CPV.
@@ -112,15 +189,15 @@ def transform_anac_month(json_path: Path, output_dir: Path) -> Path:
                 (a.items[1]).classification.id AS cpv_code,
                 (a.items[1]).classification.description AS cpv_desc,
                 (a.items[1]).description AS item_description
-            FROM (
-                SELECT unnest(releases) AS r
-                FROM read_json('{json_path}', maximum_object_size=2147483647)
-            ),
+            FROM read_json('{righe_path}', format='newline_delimited',
+                           sample_size=-1, maximum_object_size=268435456),
             unnest(r.awards) AS award_t(a)
             WHERE r.buyer.id IS NOT NULL
         )
-        TO '{pq_path}' (FORMAT PARQUET, COMPRESSION ZSTD)
+        TO '{pq_tmp}' (FORMAT PARQUET, COMPRESSION ZSTD)
     """)
+    os.replace(pq_tmp, pq_path)        # un parquet a meta non deve essere riusato
+    righe_path.unlink(missing_ok=True)
 
     n_rows = con.execute(f"SELECT COUNT(*) FROM '{pq_path}'").fetchone()[0]
     n_buyers = con.execute(
@@ -147,11 +224,27 @@ def aggregate_anac(parquet_paths: list[Path], output_dir: Path) -> Path:
     log.info("anac_aggregating", n_parquets=len(parquet_paths))
     con = duckdb.connect()
 
-    # UNION di tutti i parquet
+    # UNION di tutti i parquet, poi DEDUPLICA per affidamento.
+    # In OCDS lo stesso affidamento (ocid + award_id) ricompare nei rilasci
+    # dei mesi successivi quando viene aggiornato, e ANAC ha pubblicato file
+    # mensili identici (2025/10 e 2025/11: stessi 5.245.605.141 byte,
+    # verificato il 05/10/2026). Con UNION ALL + COUNT/SUM sarebbero contati
+    # piu volte. Si tiene una riga per (ocid, award_id): la piu recente.
     union_sql = " UNION ALL ".join(f"SELECT * FROM '{p}'" for p in parquet_paths)
-    con.execute(f"CREATE TEMP TABLE all_awards AS {union_sql}")
+    con.execute(f"CREATE TEMP TABLE awards_grezzi AS {union_sql}")
+    n_grezzi = con.execute("SELECT COUNT(*) FROM awards_grezzi").fetchone()[0]
+    con.execute("""
+        CREATE TEMP TABLE all_awards AS
+        SELECT * FROM awards_grezzi
+        QUALIFY ROW_NUMBER() OVER (
+            PARTITION BY ocid, COALESCE(award_id, '')
+            ORDER BY award_date DESC NULLS LAST, release_id DESC
+        ) = 1
+    """)
 
     n_total = con.execute("SELECT COUNT(*) FROM all_awards").fetchone()[0]
+    log.info("anac_dedup", righe_grezze=n_grezzi, affidamenti_unici=n_total,
+             duplicati_rimossi=n_grezzi - n_total)
     n_buyers = con.execute("SELECT COUNT(DISTINCT buyer_cf) FROM all_awards").fetchone()[0]
     log.info("anac_total_awards_loaded", awards=n_total, unique_buyers=n_buyers)
 
