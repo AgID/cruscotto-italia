@@ -65,7 +65,11 @@ ISTAT_HEADERS = {
 
 ANNO_PARCO = 2024
 ANNI_INCIDENTI = [2020, 2021, 2022, 2023, 2024]
-ANNI_ISCRIZIONI = [2019, 2020, 2021, 2022, 2023, 2024]
+# ACI: dal 2019 all'anno precedente. Gli anni non ancora pubblicati (o
+# assenti dalla cache dell'artifact) vengono saltati con aci_anno_skipped;
+# l'anno esposto e l'ultimo effettivamente letto. Fino al 05/10/2026 la
+# lista era cablata a 2024 e il 2025 (pubblicato da ACI) non entrava.
+ANNI_ISCRIZIONI = list(range(2019, datetime.now().year))
 
 VEHICLE_CATS = {
     "1":  "autovetture",
@@ -346,7 +350,8 @@ def _aci_discover_csv_url(anno: int) -> str | None:
     """Scrappa la pagina dataset ACI dell'anno e estrae l'URL del CSV.
     Pattern URL diversi tra 2019-2023 (titolo italiano) e 2024 (snake_case)."""
     # Shortcut: 2024 ha URL stabile
-    if anno == 2024:
+    if anno >= 2024:
+        # dal 2024 ACI pubblica il CSV a URL fisso per anno
         return f"{ACI_BASE}/sites/default/files/statistiche_prime_iscrizioni_{anno}.csv"
     page_url = ACI_DATASET_PAGE_TPL.format(anno=anno)
     try:

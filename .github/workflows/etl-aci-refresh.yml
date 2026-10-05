@@ -1,7 +1,7 @@
 name: ETL · ACI iscrizioni CSV (artifact-based)
 
 # Workflow Pull-Artifact per i CSV ACI Linked Open Data (prime iscrizioni
-# autovetture per ente territoriale e alimentazione, 2019-2024).
+# autovetture per ente territoriale e alimentazione, dal 2019 all'anno precedente).
 #
 # Motivo del workflow Actions
 # ===========================
@@ -20,8 +20,10 @@ name: ETL · ACI iscrizioni CSV (artifact-based)
 # nella cache /tmp/cruscotto-veicoli-cache/ e poi lancia
 # `python -m etl.sources.veicoli` (aci_cache_hit salta la rete).
 #
-# Cadenza upstream: annuale (ACI attualmente fermo al 2024; 2025 non
-# ancora pubblicato). Trigger manuale; schedule annuale opzionale.
+# Cadenza upstream: annuale. Anni di default calcolati (2019..anno
+# precedente): l'ultimo, se non ancora pubblicato, viene saltato con un
+# warning invece di far fallire il job. Fino al 05/10/2026 gli anni erano
+# cablati a 2019..2024 e il 2025 non veniva mai scaricato.
 #
 # Privacy / governance: repo PRIVATO per l'interno; qui (pubblico) i CSV
 # ACI sono open data CC-BY 4.0 senza PII. Retention artifact 1 giorno.
@@ -30,7 +32,7 @@ on:
   workflow_dispatch:
     inputs:
       anni:
-        description: 'Anni da scaricare (comma-separated). Vuoto = 2019..2024'
+        description: 'Anni da scaricare (comma-separated). Vuoto = 2019..anno precedente'
         required: false
         default: ''
         type: string
@@ -69,15 +71,20 @@ jobs:
           mkdir -p /tmp/aci
           UA="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/126.0 Safari/537.36"
           BASE="http://lod.aci.it"
-          # anni: input o default 2019..2024
+          # anni: input o default 2019..anno precedente
           ANNI="${{ inputs.anni }}"
-          if [ -z "$ANNI" ]; then ANNI="2019,2020,2021,2022,2023,2024"; fi
+          ULTIMO=$(( $(date -u +%Y) - 1 ))
+          if [ -z "$ANNI" ]; then ANNI=$(seq -s, 2019 "$ULTIMO"); fi
           IFS=',' read -ra YEARS <<< "$ANNI"
           for Y in "${YEARS[@]}"; do
             Y=$(echo "$Y" | tr -d ' ')
             echo "=== anno $Y ==="
-            if [ "$Y" = "2024" ]; then
-              URL="$BASE/sites/default/files/statistiche_prime_iscrizioni_2024.csv"
+            URL=""
+            if [ "$Y" -ge 2024 ]; then
+              # dal 2024 URL fisso per anno; 302 = anno non pubblicato
+              DIRETTO="$BASE/sites/default/files/statistiche_prime_iscrizioni_$Y.csv"
+              CODE=$(curl -sS -o /dev/null -w '%{http_code}' -m 30 -A "$UA" "$DIRETTO" || true)
+              if [ "$CODE" = "200" ]; then URL="$DIRETTO"; fi
             else
               PAGE="$BASE/dataset/prime-iscrizioni-veicoli-nuovi-nel-$Y-%E2%80%93-autovetture-ente-territoriale-e-alimentazione"
               # estrae l'URL del CSV dalla pagina dataset
@@ -86,6 +93,10 @@ jobs:
                     | head -1 | sed -E 's/^href="//; s/"$//')
             fi
             if [ -z "$URL" ]; then
+              if [ "$Y" = "$ULTIMO" ]; then
+                echo "::warning::ACI $Y non ancora pubblicato, saltato"
+                continue
+              fi
               echo "ERRORE: URL non trovato per $Y" >&2
               exit 1
             fi
