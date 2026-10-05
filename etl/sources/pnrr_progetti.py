@@ -180,10 +180,15 @@ def load_nome_to_istat() -> dict[str, str]:
 
 
 def _remote_last_modified() -> float | None:
-    """Last-Modified della fonte come timestamp, None se non disponibile."""
+    """Last-Modified della fonte come timestamp, None se non disponibile.
+
+    GET limitata al primo byte, non HEAD: italiadomani.gov.it risponde 404
+    alle HEAD (verificato dalla VM il 05/10/2026). Se il server ignora il
+    Range si leggono solo gli header e la connessione si chiude.
+    """
     try:
-        req = urllib.request.Request(PNRR_PROGETTI_URL, method="HEAD",
-                                     headers={"User-Agent": UA})
+        req = urllib.request.Request(PNRR_PROGETTI_URL,
+                                     headers={"User-Agent": UA, "Range": "bytes=0-0"})
         with urllib.request.urlopen(req, timeout=60) as resp:
             lm = resp.headers.get("Last-Modified")
         return email.utils.parsedate_to_datetime(lm).timestamp() if lm else None
