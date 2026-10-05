@@ -21,8 +21,10 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 import tempfile
+from datetime import date
 from pathlib import Path
 
 import duckdb
@@ -57,13 +59,20 @@ def pull_anac_month(workdir: Path, year: int, month: int) -> Path:
     log.info("anac_month_pulling", url=url, dest=str(fpath))
 
     headers = {"User-Agent": USER_AGENT, "Accept": "application/json"}
-    with requests.get(url, headers=headers, stream=True, timeout=900) as resp:
-        resp.raise_for_status()
-        size = 0
-        with open(fpath, "wb") as f:
-            for chunk in resp.iter_content(chunk_size=1024 * 1024):  # 1 MB chunks
-                f.write(chunk)
-                size += len(chunk)
+    part = fpath.with_suffix(".json.part")
+    try:
+        with requests.get(url, headers=headers, stream=True, timeout=900) as resp:
+            resp.raise_for_status()
+            size = 0
+            with open(part, "wb") as f:
+                for chunk in resp.iter_content(chunk_size=1024 * 1024):  # 1 MB chunks
+                    f.write(chunk)
+                    size += len(chunk)
+    except Exception:
+        part.unlink(missing_ok=True)
+        raise
+    # rinomina solo a download completo: un file troncato non resta in cache
+    os.replace(part, fpath)
 
     log.info("anac_month_saved", path=str(fpath), bytes=size, mb=round(size / 1024 / 1024, 1))
     return fpath
@@ -236,6 +245,44 @@ def aggregate_anac(parquet_paths: list[Path], output_dir: Path) -> Path:
 # ----------------------------------------------------------------------------
 # Main
 # ----------------------------------------------------------------------------
+def process_month(workdir: Path, year: int, month: int, output_dir: Path) -> Path | None:
+    """Parquet degli award di un mese, None se il mese non e pubblicato.
+
+    Se il parquet esiste lo riusa senza scaricare. Dopo la conversione il
+    JSON (~700 MB) viene cancellato: con la finestra di 12 mesi in /tmp
+    resterebbero ~9 GB.
+    """
+    pq = output_dir / "monthly" / f"{year}-{month:02d}-awards.parquet"
+    if pq.exists():
+        log.info("anac_parquet_reused", year=year, month=month)
+        return pq
+    try:
+        json_path = pull_anac_month(workdir, year, month)
+    except requests.HTTPError as e:
+        if e.response is not None and e.response.status_code == 404:
+            log.info("anac_month_not_available", year=year, month=month)
+            return None
+        raise
+    # Sanity: verifica che il file scaricato sia davvero JSON (non HTML del WAF)
+    if json_path.stat().st_size < 1_000_000:  # < 1MB = sospetto
+        head = json_path.read_bytes()[:200].decode("utf-8", errors="replace")
+        if "<html" in head.lower():
+            log.error("anac_month_blocked_by_waf", year=year, month=month, head=head[:200])
+            json_path.unlink(missing_ok=True)
+            return None
+    pq = transform_anac_month(json_path, output_dir / "monthly")
+    json_path.unlink(missing_ok=True)
+    return pq
+
+
+def mesi_indietro(n_max: int):
+    """(anno, mese) dal mese corrente all'indietro, al massimo n_max mesi."""
+    y, m = date.today().year, date.today().month
+    for _ in range(n_max):
+        yield y, m
+        y, m = (y, m - 1) if m > 1 else (y - 1, 12)
+
+
 def parse_months(s: str) -> list[int]:
     return [int(m.strip()) for m in s.split(",") if m.strip()]
 
@@ -249,7 +296,11 @@ def main() -> int:
     # --target tenuto per retrocompat workflow esistenti, ma solo 'local' e' supportato
     parser.add_argument("--target", choices=["local"], default="local",
                         help="Solo 'local' supportato (R2 rimosso dall'infrastruttura AgID)")
-    parser.add_argument("--years", type=str, default="2026", help="Comma-separated, e.g. 2025,2026")
+    parser.add_argument("--years", type=str, default=None,
+                        help="Modalita manuale: anni comma-separated (es. 2025,2026)")
+    parser.add_argument("--ultimi-mesi", type=int, default=12,
+                        help="Default: i N mesi piu recenti effettivamente pubblicati "
+                             "da ANAC (si cercano fino a 36 mesi indietro)")
     parser.add_argument("--months", type=str, default="1,2,3,4,5,6,7,8,9,10,11,12",
                         help="Comma-separated month list, default all 12")
     parser.add_argument("--outdir", type=Path, default=Path("/var/www/cruscotto-italia/data"))
@@ -265,7 +316,7 @@ def main() -> int:
         ]
     )
 
-    years = parse_years(args.years)
+    years = parse_years(args.years) if args.years else []
     months = parse_months(args.months)
 
     output_dir = args.outdir
@@ -280,28 +331,24 @@ def main() -> int:
     try:
         # 1. Pull + transform
         parquet_paths: list[Path] = []
-        for year in years:
-            for month in months:
-                # Skip future months for ongoing year
-                # (ANAC pubblica con 2 mesi di ritardo circa)
-                try:
-                    json_path = pull_anac_month(args.workdir, year, month)
-                except requests.HTTPError as e:
-                    if e.response is not None and e.response.status_code == 404:
-                        log.warning("anac_month_not_available", year=year, month=month)
-                        continue
-                    raise
-
-                # Sanity: verifica che il file scaricato sia davvero JSON (non HTML del WAF)
-                if json_path.stat().st_size < 1_000_000:  # < 1MB = sospetto
-                    head = json_path.read_bytes()[:200].decode("utf-8", errors="replace")
-                    if "<html" in head.lower():
-                        log.error("anac_month_blocked_by_waf", year=year, month=month, head=head[:200])
-                        json_path.unlink(missing_ok=True)
-                        continue
-
-                pq = transform_anac_month(json_path, output_dir / "monthly")
-                parquet_paths.append(pq)
+        if args.years:
+            for year in years:
+                for month in months:
+                    pq = process_month(args.workdir, year, month, output_dir)
+                    if pq:
+                        parquet_paths.append(pq)
+        else:
+            # Finestra mobile: i mesi PUBBLICATI piu recenti, non i mesi di
+            # calendario. Fino al 05/10/2026 il cron passava --years=<anno
+            # corrente>: con ANAC ferma a marzo 2026 e gennaio-febbraio 2026
+            # non scaricabili, si serviva un solo mese di contratti.
+            for year, month in mesi_indietro(36):
+                pq = process_month(args.workdir, year, month, output_dir)
+                if pq:
+                    parquet_paths.append(pq)
+                if len(parquet_paths) >= args.ultimi_mesi:
+                    break
+            log.info("anac_finestra", mesi=[p.stem[:7] for p in parquet_paths])
 
         if not parquet_paths:
             log.error("no_parquets_built")
