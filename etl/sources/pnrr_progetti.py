@@ -38,8 +38,8 @@ import email.utils
 import json
 import os
 import sys
-import time
 import tempfile
+import time
 import unicodedata
 import urllib.error
 import urllib.request
