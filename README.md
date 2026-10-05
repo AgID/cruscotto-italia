@@ -115,13 +115,13 @@ Dettagli architetturali completi: [`DESIGN.md`](DESIGN.md) ·
 | **Bi-giornaliero** (03:30 e 14:30 UTC) | ItaliaMeteo ICON-2I previsioni meteo (corse 00 e 12 UTC) | cron VM AgID | automatico |
 | **Daily** (08:00 UTC) | PUN punti ricarica, MIMIT carburanti, dashboard rebuild | cron VM AgID | automatico |
 | **Daily Pull-Artifact** (07:30 UTC) | scarica artifact dei 3 ETL ISTAT da GitHub Actions | cron VM AgID | automatico |
-| **Weekly** (lunedì 04:00 UTC) | ANAC OCDS, PNRR, sanità MdS, RUNTS, dashboard | cron VM AgID | automatico |
+| **Weekly** (lunedì 04:00 UTC) | ANAC OCDS (ultimi 12 mesi pubblicati), PNRR, sanità MdS, RUNTS, dashboard | cron VM AgID | automatico |
 | **Monthly** (5° del mese 04:00 UTC) | anagrafica, BDAP-MOP, SIOPE, ANNCSU, AGCOM banda larga (08:00 UTC), beni culturali (ArCo + Cultural-ON) | cron VM AgID | automatico |
 | **Annual** (1 feb / 1 apr / 1 lug, 04:00 UTC) | demografia POSAS, profilo Censimento, turismo, territorio, scuole, veicoli, redditi IRPEF, immobili PA | cron VM AgID | automatico |
 | **Semestrale** (1 marzo / 1 settembre, 03:00 UTC) | cartografia catastale AGE (particelle + fogli, 19 regioni) | cron VM AgID | automatico |
 | **Semestrale** (sentinella giornaliera 03:00 UTC) | quotazioni OMI AGE (zone + perimetri): `omi_semestrale.sh` interroga ogni giorno l'elenco dei semestri pubblicati e avvia la raccolta solo quando ne compare uno nuovo (l'Agenzia pubblica entro il 15 marzo e il 15 ottobre, senza data fissa) | cron VM AgID | automatico |
 | **Decennale** (manuale, prossimo 2031) | censimento Basi Territoriali (sezioni + 119 vars) | run manuale `python -m etl.sources.censimento` su VM | `workflow_dispatch` |
-| **ISTAT refresh** (manuale) | istat_profilo, asia, pendolarismo | GitHub Actions `ubuntu-latest` | `workflow_dispatch` |
+| **ISTAT su Actions** (01:00 UTC: profilo 1 feb/apr/lug, ASIA 15 feb/apr/lug; pendolarismo manuale) | istat_profilo, asia, pendolarismo | GitHub Actions `ubuntu-latest` | `schedule` + `workflow_dispatch` |
 
 ### Perché 2 esecutori distinti
 
@@ -324,7 +324,7 @@ cruscotto-italia/
 │   │   ├── scuole.py            ← MIUR anagrafe scuole statali
 │   │   ├── veicoli.py           ← ISTAT + ACI LOD
 │   │   ├── redditi.py           ← MEF Federalismo Fiscale (IRPEF)
-│   │   ├── immobili_pa.py       ← MEF DE Beni Immobili Pubblici 2022
+│   │   ├── immobili_pa.py       ← MEF DE Beni Immobili Pubblici (ultima rilevazione)
 │   │   ├── anncsu.py            ← ANNCSU civici (Agenzia Entrate + ISTAT)
 │   │   ├── sanita_mds.py        ← Min. Salute (farmacie, ospedali)
 │   │   ├── pun.py               ← GSE/MASE punti ricarica EV
@@ -342,6 +342,7 @@ cruscotto-italia/
 │   │   └── dashboard.py         ← aggregator unified shard (A1)
 │   └── lib/
 │       ├── local_lookup.py   ← utility lookup local-first
+│       ├── istat_sdmx.py     ← download SDMX ISTAT a blocchi da 35 comuni
 │       ├── r2.py             ← kill-switch (R2 dismesso, sempre RuntimeError)
 │       ├── duck.py
 │       └── manifest.py
@@ -394,6 +395,17 @@ Attenzione: `_generated_at` dice quando è stato ricostruito l'aggregato,
 non a quale periodo si riferiscono i dati. Le sezioni con un periodo di
 riferimento lo espongono in `_data_period` (es. `agcom_bbmap`, `omi`):
 è quello da guardare per sapere se una fonte è aggiornata.
+
+Lo stesso principio guida il controllo automatico. Ogni mattina
+`scripts/etl/freshness_check.py` verifica, oltre all'esecuzione degli ETL,
+il **periodo del dato** delle fonti non giornaliere (`CONTROLLI_CONTENUTO`:
+età della data per le mensili, anno minimo atteso per le annuali, finestra
+di mesi per ANAC) e invia un allarme se resta indietro rispetto al
+calendario di pubblicazione della fonte. Dall'audit del 05/10/2026 gli ETL
+seguono queste regole: anni ed edizioni delle fonti risolti a runtime e mai
+scritti nel codice, cache con scadenza (o con il periodo nel nome),
+download su file temporaneo con rinomina a fine scaricamento, richieste
+ISTAT a blocchi da 35 comuni in sequenza.
 
 ---
 

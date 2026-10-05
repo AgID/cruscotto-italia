@@ -117,13 +117,13 @@ Full architectural details: [`DESIGN.md`](DESIGN.md) ·
 | **Twice daily** (03:30 and 14:30 UTC) | ItaliaMeteo ICON-2I weather forecasts (00 and 12 UTC runs) | AgID VM cron | automatic |
 | **Daily** (08:00 UTC) | PUN charging points, MIMIT fuel prices, dashboard rebuild | AgID VM cron | automatic |
 | **Daily pull-artifact** (07:30 UTC) | downloads the artifacts of the 3 ISTAT ETLs from GitHub Actions | AgID VM cron | automatic |
-| **Weekly** (Monday 04:00 UTC) | ANAC OCDS, NRRP, Ministry of Health, RUNTS, dashboard | AgID VM cron | automatic |
+| **Weekly** (Monday 04:00 UTC) | ANAC OCDS (last 12 published months), NRRP, Ministry of Health, RUNTS, dashboard | AgID VM cron | automatic |
 | **Monthly** (5th of the month, 04:00 UTC) | registry, BDAP-MOP, SIOPE, ANNCSU, AGCOM broadband (08:00 UTC), cultural heritage (ArCo + Cultural-ON) | AgID VM cron | automatic |
 | **Annual** (1 Feb / 1 Apr / 1 Jul, 04:00 UTC) | POSAS demographics, census profile, tourism, territory, schools, vehicles, IRPEF income, public real estate | AgID VM cron | automatic |
 | **Six-monthly** (1 March / 1 September, 03:00 UTC) | Revenue Agency cadastral cartography (parcels + sheets, 19 regions) | AgID VM cron | automatic |
 | **Six-monthly** (daily sentinel at 03:00 UTC) | Revenue Agency OMI property values (zones + boundaries): `omi_semestrale.sh` polls the list of published half-years daily and starts the harvest only when a new one appears (the Agency publishes by 15 March and 15 October, with no fixed date) | AgID VM cron | automatic |
 | **Decennial** (manual, next 2031) | census Territorial Bases (enumeration areas + 127 variables) | manual run `python -m etl.sources.censimento` on the VM | `workflow_dispatch` |
-| **ISTAT refresh** (manual) | istat_profilo, asia, pendolarismo | GitHub Actions `ubuntu-latest` | `workflow_dispatch` |
+| **ISTAT on Actions** (01:00 UTC: profile 1 Feb/Apr/Jul, ASIA 15 Feb/Apr/Jul; commuting manual) | istat_profilo, asia, pendolarismo | GitHub Actions `ubuntu-latest` | `schedule` + `workflow_dispatch` |
 
 ### Why two separate runners
 
@@ -327,7 +327,7 @@ cruscotto-italia/
 │   │   ├── scuole.py            ← MIUR state school registry
 │   │   ├── veicoli.py           ← ISTAT + ACI LOD
 │   │   ├── redditi.py           ← MEF fiscal federalism (IRPEF)
-│   │   ├── immobili_pa.py       ← MEF Treasury public property assets 2022
+│   │   ├── immobili_pa.py       ← MEF Treasury public property assets (latest survey)
 │   │   ├── anncsu.py            ← ANNCSU house numbers (Revenue Agency + ISTAT)
 │   │   ├── sanita_mds.py        ← Ministry of Health (pharmacies, hospitals)
 │   │   ├── pun.py               ← GSE/MASE EV charging points
@@ -345,6 +345,7 @@ cruscotto-italia/
 │   │   └── dashboard.py         ← unified shard aggregator (A1)
 │   └── lib/
 │       ├── local_lookup.py   ← local-first lookup utilities
+│       ├── istat_sdmx.py     ← ISTAT SDMX downloads in batches of 35 municipalities
 │       ├── r2.py             ← kill-switch (R2 decommissioned, always RuntimeError)
 │       ├── duck.py
 │       └── manifest.py
@@ -397,6 +398,17 @@ Note: `_generated_at` tells when the aggregate was rebuilt, not which period
 the data refers to. Sections with a reference period expose it in
 `_data_period` (e.g. `agcom_bbmap`, `omi`): check that field to know whether
 a source is up to date.
+
+The same principle drives the automatic check. Every morning
+`scripts/etl/freshness_check.py` verifies, besides ETL execution, the
+**data period** of non-daily sources (`CONTROLLI_CONTENUTO`: date age for
+monthly sources, minimum expected year for annual ones, month window for
+ANAC) and raises an alert when it falls behind the source's publication
+calendar. Since the 05/10/2026 audit the ETLs follow these rules: source
+years and editions resolved at runtime and never hard-coded, caches that
+expire (or carry the period in their name), downloads written to a
+temporary file and renamed on completion, ISTAT requests in sequential
+batches of 35 municipalities.
 
 ---
 
