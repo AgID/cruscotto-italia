@@ -12495,6 +12495,8 @@ function adaptDashboardToOverview(d) {
         buyer_name:        anac.buyer_name,
       } : null,
       opere: bk ? {
+        // data del download BDAP: sta nello shard di dettaglio (d.opere), non in bdap_kpi
+        _data_download:   d.opere?._data_download || null,
         count:            bk.totale?.count,
         costo_lavori_eff: bk.totale?.costo_lavori_eff,
         per_stato:        bk.per_stato,
