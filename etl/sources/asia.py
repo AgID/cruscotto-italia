@@ -118,8 +118,44 @@ CANONICAL_URL = (
 LICENSE = "CC BY 3.0 IT"
 
 # Anni serie storica (verificato 2026-05-15: dataflow contiene 2018-2023)
-YEARS = [2018, 2019, 2020, 2021, 2022, 2023]
+# Dal 2018 all'ultimo anno pubblicato, risolto a runtime (resolve_years).
+# Fino al 05/10/2026 era cablato a 2018-2023 (oggi allineato: SDMX fino al
+# 2023) e i chunk in cache non avevano l'intervallo di anni nel nome, quindi
+# un anno nuovo non sarebbe mai entrato.
+YEARS_MIN = 2018
+ANNO_FALLBACK = 2023
+YEARS = list(range(YEARS_MIN, ANNO_FALLBACK + 1))
 LATEST_YEAR = max(YEARS)
+SONDA_KEY = "A.075035....."   # un solo comune (Lecce), stesse dimensioni
+
+
+def resolve_years() -> None:
+    """Porta YEARS/LATEST_YEAR all'ultimo anno con dati per la sonda."""
+    global YEARS, LATEST_YEAR
+    for anno in range(datetime.now().year - 1, ANNO_FALLBACK, -1):
+        url = (f"{SDMX_BASE}/data/{SDMX_AGENCY},{DATAFLOW_ID},{SDMX_VERSION}/"
+               f"{SONDA_KEY}?startPeriod={anno}&endPeriod={anno}")
+        req = urllib.request.Request(url, headers={
+            "Accept": "application/vnd.sdmx.data+csv;version=1.0.0", "User-Agent": UA})
+        try:
+            with urllib.request.urlopen(req, timeout=180) as resp:
+                text = resp.read().decode("utf-8", "replace")
+        except urllib.error.HTTPError as e:
+            if e.code == 404:
+                continue
+            log.warning("asia_anno_probe_failed", anno=anno, error=str(e)[:200])
+            continue
+        except Exception as e:
+            log.warning("asia_anno_probe_failed", anno=anno, error=str(e)[:200])
+            continue
+        rows = csv.DictReader(text.splitlines())
+        if any(r.get("TIME_PERIOD") == str(anno) and (r.get("OBS_VALUE") or "").strip()
+               for r in rows):
+            YEARS = list(range(YEARS_MIN, anno + 1))
+            LATEST_YEAR = anno
+            log.info("asia_anno_resolved", anno=anno)
+            return
+    log.info("asia_anno_resolved", anno=LATEST_YEAR, note="nessun anno piu recente")
 
 # Cache locale CSV bulk
 CACHE_DIR = Path("/tmp/cruscotto_asia")
@@ -362,7 +398,7 @@ def download_all_in_chunks(cache_dir: Path,
     out_paths: list[Path] = []
     todo: list[tuple[int, list[str], Path]] = []
     for idx, chunk_codes in enumerate(chunks):
-        out = cache_dir / f"asia_chunk_{idx:04d}.csv"
+        out = cache_dir / f"asia_chunk_{year_start}_{year_end}_{idx:04d}.csv"
         if out.exists() and out.stat().st_size > 1000 and not force:
             out_paths.append(out)
             continue
@@ -679,13 +715,14 @@ def main() -> int:
 
     log.info("asia_etl_start")
     t_start = time.time()
+    resolve_years()
 
     # FASE 1: download chunked
     limit = [c.strip() for c in args.limit.split(",") if c.strip()] if args.limit else None
 
     if args.skip_download:
         log.info("asia_skip_download")
-        csv_paths = sorted(CACHE_DIR.glob("asia_chunk_*.csv"))
+        csv_paths = sorted(CACHE_DIR.glob(f"asia_chunk_{min(YEARS)}_{max(YEARS)}_*.csv"))
         if not csv_paths:
             log.error("asia_cache_missing",
                       cache_dir=str(CACHE_DIR),
