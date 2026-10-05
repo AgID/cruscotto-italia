@@ -120,7 +120,14 @@ DATASET_PUBLIC_URLS = {
     "ospedali":     f"{PORTAL_BASE}/dataset/posti-letto-stabilimento-ospedaliero-e-disciplina",
 }
 
+# Riserva: il dataset posti letto e un nodo Drupal NUOVO per ogni anno, quindi
+# il nid fisso (175018 = 2023) non seguirebbe mai le nuove annualita.
+# fetch_discovery cerca fra TUTTI i nodi il file
+# "Posti letto per stabilimento ospedaliero e disciplina_<anno>" piu recente;
+# nid e anno qui sotto restano solo come ripiego (05/10/2026: il 2024 non c'e).
 ANNO_OSPEDALI = 2023
+_OSPEDALI_RE = re.compile(
+    r"posti letto per stabilimento ospedaliero e disciplina[_ ](\d{4})", re.I)
 
 # HTTP fetch (richiede UA browser-like per WAF MdS)
 HTTP_HEADERS = {
@@ -167,7 +174,35 @@ def fetch_discovery() -> dict:
     log.info("sanita_mds_discovery_nodes", total=len(nodes))
 
     result: dict[str, dict] = {}
+
+    # Ospedali: annualita piu recente cercando il nome file in tutti i nodi
+    migliore = None
+    for n in nodes:
+        for f in n.get("relationships", {}).get("field_listafile", []) or []:
+            fname = f.get("filename") or ""
+            m = _OSPEDALI_RE.search(fname)
+            if m and fname.lower().endswith(".csv"):
+                anno = int(m.group(1))
+                if migliore is None or anno > migliore[0]:
+                    migliore = (anno, n, f)
+    if migliore:
+        anno, n, f = migliore
+        url = f.get("url", "")
+        if url and not url.startswith("http"):
+            url = PORTAL_BASE + url
+        result["ospedali"] = {
+            "url": url, "filename": f.get("filename"), "filesize": f.get("filesize"),
+            "data_aggiornamento": n.get("field_dataultimoaggiornamento") or n.get("changed"),
+            "anno": anno,
+        }
+        log.info("sanita_mds_ospedali_anno", anno=anno,
+                 nid=n.get("drupal_internal__nid"), filename=f.get("filename"))
+    else:
+        log.warning("sanita_mds_ospedali_ricerca_fallita", fallback_nid=TARGETS["ospedali"]["nid"])
+
     for key, target in TARGETS.items():
+        if key in result:
+            continue
         nid = target["nid"]
         for n in nodes:
             if n.get("drupal_internal__nid") != nid:
@@ -1140,7 +1175,7 @@ def build_shards(
         },
         "ospedali": {
             "url":         DATASET_PUBLIC_URLS["ospedali"],
-            "anno_dati":   ANNO_OSPEDALI,
+            "anno_dati":   discovery["ospedali"].get("anno", ANNO_OSPEDALI),
             "aggiornamento": "annuale (luglio dell'anno N+1)",
         },
     }
