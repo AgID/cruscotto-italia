@@ -3,12 +3,15 @@
 [FASE A - PROTOTIPO] Solo amministrazioni comunali, una regione alla volta,
 output locale. R2 push + altre PA (SSN, Universita, ATER) in fasi successive.
 
-Dataset upstream: MEF DE - Dati beni immobili al 31/12/2022.
+Dataset upstream: MEF DE - Dati beni immobili al 31/12/<ANNO>.
 URL pattern bulk (header User-Agent + Referer obbligatori):
   https://www.de.mef.gov.it/modules/documenti_it/attivo_patrimonio/
-    immobili_2022/opendata_imm/Imm_Amministrazioni_Comunali_<REGIONE>_2022.zip
+    immobili_<ANNO>/opendata_imm/Imm_Amministrazioni_Comunali_<REGIONE>_<ANNO>.zip
 
-Pubblicazione: 24/03/2025. Riferimento dati: 31/12/2022.
+<ANNO> = ultima rilevazione pubblicata, risolta a runtime (resolve_anno):
+pagina dati_immobili_<ANNO>.html esistente e con link agli ZIP. Fino al
+05/10/2026 l'anno era cablato a 2022 mentre il MEF aveva gia pubblicato
+la 2023 (stesse 20 regioni, stessi nomi file, stesse 51 colonne).
 Licenza: CC BY 4.0. Encoding CSV: ISO-8859-1. Separatore: ';'. Decimali: ','.
 
 Strategia Fase A:
@@ -30,9 +33,9 @@ Note campi MEF:
 Schema output per shard comune:
 {
   "_etl_version": "0.1.0-fase-a",
-  "_source": "MEF DE - Beni Immobili Pubblici 2022",
+  "_source": "MEF DE - Beni Immobili Pubblici <ANNO>",
   "_generated_at": "ISO-8601",
-  "anno_rilevazione": 2022,
+  "anno_rilevazione": <ANNO>,
   "kpi": {
     "n_totale": 247,
     "n_fabbricati": 67,
@@ -73,20 +76,23 @@ from etl.sources.scuole import load_cat_to_istat
 log = structlog.get_logger()
 
 ETL_VERSION = "0.1.0-fase-a"
-ANNO_RILEVAZIONE = 2022
+# Riserva se la scoperta fallisce; prima rilevazione con questo formato
+ANNO_RILEVAZIONE_FALLBACK = 2023
+ANNO_MIN = 2022
 
 CACHE_DIR = Path("/tmp/cruscotto-immobili-pa-cache")
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
-BASE_URL = (
-    "https://www.de.mef.gov.it/modules/documenti_it/attivo_patrimonio/"
-    "immobili_2022/opendata_imm"
-)
-REFERER = (
-    "https://www.de.mef.gov.it/it/attivita_istituzionali/"
-    "patrimonio_pubblico/censimento_immobili_pubblici/"
-    "open_data_immobili/dati_immobili_2022.html"
-)
+def base_url(anno: int) -> str:
+    return ("https://www.de.mef.gov.it/modules/documenti_it/attivo_patrimonio/"
+            f"immobili_{anno}/opendata_imm")
+
+
+def referer(anno: int) -> str:
+    return ("https://www.de.mef.gov.it/it/attivita_istituzionali/"
+            "patrimonio_pubblico/censimento_immobili_pubblici/"
+            f"open_data_immobili/dati_immobili_{anno}.html")
+
 HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
@@ -94,8 +100,23 @@ HEADERS = {
     ),
     "Accept": "application/zip,*/*",
     "Accept-Encoding": "gzip, deflate",
-    "Referer": REFERER,
 }
+
+
+def resolve_anno() -> int:
+    """Ultima rilevazione pubblicata: dall'anno corrente all'indietro, la
+    prima pagina dati_immobili_<anno>.html che risponde 200 e contiene i
+    link agli ZIP comunali di quell'anno."""
+    for anno in range(datetime.now().year, ANNO_MIN - 1, -1):
+        try:
+            r = requests.get(referer(anno), headers=HEADERS, timeout=60)
+            if r.status_code == 200 and f"immobili_{anno}/opendata_imm" in r.text:
+                log.info("immobili_anno_resolved", anno=anno)
+                return anno
+        except Exception as e:
+            log.warning("immobili_anno_probe_failed", anno=anno, error=str(e))
+    log.warning("immobili_anno_resolve_failed", fallback=ANNO_RILEVAZIONE_FALLBACK)
+    return ANNO_RILEVAZIONE_FALLBACK
 
 REGIONI_VALIDE = [
     "ABRUZZO", "BASILICATA", "CALABRIA", "CAMPANIA", "EMILIA-ROMAGNA",
@@ -160,18 +181,19 @@ def parse_num_it(s) -> float | None:
         return None
 
 
-def download_zip(regione: str, force: bool = False) -> Path:
-    """Scarica lo ZIP regionale MEF, cache su disco."""
-    fname = f"Imm_Amministrazioni_Comunali_{regione}_2022.zip"
+def download_zip(regione: str, anno: int, force: bool = False) -> Path:
+    """Scarica lo ZIP regionale MEF, cache su disco (nome file con l'anno)."""
+    fname = f"Imm_Amministrazioni_Comunali_{regione}_{anno}.zip"
     local = CACHE_DIR / fname
     if local.exists() and not force:
         log.info("immobili_zip_cached", regione=regione, size=local.stat().st_size)
         return local
 
-    url = f"{BASE_URL}/{fname}"
+    url = f"{base_url(anno)}/{fname}"
     log.info("immobili_zip_downloading", regione=regione, url=url)
     t0 = time.time()
-    r = requests.get(url, headers=HEADERS, timeout=180, stream=True)
+    r = requests.get(url, headers={**HEADERS, "Referer": referer(anno)},
+                     timeout=180, stream=True)
     r.raise_for_status()
     with open(local, "wb") as f:
         for chunk in r.iter_content(chunk_size=64 * 1024):
@@ -199,7 +221,7 @@ def parse_csv_from_zip(zip_path: Path):
             yield from reader
 
 
-def build_shards(zip_path: Path, cat_to_istat: dict[str, str]) -> dict[str, dict]:
+def build_shards(zip_path: Path, cat_to_istat: dict[str, str], anno: int) -> dict[str, dict]:
     """Costruisce un dict istat -> shard_data dal CSV regionale."""
     by_istat: dict[str, list[dict]] = {}
     unmatched_belfiore: set[str] = set()
@@ -304,9 +326,9 @@ def build_shards(zip_path: Path, cat_to_istat: dict[str, str]) -> dict[str, dict
 
         shards[istat] = {
             "_etl_version": ETL_VERSION,
-            "_source": "MEF DE - Beni Immobili Pubblici 2022",
+            "_source": f"MEF DE - Beni Immobili Pubblici {anno}",
             "_generated_at": generated_at,
-            "anno_rilevazione": ANNO_RILEVAZIONE,
+            "anno_rilevazione": anno,
             "kpi": {
                 "n_totale": n_tot,
                 "n_fabbricati": n_fab,
@@ -352,7 +374,8 @@ def main() -> int:
     args = p.parse_args()
 
     regioni = REGIONI_VALIDE if args.regione == "ALL" else [args.regione]
-    log.info("etl_start", regioni=regioni, n_regioni=len(regioni))
+    anno = resolve_anno()
+    log.info("etl_start", anno=anno, regioni=regioni, n_regioni=len(regioni))
 
     # Carica lookup una sola volta (non per regione)
     cat_to_istat = load_cat_to_istat()
@@ -362,11 +385,12 @@ def main() -> int:
     # (es. 015040 leak in VdA, vero match in Lombardia), la regione vera
     # arriva dopo e sovrascrive. Quindi processiamo nell'ordine REGIONI_VALIDE.
     all_shards: dict[str, dict] = {}
+    n_fallite = 0
 
     for regione in regioni:
         try:
-            zip_path = download_zip(regione, force=args.no_cache)
-            shards = build_shards(zip_path, cat_to_istat)
+            zip_path = download_zip(regione, anno, force=args.no_cache)
+            shards = build_shards(zip_path, cat_to_istat, anno)
             # Merge: shard "veri" sovrascrivono leak da regioni processate prima
             for istat, data in shards.items():
                 if istat in all_shards:
@@ -381,9 +405,13 @@ def main() -> int:
                      comuni_new=len(shards),
                      cumulative=len(all_shards))
         except Exception as e:
-            log.error("etl_regione_failed", regione=regione, error=str(e))
+            n_fallite += 1
+            # gli shard gia scritti per questa regione restano alla rilevazione
+            # precedente: anni misti finche la regione non viene rielaborata
+            log.error("etl_regione_failed", regione=regione, anno=anno, error=str(e))
 
-    log.info("etl_aggregated", comuni_totali=len(all_shards))
+    log.info("etl_aggregated", anno=anno, comuni_totali=len(all_shards),
+             regioni_fallite=n_fallite)
 
     write_local(all_shards, Path(args.outdir))
 
