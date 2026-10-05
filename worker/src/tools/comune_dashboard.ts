@@ -255,7 +255,7 @@
  *                                       //   sostitutivi della stima di un tecnico.
  *     "agcom_bbmap": { ... } | null    // AGCOM Broadband Map (BBmap) - reportistica
  *                                       //   consistenze rete cablata, art. 22 CCE:
- *                                       //   { _data_period: "31/12/2025",
+ *                                       //   { _data_period: "GG/MM/AAAA",
  *                                       //     kpi: { famiglie_residenti,
  *                                       //            famiglie_ftth, famiglie_ftth_20m,
  *                                       //            copertura_ftth_desi_pct,

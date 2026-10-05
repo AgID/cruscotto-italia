@@ -102,7 +102,7 @@ export async function handleMcp(
       return rpcOk(body.id, {
         protocolVersion: negotiatedVersion,
         capabilities: { tools: {} },
-        serverInfo: { name: "cruscotto-italia-mcp", version: "0.21.0" },
+        serverInfo: { name: "cruscotto-italia-mcp", version: "0.21.1" },
         instructions: SERVER_INSTRUCTIONS,
       });
     }
