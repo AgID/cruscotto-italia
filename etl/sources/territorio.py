@@ -30,12 +30,15 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import os
+import re
 import sys
 import tempfile
 import urllib.error
 import urllib.request
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime
 from pathlib import Path
 
 import structlog
@@ -47,17 +50,34 @@ log = structlog.get_logger()
 # ---------------------------------------------------------------------------
 # URLs e costanti
 # ---------------------------------------------------------------------------
+# Edizione ISPRA del consumo di suolo: risolta a runtime dalla pagina dati
+# (resolve_suolo). Questo URL e solo la riserva. Fino al 05/10/2026 URL,
+# foglio "Comuni_2006_2024" e colonne "Suolo consumato 2024" erano cablati:
+# l'edizione successiva avrebbe rotto il parser.
 ISPRA_SUOLO_URL = (
     "https://www.isprambiente.gov.it/it/attivita/suolo-e-territorio/suolo/"
     "il-consumo-di-suolo/consumo_di_suolo_estratto_dati_2025_anni_2006_2024.xlsx"
 )
+ISPRA_SUOLO_PAGE = (
+    "https://www.isprambiente.gov.it/it/attivita/suolo-e-territorio/suolo/"
+    "il-consumo-di-suolo/i-dati-sul-consumo-di-suolo"
+)
+_SUOLO_RE = re.compile(
+    r"consumo_di_suolo_estratto_dati_(\d{4})_anni_2006_(\d{4})\.xlsx")
+# Chiavi storiche con l'anno nel nome (frontend, dashboard): valorizzate solo
+# finche il dato e davvero di quell'anno. Nuove chiavi: stock_ultimo,
+# suolo_consumato_pct/_anno, incremento_ultimo_ha.
+ANNO_CHIAVI_STORICHE = 2024
 IDROGEO_API_BASE = "https://idrogeo.isprambiente.it/api/pir/comuni"
 RIFIUTI_CSV_URL = (
     "https://www.catasto-rifiuti.isprambiente.it/get/"
     "getDettaglioComunale.csv.php?aa={anno}"
 )
 RIFIUTI_ANNO_MIN = 2010
-RIFIUTI_ANNO_MAX = 2024
+# Anno precedente: un anno non ancora pubblicato restituisce 200 con la sola
+# intestazione (aa=2025 il 05/10/2026: 535 byte, 4 righe) e NON va in cache.
+RIFIUTI_ANNO_MAX = datetime.now().year - 1
+RIFIUTI_MIN_RIGHE = 1000
 
 # Limiti operativi
 IDROGEO_PARALLEL = 20  # thread paralleli per chiamate IdroGEO
@@ -116,25 +136,45 @@ def load_nome_to_istat() -> dict:
 # ===========================================================================
 # FASE A — ISPRA Consumo di Suolo (XLSX)
 # ===========================================================================
-def download_suolo_xlsx(cache_dir: Path, force: bool = False) -> Path:
-    """Download dell'XLSX ISPRA Suolo (1.7 MB). Cache locale per ripartibilita."""
-    out = cache_dir / "ispra_suolo_2025.xlsx"
+def resolve_suolo() -> tuple[str, int]:
+    """(url, anno_fine) dell'edizione piu recente linkata nella pagina dati."""
+    try:
+        req = urllib.request.Request(ISPRA_SUOLO_PAGE,
+                                     headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=60) as resp:
+            html = resp.read().decode("utf-8", "replace")
+        trovati = sorted({(int(m.group(1)), int(m.group(2)), m.group(0))
+                          for m in _SUOLO_RE.finditer(html)})
+        if trovati:
+            edizione, anno_fine, fname = trovati[-1]
+            url = ISPRA_SUOLO_URL.rsplit("/", 1)[0] + "/" + fname
+            log.info("suolo_edizione_resolved", edizione=edizione, anno_fine=anno_fine)
+            return url, anno_fine
+        log.warning("suolo_edizione_non_trovata", page=ISPRA_SUOLO_PAGE)
+    except Exception as e:
+        log.warning("suolo_edizione_resolve_failed", error=str(e)[:200])
+    m = _SUOLO_RE.search(ISPRA_SUOLO_URL)
+    return ISPRA_SUOLO_URL, int(m.group(2))
+
+
+def download_suolo_xlsx(cache_dir: Path, url: str, force: bool = False) -> Path:
+    """Download dell'XLSX ISPRA Suolo; cache col nome dell'edizione."""
+    out = cache_dir / url.rsplit("/", 1)[-1]
     if out.exists() and not force:
         log.info("suolo_xlsx_cached", path=str(out), size=out.stat().st_size)
         return out
 
-    log.info("suolo_xlsx_download_start", url=ISPRA_SUOLO_URL)
-    req = urllib.request.Request(
-        ISPRA_SUOLO_URL, headers={"User-Agent": HTTP_USER_AGENT}
-    )
+    log.info("suolo_xlsx_download_start", url=url)
+    req = urllib.request.Request(url, headers={"User-Agent": HTTP_USER_AGENT})
+    part = out.with_suffix(".xlsx.part")
     with urllib.request.urlopen(req, timeout=60) as resp:
-        with open(out, "wb") as f:
-            f.write(resp.read())
+        part.write_bytes(resp.read())
+    os.replace(part, out)
     log.info("suolo_xlsx_download_done", size=out.stat().st_size)
     return out
 
 
-def parse_suolo_xlsx(xlsx_path: Path) -> dict:
+def parse_suolo_xlsx(xlsx_path: Path, anno_fine: int) -> dict:
     """Parse XLSX foglio 'Comuni_2006_2024' -> dict {istat: suolo_data}.
 
     Schema output per comune:
@@ -153,7 +193,14 @@ def parse_suolo_xlsx(xlsx_path: Path) -> dict:
 
     log.info("suolo_xlsx_parse_start", path=str(xlsx_path))
     wb = openpyxl.load_workbook(xlsx_path, read_only=True, data_only=True)
-    ws = wb["Comuni_2006_2024"]
+    foglio = f"Comuni_2006_{anno_fine}"
+    if foglio not in wb.sheetnames:
+        candidati = [n for n in wb.sheetnames if n.startswith("Comuni_2006_")]
+        log.warning("suolo_foglio_atteso_assente", atteso=foglio, candidati=candidati)
+        if not candidati:
+            return {}
+        foglio = candidati[0]
+    ws = wb[foglio]
 
     rows = ws.iter_rows(values_only=True)
     header = next(rows)
@@ -174,9 +221,9 @@ def parse_suolo_xlsx(xlsx_path: Path) -> dict:
     stock_ha_idx = None
     stock_pct_idx = None
     for i, h in enumerate(header):
-        if h and str(h).startswith("Suolo consumato 2024 [ettari]"):
+        if h and str(h).startswith(f"Suolo consumato {anno_fine} [ettari]"):
             stock_ha_idx = i
-        elif h and str(h).startswith("Suolo consumato 2024 [%]"):
+        elif h and str(h).startswith(f"Suolo consumato {anno_fine} [%]"):
             stock_pct_idx = i
 
     if stock_ha_idx is None or stock_pct_idx is None:
@@ -208,13 +255,14 @@ def parse_suolo_xlsx(xlsx_path: Path) -> dict:
         stock_ha = row[stock_ha_idx] if stock_ha_idx < len(row) else None
         stock_pct = row[stock_pct_idx] if stock_pct_idx < len(row) else None
 
-        suolo_by_istat[istat] = {
-            "stock_2024": {
-                "ha": round2(stock_ha) if isinstance(stock_ha, (int, float)) else None,
-                "pct": round2(stock_pct) if isinstance(stock_pct, (int, float)) else None,
-            },
-            "serie_storica": serie,
+        stock = {
+            "anno": anno_fine,
+            "ha": round2(stock_ha) if isinstance(stock_ha, (int, float)) else None,
+            "pct": round2(stock_pct) if isinstance(stock_pct, (int, float)) else None,
         }
+        suolo_by_istat[istat] = {"stock_ultimo": stock, "serie_storica": serie}
+        if anno_fine == ANNO_CHIAVI_STORICHE:
+            suolo_by_istat[istat]["stock_2024"] = {"ha": stock["ha"], "pct": stock["pct"]}
 
     log.info("suolo_xlsx_parse_done", n_comuni=len(suolo_by_istat), n_rows=n_rows)
     return suolo_by_istat
@@ -384,16 +432,28 @@ def download_rifiuti_anno(anno: int, cache_dir: Path,
     """Download CSV Catasto rifiuti anno. Cache locale."""
     out = cache_dir / f"rifiuti_{anno}.csv"
     if out.exists() and not force:
-        log.debug("rifiuti_csv_cached", anno=anno, size=out.stat().st_size)
-        return out
+        with open(out, "rb") as fh:
+            righe = sum(1 for _ in fh)
+        if righe >= RIFIUTI_MIN_RIGHE:
+            log.debug("rifiuti_csv_cached", anno=anno, size=out.stat().st_size)
+            return out
+        log.info("rifiuti_cache_scartata", anno=anno, righe=righe)
+        out.unlink()
 
     url = RIFIUTI_CSV_URL.format(anno=anno)
     log.info("rifiuti_csv_download_start", anno=anno, url=url)
     try:
         req = urllib.request.Request(url, headers={"User-Agent": HTTP_USER_AGENT})
         with urllib.request.urlopen(req, timeout=60) as resp:
-            with open(out, "wb") as f:
-                f.write(resp.read())
+            data = resp.read()
+        righe = data.count(b"\n")
+        if righe < RIFIUTI_MIN_RIGHE:
+            # anno non ancora pubblicato: risposta con la sola intestazione
+            log.info("rifiuti_anno_non_pubblicato", anno=anno, righe=righe)
+            return None
+        part = out.with_suffix(".csv.part")
+        part.write_bytes(data)
+        os.replace(part, out)
         log.info("rifiuti_csv_download_done", anno=anno, size=out.stat().st_size)
         return out
     except Exception as e:
@@ -555,8 +615,11 @@ def build_kpi(suolo: dict | None, rischio: dict | None,
     """
     kpi = {
         "ar_kmq": None,
-        "suolo_consumato_2024_pct": None,
-        "incremento_2024_ha": None,
+        "suolo_consumato_pct": None,
+        "suolo_consumato_anno": None,
+        "incremento_ultimo_ha": None,
+        "suolo_consumato_2024_pct": None,   # storica, solo se il dato e 2024
+        "incremento_2024_ha": None,         # storica, solo se il dato e 2024
         "popolazione_frane_p3p4_pct": None,
         "rd_pct_ultimo_anno": None,
         "rd_ultimo_anno": None,
@@ -567,9 +630,14 @@ def build_kpi(suolo: dict | None, rischio: dict | None,
         kpi["ar_kmq"] = idrogeo_raw.get("ar_kmq")
 
     if suolo:
-        kpi["suolo_consumato_2024_pct"] = suolo["stock_2024"]["pct"]
+        st = suolo["stock_ultimo"]
+        kpi["suolo_consumato_pct"] = st["pct"]
+        kpi["suolo_consumato_anno"] = st["anno"]
         if suolo["serie_storica"]:
-            kpi["incremento_2024_ha"] = suolo["serie_storica"][-1].get("netto_ha")
+            kpi["incremento_ultimo_ha"] = suolo["serie_storica"][-1].get("netto_ha")
+        if st["anno"] == ANNO_CHIAVI_STORICHE:
+            kpi["suolo_consumato_2024_pct"] = kpi["suolo_consumato_pct"]
+            kpi["incremento_2024_ha"] = kpi["incremento_ultimo_ha"]
 
     if rischio:
         kpi["popolazione_frane_p3p4_pct"] = rischio["frane"].get("pop_p3p4_pct")
@@ -713,8 +781,9 @@ def main() -> int:
 
         # FASE A — Suolo (XLSX)
         log.info("fase_a_suolo_start")
-        xlsx_path = download_suolo_xlsx(cache_dir, force=args.no_cache)
-        suolo_by_istat = parse_suolo_xlsx(xlsx_path)
+        suolo_url, suolo_anno = resolve_suolo()
+        xlsx_path = download_suolo_xlsx(cache_dir, suolo_url, force=args.no_cache)
+        suolo_by_istat = parse_suolo_xlsx(xlsx_path, suolo_anno)
 
         # FASE B — IdroGEO (API)
         if args.skip_idrogeo:
