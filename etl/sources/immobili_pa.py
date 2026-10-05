@@ -415,6 +415,20 @@ def main() -> int:
 
     write_local(all_shards, Path(args.outdir))
 
+    # Comuni presenti nella rilevazione precedente ma non in questa: il loro
+    # shard resterebbe con l'anno vecchio e verrebbe mostrato come attuale
+    # (05/10/2026: Lona-Lases, Floridia, Montereale fermi al 2022). Si
+    # rimuovono solo con un run completo e senza regioni fallite.
+    if args.regione == "ALL" and n_fallite == 0:
+        obsoleti = [f for f in Path(args.outdir).glob("*.json")
+                    if f.stem.isdigit() and len(f.stem) == 6 and f.stem not in all_shards]
+        for f in obsoleti:
+            f.unlink()
+        log.info("immobili_shard_obsoleti_rimossi", n=len(obsoleti),
+                 istat=sorted(f.stem for f in obsoleti))
+    elif args.regione == "ALL":
+        log.warning("immobili_shard_obsoleti_non_rimossi", regioni_fallite=n_fallite)
+
     # Manifest update best-effort
     try:
         out_dir = Path(args.outdir)
