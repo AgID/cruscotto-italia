@@ -300,6 +300,90 @@ def _check_agcom(ora: datetime) -> str | None:
     return None
 
 
+# --- Controlli aggiunti dopo l'audit del 05/10/2026 ---------------------------
+# Nell'audit diverse fonti risultavano "ok" con dati fermi: anni o URL
+# cablati, cache senza scadenza, download troncati. Questi controlli
+# guardano il PERIODO DEL DATO (non l'ora del run) sullo shard di Matera o
+# sul lookup della fonte. Soglie tarate sul calendario di pubblicazione di
+# ciascuna fonte: tutte verdi al 05/10/2026, senza scattare nei mesi
+# d'attesa normali tra un rilascio e l'altro.
+
+def _leggi(rel: str) -> dict | None:
+    f = DATA_DIR / rel
+    if not f.exists():
+        return None
+    try:
+        return json.loads(f.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+
+
+def _giorni_da(data_iso: str | None, ora: datetime) -> int | None:
+    m = re.match(r"^(\d{4})-(\d{2})-(\d{2})", str(data_iso or ""))
+    if not m:
+        return None
+    d = datetime(int(m.group(1)), int(m.group(2)), int(m.group(3)), tzinfo=timezone.utc)
+    return (ora - d).days
+
+
+def _eta_massima(rel: str, campo, soglia_gg: int, cosa: str):
+    """Controllo su una data ISO dello shard: non oltre soglia_gg giorni."""
+    def chk(ora: datetime) -> str | None:
+        d = _leggi(rel)
+        if d is None:
+            return None
+        val = campo(d)
+        gg = _giorni_da(val, ora)
+        if gg is None:
+            return f"{cosa}: data illeggibile ({val!r})"
+        if gg > soglia_gg:
+            return f"{cosa} fermo al {val} ({gg}gg, soglia {soglia_gg})"
+        return None
+    return chk
+
+
+def _anno_minimo(rel: str, campo, ritardo_anni: int, cosa: str):
+    """Controllo annuale: l'anno del dato non deve essere < anno corrente - ritardo."""
+    def chk(ora: datetime) -> str | None:
+        d = _leggi(rel)
+        if d is None:
+            return None
+        try:
+            anno = int(campo(d))
+        except (TypeError, ValueError):
+            return f"{cosa}: anno illeggibile"
+        if anno < ora.year - ritardo_anni:
+            return (f"{cosa} fermo al {anno} (atteso >= {ora.year - ritardo_anni}): "
+                    f"controllare la scoperta dell'anno nel log ETL")
+        return None
+    return chk
+
+
+def _check_anac(ora: datetime) -> str | None:
+    """Finestra ANAC: almeno 6 mesi e il piu recente entro 9 mesi.
+
+    05/10/2026: si serviva un solo mese (cron con --years=<anno corrente>).
+    ANAC OCDS e ferma a marzo 2026 lato fonte: 9 mesi lasciano margine alla
+    pubblicazione a lotti e segnalano un fermo che dura."""
+    d = _leggi("lookup/anac-aggregato.json")
+    if d is None:
+        return None
+    mesi = sorted(str(x)[:7] for x in d.get("_period_files") or [])
+    if len(mesi) < 6:
+        return f"finestra contratti di soli {len(mesi)} mesi ({mesi}): controllare anac --ultimi-mesi"
+    gg = _giorni_da(mesi[-1] + "-01", ora)
+    if gg is not None and gg > 300:
+        return f"mese ANAC piu recente {mesi[-1]} ({gg}gg): fonte OCDS ferma o download fallito"
+    return None
+
+
+def _anno_suolo(d: dict) -> int | None:
+    su = d.get("suolo") or {}
+    if (su.get("stock_ultimo") or {}).get("anno"):
+        return su["stock_ultimo"]["anno"]
+    return 2024 if "stock_2024" in su else None
+
+
 def _check_dashboard(ora: datetime) -> str | None:
     """Il dashboard deve essere piu recente degli shard che accorpa."""
     dash = DATA_DIR / "dashboard" / "077014.json"
@@ -321,6 +405,31 @@ CONTROLLI_CONTENUTO = {
     "siope": _check_siope,
     "omi": _check_omi,
     "agcom_bbmap": _check_agcom,
+    "anac": _check_anac,
+    # mensili / settimanali: eta della data del dato
+    "pnrr_progetti": _eta_massima("pnrr/077014.json", lambda d: d.get("data_estrazione"),
+                                  150, "estrazione PNRR"),   # Italia Domani ~ ogni 2-3 mesi
+    "bdap": _eta_massima("bdap/dettaglio/077014.json", lambda d: d.get("_data_download"),
+                         40, "download BDAP"),               # cron mensile + cache 20gg
+    "anncsu": _eta_massima("anncsu/077014.json", lambda d: d.get("_snapshot_date"),
+                           50, "snapshot ANNCSU"),            # flusso mensile AdE
+    # annuali: anno del dato non piu vecchio di (anno corrente - ritardo)
+    "istat_turismo": _anno_minimo("turismo/077014.json",
+                                  lambda d: d["capacita_comune"]["anno"], 2, "capacita turistica"),
+    "istat_profilo": _anno_minimo("profilo/077014.json",
+                                  lambda d: d["istruzione"]["anno"], 3, "profilo censuario"),
+    "asia": _anno_minimo("asia/077014.json", lambda d: d["_latest_year"], 4, "ASIA"),   # ISTAT ~3 anni di ritardo
+    "redditi": _anno_minimo("redditi/077014.json",
+                            lambda d: max(map(int, d["anni"])), 3, "redditi IRPEF"),
+    "veicoli": _anno_minimo("veicoli/077014.json",
+                            lambda d: d["_anno_dati_iscrizioni"], 2, "iscrizioni ACI"),
+    "immobili_pa": _anno_minimo("immobili_pa/077014.json",
+                                lambda d: d["anno_rilevazione"], 4, "rilevazione immobili MEF"),
+    "territorio": _anno_minimo("territorio/077014.json", _anno_suolo, 2, "consumo di suolo"),
+    "demografia": _anno_minimo("demografia/077014.json",
+                               lambda d: d["_anno_riferimento"], 1, "popolazione POSAS"),
+    "sanita_mds": _anno_minimo("sanita_mds/077014.json",
+                               lambda d: d["_fonti"]["ospedali"]["anno_dati"], 4, "posti letto"),  # 2024 atteso a lug 2025, ancora assente
     "dashboard": _check_dashboard,
 }
 
