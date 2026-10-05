@@ -39,7 +39,8 @@ from pathlib import Path
 import duckdb
 import structlog
 
-from etl.lib import manifest
+from etl.lib import local_lookup, manifest
+from etl.lib.istat_sdmx import scarica_a_blocchi
 
 log = structlog.get_logger()
 
@@ -153,6 +154,14 @@ def sdmx_url(df_id: str, key: str, year_start: int, year_end: int) -> str:
     )
 
 
+def codici_comuni() -> list[str]:
+    """Codici ISTAT dei comuni dal bundle locale (stessa fonte di asia.py)."""
+    bundle = local_lookup.load_comuni_bundle()
+    if not bundle:
+        raise SystemExit("comuni-bundle.json assente: eseguire prima etl.sources.anagrafica")
+    return sorted(bundle.keys())
+
+
 def download_dataflow(df: dict, cache_dir: Path, force: bool = False) -> Path:
     """Scarica un dataflow ISTAT in CSV nella cache. Riusa se gia presente."""
     out = cache_dir / f"{df['name']}_{df['year_start']}.csv"
@@ -161,32 +170,13 @@ def download_dataflow(df: dict, cache_dir: Path, force: bool = False) -> Path:
                  size=out.stat().st_size)
         return out
 
-    url = sdmx_url(df["id"], df["key"], df["year_start"], df["year_end"])
-    log.info("istat_downloading", source=df["name"], url=url,
+    # A blocchi di comuni: le richieste nazionali vanno in timeout (05/10/2026)
+    log.info("istat_downloading", source=df["name"], modo="a_blocchi",
              year_start=df["year_start"], year_end=df["year_end"])
-
-    req = urllib.request.Request(
-        url,
-        headers={
-            "Accept": "application/vnd.sdmx.data+csv;version=1.0.0",
-            "User-Agent": UA,
-        },
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=600) as resp:
-            data = resp.read()
-    except urllib.error.HTTPError as e:
-        log.error("istat_http_error", source=df["name"], status=e.code,
-                  reason=e.reason)
-        raise
-    except urllib.error.URLError as e:
-        log.error("istat_url_error", source=df["name"], reason=str(e.reason))
-        raise
-
-    out.write_bytes(data)
-    log.info("istat_downloaded", source=df["name"], bytes=len(data))
-    return out
-
+    return scarica_a_blocchi(
+        f"{SDMX_BASE}/{SDMX_AGENCY},{df['id']},{SDMX_VERSION}", df["key"],
+        df["year_start"], df["year_end"], codici_comuni(), out,
+        user_agent=UA, log=log)
 
 def build_profilo_shards(cache_dir: Path, output_dir: Path) -> Path:
     """Aggrega i 5 CSV in 1 JSON per comune (profilo/<istat>.json)."""

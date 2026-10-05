@@ -47,6 +47,7 @@ import duckdb
 import structlog
 
 from etl.lib import local_lookup, manifest
+from etl.lib.istat_sdmx import scarica_a_blocchi
 
 log = structlog.get_logger()
 
@@ -189,9 +190,26 @@ def resolve_anni() -> None:
     ANNO_FL = DATAFLOWS[1]["year_start"]
 
 
+def codici_comuni() -> list[str]:
+    """Codici ISTAT dei comuni dal bundle locale (stessa fonte di asia.py)."""
+    bundle = local_lookup.load_comuni_bundle()
+    if not bundle:
+        raise SystemExit("comuni-bundle.json assente: eseguire prima etl.sources.anagrafica")
+    return sorted(bundle.keys())
+
+
 def download_dataflow_csv(df: dict, cache_dir: Path, force: bool = False) -> Path:
     """Scarica CSV bulk del dataflow (cache con l'anno nel nome)."""
     out = cache_dir / f"{df['name']}_{df['year_start']}.csv"
+    if df["name"] == "capacita":
+        # comunale: a blocchi di comuni (la richiesta nazionale resta appesa)
+        if out.exists() and out.stat().st_size > 1000 and not force:
+            log.info("istat_cache_hit", path=str(out), size=out.stat().st_size)
+            return out
+        return scarica_a_blocchi(
+            f"{SDMX_BASE}/data/{SDMX_AGENCY},{df['id']},{SDMX_VERSION}", df["key"],
+            df["year_start"], df["year_end"], codici_comuni(), out,
+            user_agent=UA, log=log)
     url = sdmx_data_url(df["id"], df["key"], df["year_start"], df["year_end"])
     return download_url(url, out, "application/vnd.sdmx.data+csv;version=1.0.0",
                         force=force)

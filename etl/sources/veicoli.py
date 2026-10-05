@@ -38,7 +38,6 @@ from __future__ import annotations
 import argparse
 import csv
 import json
-import os
 import re
 import sys
 import time
@@ -48,10 +47,10 @@ from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
 
-import requests
 import structlog
 
 from etl.lib import local_lookup, manifest
+from etl.lib.istat_sdmx import scarica_a_blocchi
 
 log = structlog.get_logger()
 
@@ -109,30 +108,12 @@ PARCO_UNRELIABLE_ISTAT = {
 }
 
 
-def _download_istat(url: str, out: Path, tentativi: int = 3) -> None:
-    """Scarica un CSV SDMX ISTAT su out.part e rinomina solo a fine download.
-
-    Il server ISTAT puo chiudere a meta dello streaming (ReadTimeout del
-    05/10/2026 sugli incidenti): scrivendo direttamente su out, il file
-    troncato restava in cache e il run successivo lo usava senza errori.
-    """
-    part = out.with_suffix(out.suffix + ".part")
-    for n in range(1, tentativi + 1):
-        try:
-            with requests.get(url, headers=ISTAT_HEADERS, timeout=300, stream=True) as resp:
-                resp.raise_for_status()
-                with open(part, "wb") as f:
-                    for chunk in resp.iter_content(chunk_size=1 << 20):
-                        if chunk:
-                            f.write(chunk)
-            os.replace(part, out)
-            return
-        except requests.RequestException as e:
-            part.unlink(missing_ok=True)
-            log.warning("istat_download_retry", url=url, tentativo=n, error=str(e)[:200])
-            if n == tentativi:
-                raise
-            time.sleep(30 * n)
+def codici_comuni() -> list[str]:
+    """Codici ISTAT dei comuni dal bundle locale (stessa fonte di asia.py)."""
+    bundle = local_lookup.load_comuni_bundle()
+    if not bundle:
+        raise SystemExit("comuni-bundle.json assente: eseguire prima etl.sources.anagrafica")
+    return sorted(bundle.keys())
 
 
 def fetch_istat_parco(anno: int = ANNO_PARCO, use_cache: bool = True) -> Path:
@@ -141,11 +122,11 @@ def fetch_istat_parco(anno: int = ANNO_PARCO, use_cache: bool = True) -> Path:
     if out.exists() and out.stat().st_size > 100_000 and use_cache:
         log.info("istat_parco_cache_hit", path=str(out), size=out.stat().st_size, anno=anno)
         return out
-    url = (f"{ISTAT_BASE}/41_993/A..VEHICFLEET."
-           f"?startPeriod={anno}&endPeriod={anno}")
-    log.info("istat_parco_download_start", url=url, anno=anno)
+    # A blocchi di comuni: la richiesta nazionale va in timeout (05/10/2026)
+    log.info("istat_parco_download_start", anno=anno, modo="a_blocchi")
     t0 = time.time()
-    _download_istat(url, out)
+    scarica_a_blocchi(f"{ISTAT_BASE}/41_993", "A..VEHICFLEET.", anno, anno,
+                      codici_comuni(), out, user_agent=UA, log=log)
     elapsed = time.time() - t0
     log.info("istat_parco_downloaded", anno=anno, bytes=out.stat().st_size,
              elapsed_s=round(elapsed, 1), path=str(out))
@@ -218,11 +199,12 @@ def fetch_istat_incidenti(anni: list[int] | None = None, use_cache: bool = True)
 
     # Pattern dimensioni: FREQ.REF_AREA.DATA_TYPE.RESULT
     # Wildcard: tutti i comuni, tutti i DATA_TYPE, tutti i RESULT
-    url = (f"{ISTAT_BASE}/41_983/A..."
-           f"?startPeriod={a_min}&endPeriod={a_max}")
-    log.info("istat_incidenti_download_start", url=url, range=f"{a_min}-{a_max}")
+    log.info("istat_incidenti_download_start", range=f"{a_min}-{a_max}", modo="a_blocchi")
     t0 = time.time()
-    _download_istat(url, out)
+    # A blocchi di comuni: la richiesta nazionale andava in ReadTimeout per
+    # tre tentativi di fila (05/10/2026), un singolo comune risponde in ~14 s
+    scarica_a_blocchi(f"{ISTAT_BASE}/41_983", "A...", a_min, a_max,
+                      codici_comuni(), out, user_agent=UA, log=log)
     elapsed = time.time() - t0
     log.info("istat_incidenti_downloaded", bytes=out.stat().st_size,
              elapsed_s=round(elapsed, 1), path=str(out))
