@@ -69,3 +69,14 @@ with tarfile.open(fileobj=io.BytesIO(tgz), mode="r:gz") as tf:
             print("    -> " + fn + " (" + str((CACHE / fn).stat().st_size) + " byte)", flush=True)
             n += 1
 print("[4/4] estratti " + str(n) + " CSV in " + str(CACHE), flush=True)
+
+# Lo script gira come root (serve /etc/cruscotto-github.env): se ha creato
+# lui la cartella, l'ETL veicoli (utente ubuntu) non puo scriverci la propria
+# cache ISTAT (PermissionError del 05/10/2026). Cartella e file vanno
+# all'utente proprietario del repo.
+if os.geteuid() == 0:
+    owner = Path(__file__).resolve().parents[2].stat()
+    os.chown(CACHE, owner.st_uid, owner.st_gid)
+    for f in CACHE.iterdir():
+        os.chown(f, owner.st_uid, owner.st_gid)
+    print("    proprietario cartella e file: uid " + str(owner.st_uid), flush=True)
