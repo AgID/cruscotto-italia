@@ -26,11 +26,14 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import csv
+import io
 import json
 import sys
 import tempfile
 import urllib.error
 import urllib.request
+from datetime import datetime
 from pathlib import Path
 
 import duckdb
@@ -53,6 +56,7 @@ UA = "cruscotto-italia/1.0 (+https://cruscotto-italia.dati.gov.it)"
 DATAFLOWS = [
     {
         "name": "istruzione",
+        "sonda": "A.075035........",
         "id": "DF_DCSS_ISTR_LAV_PEN_2_TV_1",
         # 10 dim: FREQ.REF_AREA.INDICATOR.GENDER.AGE_NOCLASS.CITIZENSHIP.EDU_ATTAIN.CUR_ACT_STAT.LOC_DEST.REAS_COMMUTING
         "key": "A.........",  # FREQ=A + 9 wildcards = 10 dim
@@ -61,6 +65,7 @@ DATAFLOWS = [
     },
     {
         "name": "lavoro",
+        "sonda": "A.075035........",
         "id": "DF_DCSS_ISTR_LAV_PEN_2_TV_3",
         "key": "A.........",
         "year_start": 2024,
@@ -68,6 +73,7 @@ DATAFLOWS = [
     },
     {
         "name": "pendolari",
+        "statico": True,  # dataflow fermo al 2019 (ultimo ISTAT), nessuna scoperta
         "id": "DF_DCSS_ISTR_LAV_PEN_2_TV_5",
         "key": "A.........",
         "year_start": 2019,
@@ -75,6 +81,7 @@ DATAFLOWS = [
     },
     {
         "name": "famiglie",
+        "sonda": "A.075035.",
         "id": "DF_DCSS_FAM_POP_TV_1",
         # 3 dim: FREQ.REF_AREA.INDICATOR
         "key": "A..",
@@ -83,6 +90,7 @@ DATAFLOWS = [
     },
     {
         "name": "cittadinanza",
+        "sonda": "A.075035.......",
         "id": "DF_DCSS_POP_DEMCITMIG_TV_2",
         # 9 dim: FREQ.REF_AREA.INDICATOR.GENDER.AGE_CLASS.MARITAL_STATUS.CITIZENSHIP.AREA_CONTRY_CITIZEN.USUAL_RESID_1Y
         "key": "A........",
@@ -90,6 +98,51 @@ DATAFLOWS = [
         "year_end": 2024,
     },
 ]
+
+
+def _anno_disponibile(df: dict, anno: int) -> bool:
+    """True se la sonda (un solo comune) ha osservazioni con TIME_PERIOD == anno."""
+    url = sdmx_url(df["id"], df["sonda"], anno, anno)
+    req = urllib.request.Request(url, headers={
+        "Accept": "application/vnd.sdmx.data+csv;version=1.0.0", "User-Agent": UA})
+    try:
+        with urllib.request.urlopen(req, timeout=180) as resp:
+            text = resp.read().decode("utf-8", "replace")
+    except urllib.error.HTTPError as e:
+        if e.code == 404:  # ISTAT risponde 404 se l'anno non ha dati
+            return False
+        raise
+    return any(r.get("TIME_PERIOD") == str(anno) and (r.get("OBS_VALUE") or "").strip()
+               for r in csv.DictReader(io.StringIO(text)))
+
+
+def resolve_anni() -> None:
+    """Porta year_start/year_end di ogni dataflow non statico all'ultimo anno
+    pubblicato, dall'anno precedente all'indietro fino all'anno configurato
+    (che resta il valore di riserva). Fino al 05/10/2026 gli anni erano
+    solo cablati: allineati oggi (2024), ma non avrebbero mai seguito ISTAT."""
+    for df in DATAFLOWS:
+        if df.get("statico"):
+            continue
+        minimo = df["year_start"]
+        trovato = None
+        for anno in range(datetime.now().year - 1, minimo - 1, -1):
+            try:
+                if _anno_disponibile(df, anno):
+                    trovato = anno
+                    break
+            except Exception as e:
+                log.warning("istat_anno_probe_failed", source=df["name"], anno=anno,
+                            error=str(e)[:200])
+        if trovato is None:
+            trovato = minimo
+            log.warning("istat_anno_resolve_failed", source=df["name"], fallback=trovato)
+        df["year_start"] = df["year_end"] = trovato
+        log.info("istat_anno_resolved", source=df["name"], anno=trovato)
+
+
+def anno_di(name: str) -> int:
+    return next(d["year_start"] for d in DATAFLOWS if d["name"] == name)
 
 
 def sdmx_url(df_id: str, key: str, year_start: int, year_end: int) -> str:
@@ -102,7 +155,7 @@ def sdmx_url(df_id: str, key: str, year_start: int, year_end: int) -> str:
 
 def download_dataflow(df: dict, cache_dir: Path, force: bool = False) -> Path:
     """Scarica un dataflow ISTAT in CSV nella cache. Riusa se gia presente."""
-    out = cache_dir / f"{df['name']}.csv"
+    out = cache_dir / f"{df['name']}_{df['year_start']}.csv"
     if out.exists() and out.stat().st_size > 1000 and not force:
         log.info("istat_cache_hit", source=df["name"], path=str(out),
                  size=out.stat().st_size)
@@ -144,7 +197,7 @@ def build_profilo_shards(cache_dir: Path, output_dir: Path) -> Path:
 
     # === Carica i 5 CSV in altrettante tabelle ===
     for df in DATAFLOWS:
-        csv_path = cache_dir / f"{df['name']}.csv"
+        csv_path = cache_dir / f"{df['name']}_{df['year_start']}.csv"
         if not csv_path.exists():
             log.warning("istat_csv_missing", source=df["name"],
                         path=str(csv_path))
@@ -160,6 +213,7 @@ def build_profilo_shards(cache_dir: Path, output_dir: Path) -> Path:
                 ignore_errors=true,
                 all_varchar=true
             )
+            WHERE TIME_PERIOD = '{df['year_start']}'
         """)
         n = con.execute(f"SELECT COUNT(*) FROM {df['name']}").fetchone()[0]
         log.info("istat_loaded", source=df["name"], rows=n)
@@ -404,7 +458,7 @@ def build_shard(istat, istr, lav, fam, pend, citt):
     max_media = (nessun + element + media) if any([nessun, element, media]) else None
 
     sez_istruzione = {
-        "anno": 2024,
+        "anno": anno_di("istruzione"),
         "pop_riferimento_25_64": safe_int(pop_2564),
         "terziario_n":      safe_int(terziario),
         "terziario_pct":    safe_pct(terziario, pop_2564),
@@ -427,7 +481,7 @@ def build_shard(istat, istr, lav, fam, pend, citt):
     pop_lav_2564 = lav.get("pop_25_64")
     forze = lav.get("forze_lavoro")
     sez_lavoro = {
-        "anno": 2024,
+        "anno": anno_di("lavoro"),
         "pop_riferimento_25_64": safe_int(pop_lav_2564),
         "occupati_n":          safe_int(lav.get("occupati")),
         "in_cerca_n":          safe_int(lav.get("in_cerca")),
@@ -441,7 +495,7 @@ def build_shard(istat, istr, lav, fam, pend, citt):
     n_fam = fam.get("n_famiglie")
     pop_fam = fam.get("pop_in_famiglia")
     sez_famiglie = {
-        "anno": 2024,
+        "anno": anno_di("famiglie"),
         "n_famiglie":         safe_int(n_fam),
         "pop_in_famiglia":    safe_int(pop_fam),
         "pop_in_convivenza":  safe_int(fam.get("pop_in_convivenza")),
@@ -451,7 +505,7 @@ def build_shard(istat, istr, lav, fam, pend, citt):
     # === Pendolari (anno 2019, badge da mostrare in UI) ===
     tot_pend = pend.get("totale")
     sez_mobilita = {
-        "anno": 2019,
+        "anno": anno_di("pendolari"),
         "_warning": "Dato aggiornato all'ultimo censimento permanente disponibile per pendolarismo (2019)",
         "pendolari_totale_n": safe_int(tot_pend),
         "fuori_comune_n":     safe_int(pend.get("fuori_comune")),
@@ -465,7 +519,7 @@ def build_shard(istat, istr, lav, fam, pend, citt):
     # === Cittadinanza ===
     tot_citt = citt.get("pop_totale")
     sez_cittadinanza = {
-        "anno": 2024,
+        "anno": anno_di("cittadinanza"),
         "pop_totale_n":   safe_int(tot_citt),
         "italiani_n":     safe_int(citt.get("pop_italiana")),
         "stranieri_n":    safe_int(citt.get("pop_straniera")),
@@ -516,6 +570,7 @@ def main() -> int:
 
     try:
         # 1) Download dei 5 CSV ISTAT (con cache)
+        resolve_anni()
         for df in DATAFLOWS:
             download_dataflow(df, cache_dir, force=args.no_cache)
 
