@@ -141,6 +141,11 @@ def _per_abitante(eur, pop):
     return round(eur / pop, 2)
 
 
+def _first_not_none(*vals):
+    """Primo valore non None (0 e un valore valido, non va scartato)."""
+    return next((v for v in vals if v is not None), None)
+
+
 def compute_kpi_summary(out: dict) -> dict:
     """Estrae ~55 KPI sintetici dalle sezioni del shard A1.
 
@@ -302,7 +307,9 @@ def compute_kpi_summary(out: dict) -> dict:
         },
         "ambiente": {
             "superficie_kmq": _safe(territorio, "kpi", "ar_kmq"),
-            "consumo_suolo_pct": _safe(territorio, "kpi", "suolo_consumato_2024_pct"),
+            "consumo_suolo_pct": _first_not_none(
+                _safe(territorio, "kpi", "suolo_consumato_pct"),
+                _safe(territorio, "kpi", "suolo_consumato_2024_pct")),
             "raccolta_differenziata_pct": _safe(territorio, "kpi", "rd_pct_ultimo_anno"),
             "rifiuti_kg_per_abitante": _safe(territorio, "kpi", "kg_per_abitante_ultimo_anno"),
         },

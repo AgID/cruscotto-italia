@@ -2235,9 +2235,9 @@ function renderComune(data) {
             <div class="kpi-card-sub">${k.siope?.totale_anno != null ? '€' + fmtNum(Math.round(k.siope.totale_anno)) : 'movimenti di cassa'}</div>
           </div>
 
-          <div class="kpi-card ${k.territorio?.kpi?.suolo_consumato_2024_pct != null ? '' : 'tbd'}" data-go-tab="territorio" tabindex="0" role="button" aria-label="Vai alla tab Territorio">
+          <div class="kpi-card ${(k.territorio?.kpi?.suolo_consumato_pct ?? k.territorio?.kpi?.suolo_consumato_2024_pct) != null ? '' : 'tbd'}" data-go-tab="territorio" tabindex="0" role="button" aria-label="Vai alla tab Territorio">
             <div class="kpi-card-lab">Territorio</div>
-            <div class="kpi-card-val">${k.territorio?.kpi?.suolo_consumato_2024_pct != null ? k.territorio.kpi.suolo_consumato_2024_pct.toFixed(1) : '—'}<span class="kpi-card-unit">${k.territorio?.kpi?.suolo_consumato_2024_pct != null ? '%' : ''}</span></div>
+            <div class="kpi-card-val">${(k.territorio?.kpi?.suolo_consumato_pct ?? k.territorio?.kpi?.suolo_consumato_2024_pct) != null ? (k.territorio.kpi.suolo_consumato_pct ?? k.territorio.kpi.suolo_consumato_2024_pct).toFixed(1) : '—'}<span class="kpi-card-unit">${(k.territorio?.kpi?.suolo_consumato_pct ?? k.territorio?.kpi?.suolo_consumato_2024_pct) != null ? '%' : ''}</span></div>
             <div class="kpi-card-sub">suolo consumato ISPRA</div>
           </div>
 
@@ -3750,8 +3750,8 @@ async function loadTerritorio(istat) {
     window.__territorioCache[istat] = data;
 
     const span = document.querySelector('[data-tab-territorio-pct]');
-    if (span && data?.kpi?.suolo_consumato_2024_pct != null) {
-      span.textContent = data.kpi.suolo_consumato_2024_pct.toFixed(1) + '%';
+    if (span && (data?.kpi?.suolo_consumato_pct ?? data?.kpi?.suolo_consumato_2024_pct) != null) {
+      span.textContent = (data.kpi.suolo_consumato_pct ?? data.kpi.suolo_consumato_2024_pct).toFixed(1) + '%';
     }
 
     renderTerritorioContent(data);
@@ -3779,7 +3779,7 @@ function renderTerritorioContent(data) {
     <div class="kpi-cards">
       <div class="kpi-card">
         <div class="kpi-card-lab">Suolo consumato</div>
-        <div class="kpi-card-val">${k.suolo_consumato_2024_pct != null ? k.suolo_consumato_2024_pct.toFixed(2) + '%' : '—'}</div>
+        <div class="kpi-card-val">${(k.suolo_consumato_pct ?? k.suolo_consumato_2024_pct) != null ? (k.suolo_consumato_pct ?? k.suolo_consumato_2024_pct).toFixed(2) + '%' : '—'}</div>
         <div class="kpi-card-sub">2024 (ISPRA)</div>
       </div>
       <div class="kpi-card">
@@ -4450,7 +4450,7 @@ function renderSismicaSection(cs) {
 }
 
 function renderSuoloSection(suolo, geo) {
-  const stock = suolo.stock_2024 || {};
+  const stock = suolo.stock_ultimo || suolo.stock_2024 || {};
   const serie = suolo.serie_storica || [];
   const annoSuolo = serie.length ? String(serie[serie.length - 1].intervallo || '').slice(-4) : '';
   const ar_kmq = geo?.ar_kmq;
@@ -12671,7 +12671,7 @@ function updateTabBadgesFromDashboard(d) {
   const npn = d.pnrr?.kpi?.n_progetti;
   setBadge('[data-tab-pnrr-count]', npn != null ? fmtNum(npn) : (d._missing && d._missing.indexOf('pnrr') >= 0 ? '0' : null));
   // Territorio: % suolo consumato
-  const pct = d.territorio?.kpi?.suolo_consumato_2024_pct;
+  const pct = (d.territorio?.kpi?.suolo_consumato_pct ?? d.territorio?.kpi?.suolo_consumato_2024_pct);
   setBadge('[data-tab-territorio-pct]', pct != null ? (pct.toFixed(1) + '%') : null);
   // SIOPE: # voci di pagamento (v0.2.0+: dentro per_anno[anno_default]; v0.1.0: top-level)
   let nv = null;
