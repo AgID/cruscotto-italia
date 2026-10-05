@@ -37,12 +37,13 @@ on:
         default: ''
         type: string
   schedule:
-    # Allineato al cron VM dell'ETL veicoli (1 feb / 1 apr / 1 lug, 11:00 locali).
-    # Gira alle 08:00 UTC, qualche ora prima, cosi' l'artifact e' pronto quando
-    # la VM lo scarica (10:45) e poi lancia l'ETL veicoli (11:00).
-    - cron: '0 8 1 2 *'
-    - cron: '0 8 1 4 *'
-    - cron: '0 8 1 7 *'
+    # Allineato al cron VM dell'ETL veicoli (1 feb / 1 apr / 1 lug): la VM
+    # scarica l'artifact alle 10:45 locali, cioe 08:45 UTC con l'ora legale.
+    # Alle 04:00 UTC c'e margine anche se GitHub ritarda i job schedulati
+    # (05/10/2026: due run annullati per un'interruzione di Actions).
+    - cron: '0 4 1 2 *'
+    - cron: '0 4 1 4 *'
+    - cron: '0 4 1 7 *'
 
 permissions:
   contents: read
@@ -121,10 +122,10 @@ jobs:
           echo "Contenuto:"
           tar tzf /tmp/aci-iscrizioni-csv.tar.gz
 
-      - name: Upload artifact (retention 1 giorno)
+      - name: Upload artifact (retention 3 giorni)
         uses: actions/upload-artifact@v4
         with:
           name: aci-iscrizioni-csv
           path: /tmp/aci-iscrizioni-csv.tar.gz
-          retention-days: 1
+          retention-days: 3
           if-no-files-found: error
