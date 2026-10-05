@@ -34,7 +34,10 @@ from etl.lib import manifest
 # Configurazione
 # -----------------------------------------------------------------------------
 
-SUPPORTED_YEARS = [2020, 2021, 2022, 2023, 2024]
+# Anni d'imposta dal 2020 all'anno precedente. Il MEF pubblica l'anno N
+# nella primavera di N+2: per buona parte dell'anno l'ultimo da 404 e viene
+# saltato (anno_non_ancora_pubblicato). Fino al 05/10/2026 era cablato a 2024.
+SUPPORTED_YEARS = list(range(2020, datetime.now().year))
 
 MEF_BASE_URL = (
     "https://www1.finanze.gov.it/finanze3/analisi_stat/"
@@ -601,8 +604,12 @@ def run(
             zip_bytes = download_year_zip(yr, force=force)
             parsed = parse_year_csv(zip_bytes, yr)
         except Exception as e:
-            log.warning("anno %d SALTATO: %s: %s", yr, type(e).__name__, e)
-            anni_falliti.append(yr)
+            sc = getattr(getattr(e, "response", None), "status_code", None)
+            if sc == 404 and yr == max(years):
+                log.info("anno %d: anno_non_ancora_pubblicato (404 MEF)", yr)
+            else:
+                log.warning("anno %d SALTATO: %s: %s", yr, type(e).__name__, e)
+                anni_falliti.append(yr)
             continue
         if len(parsed) < EXPECTED_COMUNI - 100:
             log.warning(
