@@ -2323,7 +2323,7 @@ async function loadOpereDettaglio(istat) {
 function renderOpereDettaglioContent(container, data) {
   const progetti = data.progetti || [];
   if (!progetti.length) {
-    container.innerHTML = `<div class="placeholder">Nessun progetto attivo nel 2025.</div>`;
+    container.innerHTML = `<div class="placeholder">Nessun progetto attivo, né concluso dal 2023, registrato su BDAP MOP.</div>`;
     return;
   }
 
@@ -3158,7 +3158,7 @@ function renderTurismoTabSkeleton() {
       <div class="section-title">§ turismo</div>
       <h2 class="section-h">Capacità ricettiva e <em>flussi turistici</em>.</h2>
       <p class="section-sub">
-        Strutture e posti letto del comune nel 2024 (alberghi e extra-alberghiero, da agriturismi a B&B), con confronto sul bacino provinciale per arrivi e presenze. Fonte ISTAT.
+        Strutture e posti letto del comune (alberghi e extra-alberghiero, da agriturismi a B&B), con confronto sul bacino provinciale per arrivi e presenze. Fonte ISTAT.
       </p>
       <div id="turismo-content">
         <div class="spese-loading" role="status" aria-live="polite">
@@ -3215,7 +3215,7 @@ function renderTurismoContent(container, data) {
       <div class="kpi-card">
         <div class="kpi-card-lab">Strutture totali</div>
         <div class="kpi-card-val">${turFmtN(cap.totale_strutture)}</div>
-        <div class="kpi-card-sub">esercizi ricettivi 2024</div>
+        <div class="kpi-card-sub">esercizi ricettivi ${cap.anno || ''}</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-card-lab">Posti letto</div>
@@ -3235,7 +3235,7 @@ function renderTurismoContent(container, data) {
     </div>
 
     <div class="profilo-section">
-      <h3 class="profilo-section-h">§ Capacità nel comune <em>2024</em></h3>
+      <h3 class="profilo-section-h">§ Capacità nel comune <em>${cap.anno || ''}</em></h3>
       <p class="profilo-section-sub">Strutture e posti letto per categoria. Tutti i dati sono comunali.</p>
       ${cap.totale_letti ? renderCapacitaSection(cap, alb, ext) : '<div class="profilo-na">Dato non disponibile per questo comune.</div>'}
     </div>
@@ -3254,7 +3254,7 @@ function renderTurismoContent(container, data) {
       <strong>Fonte</strong>: <a href="https://esploradati.istat.it/" target="_blank" rel="noopener">ISTAT — Capacità ed esercizio degli esercizi ricettivi</a>.
       Dataflow utilizzati: 122_54_DF_DCSC_TUR_1 (capacità comunale), 122_54_DF_DCSC_TUR_7 (flussi annuali provinciali).
       <br>
-      <em>L'indice di turisticità (letti per 100 abitanti) è calcolato dal Cruscotto Italia incrociando i posti letto con la popolazione residente al 1 gennaio 2026 (POSAS).</em>
+      <em>L'indice di turisticità (letti per 100 abitanti) è calcolato dal Cruscotto Italia incrociando i posti letto con la popolazione residente più recente disponibile al momento dell'elaborazione (POSAS).</em>
     </div>
   `;
 }
@@ -4452,6 +4452,7 @@ function renderSismicaSection(cs) {
 function renderSuoloSection(suolo, geo) {
   const stock = suolo.stock_2024 || {};
   const serie = suolo.serie_storica || [];
+  const annoSuolo = serie.length ? String(serie[serie.length - 1].intervallo || '').slice(-4) : '';
   const ar_kmq = geo?.ar_kmq;
   const stockHa = stock.ha;
   const maxIncr = serie.reduce((m, r) => Math.max(m, r.netto_ha || 0), 0) || 1;
@@ -4473,7 +4474,7 @@ function renderSuoloSection(suolo, geo) {
       <div class="terr-section-title">§ consumo di suolo</div>
       <h3 class="terr-section-h">Suolo <em>cementificato</em>.</h3>
       <p class="terr-section-sub">
-        Dato ISPRA aggiornato al 2024, serie storica annuale dal 2006.
+        Dato ISPRA${annoSuolo ? ` aggiornato al ${annoSuolo}` : ''}, serie storica annuale dal 2006.
         Indica la superficie comunale coperta da costruzioni, infrastrutture
         e altre forme di artificializzazione permanente.
       </p>
@@ -6629,7 +6630,7 @@ function renderPunTab(d) {
       <p class="section-sub">
         Infrastrutture di ricarica per veicoli elettrici registrate alla
         <a href="https://www.piattaformaunicanazionale.it/idr" target="_blank" rel="noopener">Piattaforma Unica Nazionale</a>
-        del GSE / Ministero dell'Ambiente. Dato aggiornato quotidianamente.
+        del GSE / Ministero dell'Ambiente. Aggiornamento quotidiano${d._snapshot_date ? `, dati al ${formatDataIT(d._snapshot_date)}` : ''}.
       </p>
       <div class="kpi-cards">
         <div class="kpi-card">
@@ -9652,7 +9653,7 @@ function renderCensimentoTab(d) {
   if (!d || !d.kpi_comune) {
     return `
       <div class="tab-pane" id="pane-censimento">
-        <div class="section-title">§ Censimento ISTAT 2023</div>
+        <div class="section-title">§ Censimento ISTAT</div>
         <h2 class="section-h">Dati <em>non disponibili</em>.</h2>
         <p class="muted">Il comune non risulta nelle Basi Territoriali ISTAT 2021 (Censimento permanente).</p>
       </div>`;
@@ -9748,11 +9749,11 @@ function renderCensimentoTab(d) {
 
   return `
     <div class="tab-pane" id="pane-censimento">
-      <div class="section-title">§ Censimento ISTAT 2023</div>
+      <div class="section-title">§ Censimento ISTAT ${d._anno_rilevazione || ''}</div>
       <h2 class="section-h">Basi territoriali e variabili <em>censuarie</em>.</h2>
       <p class="muted">
-        Fonte: <a href="https://www.istat.it/notizia/dati-per-sezioni-di-censimento/" target="_blank" rel="noopener">ISTAT — Dati per sezioni di censimento 2023</a>
-        (Censimento permanente, rilevazione al 31/12/2023) sulle
+        Fonte: <a href="https://www.istat.it/notizia/dati-per-sezioni-di-censimento/" target="_blank" rel="noopener">ISTAT — Dati per sezioni di censimento ${d._anno_rilevazione || ''}</a>
+        (Censimento permanente${d._anno_rilevazione ? `, rilevazione al 31/12/${d._anno_rilevazione}` : ''}) sulle
         <a href="https://www.istat.it/notizia/basi-territoriali-e-variabili-censuarie/" target="_blank" rel="noopener">Basi Territoriali 2021</a>.
         Licenza CC-BY 3.0 IT. Copertura 100% comuni inclusi TN/BZ. Aggiornamento biennale.
       </p>
@@ -11380,7 +11381,7 @@ function renderOpereTab(opere) {
 
       <div class="tab-footer">
         <strong>Fonte</strong>: <a href="https://bdap-opendata.rgs.mef.gov.it/" target="_blank" rel="noopener">BDAP MOP</a>
-        — Monitoraggio Opere Pubbliche, dataset <em>"Progetti Opere Pubbliche - Totale"</em> (RGS-MEF, licenza CC-BY 4.0).
+        — Monitoraggio Opere Pubbliche, dataset <em>"Progetti Opere Pubbliche - Totale"</em> (RGS-MEF, licenza CC-BY 4.0).${opere && opere._data_download ? ` Dati scaricati da BDAP il ${formatDataIT(opere._data_download)}.` : ''}
         I dati sono auto-dichiarati dagli enti titolari; possono presentare imprecisioni o ritardi di aggiornamento.
         Per la situazione completa di un singolo CUP consulta direttamente il
         <a href="https://openbdap.rgs.mef.gov.it/" target="_blank" rel="noopener">portale OpenBDAP</a>.
@@ -13424,7 +13425,7 @@ function renderPendolarismoTab(d) {
       <h2 class="section-h">${saldoStr} pendolari netti: il comune è <em style="color:${saldoColor}">${saldoLabel}</em>.</h2>
       <p class="section-sub">
         Matrice origine-destinazione del Censimento permanente ISTAT
-        <strong>2021</strong>, motivo spostamento <strong>lavoro</strong>. Conta gli spostamenti
+        <strong>${d._anno_rilevazione || 2021}</strong>, motivo spostamento <strong>lavoro</strong>. Conta gli spostamenti
         sistematici giornalieri tra comune di residenza e comune di lavoro dichiarati
         nel censimento. Non include gli spostamenti per motivi di studio (matrice diversa,
         non pubblicata da ISTAT per il 2021).
