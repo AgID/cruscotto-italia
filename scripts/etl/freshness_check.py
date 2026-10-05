@@ -62,9 +62,18 @@ LOGDIR = Path(os.environ.get("CRUSCOTTO_LOG_DIR", "/var/log/cruscotto-etl"))
 # falso allarme quotidiano, e un alert che grida sempre viene ignorato.
 TOLLERANZA = 2.5
 
-# Fonti senza cron: aggiornamento manuale o statico. Non sono un'anomalia.
+# Fonti senza cron RILEVABILE: aggiornamento manuale, statico, oppure avviato
+# da uno script wrapper .sh. Il parser qui sopra cerca "etl.sources.<nome>"
+# nella riga di cron, quindi non vede le fonti lanciate da uno script
+# (catasto_semestrale.sh, omi_semestrale.sh): il modulo non compare mai nel
+# comando. Non sono un'anomalia.
 SENZA_CRON_ATTESE = {"catasto_age", "classificazione_sismica", "censimento",
-                     "cultural_on", "dcat_catalog", "pendolarismo"}
+                     "cultural_on", "dcat_catalog", "pendolarismo", "omi"}
+# NB omi e catasto_age UN CRON CE L'HANNO: girano da uno script wrapper
+# (omi_semestrale.sh, catasto_semestrale.sh) e il parser qui sopra cerca
+# "etl.sources.<nome>" nel comando, quindi non li vede. Stare in questa lista
+# li toglie pero' da ogni sorveglianza: per omi il presidio e' il controllo di
+# contenuto _check_omi, che verifica il semestre invece dell'esecuzione.
 
 
 def cadenze_da_cron() -> tuple[dict[str, float], dict[str, str]]:
@@ -117,8 +126,9 @@ def eta_ultimo_run(source: str, ora: datetime, prefisso: str | None = None,
 
     Distinzione essenziale: manifest["last_run"] NON si aggiorna quando l'ETL
     fa skip per hash invariato. agcom_bbmap risultava fermo dal 13 maggio, ma
-    era girato il 5 luglio trovando lo stesso SHA256 della fonte AGCOM: nessun
-    guasto, semplicemente la fonte non pubblica.
+    era girato il 5 luglio trovando lo stesso SHA256. Allora fu letto come
+    "la fonte non pubblica"; il 05/10/2026 si e visto che era l'item ArcGIS
+    cablato (AGCOM pubblica ogni rilascio come item nuovo): vedi _check_agcom.
       - log del cron  -> "l'ETL e' girato?"      (guasto NOSTRO se manca)
       - manifest      -> "il dato e' cambiato?"  (fermo = spesso la fonte)
     Solo il primo e' un allarme.
@@ -221,6 +231,75 @@ def _check_siope(ora: datetime) -> str | None:
     return None
 
 
+def _check_omi(ora: datetime) -> str | None:
+    """Il semestre pubblicato deve stare al passo col calendario dell'Agenzia.
+
+    Serve perche' omi non e' sorvegliabile per esecuzione: la sentinella
+    giornaliera gira sempre e uscirebbe "verde" anche se la raccolta
+    semestrale fallisse, e il dato si aggiorna due volte l'anno, quindi
+    nessuna soglia su last_run sarebbe insieme sensibile e non rumorosa.
+
+    L'Agenzia pubblica entro il 15 marzo (2o semestre dell'anno precedente) ed
+    entro il 15 ottobre (1o semestre corrente). Soglia a 45 giorni DOPO quelle
+    date: tollera un rilascio in ritardo di qualche settimana senza gridare, e
+    intercetta un semestre saltato ben prima del successivo.
+    """
+    f = DATA_DIR / "omi" / "077014.json"           # Matera, comune di controllo
+    if not f.exists():
+        return None
+    d = json.loads(f.read_text(encoding="utf-8"))
+    per = str(d.get("_data_period") or "")
+    m = re.match(r"^(\d{4})/([12])$", per)
+    if not m:
+        return f"_data_period illeggibile ({per!r})"
+    anno, sem = int(m.group(1)), int(m.group(2))
+
+    if (ora.month, ora.day) >= (11, 29):           # 15/10 + 45gg
+        atteso = (ora.year, 1)
+    elif (ora.month, ora.day) >= (4, 29):          # 15/03 + 45gg
+        atteso = (ora.year - 1, 2)
+    else:
+        atteso = (ora.year - 1, 1)
+
+    if (anno, sem) < atteso:
+        return (f"semestre fermo a {per}, atteso almeno {atteso[0]}/{atteso[1]}: "
+                f"la raccolta semestrale non e' andata a buon fine. "
+                f"Controllare /var/log/cruscotto-etl/omi-semestrale.log")
+    return None
+
+
+def _check_agcom(ora: datetime) -> str | None:
+    """Il periodo AGCOM non deve essere piu vecchio di 170 giorni.
+
+    Guasto del 2026: item ArcGIS cablato, l'ETL scaricava sempre il rilascio
+    al 31/12/2025 mentre AGCOM aveva gia pubblicato 31/03 e 30/06. Ogni
+    segnale di tempo era verde; solo il periodo del dato era fermo.
+
+    Taratura sullo storico dei rilasci (2023-2026, API di ricerca ArcGIS):
+    ritardo di pubblicazione 9-65 giorni dalla fine del trimestre; eta massima
+    del periodo subito prima del rilascio successivo = 155 giorni (31/12/2025,
+    successivo pubblicato il 04/06/2026). Una soglia a 150 avrebbe dato un
+    falso allarme; 170 = 155 + 15 di margine. Con questa soglia il guasto
+    sarebbe emerso il 20/06/2026.
+    """
+    f = DATA_DIR / "agcom_bbmap" / "077014.json"    # Matera, comune di controllo
+    if not f.exists():
+        return None
+    d = json.loads(f.read_text(encoding="utf-8"))
+    per = str(d.get("_data_period") or "")
+    m = re.match(r"^(\d{2})/(\d{2})/(\d{4})$", per)
+    if not m:
+        return f"_data_period illeggibile ({per!r})"
+    fine = datetime(int(m.group(3)), int(m.group(2)), int(m.group(1)),
+                    tzinfo=timezone.utc)
+    gg = (ora - fine).days
+    if gg > 170:
+        return (f"periodo fermo a {per} ({gg}gg fa, soglia 170): AGCOM "
+                f"pubblica ogni rilascio come item ArcGIS nuovo. Controllare "
+                f"agcom_item_resolved / agcom_item_resolve_failed nel log ETL")
+    return None
+
+
 def _check_dashboard(ora: datetime) -> str | None:
     """Il dashboard deve essere piu recente degli shard che accorpa."""
     dash = DATA_DIR / "dashboard" / "077014.json"
@@ -240,6 +319,8 @@ def _check_dashboard(ora: datetime) -> str | None:
 
 CONTROLLI_CONTENUTO = {
     "siope": _check_siope,
+    "omi": _check_omi,
+    "agcom_bbmap": _check_agcom,
     "dashboard": _check_dashboard,
 }
 
@@ -362,8 +443,9 @@ def main() -> int:
             # e' stato ruotato via da tempo.
             problemi.append("nessun log di esecuzione")
 
-        # Gira ma il dato non cambia: quasi sempre e' la fonte che non pubblica
-        # (agcom_bbmap, stesso SHA256 da maggio). Nota, non allarme.
+        # Gira ma il dato non cambia: spesso e' la fonte che non pubblica, ma
+        # non sempre (agcom_bbmap 2026: era l'URL cablato). Nota, non allarme:
+        # i casi in cui il dato DEVE avanzare stanno in CONTROLLI_CONTENUTO.
         if c and eta is not None and eta > c * args.tolleranza and not problemi:
             note.append(f"dato invariato da {eta:.0f}gg (la fonte non pubblica?)")
 
