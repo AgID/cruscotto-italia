@@ -1177,7 +1177,7 @@ footer a{color:rgba(255,255,255,0.85);text-decoration:none}
 .spesa-detail{padding:0 14px 18px 14px;}
 .spesa-mesi-label{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.14em;color:var(--ink-mute);margin-bottom:8px;}
 .spesa-sparkline{width:100%;height:80px;display:block;margin-bottom:14px;}
-.spesa-mesi-grid{display:grid;grid-template-columns:repeat(12,1fr);gap:6px;font-family:var(--mono);font-size:10px;}
+.spesa-mesi-grid{display:grid;grid-template-columns:repeat(var(--n-mesi,12),1fr);gap:6px;font-family:var(--mono);font-size:10px;}
 .mese-cell{padding:6px 4px;background:var(--paper);border:1px solid var(--paper-2);text-align:center;}
 .mese-label{color:var(--ink-mute);text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;}
 .mese-val{color:var(--ink);font-weight:500;}
@@ -4967,7 +4967,7 @@ function renderSpeseRow(v, idx, totale, anno, isEntrate) {
         <svg class="spesa-sparkline" viewBox="0 0 600 80" preserveAspectRatio="none" aria-hidden="true" focusable="false">
           ${renderSparkline(v.mensili)}
         </svg>
-        <div class="spesa-mesi-grid">
+        <div class="spesa-mesi-grid" style="--n-mesi:${Object.keys(cumulatoToDelta(v.mensili)).length}">
           ${Object.entries(cumulatoToDelta(v.mensili)).sort().map(([mese, val]) => `
             <div class="mese-cell">
               <div class="mese-label">${mese.slice(5)}</div>
