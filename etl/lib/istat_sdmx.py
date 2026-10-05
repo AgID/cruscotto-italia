@@ -6,6 +6,10 @@ TUR_1) andavano in ReadTimeout dopo 5 minuti di silenzio, mentre la stessa
 sorgente rispondeva in ~14 s per un singolo comune. ASIA scaricava gia' a
 blocchi ed era l'unico ETL ISTAT senza problemi.
 
+Limite ISTAT sui codici per richiesta: 35 passano, 50 danno 400 Bad
+Request (misurato il 05/10/2026 su 41_983). Il blocco predefinito e 35,
+come asia.py.
+
 Regole ISTAT da rispettare: richieste in SEQUENZA (il parallelismo ha gia'
 portato a un blocco dell'IP, vedi asia.py) e pausa tra un blocco e l'altro.
 
@@ -40,7 +44,7 @@ def chiave_con_codici(chiave: str, codici: list[str]) -> str:
 
 
 def scarica_a_blocchi(base_dataflow: str, chiave: str, anno_inizio: int, anno_fine: int,
-                      codici: list[str], out: Path, *, blocco: int = 100,
+                      codici: list[str], out: Path, *, blocco: int = 35,
                       tentativi: int = 3, pausa: float = 2.0, timeout: int = 300,
                       user_agent: str = "cruscotto-italia-etl", log=None) -> Path:
     """Scarica il dataflow per tutti i codici, a blocchi, in un unico CSV."""
@@ -63,6 +67,10 @@ def scarica_a_blocchi(base_dataflow: str, chiave: str, anno_inizio: int, anno_fi
                         if r.status_code == 404:      # nessun dato per il blocco
                             testo = ""
                             break
+                        if 400 <= r.status_code < 500 and r.status_code != 429:
+                            # errore della richiesta: riprovare non serve
+                            raise RuntimeError(f"ISTAT HTTP {r.status_code} sul blocco "
+                                               f"{i // blocco + 1} ({len(gruppo)} codici)")
                         r.raise_for_status()
                         testo = r.content.decode("utf-8-sig")
                         break
