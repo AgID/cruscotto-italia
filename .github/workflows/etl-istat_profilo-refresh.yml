@@ -30,13 +30,9 @@ on:
         required: false
         default: false
         type: boolean
-  # Schedule attivato il 05/10/2026: senza, il profilo si aggiornava solo a
-  # mano. L'ETL risolve da solo l'ultimo anno pubblicato (resolve_anni);
-  # la VM scarica l'artifact ogni giorno alle 07:30 UTC (pull_artifact).
-  schedule:
-    - cron: '0 1 1 2 *'
-    - cron: '0 1 1 4 *'
-    - cron: '0 1 1 7 *'
+  # Nessuno schedule: dal 05/10/2026 l'esecuzione ordinaria e il cron
+  # annuale della VM (1 feb/apr/lug). Il pull degli artifact sulla VM non
+  # esiste: questo workflow resta solo come riserva manuale.
 
 permissions:
   contents: read

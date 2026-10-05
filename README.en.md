@@ -85,8 +85,8 @@ of the Public Administration, maintained by AgID).
                   │  - cron /etc/cron.d/cruscotto-etl      │
                   │  - 29 Python ETLs (bi-daily/daily/     │
                   │    weekly/monthly/annual/six-monthly)  │
-                  │  - pull_artifact.py (daily 07:30 UTC)  │
-                  │    fetches the 3 ISTAT ETLs from Actions│
+                  │  - fetch_aci_artifact.py (1 Feb/Apr/   │
+                  │    Jul): ACI CSVs produced on Actions   │
                   └────────────┬───────────────────────────┘
                                │
                 ┌──────────────┴──────────────────┐
@@ -95,14 +95,14 @@ of the Public Administration, maintained by AgID).
    ┌─────────────────────────┐         ┌──────────────────────────┐
    │ Italian institutional   │         │ GitHub Actions           │
    │ sources (VM cron,       │         │ ubuntu-latest            │
-   │ Italian IP)             │         │ (for the 3 ISTAT ETLs    │
-   │  ANAC · BDAP · SIOPE    │         │  blocked for Italian IPs:│
-   │  PNRR · MEF · ISPRA     │         │  istat_profilo · ASIA    │
-   │  MIUR · ACI · ANNCSU    │         │  · commuting)            │
-   │  Health · MIMIT · GSE   │         │                          │
-   │  AGCOM · Labour · MiC   │         │  Output: ZIP artifact    │
+   │ Italian IP)             │         │ (ACI LOD CSVs only:      │
+   │  ANAC · BDAP · SIOPE    │         │  lod.aci.it is not       │
+   │  PNRR · MEF · ISPRA     │         │  reachable from the VM)  │
+   │  MIUR · ACI · ANNCSU    │         │                          │
+   │  Health · MIMIT · GSE   │         │  Output: tar.gz artifact │
+   │  AGCOM · Labour · MiC   │         │  (3-day retention),      │
    │  Revenue Agency INSPIRE │         │  downloaded by the VM via│
-   │  DPC · CNR-IRPI · Meteo │         │  GitHub API + pull_artifact.py │
+   │  DPC · CNR-IRPI · Meteo │         │  fetch_aci_artifact.py   │
    └─────────────────────────┘         └──────────────────────────┘
 ```
 
@@ -116,14 +116,15 @@ Full architectural details: [`DESIGN.md`](DESIGN.md) ·
 |---|---|---|---|
 | **Twice daily** (03:30 and 14:30 UTC) | ItaliaMeteo ICON-2I weather forecasts (00 and 12 UTC runs) | AgID VM cron | automatic |
 | **Daily** (08:00 UTC) | PUN charging points, MIMIT fuel prices, dashboard rebuild | AgID VM cron | automatic |
-| **Daily pull-artifact** (07:30 UTC) | downloads the artifacts of the 3 ISTAT ETLs from GitHub Actions | AgID VM cron | automatic |
 | **Weekly** (Monday 04:00 UTC) | ANAC OCDS (last 12 published months), NRRP, Ministry of Health, RUNTS, dashboard | AgID VM cron | automatic |
 | **Monthly** (5th of the month, 04:00 UTC) | registry, BDAP-MOP, SIOPE, ANNCSU, AGCOM broadband (08:00 UTC), cultural heritage (ArCo + Cultural-ON) | AgID VM cron | automatic |
-| **Annual** (1 Feb / 1 Apr / 1 Jul, 04:00 UTC) | POSAS demographics, census profile, tourism, territory, schools, vehicles, IRPEF income, public real estate | AgID VM cron | automatic |
+| **Annual** (1 Feb / 1 Apr / 1 Jul, 04:00 UTC) | POSAS demographics and population balance, census profile, air quality, ASIA, tourism, territory, vehicles (ACI CSVs from GitHub Actions), IRPEF income, public real estate | AgID VM cron | automatic |
+| **Annual** (5 September, 04:00 UTC) | MIUR schools (school year just started) | AgID VM cron | automatic |
 | **Six-monthly** (1 March / 1 September, 03:00 UTC) | Revenue Agency cadastral cartography (parcels + sheets, 19 regions) | AgID VM cron | automatic |
 | **Six-monthly** (daily sentinel at 03:00 UTC) | Revenue Agency OMI property values (zones + boundaries): `omi_semestrale.sh` polls the list of published half-years daily and starts the harvest only when a new one appears (the Agency publishes by 15 March and 15 October, with no fixed date) | AgID VM cron | automatic |
 | **Decennial** (manual, next 2031) | census Territorial Bases (enumeration areas + 127 variables) | manual run `python -m etl.sources.censimento` on the VM | `workflow_dispatch` |
-| **ISTAT on Actions** (01:00 UTC: profile 1 Feb/Apr/Jul, ASIA 15 Feb/Apr/Jul; commuting manual) | istat_profilo, asia, pendolarismo | GitHub Actions `ubuntu-latest` | `schedule` + `workflow_dispatch` |
+| **ACI on Actions** (1 Feb / 1 Apr / 1 Jul, 04:00 UTC) | ACI LOD first-registration CSVs, then fetched by the VM with `fetch_aci_artifact.py` | GitHub Actions `ubuntu-latest` | `schedule` + `workflow_dispatch` |
+| **Manual fallback** | istat_profilo, asia, pendolarismo | GitHub Actions `ubuntu-latest` | `workflow_dispatch` |
 
 ### Why two separate runners
 
@@ -131,13 +132,19 @@ Full architectural details: [`DESIGN.md`](DESIGN.md) ·
 that reject requests from cloud IPs (Azure GitHub Actions, AWS, GCP) with
 HTTP 403. They are therefore queried only from the AgID VM (Italian IP).
 
-**ISTAT esploradati**, conversely, has imposed a host-based ban on some
-Italian IPs after previous intensive use. The 3 heavy ISTAT ETLs (census
-profile, ASIA UL, commuting matrix) are therefore run on GitHub Actions
-(non-banned Azure IPs) and their results are transferred to the VM via GitHub
-artifacts + the
-[`scripts/etl/pull_artifact.py`](scripts/etl/pull_artifact.py) script
-(1-day retention, active cleanup for privacy).
+The only exception is **ACI LOD** (`lod.aci.it`), not reachable from the
+VM: the `etl-aci-refresh.yml` workflow downloads the CSVs on GitHub Actions
+and the VM fetches them with
+[`scripts/etl/fetch_aci_artifact.py`](scripts/etl/fetch_aci_artifact.py)
+before the vehicles ETL.
+
+**ISTAT esploradati** limits requests that are too large or too frequent (it
+has blocked IPs for intensive use in the past; above 35 municipality codes
+per request it answers 400). All ISTAT ETLs therefore run from the VM and
+download in sequential batches of 35 municipalities with a pause
+([`etl/lib/istat_sdmx.py`](etl/lib/istat_sdmx.py)). The ISTAT workflows on
+Actions (profile, ASIA, commuting) are kept only as a manual fallback: no VM
+cron downloads their artifacts.
 
 The weekly/monthly/annual workflows in `.github/workflows/` are therefore
 **documentary smoke tests**: a reviewer can open them from the Actions UI to
@@ -310,7 +317,7 @@ cruscotto-italia/
 ├── etl/                      ← Python ETL pipeline
 │   ├── requirements.txt
 │   ├── pyproject.toml        ← ruff + mypy + pytest config
-│   ├── sources/              ← one module per source (27 ETLs on the VM + 3 ISTAT ETLs on Actions)
+│   ├── sources/              ← one module per source (all run by the VM cron)
 │   │   ├── anagrafica.py        ← ISTAT municipal registry backbone + IPA
 │   │   ├── anac.py              ← public contracts (OCDS)
 │   │   ├── bdap.py              ← BDAP-MOP public works
@@ -353,7 +360,8 @@ cruscotto-italia/
 ├── scripts/
 │   ├── genera_indice.py      ← generates the "What to look for and where" index of about.html
 │   └── etl/
-│       └── pull_artifact.py  ← downloads the GitHub artifacts of the 3 ISTAT ETLs
+│       ├── fetch_aci_artifact.py ← downloads the ACI CSVs produced on GitHub Actions
+│       └── pull_artifact.py  ← fallback: artifacts of the manual ISTAT workflows (not in cron)
 │
 ├── .github/workflows/
 │   ├── etl-daily.yml             ← daily smoke test (PUN + fuel prices)
@@ -452,9 +460,8 @@ sources.
   Referrer-Policy, Permissions-Policy), `server_tokens off` on nginx, rate
   limiting on the MCP Worker.
 - **Privacy**: no third-party analytics, no profiling cookies, only nginx
-  technical cookies. GitHub Actions artifacts with 1-day retention and
-  active cleanup after the VM-side pull (see
-  `scripts/etl/pull_artifact.py`).
+  technical cookies. GitHub Actions artifacts contain only public ACI CSVs
+  (3-day retention).
 
 ---
 
