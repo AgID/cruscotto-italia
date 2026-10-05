@@ -11,11 +11,24 @@ target-version = "py310"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP", "RUF"]
-ignore = ["E501"]  # line length is in line-length above
+ignore = [
+    "E501",    # line length is in line-length above
+    # Caratteri tipografici (×, –, ¸) in commenti e docstring in italiano:
+    # tipografia, non bug. RUF001 (stringhe) resta attiva.
+    "RUF002",
+    "RUF003",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Script scritti volutamente in stile compatto (piu istruzioni per riga).
+"sources/build_meteo.py" = ["E701", "E702"]
+"sources/catasto_age.py" = ["E701", "E702"]
+"sources/dcat_catalog.py" = ["E701", "E702"]
 
 [tool.pytest.ini_options]
 testpaths = ["../tests/etl"]
 addopts = "-v --tb=short"
+markers = ["network: richiede accesso alla rete (escluso in CI)"]
 
 [tool.mypy]
 python_version = "3.10"

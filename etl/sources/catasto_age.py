@@ -2,10 +2,18 @@
 """
 Cruscotto Italia - Catasto AGE pipeline (parallel).
 """
-import argparse, json, gzip, os, sys, time, shutil, subprocess, zipfile, re
+import argparse
+import gzip
+import json
+import os
+import re
+import shutil
+import subprocess
+import time
+import zipfile
 from collections import defaultdict
-from pathlib import Path
 from concurrent.futures import ProcessPoolExecutor, as_completed
+from pathlib import Path
 
 # --- Config
 ZIP_DIR        = Path('/home/ubuntu/catasto_test')
@@ -97,7 +105,7 @@ def process_one(args):
     # Idempotenza
     if not force and map_out.exists() and map_out.stat().st_size > 0:
         try: c_zip_path.unlink()
-        except: pass
+        except OSError: pass
         return {'belfiore': belfiore, 'istat': istat, 'name': name, 'status': 'skip'}
 
     t0 = time.time()
@@ -157,7 +165,7 @@ def process_one(args):
     finally:
         shutil.rmtree(extract_dir, ignore_errors=True)
         try: c_zip_path.unlink()
-        except: pass
+        except OSError: pass
 
 # --- Main: estrae comune ZIPs su /tmp, sottomette al pool
 def process_region_parallel(region_name, *, only_belfiore=None, force=False, workers=DEFAULT_WORKERS):
@@ -172,7 +180,7 @@ def process_region_parallel(region_name, *, only_belfiore=None, force=False, wor
     staging.mkdir(parents=True)
 
     # Estraggo tutti i comune-zip su /tmp/staging (parallelo CPU-bound trascurabile)
-    log(f'  Estrazione provincie/comuni in staging...')
+    log('  Estrazione provincie/comuni in staging...')
     t_st = time.time()
     tasks = []  # [(belfiore, c_zip_path, force)]
     with zipfile.ZipFile(region_zip) as rzf:
@@ -200,7 +208,7 @@ def process_region_parallel(region_name, *, only_belfiore=None, force=False, wor
     t_start = time.time()
     completed = 0
     total = len(tasks)
-    
+
     with ProcessPoolExecutor(max_workers=workers, initializer=_worker_init, initargs=(LOOKUP_FILE,)) as pool:
         futures = {pool.submit(process_one, t): t for t in tasks}
         for fut in as_completed(futures):

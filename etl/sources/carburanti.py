@@ -106,7 +106,6 @@ import sys
 import time
 import unicodedata
 from collections import Counter, defaultdict
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -889,7 +888,7 @@ def main() -> int:
                 return 0
 
     # Parse anagrafica
-    anag_rows, snapshot_anag = parse_anagrafica(body_anag)
+    anag_rows, _snapshot_anag = parse_anagrafica(body_anag)
     log.info("anagrafica_parsed", impianti=len(anag_rows),
              righe_prezzi=len(prezzi_rows), snapshot=snapshot, source=price_source)
 

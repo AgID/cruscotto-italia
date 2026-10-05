@@ -70,6 +70,7 @@ import requests
 import structlog
 
 from etl.lib import manifest
+
 # Riuso lookup canonica (load_cat_to_istat e' adesso local-first)
 from etl.sources.scuole import load_cat_to_istat
 

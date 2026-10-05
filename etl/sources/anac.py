@@ -23,7 +23,6 @@ import argparse
 import json
 import os
 import sys
-import tempfile
 from datetime import date
 from pathlib import Path
 

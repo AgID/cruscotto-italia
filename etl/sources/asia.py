@@ -86,9 +86,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
-import os
 import sys
-import tempfile
 import time
 import urllib.error
 import urllib.request
@@ -316,12 +314,10 @@ def download_chunk(istat_codes: list[str],
 
     for attempt in range(1, max_retry + 1):
         try:
-            t0 = time.time()
             req = urllib.request.Request(url, headers=headers)
             attendi_turno_istat()  # limite ISTAT: 5 query/minuto per IP
             with urllib.request.urlopen(req, timeout=180) as resp:
                 data = resp.read()
-            elapsed = time.time() - t0
             if len(data) < 1000:
                 snippet = data[:200].decode("utf-8", errors="ignore")
                 raise RuntimeError(f"Response too small: {len(data)} bytes | {snippet}")

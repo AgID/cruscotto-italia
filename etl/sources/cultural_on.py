@@ -98,17 +98,13 @@ Usage:
 
 import argparse
 import json
-import sys
 import time
 import unicodedata
-from collections import Counter, defaultdict
-from datetime import datetime, timezone
+from datetime import datetime
 from pathlib import Path
 
 import requests
 import structlog
-
-from etl.lib import local_lookup, manifest
 
 log = structlog.get_logger(__name__)
 
@@ -702,7 +698,7 @@ def merge_anagrafica_contatti(anagrafica: list[dict],
 # FASE Final - Output combinato (anagrafica + contatti)
 # =========================================================================
 
-def write_combined_output(out_path: Path = None) -> int:
+def write_combined_output(out_path: Path | None = None) -> int:
     """Scrive l'output finale combinato in /tmp/cruscotto_cultural_on/cultural_on_raw.json.
 
     Schema di output (lista di dict):

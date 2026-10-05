@@ -37,7 +37,6 @@ import io
 import json
 import re
 import sys
-import tempfile
 import urllib.error
 import urllib.request
 from datetime import datetime

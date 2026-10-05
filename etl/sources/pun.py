@@ -78,7 +78,6 @@ import sys
 import time
 import unicodedata
 from collections import Counter, defaultdict
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -86,7 +85,7 @@ import requests
 import structlog
 from requests_aws4auth import AWS4Auth
 
-from etl.lib import local_lookup, manifest
+from etl.lib import manifest
 from etl.lib.text import clean_text
 
 log = structlog.get_logger()

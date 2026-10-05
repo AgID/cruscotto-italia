@@ -44,11 +44,10 @@ from __future__ import annotations
 import argparse
 import io
 import json
-import os
 import sys
 import time
-import urllib.request
 import urllib.error
+import urllib.request
 import zipfile
 from collections import defaultdict
 from datetime import datetime, timezone
@@ -299,7 +298,7 @@ def _parse_fixed_width(lines: list[str]) -> list[dict]:
     Per 2021 (solo lavoro) probabilmente piu' semplice. Ispeziono per
     individuare lunghezze e parsare in modo permissivo.
     """
-    sample = [l for l in lines[:20] if l.strip()]
+    sample = [ln for ln in lines[:20] if ln.strip()]
     if not sample:
         return []
     log.info("pendolarismo_fw_sample", first_line=sample[0][:120],

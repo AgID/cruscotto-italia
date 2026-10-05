@@ -30,7 +30,6 @@ import csv
 import io
 import json
 import sys
-import tempfile
 import urllib.error
 import urllib.request
 from datetime import datetime

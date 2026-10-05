@@ -279,7 +279,7 @@ def carica_comuni_ufficiali() -> tuple[dict, dict, dict]:
     for r in righe:
         if r.get("cf"):
             per_cf[r["cf"].strip()].append(r["i"])
-        for parte in [r["n"]] + str(r["n"]).split("/"):
+        for parte in [r["n"], *str(r["n"]).split("/")]:
             k = norm_nome(parte)
             if k and r["i"] not in per_nome[k]:
                 per_nome[k].append(r["i"])
@@ -649,7 +649,8 @@ def main() -> int:
     cache_dir = args.cache_dir or CACHE_DIR
     try:
         cache_dir.mkdir(parents=True, exist_ok=True)
-        (cache_dir / ".w").write_text("x"); (cache_dir / ".w").unlink()
+        (cache_dir / ".w").write_text("x")
+        (cache_dir / ".w").unlink()
     except OSError as e:
         log.warning("cache_dir_non_scrivibile", path=str(cache_dir),
                     err=str(e), fallback=str(CACHE_DIR_FALLBACK))

@@ -53,9 +53,7 @@ del Censimento permanente (tornate 2021, 2023, ...).
 from __future__ import annotations
 
 import argparse
-import io
 import json
-import os
 import sys
 import zipfile
 from collections import defaultdict
@@ -182,14 +180,13 @@ MIN_ZIP_SIZE_BT = 50_000
 MIN_ZIP_SIZE_VARS = 100_000_000  # 100 MB
 MIN_ZIP_SIZE_ASC = 100_000
 
-import time
-import urllib.request
-import urllib.error
+import time  # noqa: E402  import dopo le costanti, voluto
+import urllib.error  # noqa: E402
+import urllib.request  # noqa: E402
 
-import openpyxl
-import shapefile  # pyshp
-from pyproj import Transformer
-
+import openpyxl  # noqa: E402
+import shapefile  # noqa: E402  pyshp
+from pyproj import Transformer  # noqa: E402
 
 # ═════════════════════════════════════════════════════════════════════════
 # FASE 1 — Download fonti (con cache locale per riusabilita')
@@ -214,9 +211,9 @@ def _http_get(url: str, dest: Path, min_size: int, timeout: int = 600) -> Path:
         with urllib.request.urlopen(req, timeout=timeout) as resp:
             data = resp.read()
     except urllib.error.HTTPError as e:
-        raise RuntimeError(f"HTTP {e.code} su {url}: {e.reason}")
+        raise RuntimeError(f"HTTP {e.code} su {url}: {e.reason}") from e
     except urllib.error.URLError as e:
-        raise RuntimeError(f"URL error su {url}: {e.reason}")
+        raise RuntimeError(f"URL error su {url}: {e.reason}") from e
     elapsed = time.time() - t0
 
     if len(data) < min_size:
@@ -361,11 +358,11 @@ def parse_vars_xlsx_from_zip(zip_path: Path, region: int) -> dict[int, dict]:
             try:
                 with zf.open(xlsx_name) as src:
                     xlsx_out.write_bytes(src.read())
-            except KeyError:
+            except KeyError as e:
                 raise RuntimeError(
                     f"File {xlsx_name} non trovato nel ZIP. "
                     f"Files disponibili: {zf.namelist()[:5]}"
-                )
+                ) from e
 
     wb = openpyxl.load_workbook(xlsx_out, read_only=True, data_only=True)
     ws = wb.active
@@ -550,7 +547,7 @@ def parse_shapefile_region(zip_path: Path, region: int) -> list[dict]:
     n_skipped_no_geom = 0
     n_skipped_bad_geom = 0
 
-    for shape, rec in zip(sf.shapes(), sf.records()):
+    for shape, rec in zip(sf.shapes(), sf.records(), strict=True):
         d = rec.as_dict()
 
         # Skip se shape non e' Polygon (5) o MultiPatch (31).
@@ -564,7 +561,7 @@ def parse_shapefile_region(zip_path: Path, region: int) -> list[dict]:
             continue
 
         # Riproietta ring per ring (shape.parts e' la lista di start-index dei ring)
-        parts = list(shape.parts) + [len(shape.points)]
+        parts = [*shape.parts, len(shape.points)]
         rings = []
         for i in range(len(parts) - 1):
             start, end = parts[i], parts[i + 1]
@@ -912,7 +909,7 @@ def _smoke_test() -> int:
     print("=" * 70)
 
     # 1. Verifica/scarica BT regione 2
-    print(f"\n[1/4] Download BT regione R02_21.zip...")
+    print("\n[1/4] Download BT regione R02_21.zip...")
     bt_zip = download_bt_region(region)
     print(f"      OK: {bt_zip} ({bt_zip.stat().st_size / 1024 / 1024:.1f} MB)")
 
@@ -920,15 +917,15 @@ def _smoke_test() -> int:
     vars_zip = CACHE_DIR / "Dati_regionali_2023.zip"
     if not vars_zip.exists():
         print(f"\n  ATTENZIONE: {vars_zip} non trovato.")
-        print(f"  Per popolare la cache, lancia prima:")
-        print(f"    python3 -m etl.sources.censimento --download-vars")
-        print(f"  (250 MB download, ~5-10 min). Smoke test interrotto.")
+        print("  Per popolare la cache, lancia prima:")
+        print("    python3 -m etl.sources.censimento --download-vars")
+        print("  (250 MB download, ~5-10 min). Smoke test interrotto.")
         return 1
     print(f"\n[2/4] File variabili nazionale: cache hit OK "
           f"({vars_zip.stat().st_size / 1024 / 1024:.1f} MB)")
 
     # 3. Parse XLSX variabili regione 2
-    print(f"\n[3/4] Parse XLSX variabili R02...")
+    print("\n[3/4] Parse XLSX variabili R02...")
     vars_by_sezid = parse_vars_xlsx_from_zip(vars_zip, region)
     print(f"      OK: {len(vars_by_sezid)} sezioni con variabili")
     # Estraggo le sezioni di Cogne (PRO_COM == 7021)
@@ -937,7 +934,7 @@ def _smoke_test() -> int:
     print(f"      Sezioni Cogne (PRO_COM=7021): {len(cogne_sezid)}")
 
     # 4. Parse shapefile regione 2
-    print(f"\n[4/4] Parse shapefile R02...")
+    print("\n[4/4] Parse shapefile R02...")
     features = parse_shapefile_region(bt_zip, region)
     print(f"      OK: {len(features)} sezioni totali in VdA")
     cogne_features = [f for f in features if f["procom"] == cogne_istat]
@@ -961,7 +958,7 @@ def _smoke_test() -> int:
         sample = cogne_features[0]
         sid = sample["sez_id"]
         vars_rec = vars_by_sezid.get(sid, {}).get("vars", {})
-        print(f"\n[SAMPLE] Prima sezione Cogne:")
+        print("\n[SAMPLE] Prima sezione Cogne:")
         print(f"  sez_id:    {sid}")
         print(f"  sez:       {sample['sez']}")
         print(f"  procom:    {sample['procom']}")
@@ -978,7 +975,7 @@ def _smoke_test() -> int:
         print(f"  PF1 famiglie: {vars_rec.get('PF1', 'N/A')}")
         print(f"  A8 abitazioni tot: {vars_rec.get('A8', 'N/A')}")
     else:
-        print(f"\n[ERROR] Nessuna sezione Cogne nelle geometrie!")
+        print("\n[ERROR] Nessuna sezione Cogne nelle geometrie!")
         return 2
 
     print(f"\n{'=' * 70}\nSMOKE TEST OK\n{'=' * 70}")

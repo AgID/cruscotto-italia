@@ -48,4 +48,10 @@ jobs:
       - name: Type check with mypy
         run: mypy --ignore-missing-imports . || true   # non-blocking initially
       - name: Run tests
-        run: pytest -v --cov ../tests/etl || echo "no tests yet"
+        # Bloccante dal 05/10/2026. Prima "|| echo" nascondeva anche
+        # l'errore di import (da etl/ il pacchetto etl non e importabile
+        # senza la radice del repo nel PYTHONPATH): la CI era verde senza
+        # aver mai eseguito un test.
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: pytest -c pyproject.toml -v ../tests/etl

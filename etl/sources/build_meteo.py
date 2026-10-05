@@ -5,11 +5,18 @@ Fonte: https://meteohub.agenziaitaliameteo.it/nwp/ICON-2I_SURFACE_PRESSURE_LEVEL
 Licenza: CC BY 4.0 | HVD Meteorologici (Reg. EU 2023/138)
 Cron: 2x/giorno 03:30 e 15:30 CEST (corse 00 UTC e 12 UTC)
 """
-import cfgrib, numpy as np, json, os, time, tempfile, urllib.request
 import glob
-from datetime import datetime, timezone
+import json
+import os
+import tempfile
+import time
+import urllib.request
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime, timezone
 from html.parser import HTMLParser
+
+import cfgrib
+import numpy as np
 
 BASE_NWP  = "https://meteohub.agenziaitaliameteo.it/nwp/ICON-2I_SURFACE_PRESSURE_LEVELS"
 COORDS    = "/var/www/cruscotto-italia/data/istat-coords.json"
@@ -29,7 +36,7 @@ WW_DESC = {
 }
 
 def ww_label(code):
-    c = int(round(code))
+    c = int(round(code))  # noqa: RUF046  int esplicito: code puo essere numpy
     if c in WW_DESC: return WW_DESC[c]
     if c <= 3:  return "Sereno/poco nuvoloso"
     if c <= 49: return "Nebbia"
@@ -49,13 +56,13 @@ class LinkParser(HTMLParser):
 def get_latest_run():
     p = LinkParser()
     with urllib.request.urlopen(f"{BASE_NWP}/", timeout=15) as r: p.feed(r.read().decode())
-    runs = sorted(l for l in p.links if l[:10].isdigit())
+    runs = sorted(lk for lk in p.links if lk[:10].isdigit())
     return runs[-1]
 
 def get_grib_url(run, varname):
     p = LinkParser()
     with urllib.request.urlopen(f"{BASE_NWP}/{run}/{varname}/", timeout=10) as r: p.feed(r.read().decode())
-    fname = next(l for l in p.links if l.endswith('.grib'))
+    fname = next(lk for lk in p.links if lk.endswith('.grib'))
     return f"{BASE_NWP}/{run}/{varname}/{fname}"
 
 def download_grib(run, varname):
@@ -63,7 +70,7 @@ def download_grib(run, varname):
     tmp  = tempfile.mktemp(suffix=f"_{varname}.grib")
     urllib.request.urlretrieve(url, tmp)
     ds   = cfgrib.open_dataset(tmp)
-    key  = list(ds.data_vars)[0]
+    key  = next(iter(ds.data_vars))
     data = ds[key].values.copy()
     meta = {'lats': ds.latitude.values, 'lons': ds.longitude.values,
             'valid_times': ds['valid_time'].values, 'units': ds[key].attrs.get('units','?')}
@@ -115,7 +122,7 @@ def main():
     valid_str   = vtimes[step_now].strftime('%Y-%m-%dT%H:%M:%SZ')
     print(f"      step={step_now} → {valid_str} | +24h=step{step_24h}", flush=True)
 
-    print(f"[5/5] Estrazione vettorizzata + scrittura shard...", flush=True)
+    print("[5/5] Estrazione vettorizzata + scrittura shard...", flush=True)
     t_ex = time.time()
 
     # Indici nearest-neighbour (tutti i comuni in una sola operazione)
@@ -153,7 +160,7 @@ def main():
             "raffica_max24h_kmh" : round(float(raffica[i]),   1),
             "nuvolosita_pct"     : round(float(nuv[i])),
             "neve_cm"            : round(float(neve_cm[i]),   1),
-            "ww"                 : int(round(float(ww_vals[i]))),
+            "ww"                 : int(round(float(ww_vals[i]))),  # noqa: RUF046
             "ww_desc"            : ww_label(float(ww_vals[i])),
         }
         with open(f"{OUT_DIR}/{istat}.json", "w") as f:

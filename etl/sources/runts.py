@@ -141,8 +141,8 @@ SEZIONE_KEY = {
 #
 # Da estendere dopo eventuali nuovi run osservando "runts_unmatched_comuni"
 # nei log.
-from etl.sources.veicoli import SPECIAL_ACI as _ACI_ALIASES
-from etl.sources.pnrr_progetti import SPECIAL_NAMES as _PNRR_ALIASES
+from etl.sources.pnrr_progetti import SPECIAL_NAMES as _PNRR_ALIASES  # noqa: E402
+from etl.sources.veicoli import SPECIAL_ACI as _ACI_ALIASES  # noqa: E402
 
 # Mapping aggiuntivi specifici RUNTS (non gia' in ACI o PNRR).
 # Tutti i codici ISTAT sono stati VERIFICATI contro lookup/comuni-bundle.json
@@ -450,7 +450,7 @@ def parse_xlsx(xlsx_path: Path) -> list[dict]:
     skipped_no_sezione = 0
     header_seen = False
 
-    for i, row in enumerate(ws.iter_rows(values_only=True), start=1):
+    for _i, row in enumerate(ws.iter_rows(values_only=True), start=1):
         # Skip righe vuote
         if row is None or all(c is None or str(c).strip() == "" for c in row):
             continue

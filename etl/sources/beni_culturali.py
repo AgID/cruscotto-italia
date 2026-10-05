@@ -98,10 +98,9 @@ Usage:
 
 import argparse
 import json
-import sys
 import time
 import unicodedata
-from collections import Counter, defaultdict
+from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -804,7 +803,7 @@ def _resolve_tipo(tipo_raw: str | None, type_dict: dict[str, str]) -> str | None
     return type_dict.get(last_segment)
 
 
-def repair_cache(cache_path: Path = None) -> int:
+def repair_cache(cache_path: Path | None = None) -> int:
     """Ripara la cache anagrafica esistente SENZA re-fetch SPARQL completo.
 
     Operazioni eseguite IN-PLACE sui record cached:
@@ -1261,7 +1260,7 @@ def load_comuni_soppressi() -> dict[tuple[str, str], str]:
 
     import csv as _csv
     mapping: dict[tuple[str, str], str] = {}
-    with open(SOPPRESSI_CSV_PATH, "r", encoding="utf-8") as f:
+    with open(SOPPRESSI_CSV_PATH, encoding="utf-8") as f:
         reader = _csv.reader(f, delimiter=";")
         next(reader, None)  # skip header
         for row in reader:
@@ -1295,7 +1294,7 @@ def load_comuni_soppressi() -> dict[tuple[str, str], str]:
 CULTURAL_ON_RAW_PATH = Path("/tmp/cruscotto_cultural_on/cultural_on_raw.json")
 
 
-def load_cultural_on(cache_path: Path = None,
+def load_cultural_on(cache_path: Path | None = None,
                      name_to_istats: dict[str, list[str]] | None = None
                      ) -> list[dict]:
     """Carica i luoghi Cultural-ON e li converte in record con istat

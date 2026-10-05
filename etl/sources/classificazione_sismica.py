@@ -19,10 +19,9 @@ import io
 import json
 import os
 import re
-import sys
 import urllib.request
-from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from pathlib import Path
 
 SOURCE = "classificazione_sismica"
 BASE = "https://rischi.protezionecivile.gov.it"

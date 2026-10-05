@@ -1,5 +1,5 @@
 pytest>=8.0.0
 pytest-cov>=5.0.0
-ruff>=0.4.0
+ruff==0.16.10  # versione fissa: senza, ogni rilascio di ruff aggiungeva regole e la CI diventava rossa da sola
 mypy>=1.10.0
 types-requests
