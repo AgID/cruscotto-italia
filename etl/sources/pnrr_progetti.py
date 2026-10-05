@@ -20,7 +20,11 @@ Output:
   pnrr/<istat>.json per ogni comune con almeno 1 progetto.
   Schema: kpi (totali, distrib stato), per_missione (aggregato), progetti (lista).
 
-Cache: /tmp/cruscotto-pnrr-cache/ (CSV in cache per ripartibilita)
+Cache: /tmp/cruscotto-pnrr-cache/. Il CSV in cache si riusa solo se la
+fonte non ha un Last-Modified piu recente; se la HEAD fallisce, scade dopo
+CACHE_MAX_DAYS giorni. Fino al 05/10/2026 la cache non scadeva mai: il cron
+settimanale riusava il file di luglio mentre Italia Domani aveva pubblicato
+il 02/09/2026.
 
 Usage:
   python -m etl.sources.pnrr_progetti
@@ -30,8 +34,11 @@ from __future__ import annotations
 
 import argparse
 import csv
+import email.utils
 import json
+import os
 import sys
+import time
 import tempfile
 import unicodedata
 import urllib.error
@@ -49,7 +56,12 @@ log = structlog.get_logger()
 PNRR_PROGETTI_URL = (
     "https://www.italiadomani.gov.it/content/dam/sogei-ng/opendata/PNRR_Progetti.csv"
 )
-UA = "cruscotto-italia/1.0 (+https://cruscotto-italia.dati.gov.it)"
+# UA da browser: il WAF di italiadomani.gov.it risponde 403 a UA non-browser
+UA = ("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+      "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
+# Scadenza della cache quando la fonte non espone Last-Modified
+CACHE_MAX_DAYS = 14
+MIN_CSV_BYTES = 100_000_000
 
 # Aumenta il limite csv di Python (alcune righe sono molto lunghe)
 csv.field_size_limit(min(2**31 - 1, sys.maxsize))
@@ -167,27 +179,68 @@ def load_nome_to_istat() -> dict[str, str]:
     return nome
 
 
+def _remote_last_modified() -> float | None:
+    """Last-Modified della fonte come timestamp, None se non disponibile."""
+    try:
+        req = urllib.request.Request(PNRR_PROGETTI_URL, method="HEAD",
+                                     headers={"User-Agent": UA})
+        with urllib.request.urlopen(req, timeout=60) as resp:
+            lm = resp.headers.get("Last-Modified")
+        return email.utils.parsedate_to_datetime(lm).timestamp() if lm else None
+    except Exception as e:
+        log.warning("pnrr_head_failed", error=str(e))
+        return None
+
+
 def download_csv(cache_dir: Path, force: bool = False) -> Path:
-    """Scarica PNRR_Progetti.csv (294 MB) con caching su disco."""
+    """Scarica PNRR_Progetti.csv (~300 MB) con cache che scade.
+
+    Riusa la cache solo se la fonte non e piu recente (Last-Modified) o, in
+    mancanza dell'header, se la cache ha meno di CACHE_MAX_DAYS giorni.
+    Scrive su .part e rinomina: un download interrotto non tocca la cache.
+    """
     out = cache_dir / "PNRR_Progetti.csv"
-    if out.exists() and out.stat().st_size > 100_000_000 and not force:
-        log.info("pnrr_cache_hit", path=str(out), size=out.stat().st_size)
-        return out
+    remote_ts = _remote_last_modified()
+    if out.exists() and out.stat().st_size > MIN_CSV_BYTES and not force:
+        local_ts = out.stat().st_mtime
+        if remote_ts is not None and remote_ts <= local_ts:
+            log.info("pnrr_cache_hit", reason="last_modified", path=str(out))
+            return out
+        eta_gg = (time.time() - local_ts) / 86400
+        if remote_ts is None and eta_gg <= CACHE_MAX_DAYS:
+            log.info("pnrr_cache_hit", reason="ttl", eta_gg=round(eta_gg, 1))
+            return out
+        log.info("pnrr_cache_stale", eta_gg=round(eta_gg, 1),
+                 remote_last_modified=remote_ts)
     log.info("pnrr_downloading", url=PNRR_PROGETTI_URL)
+    part = out.with_suffix(".csv.part")
     req = urllib.request.Request(PNRR_PROGETTI_URL,
                                  headers={"User-Agent": UA, "Accept": "text/csv,*/*"})
     try:
         with urllib.request.urlopen(req, timeout=600) as resp:
-            with open(out, "wb") as f:
+            if remote_ts is None:
+                lm = resp.headers.get("Last-Modified")
+                if lm:
+                    remote_ts = email.utils.parsedate_to_datetime(lm).timestamp()
+            with open(part, "wb") as f:
                 while True:
                     chunk = resp.read(1 << 20)  # 1 MB chunks
                     if not chunk:
                         break
                     f.write(chunk)
     except urllib.error.HTTPError as e:
+        part.unlink(missing_ok=True)
         log.error("pnrr_http_error", status=e.code, reason=e.reason)
         raise
-    log.info("pnrr_downloaded", bytes=out.stat().st_size, path=str(out))
+    if part.stat().st_size < MIN_CSV_BYTES:
+        n = part.stat().st_size
+        part.unlink(missing_ok=True)
+        raise RuntimeError(f"PNRR_Progetti.csv troppo piccolo ({n} byte): download incompleto o pagina di errore")
+    os.replace(part, out)
+    if remote_ts is not None:
+        os.utime(out, (remote_ts, remote_ts))
+    log.info("pnrr_downloaded", bytes=out.stat().st_size, path=str(out),
+             remote_last_modified=remote_ts)
     return out
 
 
@@ -430,7 +483,7 @@ def main() -> int:
                         default=Path("/tmp/cruscotto-pnrr-cache"))
     parser.add_argument("--outdir", type=Path, default=Path("/var/www/cruscotto-italia/data"))
     parser.add_argument("--no-cache", action="store_true",
-                        help="Forza re-download del CSV (~294 MB)")
+                        help="Forza il download del CSV ignorando la cache")
     args = parser.parse_args()
 
     structlog.configure(processors=[

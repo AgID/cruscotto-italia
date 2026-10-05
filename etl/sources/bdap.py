@@ -27,8 +27,10 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 import tempfile
+import time
 from pathlib import Path
 
 import duckdb
@@ -49,16 +51,28 @@ DATASET_PROGETTI_TOTALE = "c76e90f7-eea5-4f32-8767-6b60e3505a1d"
 DATASET_LOCALIZZAZIONE = "31b40a28-9d84-49f4-905e-f4bf471aae8b"
 BDAP_DUMP = "https://bdap-opendata.rgs.mef.gov.it/SpodCkanApi/api/3/datastore/dump"
 
+# Il dump BDAP e generato al volo: nessun Last-Modified ne metadati di
+# risorsa. La cache scade a tempo. 20 giorni: il cron mensile (giorno 5)
+# riscarica sempre, i rilanci manuali ravvicinati riusano il file.
+# Fino al 05/10/2026 la cache non scadeva mai (riusato il file del 05/09).
+CACHE_MAX_DAYS = 20
 
-def pull_csv(workdir: Path, uuid: str, name: str) -> Path:
-    """Download a BDAP CKAN datastore CSV. Idempotent."""
+
+def pull_csv(workdir: Path, uuid: str, name: str, force: bool = False) -> Path:
+    """Download a BDAP CKAN datastore CSV, con cache che scade dopo
+    CACHE_MAX_DAYS giorni (o subito con force)."""
     workdir.mkdir(parents=True, exist_ok=True)
     raw_path = workdir / f"{name}.csv"
     utf8_path = workdir / f"{name}-utf8.csv"
 
     if utf8_path.exists() and utf8_path.stat().st_size > 1_000_000:
-        log.info("bdap_csv_already_converted", name=name, path=str(utf8_path))
-        return utf8_path
+        eta_gg = (time.time() - utf8_path.stat().st_mtime) / 86400
+        if not force and eta_gg <= CACHE_MAX_DAYS:
+            log.info("bdap_csv_already_converted", name=name,
+                     path=str(utf8_path), eta_gg=round(eta_gg, 1))
+            return utf8_path
+        log.info("bdap_cache_stale", name=name, eta_gg=round(eta_gg, 1), force=force)
+        raw_path.unlink(missing_ok=True)
 
     if not raw_path.exists() or raw_path.stat().st_size < 1_000_000:
         url = f"{BDAP_DUMP}/{uuid}.csv"
@@ -70,9 +84,15 @@ def pull_csv(workdir: Path, uuid: str, name: str) -> Path:
             timeout=900,
         ) as resp:
             resp.raise_for_status()
-            with open(raw_path, "wb") as f:
+            part = raw_path.with_suffix(".csv.part")
+            with open(part, "wb") as f:
                 for chunk in resp.iter_content(chunk_size=1024 * 1024):
                     f.write(chunk)
+        if part.stat().st_size < 1_000_000:
+            n = part.stat().st_size
+            part.unlink(missing_ok=True)
+            raise RuntimeError(f"BDAP {name}: download troppo piccolo ({n} byte)")
+        os.replace(part, raw_path)
         log.info("bdap_csv_saved", name=name, bytes=raw_path.stat().st_size)
     else:
         log.info("bdap_csv_already_downloaded", name=name)
@@ -81,13 +101,16 @@ def pull_csv(workdir: Path, uuid: str, name: str) -> Path:
     log.info("bdap_converting_to_utf8", src=str(raw_path), dst=str(utf8_path))
     chunk_size = 64 * 1024 * 1024
     total = 0
-    with open(raw_path, "rb") as fin, open(utf8_path, "wb") as fout:
+    utf8_part = utf8_path.with_suffix(".csv.part")
+    with open(raw_path, "rb") as fin, open(utf8_part, "wb") as fout:
         while True:
             data = fin.read(chunk_size)
             if not data:
                 break
             fout.write(data.decode("latin-1").encode("utf-8"))
             total += len(data)
+    os.replace(utf8_part, utf8_path)
+    raw_path.unlink(missing_ok=True)  # il raw latin-1 (~430 MB) non serve piu
     log.info("bdap_csv_utf8_ready", name=name, bytes=total, path=str(utf8_path))
     return utf8_path
 
@@ -364,6 +387,8 @@ def main() -> int:
                         help="Solo 'local' supportato (R2 rimosso dall'infrastruttura AgID)")
     parser.add_argument("--outdir", type=Path, default=Path("/var/www/cruscotto-italia/data"))
     parser.add_argument("--workdir", type=Path, default=Path("/tmp/cruscotto-bdap-cache"))
+    parser.add_argument("--no-cache", action="store_true",
+                        help="Forza il download ignorando la cache")
     parser.add_argument("--skip-shard", action="store_true",
                         help="Skip generation of per-comune detail shards")
     parser.add_argument("--shard-all-years", action="store_true",
@@ -393,7 +418,8 @@ def main() -> int:
 
     try:
         # 1. Pull (Progetti only per il MVP, Localizzazione la usiamo dopo per coverage geografica)
-        progetti_csv = pull_csv(args.workdir, DATASET_PROGETTI_TOTALE, "progetti-totale")
+        progetti_csv = pull_csv(args.workdir, DATASET_PROGETTI_TOTALE, "progetti-totale",
+                                force=args.no_cache)
 
         # 2. Aggregate -> scrive direttamente in lookup_dir
         aggr_path = aggregate_progetti(progetti_csv, lookup_dir)
