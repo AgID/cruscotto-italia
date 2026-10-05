@@ -47,64 +47,94 @@ def scarica_a_blocchi(base_dataflow: str, chiave: str, anno_inizio: int, anno_fi
                       codici: list[str], out: Path, *, blocco: int = 35,
                       tentativi: int = 3, pausa: float = 2.0, timeout: int = 300,
                       user_agent: str = "cruscotto-italia-etl", log=None) -> Path:
-    """Scarica il dataflow per tutti i codici, a blocchi, in un unico CSV."""
+    """Scarica il dataflow per tutti i codici, a blocchi, in un unico CSV.
+
+    Riprendibile: ogni blocco e salvato in <out>.blocchi/ appena arriva; se
+    il download si interrompe, il run successivo salta i blocchi gia
+    presenti (05/10/2026: un errore di rete al blocco 127 di 226 avrebbe
+    buttato 15 minuti di download). La cartella si cancella solo dopo aver
+    scritto il CSV completo. I blocchi dipendono da dataflow, chiave, anni e
+    codici: un cambio di parametri usa una cartella diversa.
+    """
+    import hashlib
+    import shutil
     headers = {"Accept": ACCEPT_CSV, "User-Agent": user_agent}
+    firma = hashlib.sha1(f"{base_dataflow}|{chiave}|{anno_inizio}|{anno_fine}|{blocco}|"
+                         f"{','.join(codici)}".encode()).hexdigest()[:12]
+    cartella = out.with_name(f"{out.name}.blocchi-{firma}")
+    cartella.mkdir(parents=True, exist_ok=True)
+    n_blocchi = (len(codici) + blocco - 1) // blocco
+    t0 = time.time()
+    riusati = 0
+    for k in range(1, n_blocchi + 1):
+        f_blocco = cartella / f"{k:05d}.csv"
+        if f_blocco.exists():
+            riusati += 1
+            continue
+        gruppo = codici[(k - 1) * blocco:k * blocco]
+        url = (f"{base_dataflow}/{chiave_con_codici(chiave, gruppo)}"
+               f"?startPeriod={anno_inizio}&endPeriod={anno_fine}")
+        testo = None
+        for n in range(1, tentativi + 1):
+            try:
+                r = requests.get(url, headers=headers, timeout=timeout)
+                if r.status_code == 404:      # nessun dato per il blocco
+                    testo = ""
+                    break
+                if 400 <= r.status_code < 500 and r.status_code != 429:
+                    # errore della richiesta: riprovare non serve
+                    raise RuntimeError(f"ISTAT HTTP {r.status_code} sul blocco "
+                                       f"{k} ({len(gruppo)} codici)")
+                r.raise_for_status()
+                testo = r.content.decode("utf-8-sig")
+                break
+            except requests.RequestException as e:
+                if log:
+                    log.warning("istat_blocco_retry", blocco=k, tentativo=n,
+                                error=str(e)[:200])
+                if n == tentativi:
+                    if log:
+                        log.error("istat_blocchi_interrotto", blocchi_salvati=k - 1,
+                                  totale=n_blocchi, cartella=str(cartella),
+                                  nota="rilanciare: i blocchi salvati verranno riusati")
+                    raise
+                time.sleep(30 * n)
+        tmp = f_blocco.with_suffix(".part")
+        tmp.write_text(testo, encoding="utf-8")
+        os.replace(tmp, f_blocco)
+        if log and (k % 10 == 0 or k == n_blocchi):
+            log.info("istat_blocchi_progress", blocchi=f"{k}/{n_blocchi}",
+                     riusati=riusati, secondi=round(time.time() - t0))
+        if k < n_blocchi and pausa > 0:
+            time.sleep(pausa)
+
+    # Unione dei blocchi in un unico CSV con una sola intestazione
     part = out.with_suffix(out.suffix + ".part")
     intestazione = None
     righe = 0
-    n_blocchi = (len(codici) + blocco - 1) // blocco
-    t0 = time.time()
     try:
         with open(part, "w", encoding="utf-8", newline="") as fo:
-            for i in range(0, len(codici), blocco):
-                gruppo = codici[i:i + blocco]
-                url = (f"{base_dataflow}/{chiave_con_codici(chiave, gruppo)}"
-                       f"?startPeriod={anno_inizio}&endPeriod={anno_fine}")
-                testo = None
-                for n in range(1, tentativi + 1):
-                    try:
-                        r = requests.get(url, headers=headers, timeout=timeout)
-                        if r.status_code == 404:      # nessun dato per il blocco
-                            testo = ""
-                            break
-                        if 400 <= r.status_code < 500 and r.status_code != 429:
-                            # errore della richiesta: riprovare non serve
-                            raise RuntimeError(f"ISTAT HTTP {r.status_code} sul blocco "
-                                               f"{i // blocco + 1} ({len(gruppo)} codici)")
-                        r.raise_for_status()
-                        testo = r.content.decode("utf-8-sig")
-                        break
-                    except requests.RequestException as e:
-                        if log:
-                            log.warning("istat_blocco_retry", blocco=i // blocco + 1,
-                                        tentativo=n, error=str(e)[:200])
-                        if n == tentativi:
-                            raise
-                        time.sleep(30 * n)
-                linee = testo.splitlines()
-                if linee:
-                    if intestazione is None:
-                        intestazione = linee[0]
-                        fo.write(intestazione + "\n")
-                    elif linee[0] != intestazione:
-                        raise RuntimeError("intestazione CSV diversa tra blocchi")
-                    for riga in linee[1:]:
-                        if riga:
-                            fo.write(riga + "\n")
-                            righe += 1
-                k = i // blocco + 1
-                if log and (k % 10 == 0 or k == n_blocchi):
-                    log.info("istat_blocchi_progress", blocchi=f"{k}/{n_blocchi}",
-                             righe=righe, secondi=round(time.time() - t0))
-                if k < n_blocchi and pausa > 0:
-                    time.sleep(pausa)
+            for k in range(1, n_blocchi + 1):
+                linee = (cartella / f"{k:05d}.csv").read_text(encoding="utf-8").splitlines()
+                if not linee:
+                    continue
+                if intestazione is None:
+                    intestazione = linee[0]
+                    fo.write(intestazione + "\n")
+                elif linee[0] != intestazione:
+                    raise RuntimeError(f"intestazione CSV diversa nel blocco {k}")
+                for riga in linee[1:]:
+                    if riga:
+                        fo.write(riga + "\n")
+                        righe += 1
         if intestazione is None:
             raise RuntimeError("nessun dato restituito da ISTAT per nessun blocco")
         os.replace(part, out)
     except BaseException:
         part.unlink(missing_ok=True)
         raise
+    shutil.rmtree(cartella, ignore_errors=True)
     if log:
-        log.info("istat_blocchi_done", righe=righe, blocchi=n_blocchi,
+        log.info("istat_blocchi_done", righe=righe, blocchi=n_blocchi, riusati=riusati,
                  secondi=round(time.time() - t0), path=str(out))
     return out
