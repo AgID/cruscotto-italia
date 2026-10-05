@@ -10,10 +10,17 @@ Pagina indice "AI-Ready": https://geo.agcom.it/reportistica/ai/index.html
 
 Acquisizione
 ------------
-Singolo CSV nazionale a livello comunale, scaricabile da ArcGIS sharing:
+Singolo CSV nazionale a livello comunale, pubblicato su ArcGIS sharing
+come item NUOVO a ogni rilascio (item ID diverso ogni trimestre). L'item
+corrente si risolve a runtime con l'API di ricerca ArcGIS: titolo
+"Reportistica AAMMGG Comuni", tipo CSV, periodo AAMMGG piu recente.
+Se la ricerca fallisce si usa FALLBACK_ITEM_ID con warning nel log.
 
-  https://geo.agcom.it/arcgis/sharing/rest/content/items/
-    6c0b48a9a06c44059656b987d85acb63/data
+Encoding: fino al 31/12/2025 CP1252, dal 31/03/2026 UTF-8 con BOM.
+Codici: dal 31/03/2026 AGCOM usa i nuovi codici delle province sarde
+(prefissi 112-119) per 377 comuni; il Cruscotto usa i codici storici
+dell'anagrafica, quindi i codici assenti dall'anagrafica vengono
+ricondotti per nome dentro la stessa regione (lookup/comuni-index.json).
 
 Aggiornamento trimestrale. Dato corrente al 31/12/2025, rilascio 10/02/2026.
 Encoding effettivo CP1252 (la pagina dichiara UTF-8 ma il file è Latin-1).
@@ -81,7 +88,9 @@ import csv
 import hashlib
 import io
 import json
+import re
 import sys
+import unicodedata
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -93,7 +102,7 @@ from etl.lib import local_lookup, manifest
 
 log = structlog.get_logger()
 
-ETL_VERSION = "0.1.0"
+ETL_VERSION = "0.2.0"
 
 # ──────────────────────── COSTANTI ─────────────────────────────────
 
@@ -101,12 +110,16 @@ SOURCE_LABEL = "AGCOM - Broadband Map"
 SOURCE_URL = "https://geo.agcom.it/reportistica/"
 LICENSE_STR = "CC BY 4.0 ex art. 52 c.2 D.Lgs 82/2005 (CAD)"
 
-# ArcGIS sharing item id del CSV comunale (versione 31/12/2025 → 10/02/2026)
-AGCOM_CSV_URL = (
-    "https://geo.agcom.it/arcgis/sharing/rest/content/items/"
-    "6c0b48a9a06c44059656b987d85acb63/data"
-)
-DATA_PERIOD = "31/12/2025"   # aggiornare ad ogni rilascio trimestrale
+# ArcGIS sharing: ogni rilascio trimestrale e un item nuovo.
+ARCGIS_REST = "https://geo.agcom.it/arcgis/sharing/rest"
+# Riserva usata solo se la ricerca dinamica fallisce (ultimo noto: 30/06/2026)
+FALLBACK_ITEM_ID = "25830559c5784c1eb5eb1cf748889f4c"
+FALLBACK_PERIOD = "260630"
+_TITLE_RE = re.compile(r"^Reportistica\s+(\d{6})\s+Comuni$")
+
+# Codici assenti dall'anagrafica e non ricondotti per nome: oltre questa
+# soglia l'ETL si ferma senza scrivere.
+MAX_UNRESOLVED = 5
 
 # Mappa ufficiale AGCOM (Web AppBuilder 2.15)
 # Pattern: ?center=lon,lat&level=N (WGS84, level 13-15 per scala comunale)
@@ -130,14 +143,66 @@ ANAGRAFICA_DIR_LOCAL = Path("/var/www/cruscotto-italia/data/anagrafica")
 
 # ──────────────────────── FETCH CSV AGCOM ──────────────────────────
 
-def fetch_agcom_csv() -> tuple[bytes, str]:
-    """Scarica il CSV AGCOM comunale.
+def period_key(aammgg: str) -> str:
+    """'260630' -> '20260630' (ordinabile)."""
+    return "20" + aammgg
+
+
+def period_label(aammgg: str) -> str:
+    """'260630' -> '30/06/2026'."""
+    return f"{aammgg[4:6]}/{aammgg[2:4]}/20{aammgg[0:2]}"
+
+
+def label_to_key(label: str | None) -> str | None:
+    """'31/12/2025' -> '20251231'; None se non parsabile."""
+    m = re.match(r"^(\d{2})/(\d{2})/(\d{4})$", label or "")
+    return f"{m.group(3)}{m.group(2)}{m.group(1)}" if m else None
+
+
+def resolve_latest_item() -> tuple[str, str, bool]:
+    """Trova l'item CSV comunale piu recente via API di ricerca ArcGIS.
+
+    Returns (item_id, aammgg, dinamico). dinamico=False se si e usato il
+    fallback cablato.
+    """
+    try:
+        r = requests.get(
+            f"{ARCGIS_REST}/search",
+            params={"q": "title:Reportistica Comuni", "num": 100, "f": "json"},
+            headers={"User-Agent": USER_AGENT},
+            timeout=60,
+        )
+        r.raise_for_status()
+        data = r.json()
+        cand = []
+        for it in data.get("results", []):
+            m = _TITLE_RE.match((it.get("title") or "").strip())
+            if m and it.get("type") == "CSV":
+                cand.append((m.group(1), it["id"]))
+        if data.get("nextStart", -1) not in (-1, None):
+            log.warning("agcom_search_paginata", total=data.get("total"))
+        if not cand:
+            raise ValueError("nessun item 'Reportistica AAMMGG Comuni' di tipo CSV")
+        aammgg, item_id = max(cand)
+        log.info("agcom_item_resolved", item_id=item_id,
+                 period=period_label(aammgg), candidati=len(cand))
+        return item_id, aammgg, True
+    except Exception as e:
+        log.warning("agcom_item_resolve_failed", error=str(e),
+                    fallback_item=FALLBACK_ITEM_ID,
+                    fallback_period=period_label(FALLBACK_PERIOD))
+        return FALLBACK_ITEM_ID, FALLBACK_PERIOD, False
+
+
+def fetch_agcom_csv(item_id: str) -> tuple[bytes, str]:
+    """Scarica il CSV AGCOM comunale dell'item indicato.
 
     Returns (body_bytes, sha256_hex).
     """
-    log.info("agcom_fetch_start", url=AGCOM_CSV_URL)
+    url = f"{ARCGIS_REST}/content/items/{item_id}/data"
+    log.info("agcom_fetch_start", url=url)
     r = requests.get(
-        AGCOM_CSV_URL,
+        url,
         headers={"User-Agent": USER_AGENT, "Accept": "text/csv,*/*"},
         timeout=120,
     )
@@ -177,16 +242,19 @@ def _parse_int(s: str) -> int | None:
 
 
 def parse_csv(body: bytes) -> list[dict]:
-    """Parsa il CSV AGCOM (encoding CP1252, separatore ';').
+    """Parsa il CSV AGCOM (separatore ';', 19 colonne posizionali).
 
-    Header multiriga: i nomi delle colonne contengono '\\n', vengono
-    normalizzati posizionalmente (19 colonne fisse).
+    Encoding: UTF-8 con BOM dal 31/03/2026, CP1252 nei rilasci precedenti.
+    UTF-8 va provato per primo: CP1252 non fallisce su byte UTF-8 e
+    produrrebbe nomi corrotti senza errori.
     """
-    # Encoding effettivo verificato sperimentalmente: CP1252
     try:
-        text = body.decode("cp1252")
+        text = body.decode("utf-8-sig")
+        enc = "utf-8-sig"
     except UnicodeDecodeError:
-        text = body.decode("latin-1", errors="replace")
+        text = body.decode("cp1252", errors="replace")
+        enc = "cp1252"
+    log.info("agcom_csv_encoding", encoding=enc)
     reader = csv.reader(io.StringIO(text), delimiter=";")
     header = next(reader)
     if len(header) != 19:
@@ -228,6 +296,50 @@ def parse_csv(body: bytes) -> list[dict]:
     log.info("agcom_csv_parsed",
              rows=len(rows), skipped_no_procom=skipped_no_procom)
     return rows
+
+
+# ──────────────────────── CODICI ISTAT ──────────────────────────────
+
+def _norm(s: str) -> str:
+    s = unicodedata.normalize("NFKD", s or "").encode("ascii", "ignore").decode()
+    return re.sub(r"[^a-z0-9]", "", s.lower())
+
+
+def remap_codes(rows: list[dict]) -> tuple[int, list[dict]] | None:
+    """Riconduce ai codici dell'anagrafica Cruscotto le righe con codice ignoto.
+
+    Match per nome normalizzato dentro la stessa regione, solo se univoco e
+    se il codice di destinazione non e gia usato da un'altra riga.
+    Modifica rows in place. Returns (n_ricondotti, irrisolti) oppure None
+    se l'anagrafica non e disponibile.
+    """
+    path = local_lookup.get_lookup_dir() / "comuni-index.json"
+    try:
+        idx = json.loads(path.read_text(encoding="utf-8"))
+    except Exception as e:
+        log.error("agcom_comuni_index_missing", path=str(path), error=str(e))
+        return None
+    keys = {c["i"] for c in idx}
+    by_name: dict[tuple[str, str], list[str]] = {}
+    for c in idx:
+        by_name.setdefault((_norm(c.get("r", "")), _norm(c.get("n", ""))), []).append(c["i"])
+    used = {r["istat"] for r in rows if r["istat"] in keys}
+    n_ok, irrisolti = 0, []
+    for r in rows:
+        if r["istat"] in keys:
+            continue
+        m = by_name.get((_norm(r["regione"]), _norm(r["comune"])), [])
+        if len(m) == 1 and m[0] not in used:
+            r["istat_agcom"] = r["istat"]
+            r["istat"] = m[0]
+            used.add(m[0])
+            n_ok += 1
+        else:
+            irrisolti.append({"pro_com": r["istat"], "comune": r["comune"],
+                              "regione": r["regione"], "match": m})
+    log.info("agcom_codici_ricondotti", ricondotti=n_ok,
+             irrisolti=len(irrisolti), esempi=irrisolti[:5])
+    return n_ok, irrisolti
 
 
 # ──────────────────────── CENTROIDE COMUNE ─────────────────────────
@@ -296,7 +408,7 @@ def _choose_level(famiglie_residenti: int | None) -> int:
 
 def build_shards(rows: list[dict],
                  centroids: dict[str, tuple[float, float]],
-                 now_iso: str) -> dict[str, dict]:
+                 now_iso: str, data_period: str) -> dict[str, dict]:
     """Costruisce dict istat6 -> payload shard."""
     shards: dict[str, dict] = {}
     for r in rows:
@@ -313,7 +425,7 @@ def build_shards(rows: list[dict],
             "_source": SOURCE_LABEL,
             "_source_url": SOURCE_URL,
             "_license": LICENSE_STR,
-            "_data_period": DATA_PERIOD,
+            "_data_period": data_period,
             "_generated_at": now_iso,
             "kpi": {
                 "famiglie_residenti":        fam_res,
@@ -351,12 +463,13 @@ def read_last_known_sha() -> str | None:
     return meta.get("sha256")
 
 
-def write_meta(sha: str, n_shards: int) -> None:
+def write_meta(sha: str, n_shards: int, data_period: str, item_id: str) -> None:
     """Scrive _meta.json locale con SHA + metadati."""
     local_lookup.save_meta("agcom_bbmap", {
         "sha256": sha,
         "n_shards": n_shards,
-        "data_period": DATA_PERIOD,
+        "data_period": data_period,
+        "item_id": item_id,
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "etl_version": ETL_VERSION,
     })
@@ -396,8 +509,21 @@ def main() -> int:
 
     log.info("etl_agcom_bbmap_start", version=ETL_VERSION)
 
+    # Item corrente + periodo
+    item_id, aammgg, dinamico = resolve_latest_item()
+    data_period = period_label(aammgg)
+
+    # Mai regredire: un periodo piu vecchio di quello in produzione non
+    # sovrascrive gli shard (vale anche con --force).
+    last_period = local_lookup.load_meta("agcom_bbmap").get("data_period")
+    last_key = label_to_key(last_period)
+    if last_key and period_key(aammgg) < last_key:
+        log.error("agcom_regressione_bloccata", periodo_risolto=data_period,
+                  periodo_in_produzione=last_period, dinamico=dinamico)
+        return 3
+
     # Fetch + sha
-    body, sha = fetch_agcom_csv()
+    body, sha = fetch_agcom_csv(item_id)
 
     # Skip check
     if not args.force:
@@ -414,12 +540,25 @@ def main() -> int:
                   expected_min=7000)
         return 2
 
+    # Codici assenti dall'anagrafica (es. nuove province sarde) -> per nome
+    esito = remap_codes(rows)
+    if esito is None:
+        return 4
+    _, irrisolti = esito
+    if len(irrisolti) > MAX_UNRESOLVED:
+        log.error("agcom_troppi_irrisolti", n=len(irrisolti),
+                  soglia=MAX_UNRESOLVED, esempi=irrisolti[:10])
+        return 5
+    if irrisolti:
+        rows = [r for r in rows if r["istat"] not in
+                {x["pro_com"] for x in irrisolti}]
+
     # Centroidi locali (fallback se anagrafica non disponibile)
     centroids = load_anagrafica_centroids()
 
     # Build shards
     now_iso = datetime.now(timezone.utc).isoformat()
-    shards = build_shards(rows, centroids, now_iso)
+    shards = build_shards(rows, centroids, now_iso, data_period)
 
     # Sample log (comuni notevoli)
     for sample in ["058091", "015146", "077014", "075035", "097055", "007003"]:
@@ -437,7 +576,7 @@ def main() -> int:
 
     # Write local
     n_written = write_shards_local(shards, args.outdir)
-    write_meta(sha, n_written)
+    write_meta(sha, n_written, data_period, item_id)
 
     # Manifest update best-effort
     try:
@@ -449,7 +588,8 @@ def main() -> int:
     except Exception as e:
         log.warning("manifest_update_skipped", error=str(e))
 
-    log.info("etl_agcom_bbmap_done", comuni=n_written)
+    log.info("etl_agcom_bbmap_done", comuni=n_written, periodo=data_period,
+             item_id=item_id, dinamico=dinamico)
     return 0
 
 
