@@ -22,6 +22,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import sys
 from datetime import date
 from pathlib import Path
@@ -95,7 +96,21 @@ def _riduci_release(r: dict) -> dict:
         })
     t = r.get("tender") or {}
     b = r.get("buyer") or {}
-    return {"ocid": r.get("ocid"), "id": r.get("id"),
+    if not b.get("id"):
+        # Bulk 2025 (verificato su 2025/11 il 06/10/2026): niente buyer,
+        # ocid e tender. L'ente e il soggetto in parties SENZA ruolo, con il
+        # CF come id e il nome in additionalIdentifiers (registro AUSA).
+        for pt in r.get("parties") or []:
+            ruoli = pt.get("roles") or []
+            if not ruoli or "buyer" in ruoli:
+                alt = (pt.get("additionalIdentifiers") or [{}])[0] or {}
+                b = {"id": pt.get("id"), "name": pt.get("name") or alt.get("legalName")}
+                break
+    ocid = r.get("ocid")
+    if not ocid and r.get("id"):
+        # id = <ocid>-<progressivo>, es. ocds-hu01ve-CONSIP_RDO_5946238-01
+        ocid = re.sub(r"-\d+$", "", r["id"])
+    return {"ocid": ocid, "id": r.get("id"),
             "buyer": {"id": b.get("id"), "name": b.get("name")},
             "tender": {"mainProcurementCategory": t.get("mainProcurementCategory"),
                        "procurementMethodDetails": t.get("procurementMethodDetails")},
@@ -196,6 +211,14 @@ def transform_anac_month(json_path: Path, output_dir: Path) -> Path:
         )
         TO '{pq_tmp}' (FORMAT PARQUET, COMPRESSION ZSTD)
     """)
+    n_righe = duckdb.connect().execute(
+        f"SELECT COUNT(*) FROM read_parquet('{pq_tmp}')").fetchone()[0]
+    if n_rel > 0 and n_righe == 0:
+        # 06/10/2026: struttura 2025 diversa -> 0 righe da 269.275 rilasci,
+        # parquet vuoto salvato e JSON da 5 GB cancellato. Mai piu in silenzio.
+        pq_tmp.unlink(missing_ok=True)
+        raise RuntimeError(f"{json_path.name}: {n_rel} rilasci ma 0 affidamenti estratti "
+                           "(struttura OCDS cambiata?). JSON conservato")
     os.replace(pq_tmp, pq_path)        # un parquet a meta non deve essere riusato
     righe_path.unlink(missing_ok=True)
 

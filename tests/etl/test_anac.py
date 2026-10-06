@@ -48,3 +48,28 @@ def test_dedup_affidamenti_tra_mesi(tmp_path):
     b = (agg.get("data") or agg)["CF1"]
     assert b.get("count_total", b.get("count")) == 2      # due affidamenti, non cinque
     assert b["importo_totale"] == 170.0                    # versione piu recente di a1 (120) + 50
+
+
+def test_struttura_2025_senza_buyer_ne_ocid(tmp_path):
+    """Bulk 2025: ente nel soggetto di parties senza ruolo, ocid nell'id."""
+    rel = {"id": "ocds-hu01ve-CONSIP_RDO_5946238-01",
+           "awards": [{"id": "19297367", "status": "active", "date": "2025-12-29T12:00:00Z",
+                       "value": {"amount": 7258.51, "currency": "EUR"},
+                       "items": [{"classification": {"id": "44115210-4", "description": "IDRAULICA"},
+                                  "description": "MATERIALE IDRAULICO"}]}],
+           "parties": [{"id": "00802050153",
+                        "additionalIdentifiers": [{"legalName": "MINISTERO X", "scheme": "AUSA"}]},
+                       {"id": "00721560159", "name": "FORNITORE", "roles": ["supplier"]},
+                       {"id": "B804", "name": "PAGATORE", "roles": ["payer"]}]}
+    ridotta = A._riduci_release(rel)
+    assert ridotta["buyer"] == {"id": "00802050153", "name": "MINISTERO X"}
+    assert ridotta["ocid"] == "ocds-hu01ve-CONSIP_RDO_5946238"
+
+
+def test_zero_affidamenti_si_ferma_e_conserva_il_json(tmp_path):
+    import pytest
+    src = tmp_path / "2025-01.json"
+    src.write_text(json.dumps({"releases": [{"id": "x-01", "parties": []}]}))
+    with pytest.raises(RuntimeError, match="0 affidamenti"):
+        A.transform_anac_month(src, tmp_path)
+    assert src.exists() and not list(tmp_path.glob("*.parquet*"))
