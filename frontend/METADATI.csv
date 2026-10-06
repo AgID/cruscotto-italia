@@ -177,14 +177,14 @@ redditi,anni.<anno>.trattamento,Bonus/Trattamento integrativo (schema cambia tra
 redditi,anni.<anno>.tipologie,Distribuzione per tipologia reddito (lavoro dip/auton/pensione/altro),dict,MEF DF,annuale,https://www.finanze.gov.it/it/statistiche-fiscali/,CC BY 3.0
 redditi,anni.<anno>.fasce,Distribuzione per fascia di reddito (8 fasce),dict,MEF DF,annuale,https://www.finanze.gov.it/it/statistiche-fiscali/,CC BY 3.0
 redditi,trend,"Trend 5 anni reddito medio, contribuenti, imposta media",lista,MEF DF,serie storica,https://www.finanze.gov.it/it/statistiche-fiscali/,CC BY 3.0
-anac,buyer_name,Nome stazione appaltante,testo,ANAC,ultimi 12 mesi,https://dati.anticorruzione.it,CC BY 4.0
-anac,count,Numero aggiudicazioni contratti pubblici,numero,ANAC,ultimi 12 mesi,https://dati.anticorruzione.it,CC BY 4.0
-anac,importo_totale,Importo totale aggiudicazioni (euro),euro,ANAC,ultimi 12 mesi,https://dati.anticorruzione.it,CC BY 4.0
-anac,first_award_date,Data prima aggiudicazione nel periodo,data,ANAC,ultimi 12 mesi,https://dati.anticorruzione.it,CC BY 4.0
-anac,last_award_date,Data ultima aggiudicazione nel periodo,data,ANAC,ultimi 12 mesi,https://dati.anticorruzione.it,CC BY 4.0
-anac,distinct_cpv,Numero codici CPV distinti (categorie merceologiche),numero,ANAC,ultimi 12 mesi,https://dati.anticorruzione.it,CC BY 4.0
-anac,top_cpv,"Top 5 CPV per importo (code, desc, count, importo)",lista,ANAC,ultimi 12 mesi,https://dati.anticorruzione.it,CC BY 4.0
-anac,cpv,"Tutte le categorie CPV ordinate per importo (code, desc, count, importo)",lista,ANAC,ultimi 12 mesi,https://dati.anticorruzione.it,CC BY 4.0
+anac,buyer_name,Nome stazione appaltante,testo,ANAC,"ultimi 12 file mensili ANAC, deduplicati (periodo reale tra first_award_date e last_award_date)",https://dati.anticorruzione.it,CC BY 4.0
+anac,count,Numero aggiudicazioni contratti pubblici,numero,ANAC,"ultimi 12 file mensili ANAC, deduplicati (periodo reale tra first_award_date e last_award_date)",https://dati.anticorruzione.it,CC BY 4.0
+anac,importo_totale,Importo totale aggiudicazioni (euro),euro,ANAC,"ultimi 12 file mensili ANAC, deduplicati (periodo reale tra first_award_date e last_award_date)",https://dati.anticorruzione.it,CC BY 4.0
+anac,first_award_date,Data prima aggiudicazione nel periodo,data,ANAC,"ultimi 12 file mensili ANAC, deduplicati (periodo reale tra first_award_date e last_award_date)",https://dati.anticorruzione.it,CC BY 4.0
+anac,last_award_date,Data ultima aggiudicazione nel periodo,data,ANAC,"ultimi 12 file mensili ANAC, deduplicati (periodo reale tra first_award_date e last_award_date)",https://dati.anticorruzione.it,CC BY 4.0
+anac,distinct_cpv,Numero codici CPV distinti (categorie merceologiche),numero,ANAC,"ultimi 12 file mensili ANAC, deduplicati (periodo reale tra first_award_date e last_award_date)",https://dati.anticorruzione.it,CC BY 4.0
+anac,top_cpv,"Top 5 CPV per importo (code, desc, count, importo)",lista,ANAC,"ultimi 12 file mensili ANAC, deduplicati (periodo reale tra first_award_date e last_award_date)",https://dati.anticorruzione.it,CC BY 4.0
+anac,cpv,"Tutte le categorie CPV ordinate per importo (code, desc, count, importo)",lista,ANAC,"ultimi 12 file mensili ANAC, deduplicati (periodo reale tra first_award_date e last_award_date)",https://dati.anticorruzione.it,CC BY 4.0
 bdap_kpi,totale.count,Numero totale opere BDAP (storico complessivo),numero,BDAP MOP,cumulato storico,https://bdap-opendata.rgs.mef.gov.it,IODL 2.0
 bdap_kpi,totale.costo_lavori_eff,Costo effettivo lavori totale (euro),euro,BDAP MOP,cumulato,https://bdap-opendata.rgs.mef.gov.it,IODL 2.0
 bdap_kpi,totale.finanz_statali,Finanziamenti statali totali (euro),euro,BDAP MOP,cumulato,https://bdap-opendata.rgs.mef.gov.it,IODL 2.0

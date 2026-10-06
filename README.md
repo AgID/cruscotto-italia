@@ -110,16 +110,20 @@ Dettagli architetturali completi: [`DESIGN.md`](DESIGN.md) ·
 
 ### Cadenze ETL
 
+Orari in **ora italiana** (il cron della VM usa il fuso Europe/Rome), tranne il workflow ACI su GitHub Actions (UTC).
+
 | Cadenza | Fonti | Esecuzione | Trigger |
 |---|---|---|---|
-| **Bi-giornaliero** (03:30 e 14:30 UTC) | ItaliaMeteo ICON-2I previsioni meteo (corse 00 e 12 UTC) | cron VM AgID | automatico |
-| **Daily** (08:00 UTC) | PUN punti ricarica, MIMIT carburanti, dashboard rebuild | cron VM AgID | automatico |
-| **Weekly** (lunedì 04:00 UTC) | ANAC OCDS (ultimi 12 mesi pubblicati), PNRR, sanità MdS, RUNTS, dashboard | cron VM AgID | automatico |
-| **Monthly** (5° del mese 04:00 UTC) | anagrafica, BDAP-MOP, SIOPE, ANNCSU, AGCOM banda larga (08:00 UTC), beni culturali (ArCo + Cultural-ON) | cron VM AgID | automatico |
-| **Annual** (1 feb / 1 apr / 1 lug, 04:00 UTC) | demografia POSAS e bilancio demografico, profilo Censimento, aria, ASIA, turismo, territorio, veicoli (CSV ACI da GitHub Actions), redditi IRPEF, immobili PA | cron VM AgID | automatico |
-| **Annual** (5 settembre, 04:00 UTC) | scuole MIUR (anno scolastico appena iniziato) | cron VM AgID | automatico |
-| **Semestrale** (1 marzo / 1 settembre, 03:00 UTC) | cartografia catastale AGE (particelle + fogli, 19 regioni) | cron VM AgID | automatico |
-| **Semestrale** (sentinella giornaliera 03:00 UTC) | quotazioni OMI AGE (zone + perimetri): `omi_semestrale.sh` interroga ogni giorno l'elenco dei semestri pubblicati e avvia la raccolta solo quando ne compare uno nuovo (l'Agenzia pubblica entro il 15 marzo e il 15 ottobre, senza data fissa) | cron VM AgID | automatico |
+| **Giornaliera** (07:45, 08:00, 10:30 e 15:30) | sanità MdS (farmacie, parafarmacie, posti letto), PUN punti ricarica, MIMIT carburanti (con ripasso pomeridiano) | cron VM AgID | automatico |
+| **Giornaliera** (05:00, 11:00, 16:00, 22:00) | ItaliaMeteo ICON-2I previsioni meteo | cron VM AgID | automatico |
+| **Giornaliera** (11:00 e 16:00) | dashboard rebuild (aggregato di tutte le sezioni) | cron VM AgID | automatico |
+| **Giornaliera** (09:30) | freshness check: esecuzione degli ETL e periodo del dato per fonte | cron VM AgID | automatico |
+| **Settimanale** (lunedì 04:00-06:00) | ANAC OCDS (affidamenti degli ultimi 12 file mensili pubblicati, deduplicati), PNRR, RUNTS, SIOPE, dashboard | cron VM AgID | automatico |
+| **Mensile** (giorno 5, 04:00-08:40) | anagrafica, BDAP-MOP, SIOPE, ANNCSU, AGCOM banda larga, Cultural-ON, beni culturali, dashboard | cron VM AgID | automatico |
+| **Annuale** (1 feb / 1 apr / 1 lug, 04:00-14:00) | demografia POSAS e bilancio demografico, profilo Censimento, aria, ASIA, turismo, classificazione sismica, territorio, veicoli (CSV ACI da GitHub Actions), redditi IRPEF, immobili PA, dashboard | cron VM AgID | automatico |
+| **Annuale** (5 settembre, 04:00) | scuole MIUR (anno scolastico appena iniziato) | cron VM AgID | automatico |
+| **Semestrale** (controllo il 1° di ogni mese, 03:00) | cartografia catastale AGE (particelle + fogli, 19 regioni): scarica solo se le dimensioni dei file AGE sono cambiate | cron VM AgID | automatico |
+| **Semestrale** (sentinella giornaliera 03:20) | quotazioni OMI AGE (zone + perimetri): `omi_semestrale.sh` interroga ogni giorno l'elenco dei semestri pubblicati e avvia la raccolta solo quando ne compare uno nuovo (l'Agenzia pubblica entro il 15 marzo e il 15 ottobre, senza data fissa) | cron VM AgID | automatico |
 | **Decennale** (manuale, prossimo 2031) | censimento Basi Territoriali (sezioni + 119 vars) | run manuale `python -m etl.sources.censimento` su VM | `workflow_dispatch` |
 | **ACI su Actions** (1 feb / 1 apr / 1 lug, 04:00 UTC) | CSV prime iscrizioni ACI LOD, scaricati poi dalla VM con `fetch_aci_artifact.py` | GitHub Actions `ubuntu-latest` | `schedule` + `workflow_dispatch` |
 | **Riserva manuale** | istat_profilo, asia, pendolarismo | GitHub Actions `ubuntu-latest` | `workflow_dispatch` |

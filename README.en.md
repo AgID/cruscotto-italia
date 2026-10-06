@@ -112,17 +112,21 @@ Full architectural details: [`DESIGN.md`](DESIGN.md) ·
 
 ### ETL schedule
 
-| Cadence | Sources | Runner | Trigger |
+Times in **Italian time** (the VM cron uses the Europe/Rome time zone), except the ACI workflow on GitHub Actions (UTC).
+
+| Cadence | Sources | Execution | Trigger |
 |---|---|---|---|
-| **Twice daily** (03:30 and 14:30 UTC) | ItaliaMeteo ICON-2I weather forecasts (00 and 12 UTC runs) | AgID VM cron | automatic |
-| **Daily** (08:00 UTC) | PUN charging points, MIMIT fuel prices, dashboard rebuild | AgID VM cron | automatic |
-| **Weekly** (Monday 04:00 UTC) | ANAC OCDS (last 12 published months), NRRP, Ministry of Health, RUNTS, dashboard | AgID VM cron | automatic |
-| **Monthly** (5th of the month, 04:00 UTC) | registry, BDAP-MOP, SIOPE, ANNCSU, AGCOM broadband (08:00 UTC), cultural heritage (ArCo + Cultural-ON) | AgID VM cron | automatic |
-| **Annual** (1 Feb / 1 Apr / 1 Jul, 04:00 UTC) | POSAS demographics and population balance, census profile, air quality, ASIA, tourism, territory, vehicles (ACI CSVs from GitHub Actions), IRPEF income, public real estate | AgID VM cron | automatic |
-| **Annual** (5 September, 04:00 UTC) | MIUR schools (school year just started) | AgID VM cron | automatic |
-| **Six-monthly** (1 March / 1 September, 03:00 UTC) | Revenue Agency cadastral cartography (parcels + sheets, 19 regions) | AgID VM cron | automatic |
-| **Six-monthly** (daily sentinel at 03:00 UTC) | Revenue Agency OMI property values (zones + boundaries): `omi_semestrale.sh` polls the list of published half-years daily and starts the harvest only when a new one appears (the Agency publishes by 15 March and 15 October, with no fixed date) | AgID VM cron | automatic |
-| **Decennial** (manual, next 2031) | census Territorial Bases (enumeration areas + 127 variables) | manual run `python -m etl.sources.censimento` on the VM | `workflow_dispatch` |
+| **Daily** (07:45, 08:00, 10:30 and 15:30) | Ministry of Health (pharmacies, para-pharmacies, hospital beds), PUN charging points, MIMIT fuel prices (with an afternoon retry) | AgID VM cron | automatic |
+| **Daily** (05:00, 11:00, 16:00, 22:00) | ItaliaMeteo ICON-2I weather forecasts | AgID VM cron | automatic |
+| **Daily** (11:00 and 16:00) | dashboard rebuild (aggregate of all sections) | AgID VM cron | automatic |
+| **Daily** (09:30) | freshness check: ETL runs and data period per source | AgID VM cron | automatic |
+| **Weekly** (Monday 04:00-06:00) | ANAC OCDS (awards in the last 12 published monthly files, deduplicated), NRRP, RUNTS, SIOPE, dashboard | AgID VM cron | automatic |
+| **Monthly** (day 5, 04:00-08:40) | registry, BDAP-MOP, SIOPE, ANNCSU, AGCOM broadband, Cultural-ON, cultural heritage, dashboard | AgID VM cron | automatic |
+| **Annual** (1 Feb / 1 Apr / 1 Jul, 04:00-14:00) | POSAS demographics and population balance, census profile, air quality, ASIA, tourism, seismic classification, territory, vehicles (ACI CSVs from GitHub Actions), IRPEF income, public real estate, dashboard | AgID VM cron | automatic |
+| **Annual** (5 September, 04:00) | MIUR schools (school year just started) | AgID VM cron | automatic |
+| **Six-monthly** (check on the 1st of each month, 03:00) | AGE cadastral maps (parcels + sheets, 19 regions): downloads only when AGE file sizes change | AgID VM cron | automatic |
+| **Six-monthly** (daily sentinel 03:20) | AGE OMI quotations (zones + perimeters): `omi_semestrale.sh` checks the published semesters every day and starts the collection only when a new one appears (published by 15 March and 15 October, no fixed date) | AgID VM cron | automatic |
+| **Ten-yearly** (manual, next 2031) | census Basi Territoriali (sections + 119 vars) | manual run `python -m etl.sources.censimento` on the VM | `workflow_dispatch` |
 | **ACI on Actions** (1 Feb / 1 Apr / 1 Jul, 04:00 UTC) | ACI LOD first-registration CSVs, then fetched by the VM with `fetch_aci_artifact.py` | GitHub Actions `ubuntu-latest` | `schedule` + `workflow_dispatch` |
 | **Manual fallback** | istat_profilo, asia, pendolarismo | GitHub Actions `ubuntu-latest` | `workflow_dispatch` |
 
