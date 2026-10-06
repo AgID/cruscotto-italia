@@ -25,7 +25,7 @@ Searching for a municipality ("Lecce") returns a 360° view of:
 - 🏨 **Tourism** (ISTAT accommodation capacity + provincial flows)
 - 🏫 **Schools** (MIUR — registry of state schools)
 - 👶 **Demographic dynamics** (ISTAT D7B — monthly demographic balance: births, deaths, natural and migration balance, source ANPR)
-- 🌫️ **Air quality** (ISPRA SNPA — PM10/PM2.5/NO2 per station: historical series + Environmental Data Yearbook for recent years)
+- 🌫️ **Air quality** (ISPRA SNPA — PM10/PM2.5/NO2 per station: ISPRA historical series, Environmental Data Yearbook, SNPA preliminary tables for years not yet consolidated)
 - 🏞️ **Land and territory** (ISPRA — land consumption, IdroGEO landslides and floods, municipal waste)
 - 🌋 **Seismic classification** (Civil Protection Department)
 - ⛰️ **Terrain morphology** (CNR-IRPI — 5 m HR-DTM: elevation, slope, aspect, geomorphology, solar irradiance)

@@ -11880,10 +11880,15 @@ function renderAriaContent(data) {
 
   const badge = document.querySelector('[data-tab-aria-n]');
   if (badge) badge.textContent = data.n_stazioni;
+  const annoDati = data._anno_dati || u.anno;
+  const preliminari = data._anni_preliminari || [];
+  const prelTrend = (trend.anni || []).filter(a => preliminari.includes(a));
+  const fonti = (data._fonti && data._fonti.length) ? data._fonti : [
+    { nome: 'ISPRA - Banca dati indicatori ambientali', url: 'https://indicatoriambientali.isprambiente.it/it/qualita-dellaria', anni: [], natura: '' }];
 
   container.innerHTML = meteoHtml + `
     <div class="aria-meta">
-      <span class="aria-meta-item"><b>Anno dati</b> ${data._anno_dati || u.anno || '—'}</span>
+      <span class="aria-meta-item"><b>Anno dati</b> ${annoDati || '—'}${preliminari.includes(annoDati) ? ' (preliminare SNPA)' : ''}</span>
       <span class="aria-meta-item"><b>Stazioni</b> ${data.n_stazioni}</span>
       <span class="aria-meta-item"><b>Aggiornamento</b> ${data._aggiornamento_atteso || 'annuale'}</span>
     </div>
@@ -11897,7 +11902,7 @@ function renderAriaContent(data) {
 
     ${trend.anni && trend.anni.length ? `
       <h3 class="aria-h3">Trend decennale (media annua per stazione del comune)</h3>
-      <p class="aria-trend-note">Le concentrazioni sono in μg/m³ (media annua).</p>
+      <p class="aria-trend-note">Le concentrazioni sono in μg/m³ (media annua).${prelTrend.length ? ` Dati preliminari SNPA per ${prelTrend.join(' e ')}: potranno variare leggermente con la pubblicazione consolidata.` : ''}</p>
       <div class="aria-chart-wrap">
         <canvas id="aria-trend-chart" aria-label="Trend decennale PM10, PM2.5 e NO2" role="img"></canvas>
       </div>
@@ -11928,8 +11933,8 @@ function renderAriaContent(data) {
     ` : ''}
 
     <p class="aria-source">
-      Fonte: <a href="https://annuario.isprambiente.it/" target="_blank" rel="noopener">ISPRA Annuario dei dati ambientali</a>
-      · rete SNPA · ${data._source || ''}
+      Fonti: ${fonti.map(f => `<a href="${f.url}" target="_blank" rel="noopener">${f.nome}</a>${f.anni && f.anni.length ? ` (${f.intervallo ? f.anni[0] + '–' + f.anni[f.anni.length - 1] : f.anni.join(', ')}${f.natura ? ', ' + f.natura : ''})` : ''}`).join(' · ')}.
+      Rete di monitoraggio SNPA.
     </p>
   `;
 

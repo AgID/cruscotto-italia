@@ -48,7 +48,7 @@ Schema shard aria/<istat>.json (v0.1.0):
   "_source": "ISPRA SNPA - Qualita' dell'aria",
   "_generated_at": "ISO-8601",
   "_anno_dati": 2022,
-  "_aggiornamento_atteso": "annuale (dicembre dell'anno N+1, Annuario ISPRA)",
+  "_aggiornamento_atteso": "annuale: preliminare SNPA a marzo-aprile dell'anno N+1, consolidato Annuario ISPRA a dicembre",
   "istat_code": "001027",
   "n_stazioni": 1,
   "stazioni": [
@@ -162,6 +162,18 @@ FASCE: dict[str, list[float]] = {
     "pm25": [0, 5, 10, 15, 20, 25],
     "no2":  [0, 10, 20, 30, 40],
 }
+# Tabelle preliminari SNPA "<inquinante>: la situazione nel <anno>", pubblicate
+# a marzo-aprile dell'anno dopo (2023, 2024, 2025 verificati il 06/10/2026),
+# stesso schema dell'Annuario. Per l'NO2 il nome della pagina e cambiato.
+SNPA_BASE = "https://www.snpambiente.it"
+SNPA_PAGINE: dict[str, list[str]] = {
+    "pm10": ["pm10-la-situazione-nel-{anno}"],
+    "pm25": ["pm25-la-situazione-nel-{anno}"],
+    "no2":  ["no2-la-situazione-nel-{anno}", "biossido-di-azoto-la-situazione-nel-{anno}"],
+}
+# Valorizzati in main(): fonti usate e anni da tabelle preliminari
+FONTI: list[dict] = []
+ANNI_PRELIMINARI: list[int] = []
 _ZONA = {"U": "URBANA", "S": "SUBURBANA", "R": "RURALE"}
 _STAZ = {"F": "FONDO", "T": "TRAFFICO", "I": "INDUSTRIALE"}
 
@@ -384,6 +396,35 @@ def fetch_annuario(ink: str, no_cache: bool = False) -> tuple[Path, int] | None:
     return out, anno
 
 
+def fetch_snpa(ink: str, anno: int, no_cache: bool = False) -> Path | None:
+    """Tabella preliminare SNPA dell'anno per l'inquinante, None se assente."""
+    _, sigla = ANNUARIO_PAGINE[ink]
+    headers = {"User-Agent": "Mozilla/5.0 Cruscotto-Italia/1.0 (+https://cruscotto-italia.dati.gov.it)"}
+    out = CACHE_DIR / f"snpa_{ink}_{anno}.xlsx"
+    if out.exists() and not no_cache:
+        return out
+    rx = re.compile(r'href="([^"]*_' + str(anno) + "_" + sigla + r'_TABELLA[^"]*\.xlsx)"', re.I)
+    for modello in SNPA_PAGINE[ink]:
+        try:
+            r = requests.get(f"{SNPA_BASE}/{modello.format(anno=anno)}/", headers=headers, timeout=60)
+        except requests.RequestException as e:
+            log.warning("aria_snpa_pagina_ko", inquinante=ink, anno=anno, error=str(e)[:200])
+            continue
+        if r.status_code != 200:
+            continue
+        m = rx.search(r.text)
+        if not m:
+            continue
+        d = requests.get(m.group(1), headers=headers, timeout=120)
+        d.raise_for_status()
+        part = out.with_suffix(".xlsx.part")
+        part.write_bytes(d.content)
+        os.replace(part, out)
+        log.info("aria_snpa", inquinante=ink, anno=anno, url=m.group(1))
+        return out
+    return None
+
+
 def coordinate_storiche(data: dict[str, list[dict]]) -> dict[str, tuple[float, float]]:
     """station_eu_code -> (lat, lon) dalle serie storiche di tutti gli inquinanti."""
     coord: dict[str, tuple[float, float]] = {}
@@ -399,16 +440,25 @@ def parse_annuario(path: Path, ink: str, anno: int,
     """Righe della Tabella 1 nella stessa forma di parse_csv()."""
     import openpyxl
     ws = openpyxl.load_workbook(path, read_only=True, data_only=True).worksheets[0]
-    righe = list(ws.iter_rows(values_only=True))
-    h = [str(c or "").strip().lower() for c in righe[0]]
+    tutte = list(ws.iter_rows(values_only=True))
+
+    def norm(x) -> str:
+        return re.sub(r"\s+", " ", str(x or "").replace("_", " ")).strip().lower()
+
+    # Annuario: intestazione in riga 0; SNPA: in riga 1 dopo una nota
+    ih = next((k for k, r in enumerate(tutte) if r and any(norm(c) == "station eu code" for c in r)), None)
+    if ih is None:
+        raise RuntimeError(f"{path.name}: intestazione con station_eu_code non trovata")
+    righe = tutte[ih:]
+    h = [norm(c) for c in righe[0]]
 
     def col(prefisso: str) -> int | None:
         return next((i for i, x in enumerate(h) if x.startswith(prefisso)), None)
 
-    c = {"idc": col("id_comune"), "eu": col("station_eu_code"), "reg": col("regione"),
+    c = {"idc": col("id comune"), "eu": col("station eu code"), "reg": col("regione"),
          "prov": col("provincia"), "com": col("comune"), "nome": col("nome stazione"),
          "zona": col("tipo zona"), "staz": col("tipo stazione"), "media": col("valore medio annuo"),
-         "sup": col("giorni di superamento del valore limite giornaliero"),
+         "sup": col("giorni di superamento"),
          "n": col("numero di dati validi")}
     for k in ("idc", "eu", "media"):
         if c[k] is None:
@@ -589,9 +639,11 @@ def build_shards(
         shard = {
             "_etl_version": ETL_VERSION,
             "_source": "ISPRA SNPA - Qualita' dell'aria (Decisione UE 2011/850/EU)",
+            "_fonti": FONTI,
+            "_anni_preliminari": ANNI_PRELIMINARI,
             "_generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
             "_anno_dati": ANNO_RIFERIMENTO,
-            "_aggiornamento_atteso": "annuale (dicembre dell'anno N+1, Annuario ISPRA)",
+            "_aggiornamento_atteso": "annuale: preliminare SNPA a marzo-aprile dell'anno N+1, consolidato Annuario ISPRA a dicembre",
             "istat_code": istat,
             "regione": anag.get("regione"),
             "provincia": anag.get("provincia"),
@@ -826,18 +878,51 @@ def main() -> int:
         for ink, p in csv_paths.items():
             data[ink] = parse_csv(p)
 
-        # 2b. Anni successivi dall'Annuario ISPRA (le serie storiche sono ferme)
+        # 2b. Anni successivi alle serie storiche (ferme al 2022), per anno la
+        # fonte piu consolidata: serie storiche > Annuario ISPRA > tabelle
+        # preliminari SNPA. Le fonti usate finiscono nello shard (_fonti).
         coord = coordinate_storiche(data)
+        anni_fonte: dict[str, set[int]] = {"storiche": set(), "annuario": set(), "snpa": set()}
         for ink in INQUINANTI_URLS:
             if ink not in ANNUARIO_PAGINE:
                 continue
+            presenti = {r["anno"] for r in data[ink]}
+            anni_fonte["storiche"] |= presenti
+            ultimo_storico = max(presenti, default=0)
             esito = fetch_annuario(ink, no_cache=args.no_cache)
-            if esito is None:
-                continue
-            path, anno = esito
-            if anno <= max((r["anno"] for r in data[ink]), default=0):
-                continue                               # anno gia nelle serie storiche
-            data[ink].extend(parse_annuario(path, ink, anno, coord))
+            if esito is not None and esito[1] > ultimo_storico:
+                path, anno = esito
+                data[ink].extend(parse_annuario(path, ink, anno, coord))
+                presenti.add(anno)
+                anni_fonte["annuario"].add(anno)
+            for anno in range(ultimo_storico + 1, datetime.now(timezone.utc).year):
+                if anno in presenti:
+                    continue
+                f = fetch_snpa(ink, anno, no_cache=args.no_cache)
+                if f is None:
+                    continue
+                righe = parse_annuario(f, ink, anno, coord)
+                if righe:
+                    data[ink].extend(righe)
+                    anni_fonte["snpa"].add(anno)
+
+        global FONTI, ANNI_PRELIMINARI
+        ANNI_PRELIMINARI = sorted(anni_fonte["snpa"])
+        FONTI = [
+            {"nome": "ISPRA - Serie storiche delle statistiche di qualita dell'aria",
+             "url": "https://www.isprambiente.gov.it/it/banche-dati/banche-dati-folder/aria/qualita-dellaria",
+             "anni": [min(anni_fonte["storiche"]), max(anni_fonte["storiche"])],
+             "intervallo": True, "natura": "consolidati"},
+        ]
+        if anni_fonte["annuario"]:
+            FONTI.append({"nome": "ISPRA - Annuario dei dati ambientali (indicatori qualita dell'aria)",
+                          "url": ANNUARIO_BASE + "/it/qualita-dellaria",
+                          "anni": sorted(anni_fonte["annuario"]), "natura": "consolidati"})
+        if anni_fonte["snpa"]:
+            FONTI.append({"nome": "SNPA - La qualita dell'aria in Italia (tabelle per stazione)",
+                          "url": SNPA_BASE + "/temi/aria/",
+                          "anni": ANNI_PRELIMINARI, "natura": "preliminari"})
+        log.info("aria_fonti", fonti=[(f["nome"][:20], f["anni"]) for f in FONTI])
 
         # Anno di riferimento = anno piu recente presente nei dati
         global ANNO_RIFERIMENTO
