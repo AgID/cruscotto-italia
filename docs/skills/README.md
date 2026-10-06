@@ -11,7 +11,7 @@ l'intent dell'utente.
 
 ## Pacchetto corrente
 
-- **`cruscotto-italia-workflow-v2.10.0.zip`** — workflow del connettore MCP:
+- **`cruscotto-italia-workflow-v2.12.0.zip`** — workflow del connettore MCP:
   **6 tool** (`mcp_info`, `search_comune`, `comune_kpi` ~620 token con 55 KPI in
   24 gruppi tematici, `comune_dashboard` ~250K token con le sezioni dettagliate,
   `anncsu_civico_search`, `censimento_sezione_search`), **28 dataset** integrati
@@ -27,10 +27,16 @@ l'intent dell'utente.
   Versione 2.10.0: demografia POSAS+D7B con serie storica della popolazione e
   dinamica demografica (nati, morti, saldo naturale) in `comune_kpi` come
   scalari dell'ultimo anno, serie complete in `comune_dashboard`.
+  Versione 2.11.0: quotazioni immobiliari OMI per zona omogenea.
+  Versione 2.12.0: schema aggiornato dopo l'audit degli ETL del 05-06/10/2026.
+  Suolo con chiavi generiche (`stock_ultimo`, `suolo_consumato_pct` e
+  `suolo_consumato_anno`); aria con `_fonti` e `_anni_preliminari` (ultimo anno
+  anche da tabelle preliminari SNPA); ANAC sugli ultimi 12 mesi pubblicati con
+  affidamenti deduplicati; immobili PA con l'anno in `anno_rilevazione`.
 
 ## Skill CLI (eseguibile)
 
-- **`cruscotto-cli-v0.2.0.zip`** — a differenza dei pacchetti `cruscotto-italia-workflow`,
+- **`cruscotto-cli-v0.3.0.zip`** — a differenza dei pacchetti `cruscotto-italia-workflow`,
   questa skill **contiene codice eseguibile** (`scripts/cruscotto.py`, solo stdlib
   Python 3) e non documenta il connettore MCP: interroga direttamente gli shard
   JSON statici, via HTTPS pubblico oppure da filesystem locale
@@ -60,6 +66,10 @@ l'intent dell'utente.
   provinciali e vieta di ricostruirli scaricando interi territori.
   Versione 0.2.0: allineamento alla skill workflow 2.10.0 (serie storica e
   dinamica demografica).
+  Versione 0.3.0: quotazioni immobiliari OMI. Compatibile con la workflow
+  2.12.0: la CLI legge gli shard senza riferimenti ai campi rinominati.
+
+- `cruscotto-cli-v0.2.0.zip` (storico)
 
 - `cruscotto-cli-v0.1.5.zip` (storico)
 
@@ -77,6 +87,8 @@ l'intent dell'utente.
 
 Le versioni precedenti restano disponibili per audit:
 
+- `cruscotto-italia-workflow-v2.11.0.zip`
+- `cruscotto-italia-workflow-v2.10.0.zip`
 - `cruscotto-italia-workflow-v2.9.1.zip`
 
 - `cruscotto-italia-workflow-v2.5.0.zip`
