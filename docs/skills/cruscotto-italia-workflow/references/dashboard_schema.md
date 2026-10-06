@@ -86,9 +86,9 @@ Fonte: Italia Domani / Sistema ReGiS. Solo progetti dove il comune è Soggetto A
 
 Fonti: ISPRA SNPA (suolo), ISPRA IdroGEO (rischio), ISPRA Catasto Rifiuti, Dipartimento Protezione Civile (classificazione sismica).
 
-- `kpi` — headline: `ar_kmq`, `suolo_consumato_2024_pct`, `incremento_2024_ha`, `popolazione_frane_p3p4_pct`, `rd_pct_ultimo_anno`, `kg_per_abitante_ultimo_anno`
+- `kpi` — headline: `ar_kmq`, `suolo_consumato_pct` + `suolo_consumato_anno` (anno dell'edizione ISPRA), `incremento_ultimo_ha`, `popolazione_frane_p3p4_pct`, `rd_pct_ultimo_anno`, `kg_per_abitante_ultimo_anno`
 - `suolo`
-  - `stock_2024` — `ha` e `pct`
+  - `stock_ultimo` — `anno`, `ha`, `pct` (ultima edizione ISPRA). Le chiavi storiche `stock_2024`, `suolo_consumato_2024_pct`, `incremento_2024_ha` sono valorizzate solo finché il dato è del 2024: usare le chiavi generiche
   - `serie_storica` — array di intervalli (2006-2012, 2012-2015, ..., 2023-2024) con `netto_ha` e `ripristino_ha`
 - `rischio_idrogeologico`
   - `alluvioni` — per classe pericolosità (P1, P2, P3): area kmq e pct, popolazione esposta, famiglie, edifici, imprese, beni culturali
@@ -165,9 +165,14 @@ Fonte: MIUR DS0400SCUANAGRAFESTAT + DS0420SCUANAAUTSTAT.
 
 ## `aria`
 
-Fonte: ISPRA SNPA. Disponibile per ~604 comuni con stazioni. **Spesso `null`** — controllare sempre prima.
+Fonte: ISPRA SNPA. Disponibile per ~600 comuni con stazioni. **Spesso `null`** — controllare sempre prima.
 
 Quando presente: dati monitoraggio PM10, PM2.5, NO2 con lista stazioni e misure.
+
+- `_anno_dati` — ultimo anno disponibile; `ultimo_anno` — medie e superamenti di quell'anno
+- `trend_decennale` — `anni`, `pm10_media`, `pm25_media`, `no2_media` (null dove manca il dato)
+- `_anni_preliminari` — anni da tabelle **preliminari** SNPA ("la situazione nel <anno>", pubblicate a marzo-aprile dell'anno dopo): possono variare con la pubblicazione consolidata. Citarli come preliminari
+- `_fonti` — array `nome`, `url`, `anni`, `natura` (`consolidati`/`preliminari`): per ogni anno vale la fonte più consolidata (serie storiche ISPRA > Annuario ISPRA > tabelle SNPA)
 
 ## `veicoli` — nota: gli incidenti stanno qui
 
@@ -209,12 +214,12 @@ Fonte: MEF Dipartimento delle Finanze — dichiarazioni IRPEF su base comunale. 
 
 ## `immobili_pa`
 
-Fonte: MEF Dipartimento Economia — Censimento Beni Immobili Pubblici al 31/12/2022. Licenza: CC BY 4.0.
+Fonte: MEF Dipartimento Economia — Censimento Beni Immobili Pubblici, ultima rilevazione pubblicata (anno in `anno_rilevazione`). Licenza: CC BY 4.0.
 
-**Caveat**: snapshot statico 2022. Su comuni piccoli senza beni dichiarati può essere `null`.
+**Caveat**: rilevazione annuale al 31/12 con ~2 anni di ritardo. Su comuni senza beni dichiarati nell'ultima rilevazione è `null`.
 
-- `_etl_version`, `_source` (`"MEF DE - Beni Immobili Pubblici 2022"`), `_generated_at`
-- `anno_rilevazione` — `2022`
+- `_etl_version`, `_source` (`"MEF DE - Beni Immobili Pubblici <anno>"`), `_generated_at`
+- `anno_rilevazione` — anno della rilevazione (es. `2023`)
 - `kpi`
   - `n_totale` — totale immobili dichiarati
   - `n_fabbricati`, `n_terreni`
@@ -551,7 +556,7 @@ NON è incluso nello shard `dashboard/<istat>.json`: per il calcolo `delta_vs_na
 
 ## `anac`
 
-Fonte: ANAC contratti pubblici (CC BY 4.0).
+Fonte: ANAC contratti pubblici, bulk mensili OCDS (CC BY 4.0). Finestra: gli ultimi 12 mesi **effettivamente pubblicati** da ANAC (alcuni mesi del catalogo non sono scaricabili, quindi non sono necessariamente consecutivi); i mesi usati sono in `_period_files` dell'aggregato. Ogni affidamento (`ocid` + `award_id`) conta una sola volta anche se compare in più mesi.
 
 - `buyer_name` — nome comune come appare in ANAC
 - `count` — numero aggiudicazioni

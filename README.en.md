@@ -207,7 +207,7 @@ municipalities). For usage patterns and examples see the Claude MCP skill
 A Claude skill documents how to use the connector (inventory of the 6 tools,
 `comune_dashboard` schema, operational patterns and per-section caveats, REST
 access to the cadastral cartography). Current version:
-`https://cruscotto-italia.dati.gov.it/data/skills/cruscotto-italia-workflow-v2.10.0.zip`.
+`https://cruscotto-italia.dati.gov.it/data/skills/cruscotto-italia-workflow-v2.12.0.zip`.
 `cruscotto-cli-v0.2.0.zip` is also available: an executable skill that queries
 the static JSON shards directly without going through the MCP server (full
 list with history in `docs/skills/README.md`).

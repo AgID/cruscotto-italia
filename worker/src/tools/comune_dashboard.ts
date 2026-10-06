@@ -16,7 +16,7 @@
  *   - territorio/<istat>.json
  *   - bdap/dettaglio/<istat>.json    (opere)
  *   - siope/<istat>.json             (SIOPE: pagamenti + incassi + saldo di cassa)
- *   - immobili_pa/<istat>.json     (MEF DE - Beni Immobili Pubblici 2022)
+ *   - immobili_pa/<istat>.json     (MEF DE - Beni Immobili Pubblici, ultima rilevazione)
  *   - anncsu/<istat>.json          (Agenzia Entrate + ISTAT - ANNCSU strade
  *                                   e numeri civici certificati, sample 1000
  *                                   punti geo-ref. Full su anncsu_full/ via
@@ -112,8 +112,8 @@
  *                                         // Sono movimenti di CASSA, non di competenza:
  *                                         // il saldo di cassa NON e un avanzo di bilancio.
  *     "anac":        { ... } | null,
- *     "immobili_pa": { ... } | null    // MEF DE - Beni Immobili Pubblici 2022:
- *                                       //   { anno_rilevazione: 2022,
+ *     "immobili_pa": { ... } | null    // MEF DE - Beni Immobili Pubblici (ultima rilevazione):
+ *                                       //   { anno_rilevazione: <anno>,
  *                                       //     kpi: { n_totale, n_fabbricati, n_terreni,
  *                                       //            pct_geo_referenziati,
  *                                       //            pct_vincolo_qualsiasi, pct_vincolo_culturale,
