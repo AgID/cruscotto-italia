@@ -24,7 +24,9 @@ FONTI ORIGINARIE E LORO LICENZE
 - SIOPE (MEF — Ragioneria Generale dello Stato;
   banca dati gestita da Banca d'Italia, siope.it) .... CC BY 4.0
 - Italia Domani (PNRR — Presidenza del Consiglio) .... CC BY 4.0
-- ISPRA (Suolo, IdroGEO, Catasto Rifiuti, SNPA Aria) . CC BY 4.0
+- ISPRA / SNPA (Suolo, IdroGEO, Catasto Rifiuti,
+  qualità dell'aria: serie storiche, Annuario e
+  tabelle preliminari SNPA) ......................... CC BY 4.0
 - ISTAT (POSAS, Censimento, Turismo, Incidenti,
   ASIA UL - Archivio Statistico Imprese Attive
   Unita' Locali, Matrice pendolarismo lavoro 2021,
@@ -32,9 +34,9 @@ FONTI ORIGINARIE E LORO LICENZE
   del Censimento permanente con 127 variabili per
   sezione di censimento) ............................. CC BY 3.0 IT
 - MIUR (Anagrafe Scuole) ............................. CC BY 4.0
-- ACI (Parco veicolare — LOD) ........................ CC BY 4.0
+- ACI (Prime iscrizioni autovetture — LOD) ........... CC BY 4.0
 - MEF Dipartimento Finanze (Redditi IRPEF) ........... CC BY 3.0
-- MEF Dip. Entrate (Beni Immobili Pubblici 2022) ..... CC BY 4.0
+- MEF Dip. Economia (Beni Immobili Pubblici) ........ CC BY 4.0
 - Agenzia Entrate + ISTAT (ANNCSU - civici e strade) . Open Data UE
                                                        2023/138 (HVD)
 - Ministero della Salute (Farmacie, parafarm., osp.) . IODL 2.0

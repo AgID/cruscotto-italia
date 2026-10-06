@@ -62,12 +62,12 @@ pnrr,kpi.n_missioni_distinte,Numero missioni PNRR distinte coinvolte,numero,Ital
 pnrr,per_missione,Aggregato finanziamenti per missione M1-M6,lista,Italia Domani ReGiS,corrente,https://italiadomani.gov.it,CC BY 4.0
 pnrr,progetti,"Lista completa progetti (cup, titolo, missione, finanziamento)",lista,Italia Domani ReGiS,corrente,https://italiadomani.gov.it,CC BY 4.0
 territorio,kpi.ar_kmq,Superficie comunale in kmq,kmq,ISPRA,corrente,https://www.isprambiente.gov.it,CC BY 4.0
-territorio,kpi.suolo_consumato_2024_pct,Percentuale suolo consumato sull'area comunale,percentuale,ISPRA SNPA,annuale,https://www.isprambiente.gov.it,CC BY 4.0
-territorio,kpi.incremento_2024_ha,Incremento consumo suolo nell'ultimo anno (ettari),ettari,ISPRA SNPA,annuale,https://www.isprambiente.gov.it,CC BY 4.0
+territorio,kpi.suolo_consumato_2024_pct,"STORICA, valorizzata solo se il dato e del 2024: usare la chiave generica. Percentuale suolo consumato sull'area comunale",percentuale,ISPRA SNPA,annuale,https://www.isprambiente.gov.it,CC BY 4.0
+territorio,kpi.incremento_2024_ha,"STORICA, valorizzata solo se il dato e del 2024: usare la chiave generica. Incremento consumo suolo nell'ultimo anno (ettari)",ettari,ISPRA SNPA,annuale,https://www.isprambiente.gov.it,CC BY 4.0
 territorio,kpi.popolazione_frane_p3p4_pct,% popolazione in aree frane pericolosità P3+P4,percentuale,ISPRA IdroGEO,ultimo aggiornamento,https://idrogeo.isprambiente.it,CC BY 4.0
 territorio,kpi.rd_pct_ultimo_anno,Percentuale raccolta differenziata ultimo anno,percentuale,ISPRA Catasto Rifiuti,annuale,https://www.catasto-rifiuti.isprambiente.it,CC BY 4.0
 territorio,kpi.kg_per_abitante_ultimo_anno,Kg rifiuti urbani pro-capite ultimo anno,kg/ab,ISPRA Catasto Rifiuti,annuale,https://www.catasto-rifiuti.isprambiente.it,CC BY 4.0
-territorio,suolo.stock_2024,Stock consumo suolo ultimo anno (ha e %),dict,ISPRA SNPA,annuale,https://www.isprambiente.gov.it,CC BY 4.0
+territorio,suolo.stock_2024,"STORICA, valorizzata solo se il dato e del 2024: usare la chiave generica. Stock consumo suolo ultimo anno (ha e %)",dict,ISPRA SNPA,annuale,https://www.isprambiente.gov.it,CC BY 4.0
 territorio,suolo.serie_storica,Serie storica annuale consumo suolo,lista,ISPRA SNPA,serie storica,https://www.isprambiente.gov.it,CC BY 4.0
 territorio,rischio_idrogeologico.alluvioni,Aree e popolazione esposte ad alluvioni P1/P2/P3,dict,ISPRA IdroGEO,v5.0 (2020),https://idrogeo.isprambiente.it,CC BY 4.0
 territorio,rischio_idrogeologico.frane,Aree e popolazione esposte a frane P1/P2/P3/P4,dict,ISPRA IdroGEO,v5.0 (2020),https://idrogeo.isprambiente.it,CC BY 4.0
@@ -78,6 +78,10 @@ territorio,rifiuti.serie_storica,Serie storica annuale rifiuti urbani,lista,ISPR
 territorio,geo.ar_kmq,Area kmq dato cartografico OSM,kmq,OpenStreetMap,corrente,https://www.openstreetmap.org,ODbL
 territorio,geo.osmid,ID OpenStreetMap della relazione comunale,codice,OpenStreetMap,corrente,https://www.openstreetmap.org,ODbL
 territorio,geo.extent,Bounding box geografica del comune,lista,OpenStreetMap,corrente,https://www.openstreetmap.org,ODbL
+territorio,kpi.suolo_consumato_pct,Percentuale di suolo consumato sull'area comunale (ultima edizione ISPRA),percentuale,ISPRA SNPA,annuale,https://www.isprambiente.gov.it,CC BY 4.0
+territorio,kpi.suolo_consumato_anno,Anno di riferimento del consumo di suolo,anno,ISPRA SNPA,annuale,https://www.isprambiente.gov.it,CC BY 4.0
+territorio,kpi.incremento_ultimo_ha,Incremento del consumo di suolo nell'ultimo intervallo (ettari),ettari,ISPRA SNPA,annuale,https://www.isprambiente.gov.it,CC BY 4.0
+territorio,suolo.stock_ultimo,"Stock di suolo consumato: anno, ettari e percentuale (ultima edizione ISPRA)",dict,ISPRA SNPA,annuale,https://www.isprambiente.gov.it,CC BY 4.0
 opere,n_progetti,Numero totale opere pubbliche BDAP (CHIUSI dal 2023 + ATTIVI),numero,BDAP MOP,annuale,https://bdap-opendata.rgs.mef.gov.it,IODL 2.0
 opere,progetti,"Lista completa opere (cup, descrizione, stato, costi, finanziamenti)",lista,BDAP MOP,annuale,https://bdap-opendata.rgs.mef.gov.it,IODL 2.0
 opere,progetti[].cup,Codice Unico di Progetto,codice,BDAP MOP,annuale,https://bdap-opendata.rgs.mef.gov.it,IODL 2.0
@@ -90,6 +94,7 @@ opere,progetti[].fin_europei,Finanziamenti europei (euro),euro,BDAP MOP,annuale,
 opere,progetti[].fin_enti_terr,Finanziamenti enti territoriali (euro),euro,BDAP MOP,annuale,https://bdap-opendata.rgs.mef.gov.it,IODL 2.0
 opere,progetti[].fin_privati,Finanziamenti privati (euro),euro,BDAP MOP,annuale,https://bdap-opendata.rgs.mef.gov.it,IODL 2.0
 opere,progetti[].fin_altri,Altri finanziamenti (euro),euro,BDAP MOP,annuale,https://bdap-opendata.rgs.mef.gov.it,IODL 2.0
+opere,_data_download,Giorno del download dei dati da BDAP (data del dato),data,BDAP MOP,mensile,https://bdap-opendata.rgs.mef.gov.it,IODL 2.0
 siope,anni_disponibili,Anni di rendicontazione disponibili,lista,MEF-RGS SIOPE (siope.it),mensile cumulato,https://www.siope.it/,CC BY 4.0
 siope,anno_default,Anno predefinito mostrato dal frontend,numero,Cruscotto Italia,corrente,{{SITE_URL}},CC BY 4.0
 siope,per_anno.<anno>.parziale,True se anno in corso (dati non completi),boolean,MEF-RGS SIOPE (siope.it),corrente,https://www.siope.it/,CC BY 4.0
@@ -118,7 +123,7 @@ scuole,scuole[].tipologia,Tipologia scuola (es. SCUOLA INFANZIA),enum,MIUR,annua
 scuole,scuole[].indirizzo,Indirizzo scolastico,testo,MIUR,annuale,https://dati.mim.gov.it,CC BY 4.0
 scuole,scuole[].email,Email scuola,email,MIUR,annuale,https://dati.mim.gov.it,CC BY 4.0
 scuole,scuole[].sede_direttivo,True se sede direttivo,boolean,MIUR,annuale,https://dati.mim.gov.it,CC BY 4.0
-aria,_anno_dati,Anno di riferimento dei dati qualità aria,anno,ISPRA SNPA,annuale (N+2),https://www.isprambiente.gov.it,CC BY 4.0
+aria,_anno_dati,"Ultimo anno con dati (puo essere preliminare SNPA, vedi _anni_preliminari)",anno,ISPRA SNPA,"annuale: preliminare SNPA a marzo-aprile N+1, consolidato a dicembre N+1",https://www.isprambiente.gov.it,CC BY 4.0
 aria,n_stazioni,Numero stazioni di monitoraggio nel comune,numero,ISPRA SNPA,annuale,https://www.isprambiente.gov.it,CC BY 4.0
 aria,stazioni,Lista stazioni con coordinate e classificazione,lista,ISPRA SNPA,annuale,https://www.isprambiente.gov.it,CC BY 4.0
 aria,stazioni[].station_eu_code,Codice europeo stazione (es. IT1614A),codice,ISPRA SNPA,annuale,https://www.isprambiente.gov.it,CC BY 4.0
@@ -136,6 +141,8 @@ aria,ultimo_anno.no2.n_stazioni_oltre_limite_legge,Stazioni oltre limite legge (
 aria,ultimo_anno.no2.n_stazioni_oltre_limite_oms,Stazioni oltre limite OMS (10 ug/m3),numero,ISPRA SNPA,annuale,https://www.isprambiente.gov.it,CC BY 4.0
 aria,trend_decennale,Serie storica 10 anni medie PM10/PM2.5/NO2,dict,ISPRA SNPA,serie storica,https://www.isprambiente.gov.it,CC BY 4.0
 aria,stazioni_dettaglio,Dettaglio per stazione di tutti gli anni,lista,ISPRA SNPA,serie storica,https://www.isprambiente.gov.it,CC BY 4.0
+aria,_anni_preliminari,"Anni con dati da tabelle preliminari SNPA, che possono variare con la pubblicazione consolidata",lista,SNPA,annuale,https://www.snpambiente.it/temi/aria/,CC BY 4.0
+aria,_fonti,"Fonti usate per anno: nome, url, anni, natura (consolidati/preliminari)",lista,ISPRA SNPA,annuale,https://indicatoriambientali.isprambiente.it/it/qualita-dellaria,CC BY 4.0
 veicoli,popolazione,Popolazione di riferimento per tassi pro-capite,numero,ISTAT,annuale,https://demo.istat.it,CC BY 4.0
 veicoli,parco_veicoli.autovetture,Numero autovetture circolanti,numero,ACI LOD,31 dic,https://lod.aci.it,CC BY 4.0
 veicoli,parco_veicoli.autobus,Numero autobus circolanti,numero,ACI LOD,31 dic,https://lod.aci.it,CC BY 4.0
@@ -155,6 +162,11 @@ veicoli,iscrizioni.ultimo_anno.elettriche,Nuove iscrizioni veicoli elettrici,num
 veicoli,iscrizioni.ultimo_anno.ibride,Nuove iscrizioni veicoli ibridi,numero,ACI,annuale gen,https://lod.aci.it,CC BY 4.0
 veicoli,iscrizioni.ultimo_anno.pct_elettriche_ibride,% iscrizioni elettriche+ibride sul totale,percentuale,ACI,annuale gen,https://lod.aci.it,CC BY 4.0
 veicoli,iscrizioni.serie_storica,Serie storica 6 anni iscrizioni e quota elettriche/ibride,dict,ACI,serie storica,https://lod.aci.it,CC BY 4.0
+veicoli,_anno_dati_parco,Anno del parco veicolare ISTAT,anno,ISTAT,annuale,https://esploradati.istat.it,CC BY 4.0
+veicoli,_anno_dati_incidenti,Ultimo anno degli incidenti stradali ISTAT,anno,ISTAT,annuale,https://esploradati.istat.it,CC BY 4.0
+veicoli,_anno_dati_iscrizioni,Ultimo anno delle prime iscrizioni ACI,anno,ACI,annuale,https://lod.aci.it,CC BY 4.0
+veicoli,_stale_parco_veicoli,Presente se il parco non e stato riscaricato nell'ultimo run (fonte non raggiungibile): data del dato preservato,data,Cruscotto Italia,corrente,{{SITE_URL}},CC BY 4.0
+veicoli,_stale_incidenti,Presente se gli incidenti non sono stati riscaricati nell'ultimo run: data del dato preservato,data,Cruscotto Italia,corrente,{{SITE_URL}},CC BY 4.0
 redditi,anni_disponibili,Anni di imposta disponibili (tipicamente 2020-2024),lista,MEF DF,annuale,https://www.finanze.gov.it/it/statistiche-fiscali/,CC BY 3.0
 redditi,anni.<anno>.contribuenti,Numero contribuenti dichiarazione IRPEF,numero,MEF Dip. Finanze,annuale,https://www.finanze.gov.it/it/statistiche-fiscali/,CC BY 3.0
 redditi,anni.<anno>.reddito_complessivo,"Reddito complessivo (totale, medio, mediano, freq)",dict,MEF DF,annuale,https://www.finanze.gov.it/it/statistiche-fiscali/,CC BY 3.0
@@ -182,27 +194,27 @@ bdap_kpi,per_stato.CHIUSO,Aggregato opere chiuse,dict,BDAP MOP,cumulato,https://
 bdap_kpi,per_stato.ATTIVO,Aggregato opere attive,dict,BDAP MOP,cumulato,https://bdap-opendata.rgs.mef.gov.it,IODL 2.0
 bdap_kpi,top_settori,"Top 5 settori per costo (settore, count, costo)",lista,BDAP MOP,cumulato,https://bdap-opendata.rgs.mef.gov.it,IODL 2.0
 immobili_pa,_etl_version,Versione del pipeline ETL Patrimonio PA,testo,Cruscotto Italia,corrente,{{SITE_URL}},CC BY 4.0
-immobili_pa,_source,Sorgente originaria del dato,testo,MEF DE,31/12/2022,https://www.mef.gov.it/dipartimenti/entrate/patrimonio_immobiliare/,CC BY 4.0
+immobili_pa,_source,Sorgente originaria del dato,testo,MEF DE,ultima rilevazione (31/12),https://www.de.mef.gov.it/it/attivita_istituzionali/patrimonio_pubblico/censimento_immobili_pubblici/open_data_immobili/,CC BY 4.0
 immobili_pa,_generated_at,Timestamp ISO 8601 generazione shard,datetime,Cruscotto Italia,corrente,{{SITE_URL}},CC BY 4.0
-immobili_pa,anno_rilevazione,Anno di rilevazione del Censimento MEF,anno,MEF DE,31/12/2022,https://www.mef.gov.it/dipartimenti/entrate/patrimonio_immobiliare/,CC BY 4.0
-immobili_pa,kpi.n_totale,Numero totale immobili dichiarati (fabbricati + terreni),numero,MEF DE,31/12/2022,https://www.mef.gov.it/dipartimenti/entrate/patrimonio_immobiliare/,CC BY 4.0
-immobili_pa,kpi.n_fabbricati,Numero fabbricati dichiarati,numero,MEF DE,31/12/2022,https://www.mef.gov.it/dipartimenti/entrate/patrimonio_immobiliare/,CC BY 4.0
-immobili_pa,kpi.n_terreni,Numero terreni (particelle catastali) dichiarati,numero,MEF DE,31/12/2022,https://www.mef.gov.it/dipartimenti/entrate/patrimonio_immobiliare/,CC BY 4.0
-immobili_pa,kpi.pct_geo_referenziati,Percentuale immobili con coordinate geografiche,percentuale,MEF DE,31/12/2022,https://www.mef.gov.it/dipartimenti/entrate/patrimonio_immobiliare/,CC BY 4.0
-immobili_pa,kpi.pct_vincolo_qualsiasi,Percentuale immobili con vincolo qualsiasi (culturale o paesaggistico),percentuale,MEF DE,31/12/2022,https://www.mef.gov.it/dipartimenti/entrate/patrimonio_immobiliare/,CC BY 4.0
-immobili_pa,kpi.pct_vincolo_culturale,Percentuale immobili con vincolo culturale stretto,percentuale,MEF DE,31/12/2022,https://www.mef.gov.it/dipartimenti/entrate/patrimonio_immobiliare/,CC BY 4.0
-immobili_pa,kpi.pct_uso_terzi,Percentuale immobili dati in uso a soggetti terzi,percentuale,MEF DE,31/12/2022,https://www.mef.gov.it/dipartimenti/entrate/patrimonio_immobiliare/,CC BY 4.0
-immobili_pa,kpi.superficie_totale_mq,Superficie totale dichiarata (metri quadri),mq,MEF DE,31/12/2022,https://www.mef.gov.it/dipartimenti/entrate/patrimonio_immobiliare/,CC BY 4.0
-immobili_pa,kpi.mix_categoria,Conteggio immobili per ognuna delle 17 macro-categorie semantiche,dict,MEF DE,31/12/2022,https://www.mef.gov.it/dipartimenti/entrate/patrimonio_immobiliare/,CC BY 4.0
-immobili_pa,kpi.mix_natura,Conteggio per natura (FABBRICATO/TERRENO),dict,MEF DE,31/12/2022,https://www.mef.gov.it/dipartimenti/entrate/patrimonio_immobiliare/,CC BY 4.0
-immobili_pa,punti,Campione fino a 500 punti stratificati per categoria con lat/lon/cat/tipo/sup/vincolo/uso_terzi,lista,MEF DE,31/12/2022,https://www.mef.gov.it/dipartimenti/entrate/patrimonio_immobiliare/,CC BY 4.0
-immobili_pa,punti[].lat,Latitudine WGS84 (6 decimali ~11cm),coord,MEF DE,31/12/2022,https://www.mef.gov.it/dipartimenti/entrate/patrimonio_immobiliare/,CC BY 4.0
-immobili_pa,punti[].lon,Longitudine WGS84 (6 decimali ~11cm),coord,MEF DE,31/12/2022,https://www.mef.gov.it/dipartimenti/entrate/patrimonio_immobiliare/,CC BY 4.0
-immobili_pa,punti[].cat,Categoria semantica (vedi mix_categoria per chiavi),codice,MEF DE,31/12/2022,https://www.mef.gov.it/dipartimenti/entrate/patrimonio_immobiliare/,CC BY 4.0
-immobili_pa,punti[].tipo,Tipologia testuale dichiarata MEF,testo,MEF DE,31/12/2022,https://www.mef.gov.it/dipartimenti/entrate/patrimonio_immobiliare/,CC BY 4.0
-immobili_pa,punti[].sup,Superficie dichiarata (mq),mq,MEF DE,31/12/2022,https://www.mef.gov.it/dipartimenti/entrate/patrimonio_immobiliare/,CC BY 4.0
-immobili_pa,punti[].vincolo,Presenza di vincolo (true se diverso da Nessuno),boolean,MEF DE,31/12/2022,https://www.mef.gov.it/dipartimenti/entrate/patrimonio_immobiliare/,CC BY 4.0
-immobili_pa,punti[].uso_terzi,Immobile in uso a soggetti terzi,boolean,MEF DE,31/12/2022,https://www.mef.gov.it/dipartimenti/entrate/patrimonio_immobiliare/,CC BY 4.0
+immobili_pa,anno_rilevazione,Anno di rilevazione del Censimento MEF,anno,MEF DE,ultima rilevazione (31/12),https://www.de.mef.gov.it/it/attivita_istituzionali/patrimonio_pubblico/censimento_immobili_pubblici/open_data_immobili/,CC BY 4.0
+immobili_pa,kpi.n_totale,Numero totale immobili dichiarati (fabbricati + terreni),numero,MEF DE,ultima rilevazione (31/12),https://www.de.mef.gov.it/it/attivita_istituzionali/patrimonio_pubblico/censimento_immobili_pubblici/open_data_immobili/,CC BY 4.0
+immobili_pa,kpi.n_fabbricati,Numero fabbricati dichiarati,numero,MEF DE,ultima rilevazione (31/12),https://www.de.mef.gov.it/it/attivita_istituzionali/patrimonio_pubblico/censimento_immobili_pubblici/open_data_immobili/,CC BY 4.0
+immobili_pa,kpi.n_terreni,Numero terreni (particelle catastali) dichiarati,numero,MEF DE,ultima rilevazione (31/12),https://www.de.mef.gov.it/it/attivita_istituzionali/patrimonio_pubblico/censimento_immobili_pubblici/open_data_immobili/,CC BY 4.0
+immobili_pa,kpi.pct_geo_referenziati,Percentuale immobili con coordinate geografiche,percentuale,MEF DE,ultima rilevazione (31/12),https://www.de.mef.gov.it/it/attivita_istituzionali/patrimonio_pubblico/censimento_immobili_pubblici/open_data_immobili/,CC BY 4.0
+immobili_pa,kpi.pct_vincolo_qualsiasi,Percentuale immobili con vincolo qualsiasi (culturale o paesaggistico),percentuale,MEF DE,ultima rilevazione (31/12),https://www.de.mef.gov.it/it/attivita_istituzionali/patrimonio_pubblico/censimento_immobili_pubblici/open_data_immobili/,CC BY 4.0
+immobili_pa,kpi.pct_vincolo_culturale,Percentuale immobili con vincolo culturale stretto,percentuale,MEF DE,ultima rilevazione (31/12),https://www.de.mef.gov.it/it/attivita_istituzionali/patrimonio_pubblico/censimento_immobili_pubblici/open_data_immobili/,CC BY 4.0
+immobili_pa,kpi.pct_uso_terzi,Percentuale immobili dati in uso a soggetti terzi,percentuale,MEF DE,ultima rilevazione (31/12),https://www.de.mef.gov.it/it/attivita_istituzionali/patrimonio_pubblico/censimento_immobili_pubblici/open_data_immobili/,CC BY 4.0
+immobili_pa,kpi.superficie_totale_mq,Superficie totale dichiarata (metri quadri),mq,MEF DE,ultima rilevazione (31/12),https://www.de.mef.gov.it/it/attivita_istituzionali/patrimonio_pubblico/censimento_immobili_pubblici/open_data_immobili/,CC BY 4.0
+immobili_pa,kpi.mix_categoria,Conteggio immobili per ognuna delle 17 macro-categorie semantiche,dict,MEF DE,ultima rilevazione (31/12),https://www.de.mef.gov.it/it/attivita_istituzionali/patrimonio_pubblico/censimento_immobili_pubblici/open_data_immobili/,CC BY 4.0
+immobili_pa,kpi.mix_natura,Conteggio per natura (FABBRICATO/TERRENO),dict,MEF DE,ultima rilevazione (31/12),https://www.de.mef.gov.it/it/attivita_istituzionali/patrimonio_pubblico/censimento_immobili_pubblici/open_data_immobili/,CC BY 4.0
+immobili_pa,punti,Campione fino a 500 punti stratificati per categoria con lat/lon/cat/tipo/sup/vincolo/uso_terzi,lista,MEF DE,ultima rilevazione (31/12),https://www.de.mef.gov.it/it/attivita_istituzionali/patrimonio_pubblico/censimento_immobili_pubblici/open_data_immobili/,CC BY 4.0
+immobili_pa,punti[].lat,Latitudine WGS84 (6 decimali ~11cm),coord,MEF DE,ultima rilevazione (31/12),https://www.de.mef.gov.it/it/attivita_istituzionali/patrimonio_pubblico/censimento_immobili_pubblici/open_data_immobili/,CC BY 4.0
+immobili_pa,punti[].lon,Longitudine WGS84 (6 decimali ~11cm),coord,MEF DE,ultima rilevazione (31/12),https://www.de.mef.gov.it/it/attivita_istituzionali/patrimonio_pubblico/censimento_immobili_pubblici/open_data_immobili/,CC BY 4.0
+immobili_pa,punti[].cat,Categoria semantica (vedi mix_categoria per chiavi),codice,MEF DE,ultima rilevazione (31/12),https://www.de.mef.gov.it/it/attivita_istituzionali/patrimonio_pubblico/censimento_immobili_pubblici/open_data_immobili/,CC BY 4.0
+immobili_pa,punti[].tipo,Tipologia testuale dichiarata MEF,testo,MEF DE,ultima rilevazione (31/12),https://www.de.mef.gov.it/it/attivita_istituzionali/patrimonio_pubblico/censimento_immobili_pubblici/open_data_immobili/,CC BY 4.0
+immobili_pa,punti[].sup,Superficie dichiarata (mq),mq,MEF DE,ultima rilevazione (31/12),https://www.de.mef.gov.it/it/attivita_istituzionali/patrimonio_pubblico/censimento_immobili_pubblici/open_data_immobili/,CC BY 4.0
+immobili_pa,punti[].vincolo,Presenza di vincolo (true se diverso da Nessuno),boolean,MEF DE,ultima rilevazione (31/12),https://www.de.mef.gov.it/it/attivita_istituzionali/patrimonio_pubblico/censimento_immobili_pubblici/open_data_immobili/,CC BY 4.0
+immobili_pa,punti[].uso_terzi,Immobile in uso a soggetti terzi,boolean,MEF DE,ultima rilevazione (31/12),https://www.de.mef.gov.it/it/attivita_istituzionali/patrimonio_pubblico/censimento_immobili_pubblici/open_data_immobili/,CC BY 4.0
 anncsu,_etl_version,Versione del pipeline ETL ANNCSU,testo,Cruscotto Italia,corrente,{{SITE_URL}},Open Data UE 2023/138
 anncsu,_source,Sorgente originaria del dato,testo,Agenzia delle Entrate + ISTAT,snapshot mensile,https://anncsu.open.agenziaentrate.gov.it/,Open Data UE 2023/138
 anncsu,_snapshot_date,Data dello snapshot ANNCSU utilizzato (AAAA-MM-GG),data,Agenzia Entrate,snapshot mensile,https://anncsu.open.agenziaentrate.gov.it/,Open Data UE 2023/138
@@ -295,6 +307,7 @@ pun,punti[].corrente,"Tipologia di corrente (""AC"" o ""DC"")",codice,GSE / MASE
 pun,punti[].restrizioni,"Restrizioni di accesso (vocabolario OCPI separato da ""- "": EV_ONLY, PLUGGED, DISABLED, CUSTOMERS, MOTORCYCLES, CARSHARING, TAXI; null se senza restrizioni)",codice,GSE / MASE,quotidiana,https://www.piattaformaunicanazionale.it/idr,CC BY 4.0 ex art. 52 c.2 CAD
 pun,punti[].servizi_vicini,"Servizi nelle vicinanze (vocabolario OCPI separato da ""- "": RESTAURANT, CAFE, HOTEL, MALL, SUPERMARKET, RECREATION_AREA, NATURE, PARKING; null se non dichiarato)",codice,GSE / MASE,quotidiana,https://www.piattaformaunicanazionale.it/idr,CC BY 4.0 ex art. 52 c.2 CAD
 pun,punti[].orario,"Orario di apertura (""Aperto 24/7"" oppure stringa giorno-per-giorno formato ""lunedi:HH:MM-HH:MM,martedi:HH:MM-HH:MM,...""; null se non dichiarato)",testo,GSE / MASE,quotidiana,https://www.piattaformaunicanazionale.it/idr,CC BY 4.0 ex art. 52 c.2 CAD
+pun,_snapshot_date,Giorno dell'estrazione dalla Piattaforma Unica Nazionale (data del dato),data,GSE / MASE,giornaliero,https://www.piattaformaunicanazionale.it/idr,CC BY 4.0
 agcom_bbmap,_etl_version,Versione dello script ETL Cruscotto che ha generato lo shard,testo,Cruscotto Italia,corrente,{{SITE_URL}},CC BY 4.0
 agcom_bbmap,_source,Nome canonico della fonte istituzionale,testo,Cruscotto Italia,corrente,{{SITE_URL}},CC BY 4.0
 agcom_bbmap,_source_url,URL del portale ufficiale della fonte,testo,Cruscotto Italia,corrente,https://geo.agcom.it/reportistica/,CC BY 4.0 ex art. 52 c.2 CAD
@@ -445,15 +458,15 @@ beni_culturali,kpi.mix_categoria,"Distribuzione dei beni nelle 11 macro-categori
 beni_culturali,kpi.pct_con_foto,Percentuale di beni con foto. Per ArCo: predicato foaf:depiction (URL immagine ICCD). Per Cultural-ON: campo image DBUnico 2.0.,percentuale,MiC ICCD + Cultural-ON,mensile,https://dati.beniculturali.it/sparql,CC BY 4.0
 beni_culturali,kpi.pct_con_descrizione,Percentuale di beni con descrizione testuale. Per ArCo: predicato dc:description (scheda storica-artistica catalografica ICCD). Per Cultural-ON: campo descrizione DBUnico 2.0.,percentuale,MiC ICCD + Cultural-ON,mensile,https://dati.beniculturali.it/sparql,CC BY 4.0
 beni_culturali,luoghi[],"Lista dei beni del comune. Ogni elemento: id, denom, categoria (1 di 11 macro), fonte ('arco' o 'cultural_on'), lat, lon, indirizzo, image (URL foto), descrizione, tutela, soprintendenza (solo ArCo), cis_link (URL scheda Cultural-ON), telefono/email/website/prenotazione (solo Cultural-ON). Cap 30 nello shard base; lista completa in /data/beni_culturali_full/<istat>.json per comuni con piu' di 30 beni.",array,Cruscotto Italia,mensile,{{SITE_URL}},CC BY 4.0
-meteo_italiameteo,temperatura_2m,Temperatura dell'aria a 2 metri dal suolo in gradi Celsius per ogni step orario (0-72h),gradi C,ItaliaMeteo / Cineca,bi-giornaliera,https://meteohub.agenziaitaliameteo.it/,CC BY 4.0
-meteo_italiameteo,precipitazioni_totali,Precipitazioni totali accumulate in mm per ogni step orario (0-72h),mm,ItaliaMeteo / Cineca,bi-giornaliera,https://meteohub.agenziaitaliameteo.it/,CC BY 4.0
-meteo_italiameteo,vento_u_10m,Componente U (est-ovest) del vento a 10 metri in m/s per ogni step orario,m/s,ItaliaMeteo / Cineca,bi-giornaliera,https://meteohub.agenziaitaliameteo.it/,CC BY 4.0
-meteo_italiameteo,vento_v_10m,Componente V (nord-sud) del vento a 10 metri in m/s per ogni step orario,m/s,ItaliaMeteo / Cineca,bi-giornaliera,https://meteohub.agenziaitaliameteo.it/,CC BY 4.0
-meteo_italiameteo,raffica_max,Raffica di vento massima in m/s per ogni step orario,m/s,ItaliaMeteo / Cineca,bi-giornaliera,https://meteohub.agenziaitaliameteo.it/,CC BY 4.0
-meteo_italiameteo,copertura_nuvolosa,Copertura nuvolosa totale in percentuale (0-100%) per ogni step orario,%,ItaliaMeteo / Cineca,bi-giornaliera,https://meteohub.agenziaitaliameteo.it/,CC BY 4.0
-meteo_italiameteo,altezza_neve,Altezza del manto nevoso in metri per ogni step orario,m,ItaliaMeteo / Cineca,bi-giornaliera,https://meteohub.agenziaitaliameteo.it/,CC BY 4.0
-meteo_italiameteo,codice_meteo_wmo,Codice WMO del simbolo meteo per ogni step orario (0=sereno 1=poco nuvoloso ... 99=temporale),codice,ItaliaMeteo / Cineca,bi-giornaliera,https://meteohub.agenziaitaliameteo.it/,CC BY 4.0
-meteo_italiameteo,umidita_relativa,Umidita' relativa dell'aria in percentuale per ogni step orario,%,ItaliaMeteo / Cineca,bi-giornaliera,https://meteohub.agenziaitaliameteo.it/,CC BY 4.0
+meteo,temperatura_2m,Temperatura dell'aria a 2 metri dal suolo in gradi Celsius per ogni step orario (0-72h),gradi C,ItaliaMeteo / Cineca,bi-giornaliera,https://meteohub.agenziaitaliameteo.it/,CC BY 4.0
+meteo,precipitazioni_totali,Precipitazioni totali accumulate in mm per ogni step orario (0-72h),mm,ItaliaMeteo / Cineca,bi-giornaliera,https://meteohub.agenziaitaliameteo.it/,CC BY 4.0
+meteo,vento_u_10m,Componente U (est-ovest) del vento a 10 metri in m/s per ogni step orario,m/s,ItaliaMeteo / Cineca,bi-giornaliera,https://meteohub.agenziaitaliameteo.it/,CC BY 4.0
+meteo,vento_v_10m,Componente V (nord-sud) del vento a 10 metri in m/s per ogni step orario,m/s,ItaliaMeteo / Cineca,bi-giornaliera,https://meteohub.agenziaitaliameteo.it/,CC BY 4.0
+meteo,raffica_max,Raffica di vento massima in m/s per ogni step orario,m/s,ItaliaMeteo / Cineca,bi-giornaliera,https://meteohub.agenziaitaliameteo.it/,CC BY 4.0
+meteo,copertura_nuvolosa,Copertura nuvolosa totale in percentuale (0-100%) per ogni step orario,%,ItaliaMeteo / Cineca,bi-giornaliera,https://meteohub.agenziaitaliameteo.it/,CC BY 4.0
+meteo,altezza_neve,Altezza del manto nevoso in metri per ogni step orario,m,ItaliaMeteo / Cineca,bi-giornaliera,https://meteohub.agenziaitaliameteo.it/,CC BY 4.0
+meteo,codice_meteo_wmo,Codice WMO del simbolo meteo per ogni step orario (0=sereno 1=poco nuvoloso ... 99=temporale),codice,ItaliaMeteo / Cineca,bi-giornaliera,https://meteohub.agenziaitaliameteo.it/,CC BY 4.0
+meteo,umidita_relativa,Umidita' relativa dell'aria in percentuale per ogni step orario,%,ItaliaMeteo / Cineca,bi-giornaliera,https://meteohub.agenziaitaliameteo.it/,CC BY 4.0
 morfologia,stats.istat,Codice ISTAT del comune,codice,CNR-IRPI,one-shot,https://doi.org/10.5281/zenodo.18872933,CC BY 4.0
 morfologia,stats.area_km2,Superficie del comune in km2 calcolata dal DTM 5m,km2,CNR-IRPI,one-shot,https://doi.org/10.5281/zenodo.18872933,CC BY 4.0
 morfologia,stats.elev_min,Quota minima del comune in metri sul livello del mare (DTM 5m),m,CNR-IRPI,one-shot,https://doi.org/10.5281/zenodo.18872933,CC BY 4.0
@@ -509,3 +522,4 @@ omi,...stato,"Stato di conservazione (NORMALE, OTTIMO, SCADENTE). La chiave di r
 omi,...cv_min / cv_max,Intervallo del valore di mercato (compravendita),euro/mq,Agenzia delle Entrate,semestrale,https://www.agenziaentrate.gov.it/portale/schede/fabbricatiterreni/omi/banche-dati/quotazioni-immobiliari,CC BY 4.0
 omi,...loc_min / loc_max,Intervallo del canone di locazione,euro/mq al mese,Agenzia delle Entrate,semestrale,https://www.agenziaentrate.gov.it/portale/schede/fabbricatiterreni/omi/banche-dati/quotazioni-immobiliari,CC BY 4.0
 omi,...sup_cv / sup_loc,Superficie di riferimento: L lorda o N netta,testo,Agenzia delle Entrate,semestrale,https://www.agenziaentrate.gov.it/portale/schede/fabbricatiterreni/omi/banche-dati/quotazioni-immobiliari,CC BY 4.0
+kpi_summary,*,"Sintesi dei KPI principali di tutte le sezioni (circa 55 indicatori in gruppi tematici), calcolata dal dashboard; per fonte e periodo di ogni valore vedere la sezione di origine",dict,Cruscotto Italia,corrente,{{SITE_URL}},CC BY 4.0
