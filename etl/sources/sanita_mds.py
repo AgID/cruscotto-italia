@@ -114,11 +114,24 @@ TARGETS = {
 }
 
 # Riferimento URL pubblici per `_fonti`
+# Pagine pubbliche dei dataset: di norma ricavate dall'alias del nodo nel
+# feed del portale (_pagina_dataset). Questi valori sono solo la riserva.
+# Il portale vuole il prefisso della lingua: /dataset/farmacie da 404,
+# /it/dataset/farmacie risponde (verificato dalla VM il 06/10/2026).
 DATASET_PUBLIC_URLS = {
-    "farmacie":     f"{PORTAL_BASE}/dataset/farmacie",
-    "parafarmacie": f"{PORTAL_BASE}/dataset/parafarmacie",
-    "ospedali":     f"{PORTAL_BASE}/dataset/posti-letto-stabilimento-ospedaliero-e-disciplina",
+    "farmacie":     f"{PORTAL_BASE}/it/dataset/farmacie",
+    "parafarmacie": f"{PORTAL_BASE}/it/dataset/parafarmacie",
+    "ospedali":     f"{PORTAL_BASE}/it/dataset/posti-letto-stabilimento-ospedaliero-e-disciplina-2023",
 }
+
+
+def _pagina_dataset(nodo: dict) -> str | None:
+    """URL pubblico della pagina del dataset dall'alias Drupal del nodo."""
+    path = nodo.get("path") or {}
+    alias = path.get("alias")
+    if not alias:
+        return None
+    return f"{PORTAL_BASE}/{path.get('langcode') or 'it'}{alias}"
 
 # Riserva: il dataset posti letto e un nodo Drupal NUOVO per ogni anno, quindi
 # il nid fisso (175018 = 2023) non seguirebbe mai le nuove annualita.
@@ -194,6 +207,7 @@ def fetch_discovery() -> dict:
             "url": url, "filename": f.get("filename"), "filesize": f.get("filesize"),
             "data_aggiornamento": n.get("field_dataultimoaggiornamento") or n.get("changed"),
             "anno": anno,
+            "pagina": _pagina_dataset(n),
         }
         log.info("sanita_mds_ospedali_anno", anno=anno,
                  nid=n.get("drupal_internal__nid"), filename=f.get("filename"))
@@ -227,6 +241,7 @@ def fetch_discovery() -> dict:
 
             result[key] = {
                 "url": url,
+                "pagina": _pagina_dataset(n),
                 "filename": chosen.get("filename"),
                 "filesize": chosen.get("filesize"),
                 "data_aggiornamento": (
@@ -1164,17 +1179,17 @@ def build_shards(
     # _fonti structurato
     fonti = {
         "farmacie": {
-            "url":      DATASET_PUBLIC_URLS["farmacie"],
+            "url":      discovery["farmacie"].get("pagina") or DATASET_PUBLIC_URLS["farmacie"],
             "data_riferimento": discovery["farmacie"].get("data_aggiornamento"),
             "aggiornamento":    "quotidiano",
         },
         "parafarmacie": {
-            "url":      DATASET_PUBLIC_URLS["parafarmacie"],
+            "url":      discovery["parafarmacie"].get("pagina") or DATASET_PUBLIC_URLS["parafarmacie"],
             "data_riferimento": discovery["parafarmacie"].get("data_aggiornamento"),
             "aggiornamento":    "quotidiano",
         },
         "ospedali": {
-            "url":         DATASET_PUBLIC_URLS["ospedali"],
+            "url":         discovery["ospedali"].get("pagina") or DATASET_PUBLIC_URLS["ospedali"],
             "anno_dati":   discovery["ospedali"].get("anno", ANNO_OSPEDALI),
             "aggiornamento": "annuale (luglio dell'anno N+1)",
         },
