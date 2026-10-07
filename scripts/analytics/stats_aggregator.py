@@ -75,7 +75,7 @@ PATH_ATTACK_PATTERNS = re.compile(
     r"/configprops|/heapdump|/profiler(?:/|$)|"  # Spring/Symfony diagnostic
     r"/env(?:\?|$)|"                # endpoint /env exposed (Spring)
     r"/docker-compose(?:\.[a-z]+)?\.ya?ml|"  # docker-compose.yml e varianti
-    r"/webdav/|/\.well-known/security|"
+    r"/webdav/|/\.well-known/(?!security\.txt)security|"
     r"/nuxeo/|/solr/|/struts|/geoserver/|"  # RCE noti (Nuxeo JEXL, Solr, Struts2, GeoServer)
     r"/\.git/config|/_ignition/|/telescope/"  # git leak, Laravel Ignition RCE, Telescope
     r")",
@@ -657,6 +657,14 @@ def render_table(rows: list[tuple[str, int]], headers: tuple[str, str]) -> str:
             f"  <tbody>\n{body}\n  </tbody>\n</table>")
 
 
+# Etichette leggibili per la tabella client. SOLO rendering: nei dati e in
+# Analytics Engine il valore resta quello scritto dal Worker.
+ETICHETTE_CLIENT = {
+    "other": "non identificato",
+    "bot-dichiarato": "bot dichiarato",
+}
+
+
 def render_mcp_section(mcp_stats_path: Path | None) -> str:
     """
     Costruisce la sezione HTML per le statistiche MCP, leggendo mcp_stats.json
@@ -687,7 +695,8 @@ def render_mcp_section(mcp_stats_path: Path | None) -> str:
         ("Comune", "Chiamate"),
     ) if mcp.get("by_comune") else "<p class=\"meta\">Nessun comune referenziato (tool senza ISTAT).</p>"
     table_clients = render_table(
-        [(c["client"], c["calls"]) for c in mcp.get("by_client", [])],
+        [(ETICHETTE_CLIENT.get(c["client"], c["client"]), c["calls"])
+         for c in mcp.get("by_client", [])],
         ("Client", "Chiamate"),
     )
 
@@ -737,15 +746,36 @@ def render_mcp_section(mcp_stats_path: Path | None) -> str:
     # Termini di ricerca (search_comune)
     terms = mcp.get("search_terms", {})
     if terms.get("total", 0) > 0:
+        auto = terms.get("automatici", [])
+        tot_umani = terms.get("total_umani", terms["total"])
+        tot_auto = terms.get("total_automatici", 0)
+        nota_auto = ""
+        if tot_auto:
+            nota_auto = (
+                f" Escluse {tot_auto:,} chiamate ripetitive di client "
+                f"automatici, riportate nella tabella sotto."
+            )
         terms_html = (
             f"<h2>Termini più cercati</h2>\n"
-            f"<p class=\"meta\">{terms['total']:,} ricerche, "
-            f"{terms['distinct_terms']:,} termini distinti.</p>\n"
+            f"<p class=\"meta\">{tot_umani:,} ricerche, "
+            f"{terms['distinct_terms']:,} termini distinti.{nota_auto}</p>\n"
             + render_table(
                 [(t["term"], t["calls"]) for t in terms.get("top_terms", [])[:20]],
                 ("Termine", "Ricerche"),
             )
         )
+        if auto:
+            terms_html += (
+                f"\n<h2>Ricerche automatiche</h2>\n"
+                f"<p class=\"meta\">Client che ripetono sempre lo stesso termine: "
+                f"keep-alive o sonde, non uso reale del catalogo. "
+                f"Sono conteggiati qui e non nella tabella sopra.</p>\n"
+                + render_table(
+                    [(f"{a['client']} — “{a['term']}”", a["calls"])
+                     for a in auto[:10]],
+                    ("Client e termine", "Chiamate"),
+                )
+            )
     else:
         terms_html = ""
 
@@ -759,6 +789,9 @@ def render_mcp_section(mcp_stats_path: Path | None) -> str:
         f"<h2>Comuni più consultati via MCP</h2>\n"
         f"{table_mcp_comuni}\n\n"
         f"<h2>Client che usano l'MCP</h2>\n"
+        f"<p class=\"meta\">Tipo di client ricavato dallo user-agent della "
+        f"chiamata. \u00abnon identificato\u00bb raccoglie le chiamate con "
+        f"user-agent assente o non riconducibile a un client noto.</p>\n"
         f"{table_clients}\n\n"
         f"{terms_html}\n\n"
         f"{errors_html}"

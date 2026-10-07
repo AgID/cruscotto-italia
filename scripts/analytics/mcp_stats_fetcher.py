@@ -229,21 +229,42 @@ def aggregate_errors(keys_values: dict[str, str], days_window: int) -> dict:
     }
 
 
+# Un client conta come automatico quando le sue ricerche sono di fatto un
+# termine solo: almeno SOGLIA_VOLUME ricerche nella finestra e un singolo
+# termine oltre SOGLIA_DOMINANZA delle SUE ricerche (non del totale).
+# Criterio comportamentale, non tecnologico: non si esclude un client per il
+# runtime che usa (un agente Java con ricerche varie resta fra gli utenti),
+# ma solo chi ripete sempre la stessa parola. Misurare sul client e non sul
+# totale rende la soglia indipendente dai volumi altrui: un keep-alive resta
+# riconoscibile anche se un altro attore cresce o sparisce.
+SOGLIA_DOMINANZA = 0.90
+SOGLIA_VOLUME = 1000
+
+
 def aggregate_terms(keys_values: dict[str, str], days_window: int,
                     limit: int = 30) -> dict:
     """
     Aggrega i termini di ricerca (prefix 'analytics-term:').
-    Key format: `analytics-term:YYYY-MM-DD:<slug>`
+    Key format: `analytics-term:YYYY-MM-DD:<client>:<slug>`
+    Le chiavi storiche a 3 parti (senza client) sono trattate come utenti.
+    Il client sta PRIMA dello slug perche il termine puo contenere ":".
+    Separa i termini cercati dagli utenti dal traffico automatico.
     """
     cutoff = (date.today() - timedelta(days=days_window)).isoformat()
-    by_term: dict[str, int] = defaultdict(int)
+    by_pair: dict[tuple[str, str], int] = defaultdict(int)
     total = 0
 
     for k, v in keys_values.items():
-        parts = k.split(":", 2)
-        if len(parts) != 3 or parts[0] != "analytics-term":
+        parts = k.split(":", 3)
+        if parts[0] != "analytics-term":
             continue
-        _, day, slug = parts
+        if len(parts) == 4:
+            _, day, client, slug = parts
+        elif len(parts) == 3:
+            _, day, slug = parts
+            client = "storico"
+        else:
+            continue
         if day < cutoff:
             continue
         try:
@@ -251,14 +272,32 @@ def aggregate_terms(keys_values: dict[str, str], days_window: int,
         except (ValueError, TypeError):
             continue
         total += n
-        by_term[slug] += n
+        by_pair[(client, slug)] += n
+
+    per_client: dict[str, int] = defaultdict(int)
+    for (client, _slug), n in by_pair.items():
+        per_client[client] += n
+    auto = {(c, t): n for (c, t), n in by_pair.items()
+            if per_client[c] >= SOGLIA_VOLUME
+            and n / per_client[c] >= SOGLIA_DOMINANZA}
+    umani: dict[str, int] = defaultdict(int)
+    for (client, slug), n in by_pair.items():
+        if (client, slug) not in auto:
+            umani[slug] += n
+    tot_auto = sum(auto.values())
 
     return {
         "total": total,
-        "distinct_terms": len(by_term),
+        "total_umani": total - tot_auto,
+        "total_automatici": tot_auto,
+        "distinct_terms": len(umani),
         "top_terms": [
             {"term": t, "calls": n}
-            for t, n in sorted(by_term.items(), key=lambda x: -x[1])[:limit]
+            for t, n in sorted(umani.items(), key=lambda x: -x[1])[:limit]
+        ],
+        "automatici": [
+            {"client": c, "term": t, "calls": n}
+            for (c, t), n in sorted(auto.items(), key=lambda x: -x[1])
         ],
     }
 
@@ -313,11 +352,11 @@ def fetch_ae_counters(account_id: str, token: str, dataset: str,
 
     term_kv = {}
     for r in ae_sql(account_id, token, f"""
-        SELECT toDate(timestamp) AS day, blob5 AS term,
+        SELECT toDate(timestamp) AS day, blob3 AS client, blob5 AS term,
                SUM(_sample_interval * double1) AS n
         FROM {dataset} {win} AND blob1 = 'search_comune' AND blob5 <> ''
-        GROUP BY day, term FORMAT JSON"""):
-        term_kv[f"analytics-term:{r['day']}:{r['term']}"] = str(int(float(r["n"])))
+        GROUP BY day, client, term FORMAT JSON"""):
+        term_kv[f"analytics-term:{r['day']}:{r['client']}:{r['term']}"] = str(int(float(r["n"])))
 
     return main_kv, err_kv, term_kv
 
