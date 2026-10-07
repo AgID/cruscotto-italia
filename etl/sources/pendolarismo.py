@@ -56,6 +56,7 @@ from pathlib import Path
 import structlog
 
 from etl.lib import manifest
+from etl.lib.http_ua import USER_AGENT as UA
 
 log = structlog.get_logger()
 
@@ -73,7 +74,6 @@ ANNO = 2021
 MOTIVO = "lavoro"
 ETL_VERSION = "0.1.0"
 
-UA = "CruscottoItalia-ETL/1.0 (+https://cruscotto-italia.dati.gov.it)"
 
 CACHE_DIR = Path("/tmp/cruscotto_pendolarismo")
 CACHE_DIR.mkdir(parents=True, exist_ok=True)

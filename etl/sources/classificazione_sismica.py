@@ -23,10 +23,12 @@ import urllib.request
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
+from etl.lib.http_ua import USER_AGENT
+
 SOURCE = "classificazione_sismica"
 BASE = "https://rischi.protezionecivile.gov.it"
 PAGE = BASE + "/it/sismico/attivita/classificazione-sismica/"
-UA = {"User-Agent": "cruscotto-italia-etl (+https://cruscotto-italia.dati.gov.it)"}
+UA = {"User-Agent": USER_AGENT}
 DATA_DIR = Path(os.environ.get("CRUSCOTTO_DATA_DIR", "/var/www/cruscotto-italia/data"))
 
 # Banda di sanita': il conteggio comuni varia ogni anno (fusioni), quindi NO ==

@@ -43,6 +43,7 @@ from pathlib import Path
 import structlog
 
 from etl.lib import local_lookup, manifest, shard_io
+from etl.lib.http_ua import USER_AGENT as HTTP_USER_AGENT
 
 log = structlog.get_logger()
 
@@ -81,9 +82,6 @@ RIFIUTI_MIN_RIGHE = 1000
 # Limiti operativi
 IDROGEO_PARALLEL = 20  # thread paralleli per chiamate IdroGEO
 IDROGEO_TIMEOUT = 15
-HTTP_USER_AGENT = (
-    "cruscotto-italia-etl/0.1 (+https://github.com/AgID/cruscotto-italia)"
-)
 
 
 # ---------------------------------------------------------------------------

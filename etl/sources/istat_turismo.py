@@ -46,6 +46,7 @@ import duckdb
 import structlog
 
 from etl.lib import local_lookup, manifest
+from etl.lib.http_ua import USER_AGENT as UA
 from etl.lib.istat_sdmx import attendi_turno_istat, scarica_a_blocchi
 
 log = structlog.get_logger()
@@ -54,7 +55,6 @@ log = structlog.get_logger()
 SDMX_BASE = "https://esploradati.istat.it/SDMXWS/rest"
 SDMX_AGENCY = "IT1"
 SDMX_VERSION = "1.0"
-UA = "cruscotto-italia/1.0 (+https://cruscotto-italia.dati.gov.it)"
 
 # Anno di riferimento: risolto a runtime per ciascun dataflow (resolve_anni).
 # Fino al 05/10/2026 era cablato a 2024 mentre ISTAT aveva gia pubblicato il

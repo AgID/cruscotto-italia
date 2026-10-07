@@ -40,6 +40,7 @@ import requests
 import structlog
 
 from etl.lib import duck, manifest
+from etl.lib.http_ua import USER_AGENT
 
 log = structlog.get_logger()
 
@@ -65,7 +66,6 @@ IPA_ISTAT_FIX = {
 
 IPA_ENTI_DATASET = "enti"  # CKAN package name
 
-USER_AGENT = "cruscotto-italia-etl/0.1 (+https://github.com/piersoft/cruscotto-italia)"
 
 
 # ----------------------------------------------------------------------------

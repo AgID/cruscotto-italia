@@ -39,6 +39,7 @@ import duckdb
 import structlog
 
 from etl.lib import local_lookup, manifest
+from etl.lib.http_ua import USER_AGENT as UA
 from etl.lib.istat_sdmx import attendi_turno_istat, scarica_a_blocchi
 
 log = structlog.get_logger()
@@ -47,7 +48,6 @@ log = structlog.get_logger()
 SDMX_BASE = "https://esploradati.istat.it/SDMXWS/rest/data"
 SDMX_AGENCY = "IT1"
 SDMX_VERSION = "1.0"
-UA = "cruscotto-italia/1.0 (+https://cruscotto-italia.dati.gov.it)"
 
 # Per ogni dataflow: (id, key_dimensions, anno_min, anno_max, descrizione)
 # La key SDMX e' una sequenza di valori dimensione separati da '.';

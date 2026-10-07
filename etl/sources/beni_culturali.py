@@ -108,6 +108,7 @@ import requests
 import structlog
 
 from etl.lib import local_lookup, manifest, text
+from etl.lib.http_ua import USER_AGENT
 
 log = structlog.get_logger(__name__)
 
@@ -229,10 +230,6 @@ def normalize(s: str) -> str:
 # FASE 1 - SPARQL: query builders, retry, paginazione
 # =========================================================================
 
-USER_AGENT = (
-    "Mozilla/5.0 (compatible; CruscottoItalia/1.0; "
-    "+https://cruscotto-italia.dati.gov.it/) cultural_on-etl"
-)
 
 
 def _sparql_post(query: str, timeout: int = SPARQL_TIMEOUT) -> dict:

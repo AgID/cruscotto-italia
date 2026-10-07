@@ -63,6 +63,7 @@ from pathlib import Path
 import structlog
 
 from etl.lib import manifest
+from etl.lib.http_ua import USER_AGENT as UA
 
 log = structlog.get_logger()
 
@@ -90,7 +91,6 @@ URL_VARS = (
 # Aree subcomunali (municipi/circoscrizioni/quartieri) - solo ~43 capoluoghi
 URL_ASC = "https://www.istat.it/wp-content/uploads/2025/04/ASC_21.zip"
 
-UA = "CruscottoItalia-ETL/1.0 (+https://cruscotto-italia.dati.gov.it)"
 
 # ═════════════════════════════════════════════════════════════════════════
 # Lista 127 variabili numeriche estratte per ogni sezione (dal TRACCIATO 2023)

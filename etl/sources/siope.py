@@ -52,6 +52,7 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 from etl.lib import manifest
+from etl.lib.http_ua import USER_AGENT
 
 log = structlog.get_logger()
 
@@ -79,7 +80,7 @@ HTTP_READ_TIMEOUT = int(os.environ.get("SIOPE_READ_TIMEOUT", "600"))
 CHUNK = 1 << 20  # 1 MB
 
 HEADERS = {
-    "User-Agent": "cruscotto-italia-etl (+https://cruscotto-italia.dati.gov.it)",
+    "User-Agent": USER_AGENT,
     "Accept": "*/*",
 }
 

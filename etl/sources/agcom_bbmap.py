@@ -98,6 +98,7 @@ import requests
 import structlog
 
 from etl.lib import local_lookup, manifest
+from etl.lib.http_ua import USER_AGENT
 
 log = structlog.get_logger()
 
@@ -130,10 +131,6 @@ AGCOM_MAP_BASE = (
 DEFAULT_OUTDIR = Path("/var/www/cruscotto-italia/data/agcom_bbmap")
 CACHE_DIR = Path(".cache/agcom_bbmap")
 
-USER_AGENT = (
-    "cruscotto-italia-etl/0.1 "
-    "(+https://github.com/AgID/cruscotto-italia)"
-)
 
 # Anagrafica ISTAT per ricavare centroide lat/lon (per deep-link mappa).
 # Legge file in data/anagrafica/<istat>.json se esistono.

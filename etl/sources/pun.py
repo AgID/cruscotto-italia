@@ -86,6 +86,7 @@ import structlog
 from requests_aws4auth import AWS4Auth
 
 from etl.lib import manifest
+from etl.lib.http_ua import USER_AGENT
 from etl.lib.text import clean_text
 
 log = structlog.get_logger()
@@ -114,7 +115,6 @@ DEFAULT_OUTDIR   = Path("/var/www/cruscotto-italia/data/pun")
 CACHE_DIR        = Path(".cache/pun")
 
 ISTAT_COMUNI_URL = "https://www.istat.it/storage/codici-unita-amministrative/Elenco-comuni-italiani.csv"
-USER_AGENT       = "cruscotto-italia-etl/0.2 (+https://github.com/AgID/cruscotto-italia)"
 
 BBOX_LAT_MIN, BBOX_LAT_MAX = 35.0, 47.5
 BBOX_LON_MIN, BBOX_LON_MAX = 6.0, 19.0

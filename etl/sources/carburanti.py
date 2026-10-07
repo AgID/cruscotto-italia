@@ -113,6 +113,7 @@ import requests
 import structlog
 
 from etl.lib import local_lookup, manifest
+from etl.lib.http_ua import USER_AGENT
 
 log = structlog.get_logger()
 
@@ -137,7 +138,6 @@ CACHE_DIR = Path(".cache/carburanti")
 
 # Elenco comuni ISTAT (riusa pattern di anagrafica/pun)
 ISTAT_COMUNI_URL = "https://www.istat.it/storage/codici-unita-amministrative/Elenco-comuni-italiani.csv"
-USER_AGENT = "cruscotto-italia-etl/0.1 (+https://github.com/piersoft/cruscotto-italia)"
 
 # Bounding box Italia
 BBOX_LAT_MIN, BBOX_LAT_MAX = 35.0, 47.5

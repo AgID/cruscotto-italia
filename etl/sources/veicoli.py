@@ -50,12 +50,12 @@ from pathlib import Path
 import structlog
 
 from etl.lib import local_lookup, manifest
+from etl.lib.http_ua import USER_AGENT as UA
 from etl.lib.istat_sdmx import scarica_a_blocchi
 
 log = structlog.get_logger()
 
 ETL_VERSION = "0.1.0"
-UA = "Cruscotto-Italia-ETL/0.1 (+https://github.com/AgID/cruscotto-italia)"
 
 ISTAT_BASE = "https://esploradati.istat.it/SDMXWS/rest/data"
 ISTAT_HEADERS = {
