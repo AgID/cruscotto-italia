@@ -3237,6 +3237,7 @@ function renderTurismoContent(container, data) {
     <div class="profilo-section">
       <h3 class="profilo-section-h">§ Capacità nel comune <em>${cap.anno || ''}</em></h3>
       <p class="profilo-section-sub">Strutture e posti letto per categoria. Tutti i dati sono comunali.</p>
+      ${turNotaMetodo(cap._nota_metodo)}
       ${cap.totale_letti ? renderCapacitaSection(cap, alb, ext) : '<div class="profilo-na">Dato non disponibile per questo comune.</div>'}
     </div>
 
@@ -3260,6 +3261,14 @@ function renderTurismoContent(container, data) {
 }
 
 function turFmtN(v) { return (v == null) ? '—' : fmtNum(v); }
+// Nota di discontinuita della serie (dal 2025 ISTAT include gli alloggi privati con CIN)
+function turNotaMetodo(n) {
+  if (!n || !n.testo) return '';
+  const esc = (t) => String(t).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
+  const link = (typeof n.url === 'string' && n.url.startsWith('https://www.istat.it/'))
+    ? ` <a href="${esc(n.url)}" target="_blank" rel="noopener">Circolare ISTAT</a>` : '';
+  return `<div class="flussi-warning"><strong>Cambio di metodo</strong>${esc(n.testo)}${link}</div>`;
+}
 function turFmtPct(v) { return (v == null) ? '—' : v.toFixed(1) + '%'; }
 
 function renderCapacitaSection(cap, alb, ext) {

@@ -70,7 +70,7 @@ Fonte: ISTAT Censimento permanente.
 
 Due sotto-sezioni a scopo geografico diverso:
 
-- `capacita_comune` — capacità ricettiva comunale. Chiavi: `totale_strutture`, `totale_letti`, `totale_camere`, `indice_turisticita_per_100ab`. Breakdown in `alberghi` (per stelle 1–5 + residence) ed `extra_alberghiero` (bnb, case in affitto, camping, agriturismi, ostelli, case per ferie, rifugi montagna).
+- `capacita_comune` — capacità ricettiva comunale. Chiavi: `totale_strutture`, `totale_letti`, `totale_camere`, `indice_turisticita_per_100ab`. Breakdown in `alberghi` (per stelle 1–5 + residence) ed `extra_alberghiero` (bnb, case in affitto, camping, agriturismi, ostelli, case per ferie, rifugi montagna). Dal 2025 `_nota_metodo` (`testo`, `url`): ISTAT include gli alloggi privati con CIN, valori non confrontabili con gli anni precedenti.
 - `flussi_provincia` — arrivi e presenze, **solo provinciale (NUTS3)**, con `_warning`. Chiavi: `arrivi_totali`, `arrivi_italiani`, `arrivi_stranieri`, `presenze_totali`, `presenze_italiane`, `presenze_straniere`, `permanenza_media`, `stranieri_pct`.
 
 ## `pnrr`

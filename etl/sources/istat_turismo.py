@@ -88,6 +88,19 @@ DATAFLOWS = [
     },
 ]
 
+# Dal 2025 ISTAT diffonde anche gli "Altri alloggi privati (C.2)" (locazioni
+# turistiche registrate con CIN nella Banca dati nazionale delle strutture
+# ricettive): strutture e posti letto crescono di colpo nella voce
+# "alloggi in affitto" (Lecce: 531 strutture nel 2024, 2.121 nel 2025).
+NOTA_METODO_DAL = 2025
+NOTA_METODO = {
+    "testo": ("Dal 2025 ISTAT include gli altri alloggi privati (locazioni "
+              "turistiche registrate con CIN): valori non confrontabili con gli "
+              "anni precedenti."),
+    "url": ("https://www.istat.it/fascicoloSidi/2012/"
+            "Circolare_Capacit%C3%A0%20degli%20esercizi%20ricettivi_2025.pdf"),
+}
+
 # Categorie di alloggio, gruppate in alberghi vs extra-alberghiero
 ALBERGHI_CATS = {
     "5_5P_STARSHOTELS": "stelle_5",
@@ -526,6 +539,8 @@ def build_shard(istat, prov_nuts3, prov_nome, cap_data, fl_data, pop):
             **extra_cats,
         },
     }
+    if ANNO_CAP >= NOTA_METODO_DAL:
+        sez_capacita["_nota_metodo"] = NOTA_METODO
 
     # === FLUSSI: per provincia ===
     def fl(dt, country):
