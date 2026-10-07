@@ -124,6 +124,27 @@ export async function handleMcp(
       });
 
     case "tools/call": {
+      // Uso improprio dei tool dati come keep-alive. Regola pubblicata in
+      // about.html, sezione Accesso: "Controlli di disponibilita': usare
+      // /health, non sono ammessi controlli ripetuti sui tool dati".
+      // La lista arriva dal secret KEEPALIVE_DENY_IPS, mai dal repo.
+      // initialize e tools/list restano permessi di proposito.
+      const denyRaw = (env as unknown as { KEEPALIVE_DENY_IPS?: string }).KEEPALIVE_DENY_IPS ?? "";
+      if (denyRaw) {
+        const callerIp = req.headers.get("cf-connecting-ip") ?? "";
+        const denyList = denyRaw.split(",").map((x) => x.trim()).filter(Boolean);
+        if (callerIp && denyList.includes(callerIp)) {
+          return rpcError(
+            body.id ?? null,
+            -32000,
+            "Controlli di disponibilita' ripetuti sui tool dati non sono ammessi: " +
+            "usare https://cruscotto-italia-mcp.agid.workers.dev/health . " +
+            "Regole: https://cruscotto-italia.dati.gov.it/about.html#accesso-mcp . " +
+            "Contatto: dati@agid.gov.it | " +
+            "Repeated availability checks on data tools are not allowed: use /health instead."
+          );
+        }
+      }
       const params = body.params as { name?: ToolName; arguments?: Record<string, unknown> };
       if (!params?.name || !(params.name in tools)) {
         return rpcError(body.id ?? null, -32602, `Unknown tool: ${params?.name}`);
