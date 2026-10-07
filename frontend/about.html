@@ -1609,6 +1609,34 @@ footer a:hover { color: #fff !important; }
           <div style="border-left:3px solid #0066CC;padding:8px 12px;background:#f5f8fc"><strong style="display:block;font-size:13px;color:#0066CC;margin-bottom:2px">Catasto</strong>Trovami le coordinate del civico 29 di Via Vittorio Emanuele II a Lecce e il foglio e la particella catastale a cui appartiene.</div>
           <div style="border-left:3px solid #0066CC;padding:8px 12px;background:#f5f8fc"><strong style="display:block;font-size:13px;color:#0066CC;margin-bottom:2px">Mobilità elettrica</strong>Quanti punti di ricarica attivi ci sono a Milano e qual è la percentuale di colonnine HPC/Ultra fast? Confronta con Roma e Torino.</div>
         </div>
+        <h4 style="margin:24px 0 8px;font-size:16px">Regole di utilizzo</h4>
+        <p style="margin-bottom:8px">L'accesso è libero, gratuito e non richiede registrazione. Per mantenere il servizio disponibile a tutti valgono i limiti seguenti, applicati automaticamente per indirizzo IP.</p>
+        <div style="overflow-x:auto;margin:4px 0 12px">
+          <table style="border-collapse:collapse;width:100%;font-size:14px">
+            <thead>
+              <tr style="background:#f5f8fc">
+                <th scope="col" style="text-align:left;padding:8px 10px;border-bottom:2px solid #0066CC">Risorsa</th>
+                <th scope="col" style="text-align:left;padding:8px 10px;border-bottom:2px solid #0066CC">Limite</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td style="padding:8px 10px;border-bottom:1px solid #e0e0e0">Endpoint MCP <code>/mcp</code></td><td style="padding:8px 10px;border-bottom:1px solid #e0e0e0">60 richieste al minuto</td></tr>
+              <tr><td style="padding:8px 10px;border-bottom:1px solid #e0e0e0">Shard per comune <code>/data/&lt;fonte&gt;/&lt;istat&gt;.json</code></td><td style="padding:8px 10px;border-bottom:1px solid #e0e0e0">2 richieste al secondo, picchi fino a 80</td></tr>
+              <tr><td style="padding:8px 10px;border-bottom:1px solid #e0e0e0">Archivi aggregati e <code>_full</code></td><td style="padding:8px 10px;border-bottom:1px solid #e0e0e0">10 richieste al secondo, picchi fino a 60</td></tr>
+              <tr><td style="padding:8px 10px;border-bottom:1px solid #e0e0e0">Connessioni simultanee su <code>/data/</code></td><td style="padding:8px 10px;border-bottom:1px solid #e0e0e0">8</td></tr>
+              <tr><td style="padding:8px 10px;border-bottom:1px solid #e0e0e0">Blocco automatico</td><td style="padding:8px 10px;border-bottom:1px solid #e0e0e0">oltre 3.000 richieste in 10 minuti: 24 ore</td></tr>
+              <tr><td style="padding:8px 10px;border-bottom:1px solid #e0e0e0">Blocchi ripetuti</td><td style="padding:8px 10px;border-bottom:1px solid #e0e0e0">la durata raddoppia a ogni recidiva, fino a 4 settimane</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p style="margin-bottom:8px"><strong>Buone pratiche</strong></p>
+        <ul style="margin:0 0 12px">
+          <li>Dichiarare uno <em>User-Agent</em> riconoscibile, con il nome del progetto e un recapito: un client che si identifica non viene scambiato per traffico anomalo.</li>
+          <li>Per i controlli di disponibilità usare <code>/health</code>, non i tool dati: è l'endpoint previsto allo scopo e non consuma il limite MCP.</li>
+          <li>Per scaricare molti comuni usare gli shard statici <code>/data/&lt;fonte&gt;/&lt;istat&gt;.json</code>, non chiamate MCP ripetute: è più veloce per chi scarica e più leggero per il servizio.</li>
+          <li>Superato un limite la risposta è <code>429</code>: attendere e riprovare con intervalli crescenti, non insistere.</li>
+        </ul>
+        <p>Per usi che richiedono volumi superiori a questi limiti, o in caso di dubbi, scrivere a <a href="mailto:dati@agid.gov.it">dati@agid.gov.it</a>: i limiti sono una tutela del servizio, non una chiusura verso il riuso.</p>
       </div>
     </div>
 
