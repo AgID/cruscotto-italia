@@ -27,7 +27,7 @@ on:
 jobs:
   preflight:
     name: Check Cloudflare secrets
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       has_secrets: ${{ steps.check.outputs.has_secrets }}
     steps:
@@ -48,14 +48,14 @@ jobs:
     name: Deploy MCP Worker to Cloudflare
     needs: [preflight]
     if: needs.preflight.outputs.has_secrets == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     environment: production
     defaults:
       run:
         working-directory: worker
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: '20'
           cache: 'npm'
@@ -64,7 +64,7 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
       - name: Deploy with Wrangler
-        uses: cloudflare/wrangler-action@v3
+        uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

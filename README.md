@@ -93,7 +93,7 @@ Amministrazione, AgID).
                 ▼                                 ▼
    ┌─────────────────────────┐         ┌──────────────────────────┐
    │ Fonti istituzionali IT  │         │ GitHub Actions           │
-   │ (cron VM, IP italiano)  │         │ ubuntu-latest            │
+   │ (cron VM, IP italiano)  │         │ ubuntu-24.04             │
    │                         │         │ (solo CSV ACI LOD:       │
    │  ANAC · BDAP · SIOPE    │         │  lod.aci.it non e        │
    │  PNRR · MEF · ISPRA     │         │  raggiungibile dalla VM) │
@@ -125,9 +125,9 @@ Orari in **ora italiana** (il cron della VM usa il fuso Europe/Rome), tranne i w
 | **Semestrale** (controllo il 1° di ogni mese, 03:00) | cartografia catastale AGE (particelle + fogli, 19 regioni): scarica solo se le dimensioni dei file AGE sono cambiate | cron VM AgID | automatico |
 | **Semestrale** (sentinella giornaliera 03:20) | quotazioni OMI AGE (zone + perimetri): `omi_semestrale.sh` interroga ogni giorno l'elenco dei semestri pubblicati e avvia la raccolta solo quando ne compare uno nuovo (l'Agenzia pubblica entro il 15 marzo e il 15 ottobre, senza data fissa) | cron VM AgID | automatico |
 | **Decennale** (manuale, prossimo 2031) | censimento Basi Territoriali (sezioni + 119 vars) | run manuale `python -m etl.sources.censimento` su VM | `workflow_dispatch` |
-| **ACI su Actions** (1 feb / 1 apr / 1 lug, 04:00 UTC) | CSV prime iscrizioni ACI LOD, scaricati poi dalla VM con `fetch_aci_artifact.py` | GitHub Actions `ubuntu-latest` | `schedule` + `workflow_dispatch` |
-| **ISTAT su Actions** (1 feb / 1 apr / 1 lug, 02:00 UTC) | download SDMX di parco veicoli, incidenti, capacità ricettiva e flussi turistici, divisi fra più runner (8 parti, 16 per la capacità ricettiva); la VM li recupera con `fetch_istat_artifact.py` e gli ETL girano con `--solo-cache` | GitHub Actions `ubuntu-latest` | `schedule` + `workflow_dispatch` |
-| **Riserva manuale** | istat_profilo, asia, pendolarismo | GitHub Actions `ubuntu-latest` | `workflow_dispatch` |
+| **ACI su Actions** (1 feb / 1 apr / 1 lug, 04:00 UTC) | CSV prime iscrizioni ACI LOD, scaricati poi dalla VM con `fetch_aci_artifact.py` | GitHub Actions `ubuntu-24.04` | `schedule` + `workflow_dispatch` |
+| **ISTAT su Actions** (1 feb / 1 apr / 1 lug, 02:00 UTC) | download SDMX di parco veicoli, incidenti, capacità ricettiva e flussi turistici, divisi fra più runner (8 parti, 16 per la capacità ricettiva); la VM li recupera con `fetch_istat_artifact.py` e gli ETL girano con `--solo-cache` | GitHub Actions `ubuntu-24.04` | `schedule` + `workflow_dispatch` |
+| **Riserva manuale** | istat_profilo, asia, pendolarismo | GitHub Actions `ubuntu-24.04` | `workflow_dispatch` |
 
 ### Perché 2 esecutori distinti
 
@@ -168,7 +168,7 @@ nessun cron della VM ne scarica gli artifact.
 I workflow weekly/monthly/annual presenti in `.github/workflows/` sono
 quindi **smoke test documentali**: il revisore può aprirli dalla UI
 Actions per leggere i comandi Python eseguiti dal cron VM, ma su
-ubuntu-latest essi falliscono con 403 (WAF). Il produttore reale dei
+ubuntu-24.04 essi falliscono con 403 (WAF). Il produttore reale dei
 dati è il cron `/etc/cron.d/cruscotto-etl` sulla VM AgID, mai i workflow.
 
 ---

@@ -43,15 +43,15 @@ permissions:
 jobs:
   refresh:
     name: ETL pendolarismo + artifact upload
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 1
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
           cache: 'pip'
@@ -110,7 +110,7 @@ jobs:
           echo "Total files: $(tar tzf /tmp/pendolarismo-shards.tar.gz | wc -l)"
 
       - name: Upload artifact (retention 1 giorno per privacy)
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: pendolarismo-shards
           path: /tmp/pendolarismo-shards.tar.gz

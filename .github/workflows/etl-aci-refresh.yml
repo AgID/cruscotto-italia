@@ -51,7 +51,7 @@ permissions:
 jobs:
   fetch-aci:
     name: Download CSV ACI LOD + artifact upload
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
 
     steps:
@@ -123,7 +123,7 @@ jobs:
           tar tzf /tmp/aci-iscrizioni-csv.tar.gz
 
       - name: Upload artifact (retention 3 giorni)
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: aci-iscrizioni-csv
           path: /tmp/aci-iscrizioni-csv.tar.gz

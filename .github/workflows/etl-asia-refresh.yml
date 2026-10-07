@@ -52,16 +52,16 @@ permissions:
 jobs:
   refresh:
     name: ETL asia + artifact upload
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     # Polite mode ISTAT: 90-120 min stimato. 180 min copre worst case.
     timeout-minutes: 180
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 1
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
           cache: 'pip'
@@ -134,7 +134,7 @@ jobs:
           echo "Total files: $(tar tzf /tmp/asia-shards.tar.gz | wc -l)"
 
       - name: Upload artifact (retention 1 giorno per privacy)
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: asia-shards
           path: /tmp/asia-shards.tar.gz

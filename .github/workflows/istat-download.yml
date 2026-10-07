@@ -31,7 +31,7 @@ env:
 jobs:
   anni:
     name: Anni disponibili
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     outputs:
       anno_cap: ${{ steps.anni.outputs.anno_cap }}
@@ -39,8 +39,8 @@ jobs:
       anno_parco: ${{ steps.anni.outputs.anno_parco }}
       anno_inc: ${{ steps.anni.outputs.anno_inc }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
       - run: pip install duckdb requests structlog
@@ -56,7 +56,7 @@ jobs:
   scarica:
     name: ${{ matrix.dataset }} ${{ matrix.parte }}/8
     needs: anni
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 120
     strategy:
       fail-fast: false
@@ -64,8 +64,8 @@ jobs:
         dataset: [incidenti, parco]
         parte: [1, 2, 3, 4, 5, 6, 7, 8]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
       - run: pip install duckdb requests structlog
@@ -74,7 +74,7 @@ jobs:
           mkdir -p "$DATA_DIR/lookup"
           curl -sSf -m 60 -o "$DATA_DIR/lookup/comuni-bundle.json" "$BUNDLE_URL"
       # Blocchi gia scaricati da un tentativo fallito (ripresa)
-      - uses: actions/cache/restore@v4
+      - uses: actions/cache/restore@v5
         with:
           path: parti
           key: blocchi-${{ matrix.dataset }}-${{ matrix.parte }}-${{ github.run_id }}-${{ github.run_attempt }}
@@ -87,11 +87,11 @@ jobs:
             --anno-parco ${{ needs.anni.outputs.anno_parco }} \
             --anno-inc ${{ needs.anni.outputs.anno_inc }} --out parti
       - if: failure() || cancelled()
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v5
         with:
           path: parti
           key: blocchi-${{ matrix.dataset }}-${{ matrix.parte }}-${{ github.run_id }}-${{ github.run_attempt }}
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: parte-${{ matrix.dataset }}-${{ matrix.parte }}
           path: parti/*.parte[0-9][0-9]
@@ -105,7 +105,7 @@ jobs:
     # comuni in parallelo -> richieste scadute)
     name: capacita ${{ matrix.parte }}/16
     needs: anni
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 330
     strategy:
       fail-fast: false
@@ -113,8 +113,8 @@ jobs:
       matrix:
         parte: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
       - run: pip install duckdb requests structlog
@@ -122,7 +122,7 @@ jobs:
         run: |
           mkdir -p "$DATA_DIR/lookup"
           curl -sSf -m 60 -o "$DATA_DIR/lookup/comuni-bundle.json" "$BUNDLE_URL"
-      - uses: actions/cache/restore@v4
+      - uses: actions/cache/restore@v5
         with:
           path: parti
           key: blocchi-capacita-${{ matrix.parte }}-${{ github.run_id }}-${{ github.run_attempt }}
@@ -135,11 +135,11 @@ jobs:
             --anno-parco ${{ needs.anni.outputs.anno_parco }} \
             --anno-inc ${{ needs.anni.outputs.anno_inc }} --out parti
       - if: failure() || cancelled()
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v5
         with:
           path: parti
           key: blocchi-capacita-${{ matrix.parte }}-${{ github.run_id }}-${{ github.run_attempt }}
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: parte-capacita-${{ matrix.parte }}
           path: parti/*.parte[0-9][0-9]
@@ -149,11 +149,11 @@ jobs:
   provinciali:
     name: Flussi provinciali e codelist
     needs: anni
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
       - run: pip install duckdb requests structlog
@@ -162,7 +162,7 @@ jobs:
           echo "Runner IP: $(curl -sS -m 5 https://api.ipify.org || echo unknown)"
           python scripts/etl/istat_actions.py provinciali \
             --anno-fl ${{ needs.anni.outputs.anno_fl }} --out parti
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: parte-provinciali
           path: |
@@ -174,15 +174,15 @@ jobs:
   unisci:
     name: Unisci e pubblica istat-raw
     needs: [anni, scarica, capacita, provinciali]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
       - run: pip install duckdb requests structlog
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           pattern: parte-*
           path: parti
@@ -196,7 +196,7 @@ jobs:
           ls -la istat-raw
           cat istat-raw/manifest.json
           tar czf istat-raw.tar.gz -C istat-raw .
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: istat-raw
           path: istat-raw.tar.gz

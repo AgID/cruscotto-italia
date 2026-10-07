@@ -52,14 +52,14 @@ jobs:
   # ---------------------------------------------------------------------------
   pun:
     name: ETL · PUN (smoke test)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     if: ${{ contains(github.event.inputs.sources, 'pun') || github.event.inputs.sources == 'all' || github.event.inputs.sources == '' }}
     timeout-minutes: 30
     outputs:
       ran: ${{ steps.pun_run.outputs.ran }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
           cache: 'pip'
@@ -105,14 +105,14 @@ jobs:
   # ---------------------------------------------------------------------------
   carburanti:
     name: ETL · Carburanti (smoke test)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     if: ${{ contains(github.event.inputs.sources, 'carburanti') || github.event.inputs.sources == 'all' || github.event.inputs.sources == '' }}
     timeout-minutes: 30
     outputs:
       ran: ${{ steps.carburanti_run.outputs.ran }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
           cache: 'pip'
@@ -163,13 +163,13 @@ jobs:
   # potrebbe loggare warning su sezioni mancanti: e' atteso, NON e' un bug.
   dashboard:
     name: ETL · Dashboard rebuild (smoke test parziale)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: [pun, carburanti]
     if: ${{ always() && (needs.pun.outputs.ran == 'true' || needs.carburanti.outputs.ran == 'true') && (contains(github.event.inputs.sources, 'dashboard') || github.event.inputs.sources == 'all' || github.event.inputs.sources == '') }}
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
           cache: 'pip'

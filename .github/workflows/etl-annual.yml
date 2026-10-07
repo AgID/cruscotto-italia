@@ -94,12 +94,12 @@ jobs:
   # Demografia (ISTAT POSAS) — popolazione residente per eta'/sesso
   demografia:
     name: ETL · Demografia (atteso fail su Azure)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     if: ${{ contains(github.event.inputs.sources, 'demografia') || github.event.inputs.sources == 'all' || github.event.inputs.sources == '' }}
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
           cache: 'pip'
@@ -120,12 +120,12 @@ jobs:
   # Aria (ISPRA SNPA) — qualita' aria PM10/PM2.5/NO2 per comune
   aria:
     name: ETL · Aria ISPRA SNPA (atteso fail su Azure)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     if: ${{ contains(github.event.inputs.sources, 'aria') || github.event.inputs.sources == 'all' || github.event.inputs.sources == '' }}
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
           cache: 'pip'
@@ -146,12 +146,12 @@ jobs:
   # Turismo (ISTAT TUR_1 + TUR_7) — capacita' e movimentazione turistica
   turismo:
     name: ETL · Turismo ISTAT (atteso fail su Azure)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     if: ${{ contains(github.event.inputs.sources, 'turismo') || github.event.inputs.sources == 'all' || github.event.inputs.sources == '' }}
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
           cache: 'pip'
@@ -172,12 +172,12 @@ jobs:
   # Territorio (ISPRA Suolo + IdroGEO + Catasto Rifiuti)
   territorio:
     name: ETL · Territorio (atteso fail su Azure)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     if: ${{ contains(github.event.inputs.sources, 'territorio') || github.event.inputs.sources == 'all' || github.event.inputs.sources == '' }}
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
           cache: 'pip'
@@ -198,12 +198,12 @@ jobs:
   # Veicoli (ACI LOD + ISTAT 41_993 + ISTAT 41_983 incidenti)
   veicoli:
     name: ETL · Veicoli ACI+ISTAT (atteso fail su Azure)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     if: ${{ contains(github.event.inputs.sources, 'veicoli') || github.event.inputs.sources == 'all' || github.event.inputs.sources == '' }}
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
           cache: 'pip'
@@ -224,12 +224,12 @@ jobs:
   # Redditi MEF (Finanze) — IRPEF dichiarazioni comunali
   redditi:
     name: ETL · MEF Redditi IRPEF (atteso fail su Azure)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     if: ${{ contains(github.event.inputs.sources, 'redditi') || github.event.inputs.sources == 'all' || github.event.inputs.sources == '' }}
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
           cache: 'pip'
@@ -250,12 +250,12 @@ jobs:
   # MEF DE — Patrimonio Immobiliare PA (censimento beni immobili 2022)
   immobili_pa:
     name: ETL · MEF Immobili PA (atteso fail su Azure)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     if: ${{ contains(github.event.inputs.sources, 'immobili_pa') || github.event.inputs.sources == 'all' || github.event.inputs.sources == '' }}
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
           cache: 'pip'
@@ -276,12 +276,12 @@ jobs:
   # Scuole (MIUR Anagrafe Scuole Statali DS0400SCUANAGRAFESTAT)
   scuole:
     name: ETL · MIUR Scuole (atteso fail su Azure)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     if: ${{ contains(github.event.inputs.sources, 'scuole') || github.event.inputs.sources == 'all' || github.event.inputs.sources == '' }}
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
           cache: 'pip'

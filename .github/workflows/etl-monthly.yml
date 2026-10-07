@@ -77,12 +77,12 @@ jobs:
   # ATTESO FALLIMENTO HTTP 403 su ubuntu-latest (WAF cloud-restrict)
   anagrafica:
     name: ETL · Anagrafica (atteso fail su Azure)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     if: ${{ contains(github.event.inputs.sources, 'anagrafica') || github.event.inputs.sources == 'all' || github.event.inputs.sources == '' }}
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
           cache: 'pip'
@@ -104,12 +104,12 @@ jobs:
   # ATTESO FALLIMENTO HTTP 403 (WAF cloud-restrict)
   bdap:
     name: ETL · BDAP-MOP (atteso fail su Azure)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     if: ${{ contains(github.event.inputs.sources, 'bdap') || github.event.inputs.sources == 'all' || github.event.inputs.sources == '' }}
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
           cache: 'pip'
@@ -131,12 +131,12 @@ jobs:
   # ATTESO FALLIMENTO HTTP 403 (WAF cloud-restrict)
   siope:
     name: ETL · SIOPE (atteso fail su Azure)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     if: ${{ contains(github.event.inputs.sources, 'siope') || github.event.inputs.sources == 'all' || github.event.inputs.sources == '' }}
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
           cache: 'pip'
@@ -166,12 +166,12 @@ jobs:
   # ATTESO FALLIMENTO HTTP 403 (WAF cloud-restrict)
   anncsu:
     name: ETL · ANNCSU (atteso fail su Azure)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     if: ${{ contains(github.event.inputs.sources, 'anncsu') || github.event.inputs.sources == 'all' || github.event.inputs.sources == '' }}
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
           cache: 'pip'
@@ -193,12 +193,12 @@ jobs:
   # POTREBBE FUNZIONARE: ArcGIS services.arcgis.com non sempre ha WAF cloud-restrict
   agcom_bbmap:
     name: ETL · AGCOM Broadband Map
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     if: ${{ contains(github.event.inputs.sources, 'agcom_bbmap') || github.event.inputs.sources == 'all' || github.event.inputs.sources == '' }}
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
           cache: 'pip'
@@ -227,12 +227,12 @@ jobs:
   # FUNZIONA su Azure: l'endpoint SPARQL del MiC e' aperto (no WAF cloud-restrict)
   beni_culturali:
     name: ETL · Beni Culturali ArCo (MiC)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     if: ${{ contains(github.event.inputs.sources, 'beni_culturali') || github.event.inputs.sources == 'all' || github.event.inputs.sources == '' }}
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
           cache: 'pip'

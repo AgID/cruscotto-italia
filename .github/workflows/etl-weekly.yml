@@ -76,12 +76,12 @@ jobs:
   # ATTESO FALLIMENTO HTTP 403 su ubuntu-latest (WAF F5 Volterra cloud-restrict)
   anac:
     name: ETL · ANAC OCDS (atteso fail su Azure)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     if: ${{ contains(github.event.inputs.sources, 'anac') || github.event.inputs.sources == 'all' || github.event.inputs.sources == '' }}
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
           cache: 'pip'
@@ -111,12 +111,12 @@ jobs:
   # ATTESO FALLIMENTO HTTP 403 (stesso WAF cloud-restrict)
   pnrr:
     name: ETL · PNRR Italia Domani (atteso fail su Azure)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     if: ${{ contains(github.event.inputs.sources, 'pnrr') || github.event.inputs.sources == 'all' || github.event.inputs.sources == '' }}
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
           cache: 'pip'
@@ -138,12 +138,12 @@ jobs:
   # ATTESO FALLIMENTO HTTP 403 (stesso WAF cloud-restrict)
   sanita_mds:
     name: ETL · Sanita' MdS (atteso fail su Azure)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     if: ${{ contains(github.event.inputs.sources, 'sanita_mds') || github.event.inputs.sources == 'all' || github.event.inputs.sources == '' }}
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
           cache: 'pip'
@@ -165,12 +165,12 @@ jobs:
   # ATTESO FALLIMENTO HTTP 403 (stesso WAF cloud-restrict)
   runts:
     name: ETL · RUNTS (atteso fail su Azure)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     if: ${{ contains(github.event.inputs.sources, 'runts') || github.event.inputs.sources == 'all' || github.event.inputs.sources == '' }}
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
           cache: 'pip'
