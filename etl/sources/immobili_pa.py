@@ -72,6 +72,7 @@ import structlog
 from etl.lib import manifest
 
 # Riuso lookup canonica (load_cat_to_istat e' adesso local-first)
+from etl.lib.http_ua import USER_AGENT
 from etl.sources.scuole import load_cat_to_istat
 
 log = structlog.get_logger()
@@ -95,10 +96,7 @@ def referer(anno: int) -> str:
             f"open_data_immobili/dati_immobili_{anno}.html")
 
 HEADERS = {
-    "User-Agent": (
-        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
-        "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
-    ),
+    "User-Agent": USER_AGENT,
     "Accept": "application/zip,*/*",
     "Accept-Encoding": "gzip, deflate",
 }

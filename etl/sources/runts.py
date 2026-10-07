@@ -89,6 +89,7 @@ import requests
 import structlog
 
 from etl.lib import local_lookup, manifest
+from etl.lib.http_ua import USER_AGENT
 
 log = structlog.get_logger(__name__)
 
@@ -326,9 +327,7 @@ def download_xlsx(force: bool = False) -> Path:
 
     session = requests.Session()
     session.headers.update({
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-                      "AppleWebKit/537.36 (KHTML, like Gecko) "
-                      "Chrome/125.0.0.0 Safari/537.36 CruscottoItalia/1.0",
+        "User-Agent": USER_AGENT,
         "Accept-Language": "it-IT,it;q=0.9,en;q=0.8",
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
     })

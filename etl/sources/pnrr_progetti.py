@@ -48,6 +48,7 @@ from pathlib import Path
 import structlog
 
 from etl.lib import local_lookup, manifest
+from etl.lib.http_ua import USER_AGENT as UA
 
 log = structlog.get_logger()
 
@@ -56,8 +57,6 @@ PNRR_PROGETTI_URL = (
     "https://www.italiadomani.gov.it/content/dam/sogei-ng/opendata/PNRR_Progetti.csv"
 )
 # UA da browser: il WAF di italiadomani.gov.it risponde 403 a UA non-browser
-UA = ("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
-      "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
 # Scadenza della cache quando la fonte non espone Last-Modified
 CACHE_MAX_DAYS = 14
 MIN_CSV_BYTES = 100_000_000

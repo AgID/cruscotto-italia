@@ -87,6 +87,7 @@ import requests
 import structlog
 
 from etl.lib import local_lookup, manifest
+from etl.lib.http_ua import USER_AGENT
 
 log = structlog.get_logger()
 
@@ -102,7 +103,6 @@ REGIONS = [
 
 BASE_URL = "https://anncsu.open.agenziaentrate.gov.it/age-inspire/opendata/anncsu/getds.php"
 REFERER = "https://www.anncsu.gov.it/it/consultazione-dellarchivio/open-data/Accedi-ai-servizi-di-dowload-massivo-in-Open-data/"
-USER_AGENT = "Mozilla/5.0 (X11; Linux x86_64; rv:120.0) Gecko/20100101 Firefox/120.0"
 
 HEADERS = {
     "User-Agent": USER_AGENT,

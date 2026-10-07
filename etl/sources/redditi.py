@@ -28,6 +28,7 @@ from typing import Any
 import requests
 
 from etl.lib import manifest
+from etl.lib.http_ua import USER_AGENT
 
 # -----------------------------------------------------------------------------
 # Configurazione
@@ -50,10 +51,6 @@ MEF_REFERER = (
     "index.php?search_class%5B0%5D=cCOMUNE&opendata=yes"
 )
 
-USER_AGENT = (
-    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
-    "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-)
 
 # Locale (cache CSV zip per ripartibilita)
 LOCAL_CACHE_DIR = Path(os.environ.get("MEF_CACHE_DIR", "/tmp/mef_cache"))

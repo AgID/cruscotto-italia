@@ -108,6 +108,7 @@ import requests
 import structlog
 
 from etl.lib import local_lookup, manifest
+from etl.lib.http_ua import USER_AGENT
 
 log = structlog.get_logger()
 
@@ -199,7 +200,7 @@ def fetch_csv(inquinante: str, url: str, no_cache: bool = False) -> Path:
 
     log.info("aria_downloading", inquinante=inquinante, url=url)
     headers = {
-        "User-Agent": "Mozilla/5.0 Cruscotto-Italia/1.0 (+https://cruscotto-italia.dati.gov.it)",
+        "User-Agent": USER_AGENT,
         "Accept": "text/csv,application/csv,*/*",
     }
     resp = requests.get(url, headers=headers, timeout=120)
@@ -371,7 +372,7 @@ def fetch_annuario(ink: str, no_cache: bool = False) -> tuple[Path, int] | None:
     data di pubblicazione e cambia a ogni edizione. None se non trovata.
     """
     pagina, sigla = ANNUARIO_PAGINE[ink]
-    headers = {"User-Agent": "Mozilla/5.0 Cruscotto-Italia/1.0 (+https://cruscotto-italia.dati.gov.it)"}
+    headers = {"User-Agent": USER_AGENT}
     try:
         r = requests.get(ANNUARIO_BASE + pagina, headers=headers, timeout=60)
         r.raise_for_status()
@@ -399,7 +400,7 @@ def fetch_annuario(ink: str, no_cache: bool = False) -> tuple[Path, int] | None:
 def fetch_snpa(ink: str, anno: int, no_cache: bool = False) -> Path | None:
     """Tabella preliminare SNPA dell'anno per l'inquinante, None se assente."""
     _, sigla = ANNUARIO_PAGINE[ink]
-    headers = {"User-Agent": "Mozilla/5.0 Cruscotto-Italia/1.0 (+https://cruscotto-italia.dati.gov.it)"}
+    headers = {"User-Agent": USER_AGENT}
     out = CACHE_DIR / f"snpa_{ink}_{anno}.xlsx"
     if out.exists() and not no_cache:
         return out

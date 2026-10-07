@@ -150,11 +150,9 @@ FRESHNESS_DAYS = 7
 # L'anagrafica resta dai CSV; i prezzi praticati sono letti in tempo reale dal
 # backend del portale OsservaPrezzi (stesso dato IODL 2.0, aggiornato in giornata
 # invece che con ~1gg di ritardo del CSV). Il portale e' dietro Akamai: serve
-# User-Agent browser-like (UA "bot" -> 403).
 API_BASE = "https://carburanti.mise.gov.it/ospzApi"
 API_HEADERS = {
-    "User-Agent": ("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
-                   "(KHTML, like Gecko) Chrome/126.0 Safari/537.36"),
+    "User-Agent": USER_AGENT,
     "Accept": "application/json, text/plain, */*",
     "Referer": "https://carburanti.mise.gov.it/ospzSearch/risultati",
     "Content-Type": "application/json",

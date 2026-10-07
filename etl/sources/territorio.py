@@ -137,7 +137,7 @@ def resolve_suolo() -> tuple[str, int]:
     """(url, anno_fine) dell'edizione piu recente linkata nella pagina dati."""
     try:
         req = urllib.request.Request(ISPRA_SUOLO_PAGE,
-                                     headers={"User-Agent": "Mozilla/5.0"})
+                                     headers={"User-Agent": HTTP_USER_AGENT})
         with urllib.request.urlopen(req, timeout=60) as resp:
             html = resp.read().decode("utf-8", "replace")
         trovati = sorted({(int(m.group(1)), int(m.group(2)), m.group(0))

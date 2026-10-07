@@ -91,6 +91,7 @@ import requests
 import structlog
 
 from etl.lib import local_lookup, manifest
+from etl.lib.http_ua import USER_AGENT
 from etl.lib.text import clean_text
 
 log = structlog.get_logger()
@@ -144,10 +145,7 @@ _OSPEDALI_RE = re.compile(
 
 # HTTP fetch (richiede UA browser-like per WAF MdS)
 HTTP_HEADERS = {
-    "User-Agent": (
-        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
-        "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-    ),
+    "User-Agent": USER_AGENT,
     "Accept": "text/csv,application/json,*/*",
     "Accept-Language": "it-IT,it;q=0.9,en;q=0.8",
     "Referer": "https://www.dati.salute.gov.it/",
