@@ -110,7 +110,7 @@ Dettagli architetturali completi: [`DESIGN.md`](DESIGN.md) ·
 
 ### Cadenze ETL
 
-Orari in **ora italiana** (il cron della VM usa il fuso Europe/Rome), tranne il workflow ACI su GitHub Actions (UTC).
+Orari in **ora italiana** (il cron della VM usa il fuso Europe/Rome), tranne i workflow ACI e ISTAT su GitHub Actions (UTC).
 
 | Cadenza | Fonti | Esecuzione | Trigger |
 |---|---|---|---|
@@ -126,6 +126,7 @@ Orari in **ora italiana** (il cron della VM usa il fuso Europe/Rome), tranne il 
 | **Semestrale** (sentinella giornaliera 03:20) | quotazioni OMI AGE (zone + perimetri): `omi_semestrale.sh` interroga ogni giorno l'elenco dei semestri pubblicati e avvia la raccolta solo quando ne compare uno nuovo (l'Agenzia pubblica entro il 15 marzo e il 15 ottobre, senza data fissa) | cron VM AgID | automatico |
 | **Decennale** (manuale, prossimo 2031) | censimento Basi Territoriali (sezioni + 119 vars) | run manuale `python -m etl.sources.censimento` su VM | `workflow_dispatch` |
 | **ACI su Actions** (1 feb / 1 apr / 1 lug, 04:00 UTC) | CSV prime iscrizioni ACI LOD, scaricati poi dalla VM con `fetch_aci_artifact.py` | GitHub Actions `ubuntu-latest` | `schedule` + `workflow_dispatch` |
+| **ISTAT su Actions** (1 feb / 1 apr / 1 lug, 02:00 UTC) | download SDMX di parco veicoli, incidenti, capacità ricettiva e flussi turistici, divisi fra 8 runner; la VM li recupera con `fetch_istat_artifact.py` e gli ETL girano con `--solo-cache` | GitHub Actions `ubuntu-latest` | `schedule` + `workflow_dispatch` |
 | **Riserva manuale** | istat_profilo, asia, pendolarismo | GitHub Actions `ubuntu-latest` | `workflow_dispatch` |
 
 ### Perché 2 esecutori distinti
@@ -141,9 +142,20 @@ VM li recupera con
 [`scripts/etl/fetch_aci_artifact.py`](scripts/etl/fetch_aci_artifact.py)
 prima dell'ETL veicoli.
 
-**ISTAT esploradati** limita le richieste troppo grandi o troppo frequenti
+**ISTAT esploradati** blocca l'IP della VM dopo circa 100-130 richieste
+SDMX, anche sotto le 5 query/minuto dichiarate (ottobre 2026). Per parco
+veicoli, incidenti e turismo il download avviene quindi su Actions
+([`istat-download.yml`](.github/workflows/istat-download.yml)): i comuni
+sono divisi in 8 parti, ognuna su un runner diverso con meno di 40
+richieste. L'artifact `istat-raw` contiene i CSV uniti e un `manifest.json`
+con anni e righe; la VM lo scarica con
+[`scripts/etl/fetch_istat_artifact.py`](scripts/etl/fetch_istat_artifact.py),
+che controlla le righe prima di sostituire la cache, e lancia
+`veicoli` e `istat_turismo` con `--solo-cache` (nessuna richiesta a ISTAT).
+
+Per le altre fonti, ISTAT limita le richieste troppo grandi o troppo frequenti
 (in passato ha bloccato IP per uso intensivo; oltre 35 codici comune per
-richiesta risponde 400). Tutti gli ETL ISTAT girano quindi dalla VM e
+richiesta risponde 400). Gli altri ETL ISTAT girano dalla VM e
 scaricano a blocchi da 35 comuni, in sequenza e con pausa
 ([`etl/lib/istat_sdmx.py`](etl/lib/istat_sdmx.py)). I workflow ISTAT su
 Actions (profilo, ASIA, pendolarismo) restano solo come riserva manuale:
@@ -362,6 +374,8 @@ cruscotto-italia/
 │   ├── genera_indice.py      ← genera l'indice "Cosa cercare e dove" di about.html
 │   └── etl/
 │       ├── fetch_aci_artifact.py ← scarica i CSV ACI prodotti su GitHub Actions
+│       ├── istat_actions.py  ← download ISTAT a parti sui runner (usato da istat-download.yml)
+│       ├── fetch_istat_artifact.py ← artifact istat-raw → cache ETL veicoli e turismo
 │       └── pull_artifact.py  ← riserva: artifact dei workflow ISTAT manuali (non in cron)
 │
 ├── .github/workflows/
@@ -373,6 +387,7 @@ cruscotto-italia/
 │   ├── etl-asia-refresh.yml          ← producer ISTAT ASIA, output artifact
 │   ├── etl-pendolarismo-refresh.yml  ← producer ISTAT pendolarismo
 │   ├── etl-aci-refresh.yml           ← scarica i CSV ACI LOD (ETL veicoli resta sulla VM)
+│   ├── istat-download.yml            ← scarica parco, incidenti e turismo ISTAT (elaborazione sulla VM)
 │   ├── deploy-worker.yml         ← deploy Cloudflare Worker su push main
 │   ├── deploy-frontend.yml       ← sync frontend (legacy, in dismissione)
 │   └── ci.yml                    ← CI lint & test (ruff, mypy, pytest, tsc)
@@ -460,7 +475,7 @@ e nella pagina pubblica `about.html` con link diretti alle fonti.
   rate limiting sul Worker MCP.
 - **Privacy**: nessun analytics di terzi, nessun cookie di profilazione,
   solo cookie tecnici nginx. Gli artifact GitHub Actions contengono solo
-  CSV pubblici ACI (retention 3 giorni).
+  CSV pubblici ACI e ISTAT (retention 3 giorni).
 
 ---
 

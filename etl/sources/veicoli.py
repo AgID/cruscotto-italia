@@ -92,6 +92,9 @@ EURO_CODES = {
 }
 
 CACHE_DIR = Path("/tmp/cruscotto-veicoli-cache")
+# --solo-cache: i CSV ISTAT arrivano dall'artifact istat-raw (GitHub Actions,
+# fetch_istat_artifact.py); se mancano, nessuna richiesta a ISTAT
+SOLO_CACHE = False
 # Output locale (default produzione VM AgID; override via --outdir)
 DEFAULT_OUTDIR = Path("/var/www/cruscotto-italia/data/veicoli")
 
@@ -116,12 +119,33 @@ def codici_comuni() -> list[str]:
     return sorted(bundle.keys())
 
 
+def anni_da_cache() -> None:
+    """--solo-cache: anno del parco e serie degli incidenti dai CSV in cache
+    (artifact istat-raw, che li sceglie all'ultimo anno pubblicato). Se un
+    file manca restano le costanti e il fetch lo segnala come assente."""
+    global ANNO_PARCO, ANNI_INCIDENTI
+    parco = [int(m.group(1)) for f in CACHE_DIR.glob("istat_41_993_parco_*.csv")
+             if (m := re.fullmatch(r"istat_41_993_parco_(\d{4})\.csv", f.name))]
+    inc = [(int(m.group(1)), int(m.group(2)))
+           for f in CACHE_DIR.glob("istat_41_983_incidenti_*.csv")
+           if (m := re.fullmatch(r"istat_41_983_incidenti_(\d{4})_(\d{4})\.csv", f.name))]
+    if parco:
+        ANNO_PARCO = max(parco)
+    if inc:
+        a, b = max(inc, key=lambda t: t[1])
+        ANNI_INCIDENTI = list(range(a, b + 1))
+    log.info("istat_anni_da_cache", anno_parco=ANNO_PARCO,
+             incidenti=f"{min(ANNI_INCIDENTI)}-{max(ANNI_INCIDENTI)}")
+
+
 def fetch_istat_parco(anno: int = ANNO_PARCO, use_cache: bool = True) -> Path:
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
     out = CACHE_DIR / f"istat_41_993_parco_{anno}.csv"
     if out.exists() and out.stat().st_size > 100_000 and use_cache:
         log.info("istat_parco_cache_hit", path=str(out), size=out.stat().st_size, anno=anno)
         return out
+    if SOLO_CACHE:
+        raise FileNotFoundError(f"--solo-cache: {out} assente")
     # A blocchi di comuni: la richiesta nazionale va in timeout (05/10/2026)
     log.info("istat_parco_download_start", anno=anno, modo="a_blocchi")
     t0 = time.time()
@@ -197,6 +221,8 @@ def fetch_istat_incidenti(anni: list[int] | None = None, use_cache: bool = True)
                  size=out.stat().st_size, range=f"{a_min}-{a_max}")
         return out
 
+    if SOLO_CACHE:
+        raise FileNotFoundError(f"--solo-cache: {out} assente")
     # Pattern dimensioni: FREQ.REF_AREA.DATA_TYPE.RESULT
     # Wildcard: tutti i comuni, tutti i DATA_TYPE, tutti i RESULT
     log.info("istat_incidenti_download_start", range=f"{a_min}-{a_max}", modo="a_blocchi")
@@ -683,7 +709,14 @@ def main() -> int:
     parser.add_argument("--riusa-istat", action="store_true",
                         help="Non interroga ISTAT: parco e incidenti restano quelli "
                              "degli shard esistenti (es. IP bloccato da ISTAT)")
+    parser.add_argument("--solo-cache", action="store_true",
+                        help="Parco e incidenti solo dai CSV in cache (artifact "
+                             "istat-raw), mai richieste a ISTAT")
     args = parser.parse_args()
+    global SOLO_CACHE
+    SOLO_CACHE = args.solo_cache
+    if SOLO_CACHE:
+        anni_da_cache()
 
     log.info("etl_veicoli_start", version=ETL_VERSION)
     use_cache = not args.no_cache

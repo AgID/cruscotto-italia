@@ -16,7 +16,7 @@ def test_etl_version():
 def test_anagrafica_constants():
     assert "istat.it" in anagrafica.ISTAT_COMUNI_CSV
     assert "indicepa.gov.it" in anagrafica.IPA_CKAN_BASE
-    assert "cruscotto-italia-etl" in anagrafica.USER_AGENT
+    assert "CruscottoItalia-ETL" in anagrafica.USER_AGENT
 
 
 def test_anagrafica_main_signature():

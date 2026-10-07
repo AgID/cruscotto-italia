@@ -112,7 +112,7 @@ Full architectural details: [`DESIGN.md`](DESIGN.md) ·
 
 ### ETL schedule
 
-Times in **Italian time** (the VM cron uses the Europe/Rome time zone), except the ACI workflow on GitHub Actions (UTC).
+Times in **Italian time** (the VM cron uses the Europe/Rome time zone), except the ACI and ISTAT workflows on GitHub Actions (UTC).
 
 | Cadence | Sources | Execution | Trigger |
 |---|---|---|---|
@@ -128,6 +128,7 @@ Times in **Italian time** (the VM cron uses the Europe/Rome time zone), except t
 | **Six-monthly** (daily sentinel 03:20) | AGE OMI quotations (zones + perimeters): `omi_semestrale.sh` checks the published semesters every day and starts the collection only when a new one appears (published by 15 March and 15 October, no fixed date) | AgID VM cron | automatic |
 | **Ten-yearly** (manual, next 2031) | census Basi Territoriali (sections + 119 vars) | manual run `python -m etl.sources.censimento` on the VM | `workflow_dispatch` |
 | **ACI on Actions** (1 Feb / 1 Apr / 1 Jul, 04:00 UTC) | ACI LOD first-registration CSVs, then fetched by the VM with `fetch_aci_artifact.py` | GitHub Actions `ubuntu-latest` | `schedule` + `workflow_dispatch` |
+| **ISTAT on Actions** (1 Feb / 1 Apr / 1 Jul, 02:00 UTC) | SDMX download of vehicle fleet, road accidents, accommodation capacity and tourist flows, split across 8 runners; the VM fetches them with `fetch_istat_artifact.py` and the ETLs run with `--solo-cache` | GitHub Actions `ubuntu-latest` | `schedule` + `workflow_dispatch` |
 | **Manual fallback** | istat_profilo, asia, pendolarismo | GitHub Actions `ubuntu-latest` | `workflow_dispatch` |
 
 ### Why two separate runners
@@ -142,10 +143,20 @@ and the VM fetches them with
 [`scripts/etl/fetch_aci_artifact.py`](scripts/etl/fetch_aci_artifact.py)
 before the vehicles ETL.
 
-**ISTAT esploradati** limits requests that are too large or too frequent (it
-has blocked IPs for intensive use in the past; above 35 municipality codes
-per request it answers 400). All ISTAT ETLs therefore run from the VM and
-download in sequential batches of 35 municipalities with a pause
+**ISTAT esploradati** blocks the VM's IP after about 100-130 SDMX requests,
+even below the declared 5 queries/minute (October 2026). For vehicle fleet,
+road accidents and tourism the download therefore runs on Actions
+([`istat-download.yml`](.github/workflows/istat-download.yml)): municipalities
+are split into 8 parts, each on a different runner with fewer than 40
+requests. The `istat-raw` artifact holds the merged CSVs and a
+`manifest.json` with years and row counts; the VM fetches it with
+[`scripts/etl/fetch_istat_artifact.py`](scripts/etl/fetch_istat_artifact.py),
+which checks row counts before replacing the cache, and runs `veicoli` and
+`istat_turismo` with `--solo-cache` (no request to ISTAT).
+
+For the other sources, ISTAT limits requests that are too large or too
+frequent (above 35 municipality codes per request it answers 400). The
+other ISTAT ETLs run from the VM and download in sequential batches of 35 municipalities with a pause
 ([`etl/lib/istat_sdmx.py`](etl/lib/istat_sdmx.py)). The ISTAT workflows on
 Actions (profile, ASIA, commuting) are kept only as a manual fallback: no VM
 cron downloads their artifacts.
@@ -365,6 +376,8 @@ cruscotto-italia/
 │   ├── genera_indice.py      ← generates the "What to look for and where" index of about.html
 │   └── etl/
 │       ├── fetch_aci_artifact.py ← downloads the ACI CSVs produced on GitHub Actions
+│       ├── istat_actions.py  ← ISTAT download in parts on runners (used by istat-download.yml)
+│       ├── fetch_istat_artifact.py ← istat-raw artifact → vehicles and tourism ETL cache
 │       └── pull_artifact.py  ← fallback: artifacts of the manual ISTAT workflows (not in cron)
 │
 ├── .github/workflows/
@@ -376,6 +389,7 @@ cruscotto-italia/
 │   ├── etl-asia-refresh.yml          ← ISTAT ASIA producer, artifact output
 │   ├── etl-pendolarismo-refresh.yml  ← ISTAT commuting producer
 │   ├── etl-aci-refresh.yml           ← downloads the ACI LOD CSVs (the vehicle ETL stays on the VM)
+│   ├── istat-download.yml            ← downloads ISTAT fleet, accidents and tourism (processing on the VM)
 │   ├── deploy-worker.yml         ← Cloudflare Worker deploy on push to main
 │   ├── deploy-frontend.yml       ← frontend sync (legacy, being retired)
 │   └── ci.yml                    ← CI lint & test (ruff, mypy, pytest, tsc)
@@ -464,7 +478,7 @@ sources.
   Referrer-Policy, Permissions-Policy), `server_tokens off` on nginx, rate
   limiting on the MCP Worker.
 - **Privacy**: no third-party analytics, no profiling cookies, only nginx
-  technical cookies. GitHub Actions artifacts contain only public ACI CSVs
+  technical cookies. GitHub Actions artifacts contain only public ACI and ISTAT CSVs
   (3-day retention).
 
 ---

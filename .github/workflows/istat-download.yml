@@ -1,0 +1,145 @@
+name: ETL · ISTAT SDMX download (artifact)
+
+# Scarica da ISTAT i dati comunali di veicoli (parco, incidenti) e turismo
+# (capacita ricettiva, flussi provinciali) e li pubblica come artifact
+# `istat-raw`. L'elaborazione resta sulla VM: `fetch_istat_artifact.py`
+# mette i file nella cache degli ETL, che girano con `--solo-cache`.
+#
+# Perche: ISTAT blocca l'IP della VM dopo ~100-130 richieste SDMX anche
+# sotto le 5 query/minuto dichiarate (05 e 07/10/2026). I comuni sono divisi
+# in PARTI parti: ogni job gira su un runner diverso (IP diverso) e fa meno
+# di 40 richieste, con 13 s di pausa fra l'una e l'altra.
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Prima delle finestre annuali della VM (1 feb / 1 apr / 1 lug)
+    - cron: '0 2 1 2 *'
+    - cron: '0 2 1 4 *'
+    - cron: '0 2 1 7 *'
+
+permissions:
+  contents: read
+
+env:
+  PARTI: '8'
+  DATA_DIR: /tmp/cruscotto-data
+  PYTHONPATH: ${{ github.workspace }}
+  BUNDLE_URL: https://cruscotto-italia.dati.gov.it/data/lookup/comuni-bundle.json
+
+jobs:
+  anni:
+    name: Anni disponibili
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      anno_cap: ${{ steps.anni.outputs.anno_cap }}
+      anno_fl: ${{ steps.anni.outputs.anno_fl }}
+      anno_parco: ${{ steps.anni.outputs.anno_parco }}
+      anno_inc: ${{ steps.anni.outputs.anno_inc }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install duckdb requests structlog
+      - name: Comuni-bundle
+        run: |
+          mkdir -p "$DATA_DIR/lookup"
+          curl -sSf -m 60 -o "$DATA_DIR/lookup/comuni-bundle.json" "$BUNDLE_URL"
+      - id: anni
+        run: |
+          echo "Runner IP: $(curl -sS -m 5 https://api.ipify.org || echo unknown)"
+          python scripts/etl/istat_actions.py anni | tee -a "$GITHUB_OUTPUT"
+
+  scarica:
+    name: ${{ matrix.dataset }} ${{ matrix.parte }}/8
+    needs: anni
+    runs-on: ubuntu-latest
+    # capacita ricettiva: ~2-3 minuti per blocco da 35 comuni (prova 07/10/2026)
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix:
+        dataset: [incidenti, parco, capacita]
+        parte: [1, 2, 3, 4, 5, 6, 7, 8]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install duckdb requests structlog
+      - name: Comuni-bundle
+        run: |
+          mkdir -p "$DATA_DIR/lookup"
+          curl -sSf -m 60 -o "$DATA_DIR/lookup/comuni-bundle.json" "$BUNDLE_URL"
+      - name: Scarica
+        run: |
+          echo "Runner IP: $(curl -sS -m 5 https://api.ipify.org || echo unknown)"
+          python scripts/etl/istat_actions.py scarica ${{ matrix.dataset }} \
+            ${{ matrix.parte }} "$PARTI" --anno-cap ${{ needs.anni.outputs.anno_cap }} \
+            --anno-parco ${{ needs.anni.outputs.anno_parco }} \
+            --anno-inc ${{ needs.anni.outputs.anno_inc }} --out parti
+      - uses: actions/upload-artifact@v4
+        with:
+          name: parte-${{ matrix.dataset }}-${{ matrix.parte }}
+          path: parti/*.parte[0-9][0-9]
+          retention-days: 1
+          if-no-files-found: error
+
+  provinciali:
+    name: Flussi provinciali e codelist
+    needs: anni
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install duckdb requests structlog
+      - name: Scarica
+        run: |
+          echo "Runner IP: $(curl -sS -m 5 https://api.ipify.org || echo unknown)"
+          python scripts/etl/istat_actions.py provinciali \
+            --anno-fl ${{ needs.anni.outputs.anno_fl }} --out parti
+      - uses: actions/upload-artifact@v4
+        with:
+          name: parte-provinciali
+          path: |
+            parti/flussi_*.csv
+            parti/itter107.xml
+          retention-days: 1
+          if-no-files-found: error
+
+  unisci:
+    name: Unisci e pubblica istat-raw
+    needs: [anni, scarica, provinciali]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install duckdb requests structlog
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: parte-*
+          path: parti
+      - name: Unisci
+        run: |
+          python scripts/etl/istat_actions.py unisci --dir parti --out istat-raw \
+            --parti "$PARTI" --anno-cap ${{ needs.anni.outputs.anno_cap }} \
+            --anno-fl ${{ needs.anni.outputs.anno_fl }} \
+            --anno-parco ${{ needs.anni.outputs.anno_parco }} \
+            --anno-inc ${{ needs.anni.outputs.anno_inc }}
+          ls -la istat-raw
+          cat istat-raw/manifest.json
+          tar czf istat-raw.tar.gz -C istat-raw .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: istat-raw
+          path: istat-raw.tar.gz
+          retention-days: 3
+          if-no-files-found: error

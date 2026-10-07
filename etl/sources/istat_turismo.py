@@ -191,6 +191,23 @@ def resolve_anni() -> None:
     ANNO_FL = DATAFLOWS[1]["year_start"]
 
 
+def anni_da_cache(cache_dir: Path) -> None:
+    """--solo-cache: anni dai file gia in cache (artifact istat-raw scaricato
+    da fetch_istat_artifact.py), senza alcuna richiesta a ISTAT."""
+    global ANNO_CAP, ANNO_FL
+    for df in DATAFLOWS:
+        anni = [int(m.group(1)) for f in cache_dir.glob(f"{df['name']}_*.csv")
+                if (m := re.fullmatch(rf"{df['name']}_(\d{{4}})\.csv", f.name))]
+        if not anni:
+            raise SystemExit(f"--solo-cache: nessun {df['name']}_<anno>.csv in {cache_dir}")
+        df["year_start"] = df["year_end"] = max(anni)
+        log.info("istat_anno_da_cache", source=df["name"], anno=max(anni))
+    if not (cache_dir / "itter107.xml").exists():
+        raise SystemExit(f"--solo-cache: manca itter107.xml in {cache_dir}")
+    ANNO_CAP = DATAFLOWS[0]["year_start"]
+    ANNO_FL = DATAFLOWS[1]["year_start"]
+
+
 def codici_comuni() -> list[str]:
     """Codici ISTAT dei comuni dal bundle locale (stessa fonte di asia.py)."""
     bundle = local_lookup.load_comuni_bundle()
@@ -566,6 +583,9 @@ def main() -> int:
     parser.add_argument("--outdir", type=Path, default=Path("/var/www/cruscotto-italia/data"))
     parser.add_argument("--no-cache", action="store_true",
                         help="Forza re-download dei CSV ISTAT anche se gia in cache")
+    parser.add_argument("--solo-cache", action="store_true",
+                        help="Nessuna richiesta a ISTAT: usa i file in cache "
+                             "(artifact istat-raw, vedi fetch_istat_artifact.py)")
     args = parser.parse_args()
 
     structlog.configure(processors=[
@@ -586,10 +606,13 @@ def main() -> int:
 
     try:
         # 1) Download dei 2 CSV (capacita + flussi) + 1 XML (CL_ITTER107)
-        resolve_anni()
-        for df in DATAFLOWS:
-            download_dataflow_csv(df, cache_dir, force=args.no_cache)
-        download_codelist_xml(cache_dir, force=args.no_cache)
+        if args.solo_cache:
+            anni_da_cache(cache_dir)
+        else:
+            resolve_anni()
+            for df in DATAFLOWS:
+                download_dataflow_csv(df, cache_dir, force=args.no_cache)
+            download_codelist_xml(cache_dir, force=args.no_cache)
 
         # 2) Aggrega in shard per comune
         shard_dir = build_turismo_shards(cache_dir, output_dir)
