@@ -7,8 +7,10 @@ name: ETL · ISTAT SDMX download (artifact)
 #
 # Perche: ISTAT blocca l'IP della VM dopo ~100-130 richieste SDMX anche
 # sotto le 5 query/minuto dichiarate (05 e 07/10/2026). I comuni sono divisi
-# in PARTI parti: ogni job gira su un runner diverso (IP diverso) e fa meno
-# di 40 richieste, con 13 s di pausa fra l'una e l'altra.
+# in parti (PARTI in istat_actions.py): ogni job gira su un runner diverso
+# (IP diverso) e fa al massimo ~50 richieste, con 13 s di pausa fra l'una e
+# l'altra. Se un job fallisce, i blocchi scaricati restano nella cache di
+# Actions e "Re-run failed jobs" riparte da li.
 
 on:
   workflow_dispatch:
@@ -22,7 +24,6 @@ permissions:
   contents: read
 
 env:
-  PARTI: '8'
   DATA_DIR: /tmp/cruscotto-data
   PYTHONPATH: ${{ github.workspace }}
   BUNDLE_URL: https://cruscotto-italia.dati.gov.it/data/lookup/comuni-bundle.json
@@ -56,12 +57,11 @@ jobs:
     name: ${{ matrix.dataset }} ${{ matrix.parte }}/8
     needs: anni
     runs-on: ubuntu-latest
-    # capacita ricettiva: ~2-3 minuti per blocco da 35 comuni (prova 07/10/2026)
-    timeout-minutes: 180
+    timeout-minutes: 120
     strategy:
       fail-fast: false
       matrix:
-        dataset: [incidenti, parco, capacita]
+        dataset: [incidenti, parco]
         parte: [1, 2, 3, 4, 5, 6, 7, 8]
     steps:
       - uses: actions/checkout@v4
@@ -73,16 +73,75 @@ jobs:
         run: |
           mkdir -p "$DATA_DIR/lookup"
           curl -sSf -m 60 -o "$DATA_DIR/lookup/comuni-bundle.json" "$BUNDLE_URL"
+      # Blocchi gia scaricati da un tentativo fallito (ripresa)
+      - uses: actions/cache/restore@v4
+        with:
+          path: parti
+          key: blocchi-${{ matrix.dataset }}-${{ matrix.parte }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: blocchi-${{ matrix.dataset }}-${{ matrix.parte }}-
       - name: Scarica
         run: |
           echo "Runner IP: $(curl -sS -m 5 https://api.ipify.org || echo unknown)"
-          python scripts/etl/istat_actions.py scarica ${{ matrix.dataset }} \
-            ${{ matrix.parte }} "$PARTI" --anno-cap ${{ needs.anni.outputs.anno_cap }} \
+          python scripts/etl/istat_actions.py scarica ${{ matrix.dataset }} ${{ matrix.parte }} \
+            --anno-cap ${{ needs.anni.outputs.anno_cap }} \
             --anno-parco ${{ needs.anni.outputs.anno_parco }} \
             --anno-inc ${{ needs.anni.outputs.anno_inc }} --out parti
+      - if: failure() || cancelled()
+        uses: actions/cache/save@v4
+        with:
+          path: parti
+          key: blocchi-${{ matrix.dataset }}-${{ matrix.parte }}-${{ github.run_id }}-${{ github.run_attempt }}
       - uses: actions/upload-artifact@v4
         with:
           name: parte-${{ matrix.dataset }}-${{ matrix.parte }}
+          path: parti/*.parte[0-9][0-9]
+          retention-days: 1
+          if-no-files-found: error
+
+  capacita:
+    # TUR_1: ~4 s per comune lato ISTAT, che chiude le richieste oltre ~4,5
+    # minuti. Blocchi da 10 comuni, 16 parti, al massimo 8 job insieme per
+    # non sovraccaricare il servizio (07/10/2026: 8 parti da blocchi di 35
+    # comuni in parallelo -> richieste scadute)
+    name: capacita ${{ matrix.parte }}/16
+    needs: anni
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    strategy:
+      fail-fast: false
+      max-parallel: 8
+      matrix:
+        parte: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install duckdb requests structlog
+      - name: Comuni-bundle
+        run: |
+          mkdir -p "$DATA_DIR/lookup"
+          curl -sSf -m 60 -o "$DATA_DIR/lookup/comuni-bundle.json" "$BUNDLE_URL"
+      - uses: actions/cache/restore@v4
+        with:
+          path: parti
+          key: blocchi-capacita-${{ matrix.parte }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: blocchi-capacita-${{ matrix.parte }}-
+      - name: Scarica
+        run: |
+          echo "Runner IP: $(curl -sS -m 5 https://api.ipify.org || echo unknown)"
+          python scripts/etl/istat_actions.py scarica capacita ${{ matrix.parte }} \
+            --anno-cap ${{ needs.anni.outputs.anno_cap }} \
+            --anno-parco ${{ needs.anni.outputs.anno_parco }} \
+            --anno-inc ${{ needs.anni.outputs.anno_inc }} --out parti
+      - if: failure() || cancelled()
+        uses: actions/cache/save@v4
+        with:
+          path: parti
+          key: blocchi-capacita-${{ matrix.parte }}-${{ github.run_id }}-${{ github.run_attempt }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: parte-capacita-${{ matrix.parte }}
           path: parti/*.parte[0-9][0-9]
           retention-days: 1
           if-no-files-found: error
@@ -114,7 +173,7 @@ jobs:
 
   unisci:
     name: Unisci e pubblica istat-raw
-    needs: [anni, scarica, provinciali]
+    needs: [anni, scarica, capacita, provinciali]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -130,7 +189,7 @@ jobs:
       - name: Unisci
         run: |
           python scripts/etl/istat_actions.py unisci --dir parti --out istat-raw \
-            --parti "$PARTI" --anno-cap ${{ needs.anni.outputs.anno_cap }} \
+            --anno-cap ${{ needs.anni.outputs.anno_cap }} \
             --anno-fl ${{ needs.anni.outputs.anno_fl }} \
             --anno-parco ${{ needs.anni.outputs.anno_parco }} \
             --anno-inc ${{ needs.anni.outputs.anno_inc }}

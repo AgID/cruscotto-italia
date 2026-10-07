@@ -23,16 +23,16 @@ def test_parti_coprono_tutti_i_comuni_una_volta(monkeypatch, tmp_path):
     monkeypatch.setattr(A.T, "codici_comuni", lambda: CODICI)
     monkeypatch.setattr(A, "scarica_a_blocchi",
                         lambda base, chiave, a0, a1, codici, out, **kw: visti.extend(codici))
-    for parte in range(1, 9):
-        A.cmd_scarica(SimpleNamespace(dataset="incidenti", parte=parte, parti=8,
+    for parte in range(1, A.PARTI["incidenti"] + 1):
+        A.cmd_scarica(SimpleNamespace(dataset="incidenti", parte=parte,
                                       anno_cap=2025, anno_parco=2024, anno_inc=2024,
                                       out=str(tmp_path)))
     assert sorted(visti) == CODICI
 
 
-def _scrivi_parti(d: Path, anno_cap: int, anno_fl: int, parti: int):
-    for spec in A.specifiche(anno_cap, 2025, 2025).values():
-        for k in range(1, parti + 1):
+def _scrivi_parti(d: Path, anno_cap: int, anno_fl: int, meno: int = 0):
+    for nome, spec in A.specifiche(anno_cap, 2025, 2025).items():
+        for k in range(1, A.PARTI[nome] + 1 - meno):
             p = d / f"parte-{k}" / f"{spec['file']}.parte{k:02d}"
             p.parent.mkdir(parents=True, exist_ok=True)
             p.write_text(f"H1,H2\nr{k},1\nr{k},2\n", encoding="utf-8")
@@ -42,23 +42,24 @@ def _scrivi_parti(d: Path, anno_cap: int, anno_fl: int, parti: int):
 
 
 def test_unisci_una_intestazione_e_manifest(tmp_path):
-    _scrivi_parti(tmp_path / "parti", 2025, 2025, 3)
+    _scrivi_parti(tmp_path / "parti", 2025, 2025)
     A.cmd_unisci(SimpleNamespace(dir=str(tmp_path / "parti"), out=str(tmp_path / "raw"),
-                                 parti=3, anno_cap=2025, anno_fl=2025,
+                                 anno_cap=2025, anno_fl=2025,
                                  anno_parco=2025, anno_inc=2025))
     m = json.loads((tmp_path / "raw/manifest.json").read_text())
     assert m["anno_cap"] == 2025
     assert {f["nome"] for f in m["file"]} >= {"capacita_2025.csv", "flussi_2025.csv", "itter107.xml"}
     cap = (tmp_path / "raw/capacita_2025.csv").read_text().splitlines()
-    assert cap[0] == "H1,H2" and cap.count("H1,H2") == 1 and len(cap) == 7
-    assert all(f["righe"] == 6 for f in m["file"] if "righe" in f)
+    assert cap[0] == "H1,H2" and cap.count("H1,H2") == 1
+    assert len(cap) == 1 + 2 * A.PARTI["capacita"]
+    assert all(f["righe"] == 2 * A.PARTI[n] for n, f in zip(A.PARTI, m["file"]))
 
 
 def test_unisci_rifiuta_parti_mancanti(tmp_path):
-    _scrivi_parti(tmp_path / "parti", 2025, 2025, 2)
+    _scrivi_parti(tmp_path / "parti", 2025, 2025, meno=1)
     with pytest.raises(SystemExit):
         A.cmd_unisci(SimpleNamespace(dir=str(tmp_path / "parti"), out=str(tmp_path / "raw"),
-                                     parti=3, anno_cap=2025, anno_fl=2025,
+                                     anno_cap=2025, anno_fl=2025,
                                      anno_parco=2025, anno_inc=2025))
 
 

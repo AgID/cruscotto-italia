@@ -128,7 +128,7 @@ Times in **Italian time** (the VM cron uses the Europe/Rome time zone), except t
 | **Six-monthly** (daily sentinel 03:20) | AGE OMI quotations (zones + perimeters): `omi_semestrale.sh` checks the published semesters every day and starts the collection only when a new one appears (published by 15 March and 15 October, no fixed date) | AgID VM cron | automatic |
 | **Ten-yearly** (manual, next 2031) | census Basi Territoriali (sections + 119 vars) | manual run `python -m etl.sources.censimento` on the VM | `workflow_dispatch` |
 | **ACI on Actions** (1 Feb / 1 Apr / 1 Jul, 04:00 UTC) | ACI LOD first-registration CSVs, then fetched by the VM with `fetch_aci_artifact.py` | GitHub Actions `ubuntu-latest` | `schedule` + `workflow_dispatch` |
-| **ISTAT on Actions** (1 Feb / 1 Apr / 1 Jul, 02:00 UTC) | SDMX download of vehicle fleet, road accidents, accommodation capacity and tourist flows, split across 8 runners; the VM fetches them with `fetch_istat_artifact.py` and the ETLs run with `--solo-cache` | GitHub Actions `ubuntu-latest` | `schedule` + `workflow_dispatch` |
+| **ISTAT on Actions** (1 Feb / 1 Apr / 1 Jul, 02:00 UTC) | SDMX download of vehicle fleet, road accidents, accommodation capacity and tourist flows, split across several runners (8 parts, 16 for accommodation capacity); the VM fetches them with `fetch_istat_artifact.py` and the ETLs run with `--solo-cache` | GitHub Actions `ubuntu-latest` | `schedule` + `workflow_dispatch` |
 | **Manual fallback** | istat_profilo, asia, pendolarismo | GitHub Actions `ubuntu-latest` | `workflow_dispatch` |
 
 ### Why two separate runners
@@ -147,8 +147,13 @@ before the vehicles ETL.
 even below the declared 5 queries/minute (October 2026). For vehicle fleet,
 road accidents and tourism the download therefore runs on Actions
 ([`istat-download.yml`](.github/workflows/istat-download.yml)): municipalities
-are split into 8 parts, each on a different runner with fewer than 40
-requests. The `istat-raw` artifact holds the merged CSVs and a
+are split into parts, each on a different runner with at most ~50
+requests: 8 parts for fleet and accidents, 16 for accommodation capacity,
+which ISTAT serves slowly (~6 s per municipality, requests closed after
+~4.5 minutes) and is therefore downloaded in blocks of 10 municipalities
+with at most 8 jobs at a time. If a job fails, the blocks already
+downloaded stay in the Actions cache and "Re-run failed jobs" resumes from
+there. The `istat-raw` artifact holds the merged CSVs and a
 `manifest.json` with years and row counts; the VM fetches it with
 [`scripts/etl/fetch_istat_artifact.py`](scripts/etl/fetch_istat_artifact.py),
 which checks row counts before replacing the cache, and runs `veicoli` and

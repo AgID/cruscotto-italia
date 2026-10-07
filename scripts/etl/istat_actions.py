@@ -6,7 +6,7 @@ richieste SDMX, anche rispettando le 5 query al minuto dichiarate. I runner
 GitHub hanno un IP diverso a ogni run e lo raggiungono (prova del 07/10:
 metadati 1,3 s, incidenti 1,9 s, turismo 12,9 s). Il workflow
 `istat-download.yml` divide i comuni in parti, ogni parte gira su un runner
-diverso (meno di 40 richieste ciascuno), e pubblica i CSV grezzi come
+diverso (al massimo ~50 richieste ciascuno), e pubblica i CSV grezzi come
 artifact. La VM li scarica con `fetch_istat_artifact.py` nella cache degli
 ETL, che poi girano con `--solo-cache` senza alcuna richiesta a ISTAT.
 
@@ -14,7 +14,7 @@ Comandi (eseguiti dal workflow):
   anni                      ultimo anno pubblicato per capacita ricettiva, flussi
                             turistici, parco veicoli e incidenti (righe
                             chiave=valore per $GITHUB_OUTPUT)
-  scarica DATASET PARTE N   scarica la parte PARTE di N in --out
+  scarica DATASET PARTE     scarica la parte PARTE (di PARTI[DATASET]) in --out
   provinciali               flussi turistici provinciali + codelist (piccoli)
   unisci                    unisce le parti in un CSV per dataset + manifest.json
 
@@ -44,6 +44,13 @@ log = structlog.get_logger()
 # rimettere ogni file dove l'ETL lo cerca)
 CACHE = {"veicoli": str(V.CACHE_DIR), "turismo": "/tmp/cruscotto-istat-turismo-cache"}
 
+
+# Parti e blocco per dataset. Capacita ricettiva (TUR_1): ~4 s per comune
+# lato ISTAT, che chiude le richieste oltre ~4,5 minuti (07/10/2026: con 8
+# parti da blocchi di 35 comuni le richieste scadevano). Blocchi da 10
+# comuni (~40 s) e 16 parti: ~50 richieste per runner.
+PARTI = {"incidenti": 8, "parco": 8, "capacita": 16}
+BLOCCO = {"incidenti": 35, "parco": 35, "capacita": 10}
 
 # Anni di incidenti nella serie (finestra mobile che termina all'ultimo anno)
 FINESTRA_INCIDENTI = len(V.ANNI_INCIDENTI)
@@ -101,13 +108,17 @@ def cmd_anni(_args) -> int:
 def cmd_scarica(args) -> int:
     spec = specifiche(args.anno_cap, args.anno_parco, args.anno_inc)[args.dataset]
     codici = T.codici_comuni()
-    parte = [c for i, c in enumerate(codici) if i % args.parti == args.parte - 1]
+    parti = PARTI[args.dataset]
+    if not 1 <= args.parte <= parti:
+        raise SystemExit(f"{args.dataset}: parte {args.parte} fuori da 1..{parti}")
+    parte = [c for i, c in enumerate(codici) if i % parti == args.parte - 1]
     out = Path(args.out) / f"{spec['file']}.parte{args.parte:02d}"
     out.parent.mkdir(parents=True, exist_ok=True)
-    log.info("parte_start", dataset=args.dataset, parte=args.parte, parti=args.parti,
+    log.info("parte_start", dataset=args.dataset, parte=args.parte, parti=parti,
              comuni=len(parte), anni=spec["anni"])
     scarica_a_blocchi(spec["base"], spec["chiave"], spec["anni"][0], spec["anni"][1],
-                      parte, out, user_agent=T.UA, log=log)
+                      parte, out, blocco=BLOCCO[args.dataset], tentativi=4,
+                      user_agent=T.UA, log=log)
     return 0
 
 
@@ -127,9 +138,9 @@ def cmd_unisci(args) -> int:
     manifest = {"anno_cap": args.anno_cap, "anno_fl": args.anno_fl,
                 "anno_parco": args.anno_parco, "anno_inc": args.anno_inc, "file": []}
     for nome, spec in specifiche(args.anno_cap, args.anno_parco, args.anno_inc).items():
-        parti = sorted(src.rglob(f"{spec['file']}.parte*"))
-        if len(parti) != args.parti:
-            raise SystemExit(f"{nome}: attese {args.parti} parti, trovate {len(parti)}")
+        parti = sorted(p for p in src.rglob(f"{spec['file']}.parte[0-9][0-9]") if p.is_file())
+        if len(parti) != PARTI[nome]:
+            raise SystemExit(f"{nome}: attese {PARTI[nome]} parti, trovate {len(parti)}")
         intestazione, righe = None, 0
         with open(dst / spec["file"], "w", encoding="utf-8", newline="") as fo:
             for p in parti:
@@ -171,7 +182,6 @@ def main() -> int:
     s = sub.add_parser("scarica")
     s.add_argument("dataset", choices=["incidenti", "parco", "capacita"])
     s.add_argument("parte", type=int)
-    s.add_argument("parti", type=int)
     s.add_argument("--anno-cap", type=int, required=True)
     s.add_argument("--anno-parco", type=int, required=True)
     s.add_argument("--anno-inc", type=int, required=True)
@@ -182,7 +192,6 @@ def main() -> int:
     u = sub.add_parser("unisci")
     u.add_argument("--dir", default="parti")
     u.add_argument("--out", default="istat-raw")
-    u.add_argument("--parti", type=int, required=True)
     u.add_argument("--anno-cap", type=int, required=True)
     u.add_argument("--anno-fl", type=int, required=True)
     u.add_argument("--anno-parco", type=int, required=True)
