@@ -1,0 +1,33 @@
+name: ISTAT - prova raggiungibilita da runner GitHub
+
+# Prova del 07/10/2026: la VM agid01 e stata bloccata da ISTAT dopo ~100
+# richieste SDMX. Verifica se i runner GitHub (IP diversi a ogni run)
+# raggiungono l'API SDMX, prima di spostare i download ISTAT su Actions.
+# Tre richieste leggere, distanziate di 20 s. Nessun artifact.
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - .github/workflows/istat-prova-runner.yml
+
+permissions:
+  contents: read
+
+jobs:
+  prova:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: IP pubblico del runner
+        run: curl -sS --max-time 20 https://api.ipify.org; echo
+      - name: Richieste SDMX (metadati, incidenti, turismo)
+        run: |
+          UA="CruscottoItalia-ETL/1.0 (+https://cruscotto-italia.dati.gov.it; AgID)"
+          B="https://esploradati.istat.it/SDMXWS/rest"
+          H="Accept: application/vnd.sdmx.data+csv;version=1.0.0"
+          curl -s -o /dev/null -m 120 -A "$UA" -w "METADATI 41_983:        %{http_code} %{size_download}B %{time_total}s\n" "$B/dataflow/IT1/41_983/latest" || echo "METADATI: errore curl $?"
+          sleep 20
+          curl -s -o /dev/null -m 120 -A "$UA" -H "$H" -w "DATI incidenti Lecce:   %{http_code} %{size_download}B %{time_total}s\n" "$B/data/41_983/A.075035..?startPeriod=2024&endPeriod=2024" || echo "INCIDENTI: errore curl $?"
+          sleep 20
+          curl -s -o /dev/null -m 120 -A "$UA" -H "$H" -w "DATI turismo Lecce 2025: %{http_code} %{size_download}B %{time_total}s\n" "$B/data/IT1,122_54_DF_DCSC_TUR_1,1.0/A.075035.........?startPeriod=2025&endPeriod=2025" || echo "TURISMO: errore curl $?"
