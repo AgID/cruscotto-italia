@@ -21,9 +21,10 @@ Formato fonte:
 
 Risoluzione del comune: il join primario e per CODICE FISCALE contro
 lookup/comuni-index.json. Il campo prov+com dichiarato da SIOPE usa una
-codifica provinciale non ISTAT per tutta la Sardegna (prefissi 112-119,
-province soppresse) ed e quindi inaffidabile come chiave primaria: usarlo
-produceva 377 shard con nomi ISTAT inesistenti.
+codifica ISTAT vigente dal 01/01/2026 per tutta la Sardegna (prefissi
+112-119, riforma delle province sarde), mentre l'universo di Cruscotto e'
+ancora sulla codifica 2024: usarlo come chiave produceva 377 shard con
+codici fuori dall'universo. Vedi scripts/etl/genera_variazioni_istat.py.
 
 Compatibilita shard: la chiave `voci` resta le USCITE con `mensili` CUMULATI,
 identica alla v0.2.0, per non rompere frontend e chatbot. Le ENTRATE sono
