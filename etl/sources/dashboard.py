@@ -65,7 +65,7 @@ from pathlib import Path
 
 import structlog
 
-from etl.lib import local_lookup, manifest
+from etl.lib import codici, local_lookup, manifest
 
 log = structlog.get_logger()
 
@@ -456,6 +456,7 @@ def build_dashboard_for_comune(istat: str,
     letti da filesystem locale ($DATA_DIR/<source>/<istat>.json).
     """
     missing: list[str] = []
+    inoltri: dict[str, str] = {}
     out: dict = {
         "_etl_version": ETL_VERSION,
         "_generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
@@ -463,25 +464,24 @@ def build_dashboard_for_comune(istat: str,
         "anagrafica": anagrafica,
     }
 
-    # Shard fisici letti da filesystem locale
+    # Shard per fonte: prima il codice vigente, poi i codici precedenti dello
+    # stesso comune (ricodifiche ISTAT, es. Sardegna 2026). Le fonti con dati
+    # anteriori alla ricodifica restano col vecchio codice: si leggono, non si
+    # riscrivono. inoltri = {sezione: codice letto} quando diverso da istat.
     data_dir = local_lookup.get_data_dir()
-    for label, pat in SHARDS:
-        # pat e' "demografia/{istat}.json" -> path locale "DATA_DIR/demografia/{istat}.json"
-        data = fetch_json_local(str(data_dir / pat.format(istat=istat)))
+    sorgenti = [(label, str(data_dir / pat)) for label, pat in SHARDS] + list(SHARDS_LOCAL)
+    for label, modello in sorgenti:
+        trovato = codici.trova_file(modello, istat)
+        data = fetch_json_local(str(trovato[0])) if trovato else None
         if data is None:
             missing.append(label)
             out[label] = None
         else:
             out[label] = data
-
-    # Shard locali con path assoluto (legacy: pendolarismo)
-    for label, pat in SHARDS_LOCAL:
-        data = fetch_json_local(pat.format(istat=istat))
-        if data is None:
-            missing.append(label)
-            out[label] = None
-        else:
-            out[label] = data
+            if trovato[1] != istat:
+                inoltri[label] = trovato[1]
+    if inoltri:
+        out["_inoltri"] = inoltri
 
     cf = anagrafica.get("codice_fiscale")
 

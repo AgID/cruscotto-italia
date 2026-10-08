@@ -38,6 +38,7 @@ _RE_ISTAT = re.compile(r"^\d{6}$")
 
 _cache: dict[str, dict] | None = None
 _cache_path: Path | None = None
+_predecessori: dict[str, list[str]] = {}
 
 
 class TabellaVariazioniError(RuntimeError):
@@ -99,6 +100,10 @@ def carica(path: Path | None = None, *, ricarica: bool = False) -> dict[str, dic
     except json.JSONDecodeError as e:
         raise TabellaVariazioniError(f"{p}: JSON non valido ({e})") from e
     _cache, _cache_path = _valida(payload, p), p
+    _predecessori.clear()
+    for vecchio, v in sorted(_cache.items()):
+        if v["tipo"] in TIPI_RICODIFICA:
+            _predecessori.setdefault(v["nuovo"], []).append(vecchio)
     return _cache
 
 
@@ -165,3 +170,32 @@ def rimappa_chiavi(dati: dict) -> tuple[dict, dict]:
     return out, {"ricodificati": ricodificati,
                  "scartati_soppressi": sorted(scartati),
                  "invariati": invariati}
+
+
+# ---------------------------------------------------------------------------
+# Lettura con inoltro (decisione 08/10/2026): gli ETL scrivono col codice usato
+# dalla fonte; chi LEGGE cerca prima il codice vigente, poi i codici con cui lo
+# stesso comune era ricodificato. Mai i comuni soppressi: i loro dati non si
+# attribuiscono al comune vigente.
+# ---------------------------------------------------------------------------
+
+def candidati_lettura(cod) -> list[str]:
+    """[codice, codici_precedenti_dello_stesso_comune...] in ordine di preferenza.
+
+    Solo ricodifiche: per 112001 -> ['112001', '090003']; per 024129 -> ['024129'].
+    """
+    c = normalizza(cod)
+    carica()
+    return [c] + _predecessori.get(c, [])
+
+
+def trova_file(modello: str, cod) -> tuple[Path, str] | None:
+    """Primo file esistente per il comune: modello con {istat}, es. 'DATA/aria/{istat}.json'.
+
+    Restituisce (path, codice_usato) oppure None se nessun candidato esiste.
+    """
+    for c in candidati_lettura(cod):
+        p = Path(modello.format(istat=c))
+        if p.exists():
+            return p, c
+    return None

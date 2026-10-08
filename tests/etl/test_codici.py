@@ -95,3 +95,32 @@ def test_tabella_incoerente(tmp_path, monkeypatch, guasto):
     codici._cache = codici._cache_path = None
     with pytest.raises(codici.TabellaVariazioniError):
         codici.carica()
+
+
+def test_candidati_lettura(tabella):
+    assert codici.candidati_lettura("112001") == ["112001", "090003"]
+    assert codici.candidati_lettura("118006") == ["118006", "092009"]
+    assert codici.candidati_lettura("090003") == ["090003"]    # bundle vecchio: inerte
+    assert codici.candidati_lettura("024129") == ["024129"]    # mai i soppressi
+    assert codici.candidati_lettura("018094") == ["018094"]
+    assert codici.candidati_lettura("075035") == ["075035"]
+
+
+def test_trova_file(tabella, tmp_path):
+    d = tmp_path / "aria"
+    d.mkdir()
+    (d / "090003.json").write_text("{}")
+    (d / "024027.json").write_text("{}")
+    modello = str(d / "{istat}.json")
+    assert codici.trova_file(modello, "112001") == (d / "090003.json", "090003")
+    assert codici.trova_file(modello, "024129") is None      # Castegnero non inoltrato
+    (d / "112001.json").write_text("{}")
+    assert codici.trova_file(modello, "112001") == (d / "112001.json", "112001")  # vince il vigente
+
+
+def test_trova_file_modello_doppio(tabella, tmp_path):
+    d = tmp_path / "morfologia" / "090003"
+    d.mkdir(parents=True)
+    (d / "090003_stats.json").write_text("{}")
+    modello = str(tmp_path / "morfologia" / "{istat}" / "{istat}_stats.json")
+    assert codici.trova_file(modello, "112001")[1] == "090003"
