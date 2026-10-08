@@ -86,7 +86,7 @@ from pathlib import Path
 import requests
 import structlog
 
-from etl.lib import local_lookup, manifest
+from etl.lib import codici, local_lookup, manifest
 from etl.lib.http_ua import USER_AGENT
 
 log = structlog.get_logger()
@@ -273,6 +273,15 @@ def _extract_snapshot_date(csv_filename: str) -> str:
     return ""
 
 
+def _vigente(cod: str) -> str | None:
+    """Codice ISTAT vigente del comune (migrazione 2026: ricodifiche sarde -> codice
+    nuovo); None per i comuni soppressi (nessuna somma nel vigente) o codici non validi."""
+    try:
+        return codici.codice_vigente(cod)
+    except ValueError:
+        return None
+
+
 def load_canonical_istat() -> set[str]:
     """Carica il set di tutti gli ISTAT validi (~7896) dal bundle R2.
 
@@ -342,6 +351,9 @@ def parse_strad_region(zip_path: Path) -> tuple[dict, str]:
     for row in rows:
         istat = (row.get("CODICE_ISTAT") or "").strip()
         if not istat or len(istat) != 6:
+            continue
+        istat = _vigente(istat)
+        if istat is None:
             continue
         odo = (row.get("ODONIMO") or "").strip()
         if not odo:
@@ -476,6 +488,9 @@ def parse_indir_region(zip_path: Path,
     for row in rows:
         istat = (row.get("CODICE_ISTAT") or "").strip()
         if not istat or len(istat) != 6:
+            continue
+        istat = _vigente(istat)
+        if istat is None:
             continue
         d = per_istat[istat]
         d["n_civici"] += 1
