@@ -180,13 +180,24 @@ def rimappa_chiavi(dati: dict) -> tuple[dict, dict]:
 # ---------------------------------------------------------------------------
 
 def candidati_lettura(cod) -> list[str]:
-    """[codice, codici_precedenti_dello_stesso_comune...] in ordine di preferenza.
+    """Codici con cui cercare i file dello stesso comune, in ordine di preferenza.
 
-    Solo ricodifiche: per 112001 -> ['112001', '090003']; per 024129 -> ['024129'].
+    Prima il codice vigente, poi i codici precedenti (solo ricodifiche), qualunque
+    sia il codice richiesto: per 112001 e per 090003 -> ['112001', '090003'].
+    Cosi una fonte gia' riscritta col codice vigente vince sul file vecchio anche
+    finche' il bundle e' sulla codifica precedente.
+    Soppressi e codici senza variazioni: solo se stessi (024027 -> ['024027'],
+    024129 -> ['024129']): i dati dei soppressi non passano mai al vigente.
     """
     c = normalizza(cod)
-    carica()
-    return [c] + _predecessori.get(c, [])
+    v = carica().get(c)
+    if v is None:
+        vigente = c
+    elif v["tipo"] in TIPI_RICODIFICA:
+        vigente = v["nuovo"]
+    else:
+        return [c]
+    return [vigente] + _predecessori.get(vigente, [])
 
 
 def trova_file(modello: str, cod) -> tuple[Path, str] | None:
