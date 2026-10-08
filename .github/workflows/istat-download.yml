@@ -48,6 +48,9 @@ jobs:
         run: |
           mkdir -p "$DATA_DIR/lookup"
           curl -sSf -m 60 -o "$DATA_DIR/lookup/comuni-bundle.json" "$BUNDLE_URL"
+          # tabella dei codici ISTAT non piu vigenti: codici_comuni() chiede anche
+          # i codici precedenti dello stesso comune (migrazione 2026)
+          curl -sSf -m 60 -o "$DATA_DIR/lookup/variazioni_istat.json" "${BUNDLE_URL%/*}/variazioni_istat.json"
       - id: anni
         run: |
           echo "Runner IP: $(curl -sS -m 5 https://api.ipify.org || echo unknown)"
@@ -73,6 +76,9 @@ jobs:
         run: |
           mkdir -p "$DATA_DIR/lookup"
           curl -sSf -m 60 -o "$DATA_DIR/lookup/comuni-bundle.json" "$BUNDLE_URL"
+          # tabella dei codici ISTAT non piu vigenti: codici_comuni() chiede anche
+          # i codici precedenti dello stesso comune (migrazione 2026)
+          curl -sSf -m 60 -o "$DATA_DIR/lookup/variazioni_istat.json" "${BUNDLE_URL%/*}/variazioni_istat.json"
       # Blocchi gia scaricati da un tentativo fallito (ripresa)
       - uses: actions/cache/restore@v5
         with:
@@ -122,6 +128,9 @@ jobs:
         run: |
           mkdir -p "$DATA_DIR/lookup"
           curl -sSf -m 60 -o "$DATA_DIR/lookup/comuni-bundle.json" "$BUNDLE_URL"
+          # tabella dei codici ISTAT non piu vigenti: codici_comuni() chiede anche
+          # i codici precedenti dello stesso comune (migrazione 2026)
+          curl -sSf -m 60 -o "$DATA_DIR/lookup/variazioni_istat.json" "${BUNDLE_URL%/*}/variazioni_istat.json"
       - uses: actions/cache/restore@v5
         with:
           path: parti
