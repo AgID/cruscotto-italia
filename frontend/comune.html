@@ -8695,7 +8695,7 @@ function renderAnncsuTab(d) {
       <div id="anncsu-legend" class="anncsu-legend" role="group" aria-label="Legenda metodi di geo-referenziazione"></div>
       <div class="anncsu-catasto-panel">
         <div class="anncsu-catasto-title">🗺️ Livelli mappa</div>
-        <div class="anncsu-catasto-sub">${hasPunti ? 'Civici ANNCSU + ' : ''}Catasto AGE (© Agenzia delle Entrate, CC-BY 4.0)</div>
+        <div class="anncsu-catasto-sub">${hasPunti ? 'Civici ANNCSU + ' : ''}Catasto AGE (© Agenzia delle Entrate, CC-BY 4.0)<span id="anncsu-catasto-rilascio"></span></div>
         <div class="anncsu-catasto-layers">
           <label class="anncsu-catasto-lbl">
             <input type="checkbox" id="anncsu-civici-chk" ${hasPunti ? 'checked' : 'disabled'} ${hasPunti ? '' : 'title="Il Comune non ha conferito i numeri civici geo-referenziati all\'ANNCSU"'}>
@@ -8862,6 +8862,25 @@ function initAnncsu(d) {
   const catastoChkPle   = document.getElementById('anncsu-catasto-ple');
   const catastoHintEl   = document.getElementById('anncsu-catasto-hint');
   const catastoStatusEl = document.getElementById('anncsu-catasto-status');
+  // Data di rilascio AdE per la regione del comune, scritta dalla sentinella
+  // catasto_semestrale.sh in catasto_full/_rilascio.json: e' la data del dato,
+  // non quella di rigenerazione. Se manca (es. Trentino-Alto Adige, catasto
+  // provinciale) non si mostra nulla.
+  (async () => {
+    const el = document.getElementById('anncsu-catasto-rilascio');
+    const reg = String(window.__carburantiRegione || '').split('/')[0]
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase()
+      .replace(/[^A-Z]+/g, '-').replace(/^-|-$/g, '');
+    const chiave = reg === 'VALLE-D-AOSTA' ? 'VALLE-AOSTA' : reg;
+    if (!el || !chiave) return;
+    try {
+      const r = await fetch('/data/catasto_full/_rilascio.json');
+      if (!r.ok) return;
+      const j = await r.json();
+      const data = j && j.regioni && j.regioni[chiave];
+      if (data) el.textContent = ` · rilascio del ${formatDataIT(data)}`;
+    } catch (e) { /* noop */ }
+  })();
   const catastoRenderer = L.canvas({ padding: 0.5 });
   const CATASTO_STYLE_MAP = { color:'#1B5E20', weight:1.8, opacity:0.95, fillColor:'#1B5E20', fillOpacity:0.10 };
   const CATASTO_STYLE_PLE = { color:'#2E7D32', weight:0.5, opacity:0.75, fillColor:'#81C784', fillOpacity:0.18 };

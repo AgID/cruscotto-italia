@@ -15,6 +15,8 @@
 # rilascio remoto e rilascio in produzione per regione). _diagnostics NON e'
 # servita da nginx: un esito di errore non deve essere leggibile dall'esterno.
 # Lo legge scripts/etl/freshness_check.py.
+# Pubblico: data/catasto_full/_rilascio.json, SOLO la data di rilascio AdE
+# in produzione per regione (letta da comune.html).
 #
 # Errori mai silenziosi: ogni condizione anomala scrive ERRORE o ATTENZIONE
 # nel log, registra l'esito nello stato ed esce con codice 1.
@@ -28,6 +30,7 @@ ZIPDIR="/home/ubuntu/catasto_test"
 OUTDIR="/var/www/cruscotto-italia/data/catasto_full"
 DIAGDIR="/var/www/cruscotto-italia/data/_diagnostics"
 STATE="${DIAGDIR}/catasto_release.json"
+PUBLIC="${OUTDIR}/_rilascio.json"
 LOGDIR="/var/log/cruscotto-etl"
 LOGFILE="${LOGDIR}/catasto-semestrale.log"
 LOCK="/var/lock/cruscotto-catasto.lock"
@@ -85,7 +88,7 @@ scrivi_stato() {
     printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$R" "${RSZ[$R]}" "${RLM[$R]:-}" \
       "${ZSZ[$R]:-0}" "${BUILT[$R]:-0}" "${FAILN[$R]:-}" >> "${TMP}/regioni.tsv"
   done
-  ESITO="$esito" STATE="$STATE" TSV="${TMP}/regioni.tsv" python3 - <<'PY' || log "ERRORE: scrittura stato fallita"
+  ESITO="$esito" STATE="$STATE" PUBLIC="$PUBLIC" TSV="${TMP}/regioni.tsv" python3 - <<'PY' || log "ERRORE: scrittura stato fallita"
 import datetime, json, os
 from email.utils import parsedate_to_datetime
 
@@ -139,6 +142,18 @@ with open(tmp, "w") as f:
     json.dump(out, f, ensure_ascii=False, indent=1)
 os.chmod(tmp, 0o644)
 os.replace(tmp, state_path)
+
+# File PUBBLICO letto dal frontend: SOLO la data di rilascio AdE in produzione
+# per regione. Nessun esito ne' errore (quelli restano in _diagnostics).
+pub = {"fonte": "Agenzia delle Entrate - cartografia catastale",
+       "nota": "data di rilascio AdE dello ZIP regionale in produzione",
+       "regioni": {r: ((v.get("in_produzione") or {}).get("last_modified") or "")[:10] or None
+                   for r, v in sorted(reg.items())}}
+ptmp = os.environ["PUBLIC"] + ".tmp"
+with open(ptmp, "w") as f:
+    json.dump(pub, f, ensure_ascii=False, indent=1)
+os.chmod(ptmp, 0o644)
+os.replace(ptmp, os.environ["PUBLIC"])
 PY
 }
 
