@@ -49,6 +49,7 @@ import sys
 import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
 from pathlib import Path
 
 DATA_DIR = Path(os.environ.get("CRUSCOTTO_DATA_DIR", "/var/www/cruscotto-italia/data"))
@@ -437,7 +438,57 @@ def _check_catasto(ora: datetime) -> str | None:
     return None
 
 
+# Elenco comuni ISTAT (08/10/2026): fino a quel giorno l'anagrafica leggeva il
+# CSV fermo al 26/01/2024 mentre ISTAT aggiornava solo l'xlsx. L'ETL girava "ok"
+# e nessun controllo poteva accorgersene. Ora il bundle dichiara la data
+# dell'elenco usato (_elenco_istat_del) e qui la si confronta con quella
+# pubblicata da ISTAT e con quella della tabella delle variazioni.
+URL_ELENCO_ISTAT = "https://www.istat.it/storage/codici-unita-amministrative/Elenco-comuni-italiani.xlsx"
+
+
+def _data_elenco_istat_remoto() -> str | None:
+    """Last-Modified dell'xlsx ISTAT come YYYY-MM-DD; None se non raggiungibile."""
+    try:
+        req = urllib.request.Request(URL_ELENCO_ISTAT, method="HEAD",
+                                     headers={"User-Agent": "CruscottoItalia-freshness/1.0 (AgID)"})
+        with urllib.request.urlopen(req, timeout=30) as r:
+            lm = r.headers.get("Last-Modified")
+        return parsedate_to_datetime(lm).date().isoformat() if lm else None
+    except Exception:
+        return None
+
+
+def _check_anagrafica(ora: datetime) -> str | None:
+    """L'elenco comuni in uso deve essere l'ultimo pubblicato da ISTAT.
+
+    Tre condizioni: il bundle dichiara la data dell'elenco; la tabella delle
+    variazioni e' stata generata sullo stesso elenco (stesso numero di comuni);
+    ISTAT non ha pubblicato un elenco piu recente. Rete non raggiungibile: il
+    terzo controllo si salta (non e' il guasto da segnalare qui).
+    """
+    rigenera = ("rigenerare scripts/etl/genera_variazioni_istat.py (censire le nuove variazioni), "
+                "poi anagrafica, genera_istat_names, genera_inoltro_nginx, genera_lookup_belfiore")
+    b = _leggi("lookup/comuni-bundle.json")
+    if b is None:
+        return "lookup/comuni-bundle.json assente o illeggibile"
+    in_uso = b.get("_elenco_istat_del")
+    if not in_uso:
+        return "il bundle non dichiara la data dell'elenco ISTAT (_elenco_istat_del): anagrafica sul vecchio CSV?"
+    v = _leggi("lookup/variazioni_istat.json") or {}
+    n = len(b.get("comuni") or {})
+    if v.get("_elenco_vigente_istat_del") and v["_elenco_vigente_istat_del"] != in_uso:
+        return (f"tabella variazioni sull'elenco del {v['_elenco_vigente_istat_del']}, bundle su quello del "
+                f"{in_uso}: {rigenera}")
+    if v.get("_n_comuni_vigenti") and v["_n_comuni_vigenti"] != n:
+        return f"bundle con {n} comuni, elenco vigente della tabella variazioni {v['_n_comuni_vigenti']}"
+    remoto = _data_elenco_istat_remoto()
+    if remoto and remoto > in_uso:
+        return f"ISTAT ha pubblicato l'elenco comuni del {remoto} (in uso: {in_uso}): {rigenera}"
+    return None
+
+
 CONTROLLI_CONTENUTO = {
+    "anagrafica": _check_anagrafica,
     "siope": _check_siope,
     "omi": _check_omi,
     "catasto_age": _check_catasto,

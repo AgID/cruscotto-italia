@@ -69,3 +69,50 @@ def test_aria_anno_minimo(fc, tmp_path):
     assert fc.controlli_contenuto("aria", _ora("2026-10-05"))          # il guasto di oggi
     _scrivi(tmp_path, "aria/075035.json", {"_anno_dati": 2024})
     assert fc.controlli_contenuto("aria", _ora("2026-10-05")) == []
+
+
+# --- elenco comuni ISTAT (08/10/2026) ----------------------------------------
+
+def _anag(base, del_bundle="2026-02-26", del_var="2026-02-26", n=3, n_var=3):
+    b = {"comuni": {f"{i:06d}": {} for i in range(1, n + 1)}}
+    if del_bundle:
+        b["_elenco_istat_del"] = del_bundle
+    _scrivi(base, "lookup/comuni-bundle.json", b)
+    _scrivi(base, "lookup/variazioni_istat.json",
+            {"_elenco_vigente_istat_del": del_var, "_n_comuni_vigenti": n_var, "variazioni": {}})
+
+
+def test_anagrafica_ok(fc, tmp_path, monkeypatch):
+    _anag(tmp_path)
+    monkeypatch.setattr(fc, "_data_elenco_istat_remoto", lambda: "2026-02-26")
+    assert fc._check_anagrafica(datetime.now(timezone.utc)) is None
+
+
+def test_anagrafica_rete_assente_non_scatta(fc, tmp_path, monkeypatch):
+    _anag(tmp_path)
+    monkeypatch.setattr(fc, "_data_elenco_istat_remoto", lambda: None)
+    assert fc._check_anagrafica(datetime.now(timezone.utc)) is None
+
+
+def test_anagrafica_elenco_istat_piu_recente(fc, tmp_path, monkeypatch):
+    _anag(tmp_path)
+    monkeypatch.setattr(fc, "_data_elenco_istat_remoto", lambda: "2026-11-30")
+    assert "2026-11-30" in fc._check_anagrafica(datetime.now(timezone.utc))
+
+
+def test_anagrafica_senza_data(fc, tmp_path, monkeypatch):
+    _anag(tmp_path, del_bundle=None)
+    monkeypatch.setattr(fc, "_data_elenco_istat_remoto", lambda: "2026-02-26")
+    assert "_elenco_istat_del" in fc._check_anagrafica(datetime.now(timezone.utc))
+
+
+def test_anagrafica_variazioni_disallineate(fc, tmp_path, monkeypatch):
+    _anag(tmp_path, del_var="2025-06-30")
+    monkeypatch.setattr(fc, "_data_elenco_istat_remoto", lambda: "2026-02-26")
+    assert "tabella variazioni" in fc._check_anagrafica(datetime.now(timezone.utc))
+
+
+def test_anagrafica_conteggio_diverso(fc, tmp_path, monkeypatch):
+    _anag(tmp_path, n=3, n_var=4)
+    monkeypatch.setattr(fc, "_data_elenco_istat_remoto", lambda: "2026-02-26")
+    assert "3 comuni" in fc._check_anagrafica(datetime.now(timezone.utc))
