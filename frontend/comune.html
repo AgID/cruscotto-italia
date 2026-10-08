@@ -13072,6 +13072,48 @@ Cruscotto Italia.
   });
 }
 
+// Migrazione codici ISTAT 2026 (08/10/2026). Tabella pubblica generata da
+// scripts/etl/genera_variazioni_istat.py: codice non piu vigente -> vigente.
+async function caricaVariazioniIstat() {
+  try {
+    const r = await fetch('/data/lookup/variazioni_istat.json');
+    if (!r.ok) return {};
+    return (await r.json()).variazioni || {};
+  } catch (e) { return {}; }
+}
+
+// Riquadro sotto l'intestazione: comune soppresso (pagina storica, rimando al
+// vigente), comune nato da fusione/incorporazione (rimando alle pagine storiche),
+// comune ricodificato (codice precedente). Nessun dato viene sommato.
+function mostraVariazioniIstat(istat, variazioni) {
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const data = d => /^\d{4}-\d{2}-\d{2}$/.test(d || '') ? d.split('-').reverse().join('/') : esc(d);
+  const link = (cod, nome) => `<a href="/comune.html?istat=${encodeURIComponent(cod)}">${esc(nome)}</a>`;
+  let html = '';
+  const v = variazioni[istat];
+  if (v && v.tipo !== 'ricodifica') {
+    html = `Comune soppresso dal ${data(v.decorrenza)}: ${esc(v.nota)}. ` +
+           `I dati di questa pagina sono quelli disponibili fino alla soppressione e non vengono pi\u00f9 aggiornati. ` +
+           `Comune attuale: ${link(v.nuovo, v.denominazione_nuovo)}.`;
+  } else {
+    const prec = Object.entries(variazioni).filter(([, x]) => x.nuovo === istat);
+    const sopp = prec.filter(([, x]) => x.tipo !== 'ricodifica');
+    const ric = prec.filter(([, x]) => x.tipo === 'ricodifica');
+    if (sopp.length) {
+      html = `Dal ${data(sopp[0][1].decorrenza)}: ${esc(sopp[0][1].nota)}. ` +
+             `I dati precedenti restano nelle pagine storiche: ${sopp.map(([c, x]) => link(c, x.denominazione)).join(' \u00b7 ')}.`;
+    } else if (ric.length) {
+      html = `Codice ISTAT in vigore dal ${data(ric[0][1].decorrenza)}; codice precedente ${ric.map(([c]) => esc(c)).join(', ')} ` +
+             `(${esc(ric[0][1].nota)}).`;
+    }
+  }
+  const meta = document.querySelector('.comune-hero .comune-meta');
+  if (meta && html) {
+    meta.insertAdjacentHTML('afterend',
+      `<p class="comune-variazione" role="note" style="margin-top:14px;max-width:72ch;font-size:15px;line-height:1.5">${html}</p>`);
+  }
+}
+
 async function init() {
   const params = new URLSearchParams(window.location.search);
   const istat = params.get('istat');
@@ -13095,6 +13137,13 @@ async function init() {
           Il codice ISTAT deve essere di 6 cifre. Torna alla <a href="/">home</a> per cercare un comune.
         </p>
       </div></section>`;
+    return;
+  }
+  // Codice ricodificato (es. Sardegna 2026): stesso comune, si passa al codice vigente.
+  const variazioni = await caricaVariazioniIstat();
+  if (variazioni[istat] && variazioni[istat].tipo === 'ricodifica') {
+    params.set('istat', variazioni[istat].nuovo);
+    window.location.replace(`${window.location.pathname}?${params.toString()}${window.location.hash}`);
     return;
   }
   try {
@@ -13130,6 +13179,7 @@ async function init() {
     enhanceTabsA11y();
     bindScuoleFilters();
     setupDownloadButton(istat, dashboard);
+    mostraVariazioniIstat(istat, variazioni);
   } catch (err) {
     console.error('init() comune_dashboard:', err);
     document.getElementById('comune-content').innerHTML = `

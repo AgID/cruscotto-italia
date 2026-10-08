@@ -30,16 +30,20 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import csv
+import importlib.util
+import io
 import json
 import sys
 import zipfile
+from email.utils import parsedate_to_datetime
 from pathlib import Path
 
 import duckdb
 import requests
 import structlog
 
-from etl.lib import duck, manifest
+from etl.lib import codici, duck, manifest
 from etl.lib.http_ua import USER_AGENT
 
 log = structlog.get_logger()
@@ -47,7 +51,13 @@ log = structlog.get_logger()
 # ----------------------------------------------------------------------------
 # URLs delle fonti
 # ----------------------------------------------------------------------------
-ISTAT_COMUNI_CSV = "https://www.istat.it/storage/codici-unita-amministrative/Elenco-comuni-italiani.csv"
+# ATTENZIONE (08/10/2026): ISTAT aggiorna SOLO l'.xlsx; il .csv allo stesso percorso
+# e' fermo al 26/01/2024 (senza la ricodifica sarda 2026 e le variazioni 2026).
+# Fino all'08/10/2026 Cruscotto leggeva il .csv: l'ETL "girava ok" su un elenco fermo.
+ISTAT_COMUNI_XLSX = "https://www.istat.it/storage/codici-unita-amministrative/Elenco-comuni-italiani.xlsx"
+
+# Lettore xlsx solo stdlib, condiviso con scripts/etl/genera_variazioni_istat.py
+_GV_PATH = Path(__file__).resolve().parents[2] / "scripts" / "etl" / "genera_variazioni_istat.py"
 
 # IPA: dataset "enti" dal portale CKAN ufficiale
 IPA_CKAN_BASE = "https://indicepa.gov.it/ipa-dati/api/3/action"
@@ -71,27 +81,43 @@ IPA_ENTI_DATASET = "enti"  # CKAN package name
 # ----------------------------------------------------------------------------
 # Pull ISTAT codici amministrativi
 # ----------------------------------------------------------------------------
-def pull_istat_comuni(workdir: Path) -> Path:
-    """Scarica il CSV ISTAT con i codici amministrativi dei comuni.
+def _righe_xlsx(data: bytes) -> list[list[str]]:
+    spec = importlib.util.spec_from_file_location("genera_variazioni_istat", _GV_PATH)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod.righe_xlsx(data)
 
-    Note: ISTAT pubblica il CSV in encoding latin-1 con separatore ';'.
-    Le colonne possono variare di anno in anno; usiamo il pattern stabile.
+
+def pull_istat_comuni(workdir: Path) -> tuple[Path, str | None]:
+    """Scarica l'elenco ISTAT vigente (.xlsx) e lo salva come CSV ';' UTF-8.
+
+    Il CSV mantiene le intestazioni ISTAT, cosi la read_csv e la discovery delle
+    colonne di build_anagrafica restano quelle di prima. Le celle numeriche
+    dell'xlsx possono arrivare come "1001.0": il suffisso si toglie qui.
+    Restituisce (path_csv, data_elenco_istat "YYYY-MM-DD" dal Last-Modified).
     """
     workdir.mkdir(parents=True, exist_ok=True)
     out = workdir / "istat-comuni.csv"
-    log.info("pulling_istat_comuni", url=ISTAT_COMUNI_CSV)
-    headers = {"User-Agent": USER_AGENT, "Accept-Charset": "utf-8;q=0.7,*;q=0.3"}
-    r = requests.get(ISTAT_COMUNI_CSV, headers=headers, timeout=120)
+    log.info("pulling_istat_comuni", url=ISTAT_COMUNI_XLSX)
+    r = requests.get(ISTAT_COMUNI_XLSX, headers={"User-Agent": USER_AGENT}, timeout=120)
     r.raise_for_status()
-    # ISTAT pubblica in latin-1; ricodifichiamo in UTF-8 perché DuckDB legge UTF-8
-    raw = r.content
-    try:
-        text = raw.decode("latin-1")
-    except UnicodeDecodeError:
-        text = raw.decode("utf-8", errors="replace")
-    out.write_text(text, encoding="utf-8")
-    log.info("istat_comuni_saved", path=str(out), bytes=out.stat().st_size, encoded="utf-8")
-    return out
+    elenco_del = None
+    if r.headers.get("Last-Modified"):
+        try:
+            elenco_del = parsedate_to_datetime(r.headers["Last-Modified"]).date().isoformat()
+        except (TypeError, ValueError):
+            elenco_del = None
+    righe = _righe_xlsx(r.content)
+    if len(righe) < 7000:
+        raise RuntimeError(f"elenco ISTAT xlsx con {len(righe)} righe: troppo poche")
+    buf = io.StringIO()
+    w = csv.writer(buf, delimiter=";", quoting=csv.QUOTE_ALL, lineterminator="\n")
+    for riga in righe:
+        w.writerow([c[:-2] if c.endswith(".0") and c[:-2].isdigit() else c for c in riga])
+    out.write_text(buf.getvalue(), encoding="utf-8")
+    log.info("istat_comuni_saved", path=str(out), bytes=out.stat().st_size,
+             righe=len(righe) - 1, elenco_istat_del=elenco_del)
+    return out, elenco_del
 
 
 # ----------------------------------------------------------------------------
@@ -224,7 +250,8 @@ def load_popolazione_map(csv_path: Path) -> dict[str, int]:
 
 
 
-def build_anagrafica(istat_csv: Path, ipa_csv: Path, output_dir: Path, pop_map: dict[str, int] | None = None) -> dict:
+def build_anagrafica(istat_csv: Path, ipa_csv: Path, output_dir: Path, pop_map: dict[str, int] | None = None,
+                     elenco_istat_del: str | None = None) -> dict:
     """Componi anagrafica unificata via DuckDB.
 
     Approccio:
@@ -264,6 +291,9 @@ def build_anagrafica(istat_csv: Path, ipa_csv: Path, output_dir: Path, pop_map: 
 
         # Detect the codice istat column heuristically
         codice_istat_col = next(
+            (c for c in cols_istat if "codice comune formato alfanumerico" in c.lower()),
+            None,
+        ) or next(
             (c for c in cols_istat if "codice comune" in c.lower() or "codice istat" in c.lower() or "comune (numerico)" in c.lower()),
             None,
         )
@@ -605,7 +635,8 @@ def build_anagrafica(istat_csv: Path, ipa_csv: Path, output_dir: Path, pop_map: 
             }
         bundle_path = lookup_dir / "comuni-bundle.json"
         bundle_path.write_text(
-            json.dumps({"_etl_version": "0.1.0", "comuni": bundle},
+            json.dumps({"_etl_version": "0.1.0", "_elenco_istat_del": elenco_istat_del,
+                        "comuni": bundle},
                        ensure_ascii=False, separators=(",", ":")),
             encoding="utf-8"
         )
@@ -658,13 +689,18 @@ def main() -> int:
 
     try:
         # 1. Pull
-        istat_csv = pull_istat_comuni(workdir)
+        istat_csv, elenco_istat_del = pull_istat_comuni(workdir)
         ipa_csv = pull_ipa_enti(workdir)
         posas_csv = pull_popolazione_istat(workdir)
         pop_map = load_popolazione_map(posas_csv)
+        # POSAS puo usare codici non piu vigenti (es. Sardegna pre-2026): ricodifiche
+        # rinominate, soppressi scartati (nessuna somma nel comune vigente).
+        pop_map, resoconto = codici.rimappa_chiavi(pop_map)
+        log.info("popolazione_rimappata", **resoconto)
 
         # 2. Build (scrive in output_dir/lookup/)
-        result = build_anagrafica(istat_csv, ipa_csv, output_dir, pop_map=pop_map)
+        result = build_anagrafica(istat_csv, ipa_csv, output_dir, pop_map=pop_map,
+                                  elenco_istat_del=elenco_istat_del)
 
         # 3. Aggiorna manifest (best-effort)
         try:

@@ -97,6 +97,31 @@ def main():
         var = json.loads(VARIAZIONI.read_text())["variazioni"]
     except (OSError, ValueError, KeyError):
         var = {}
+    # Comune vigente senza centroide proprio (es. nato da fusione e ancora senza
+    # sezione territorio): media dei centroidi dei comuni d'origine, letti dai
+    # loro dashboard storici. E' solo una posizione (mappa, meteo), non un dato.
+    vigenti = set(universo)
+    origini = {}
+    for vecchio, v in var.items():
+        if v.get("tipo") != "ricodifica":
+            origini.setdefault(v.get("nuovo"), []).append(vecchio)
+    da_origini = 0
+    for nuovo, vecchi in sorted(origini.items()):
+        if nuovo in coords or nuovo not in vigenti:
+            continue
+        punti = []
+        for c in vecchi:
+            try:
+                res = extract_centroid(json.loads((SHARD_DIR / f"{c}.json").read_text()))
+            except (OSError, ValueError):
+                res = None
+            if res:
+                punti.append(res[:2])
+        if punti:
+            coords[nuovo] = [round(mean(x[0] for x in punti), 5), round(mean(x[1] for x in punti), 5)]
+            da_origini += 1
+    print(f"Centroidi dai comuni d'origine: {da_origini}", file=sys.stderr)
+
     for vecchio, v in sorted(var.items()):
         if vecchio not in coords and v.get("nuovo") in coords:
             coords[vecchio] = coords[v["nuovo"]]

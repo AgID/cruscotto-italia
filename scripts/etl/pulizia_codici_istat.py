@@ -4,9 +4,12 @@
 Da lanciare DOPO il passaggio dell'anagrafica ai codici vigenti e DOPO il
 rebuild del dashboard (migrazione 08/10/2026). Regole:
 
-  dashboard/        rimuove <vecchio>.json per ogni codice non vigente
-                    (ricodifiche e soppressi) SOLO se esiste dashboard/<vigente>.json:
-                    i vecchi link sono serviti dall'inoltro nginx verso il vigente.
+  dashboard/        ricodifiche: rimuove <vecchio>.json SOLO se esiste
+                    dashboard/<vigente>.json (i vecchi link li reindirizza
+                    comune.html; nginx inoltra comunque al vigente).
+                    Soppressi: il loro dashboard RESTA come pagina storica
+                    (decisione 08/10/2026, "b2"): non si aggiorna piu, e la
+                    pagina del comune vigente rimanda a quelle storiche.
   altre cartelle    ricodifiche: rimuove il file/la cartella col codice vecchio
                     SOLO se esiste lo stesso file col codice vigente (doppione
                     vecchio di una fonte che e' passata ai codici 2026). Se esiste
@@ -70,8 +73,7 @@ def main() -> int:
     cartelle += [data / e for e in EXTRA if (data / e).is_dir()]
     riepilogo = {}
     for cart in cartelle:
-        dash = cart.name == "dashboard"
-        mappa = tutti if dash else ricod
+        mappa = ricod
         cont = Counter()
         for voce in sorted(cart.iterdir()):
             vecchio = codice_iniziale(voce.name, set(mappa))
