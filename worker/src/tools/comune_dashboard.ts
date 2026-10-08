@@ -45,7 +45,7 @@
  *   - agcom_bbmap/<istat>.json     (AGCOM - Broadband Map ex art. 22 Codice
  *                                   Comunicazioni Elettroniche. Licenza
  *                                   CC BY 4.0 ex art. 52 c.2 CAD (open by
- *                                   default). 7896/7896 comuni (100%).
+ *                                   default). 7894/7894 comuni (100%).
  *                                   Aggiornamento trimestrale.)
  *   - carburanti/<istat>.json      (MIMIT - Osservatorio Prezzi Carburanti
  *                                   (art. 51 L. 99/2009). Licenza IODL 2.0.
@@ -73,7 +73,7 @@
  *                                   addetti × anno. Serie 2018-2023. Misure: LU
  *                                   (stock unità locali) + LUEMPDAA (addetti
  *                                   media annua). Classi: W0_9, W10_49, W50_249,
- *                                   W_GE250. Copertura: 100% dei 7.896 comuni.
+ *                                   W_GE250. Copertura: 100% dei 7.894 comuni.
  *                                   Aggiornamento annuale (~Q4 ISTAT).)
  *   - lookup/anac-aggregato.json[<cf>] (contratti)
  *
@@ -223,7 +223,7 @@
  *                                       //               orario }, ...]
  *                                       //     // no capping per ora
  *                                       //   }
- *                                       //   Coverage: 5185/7896 comuni (65,7%),
+ *                                       //   Coverage: 5185/7894 comuni (65,7%),
  *                                       //   66619 PdR totali. Aggiornamento
  *                                       //   quotidiano via GSE S3 (Cognito guest).
  *     "omi": { ... } | null            // Agenzia Entrate OMI - quotazioni per zona
@@ -273,7 +273,7 @@
  *                                       //                          provincia, comune },
  *                                       //     mappa_ufficiale: { url, level }
  *                                       //   }
- *                                       //   Coverage 7896/7896 (100%), aggiornamento
+ *                                       //   Coverage 7894/7894 (100%), aggiornamento
  *                                       //   trimestrale. Le geometrie (polilinee
  *                                       //   strade FTTH/rame) NON sono nello shard:
  *                                       //   la mappa di dettaglio e' linkata via
@@ -307,7 +307,7 @@
  *                                       //               ultimo_aggiornamento: "YYYY-MM-DD"
  *                                       //             }, ...]
  *                                       //   }
- *                                       //   Coverage: ~5.450/7.896 comuni (69%),
+ *                                       //   Coverage: ~5.450/7.894 comuni (69%),
  *                                       //   ~23.700 impianti totali. Aggregati
  *                                       //   nazionali e regionali in shard separato
  *                                       //   carburanti/_nazionale.json (fetch
@@ -376,7 +376,7 @@
  *                                       //   Caveat: ASIA conta UL non imprese
  *                                       //   giuridiche - 1 impresa con sedi multi-
  *                                       //   comune compare in piu' comuni.
- *                                       //   Coverage: 100% dei 7.896 comuni.
+ *                                       //   Coverage: 100% dei 7.894 comuni.
  *                                       //   Aggiornamento annuale (~Q4 ISTAT,
  *                                       //   latency ~2 anni: nel 2026 latest=2023).
  *   }
