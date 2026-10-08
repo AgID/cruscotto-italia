@@ -72,8 +72,9 @@ SENZA_CRON_ATTESE = {"catasto_age", "classificazione_sismica", "censimento",
 # NB omi e catasto_age UN CRON CE L'HANNO: girano da uno script wrapper
 # (omi_semestrale.sh, catasto_semestrale.sh) e il parser qui sopra cerca
 # "etl.sources.<nome>" nel comando, quindi non li vede. Stare in questa lista
-# li toglie pero' da ogni sorveglianza: per omi il presidio e' il controllo di
-# contenuto _check_omi, che verifica il semestre invece dell'esecuzione.
+# li toglie pero' da ogni sorveglianza: il presidio e' il controllo di
+# contenuto (_check_omi sul semestre, _check_catasto sullo stato della
+# sentinella), che verifica il dato invece dell'esecuzione.
 
 
 def cadenze_da_cron() -> tuple[dict[str, float], dict[str, str]]:

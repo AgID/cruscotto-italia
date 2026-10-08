@@ -9,7 +9,7 @@
 # Il controllo giornaliero non cambia la cadenza del dato, che resta
 # semestrale: serve solo a non dipendere dalla puntualita' dell'Agenzia, che
 # pubblica "entro" il 15 marzo e il 15 ottobre senza una data fissa.
-# Stessa logica di catasto_semestrale.sh, che controlla mensilmente una
+# Stessa logica di catasto_semestrale.sh, sentinella giornaliera su una
 # fonte semestrale.
 #
 # Catena: sentinella -> perimetri (~10 min) -> quotazioni (~12 h)
