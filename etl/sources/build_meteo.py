@@ -20,6 +20,7 @@ import numpy as np
 
 BASE_NWP  = "https://meteohub.agenziaitaliameteo.it/nwp/ICON-2I_SURFACE_PRESSURE_LEVELS"
 COORDS    = "/var/www/cruscotto-italia/data/istat-coords.json"
+BUNDLE    = "/var/www/cruscotto-italia/data/lookup/comuni-bundle.json"
 OUT_DIR   = "/var/www/cruscotto-italia/data/meteo"
 WORKERS   = 4
 GRIB_VARS = ["T_2M","TOT_PREC","RELHUM","U_10M","V_10M","VMAX_10M","CLCT","H_SNOW","WW"]
@@ -90,7 +91,11 @@ def main():
 
     print("[1/5] Centroidi...", flush=True)
     coords     = json.load(open(COORDS))
-    istat_list = list(coords.keys())
+    # istat-coords.json contiene anche i codici non piu vigenti (alias per il
+    # frontend): l'universo del meteo sono i soli comuni del bundle anagrafica.
+    with open(BUNDLE) as f:
+        vigenti = set(json.load(f)["comuni"])
+    istat_list = [i for i in coords if i in vigenti]
     lat_arr    = np.array([coords[i][0] for i in istat_list])
     lon_arr    = np.array([coords[i][1] for i in istat_list])
     print(f"      {len(istat_list)} comuni", flush=True)

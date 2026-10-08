@@ -1,9 +1,17 @@
 """
 build_istat_coords.py — Genera istat-coords.json (centroidi dei comuni italiani).
 
-INPUT:  /var/www/cruscotto-italia/data/dashboard/<istat>.json (7896 shard A1)
+INPUT:  /var/www/cruscotto-italia/data/dashboard/<istat>.json, per i SOLI comuni
+        del bundle anagrafica (lookup/comuni-bundle.json): i dashboard di codici
+        non piu vigenti eventualmente rimasti su disco non entrano nell'universo
 OUTPUT: /var/www/cruscotto-italia/data/istat-coords.json
 SCHEMA: {istat_code: [lat, lon]}  (5 decimali, ~1m precisione)
+
+Codici non piu vigenti (lookup/variazioni_istat.json, migrazione 08/10/2026):
+ognuno riceve le coordinate del suo comune vigente (ricodifiche: stesso comune;
+soppressi: comune in cui sono confluiti). Servono al frontend (mappa del
+pendolarismo, matrice 2021 con i codici di allora). Chi usa le coordinate come
+universo dei comuni (build_meteo) deve filtrare sul bundle.
 
 Strategia di estrazione (prima fonte trovata vince):
   1. territorio.geo.extent      (OSM relation bbox - PREFERITO)
@@ -12,7 +20,7 @@ Strategia di estrazione (prima fonte trovata vince):
   4. pun.punti[] media           (fallback)
   5. carburanti.punti[] media    (fallback)
 
-Copertura attesa: 7895/7896 (99.99%).
+Copertura attesa: tutti i comuni del bundle meno 1 (99.99%).
 Eseguire dopo ogni rigenerazione dashboard A1 (vedi dashboard.py).
 """
 import json
@@ -22,6 +30,8 @@ import sys
 
 SHARD_DIR = Path("/var/www/cruscotto-italia/data/dashboard")
 OUT_PATH = Path("/var/www/cruscotto-italia/data/istat-coords.json")
+BUNDLE = Path("/var/www/cruscotto-italia/data/lookup/comuni-bundle.json")
+VARIAZIONI = Path("/var/www/cruscotto-italia/data/lookup/variazioni_istat.json")
 
 def extract_centroid(d):
     # 1. territorio.geo.extent (GeoJSON: [lon, lat])
@@ -56,8 +66,9 @@ def extract_centroid(d):
 def main():
     coords = {}
     stats = {"osm_extent": 0, "anncsu": 0, "immobili_pa": 0, "pun": 0, "carburanti": 0, "missing": 0}
-    files = sorted(SHARD_DIR.glob("*.json"))
-    print(f"Processing {len(files)} shards...", file=sys.stderr, flush=True)
+    universo = sorted(json.loads(BUNDLE.read_text())["comuni"])
+    files = [SHARD_DIR / f"{istat}.json" for istat in universo]
+    print(f"Processing {len(files)} shards (comuni del bundle)...", file=sys.stderr, flush=True)
 
     for i, fp in enumerate(files):
         istat = fp.stem
@@ -79,6 +90,18 @@ def main():
     for k, v in stats.items():
         print(f"  {k}: {v}", file=sys.stderr)
     print(f"Total coords: {len(coords)}/{len(files)}", file=sys.stderr)
+
+    # Codici non piu vigenti -> coordinate del comune vigente
+    alias = 0
+    try:
+        var = json.loads(VARIAZIONI.read_text())["variazioni"]
+    except (OSError, ValueError, KeyError):
+        var = {}
+    for vecchio, v in sorted(var.items()):
+        if vecchio not in coords and v.get("nuovo") in coords:
+            coords[vecchio] = coords[v["nuovo"]]
+            alias += 1
+    print(f"Alias codici non vigenti: {alias}", file=sys.stderr)
 
     OUT_PATH.write_text(json.dumps(coords, separators=(",", ":")))
     size = OUT_PATH.stat().st_size
