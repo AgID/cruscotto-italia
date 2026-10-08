@@ -54,7 +54,7 @@ I dati sono inoltre esposti come **catalogo DCAT-AP_IT** (un `dcat:Dataset`
 per comune, generato da `etl/sources/dcat_catalog.py`) per l'harvesting
 su [dati.gov.it](https://www.dati.gov.it).
 
-Tutto ricomposto sulla **spina dorsale anagrafica ISTAT comuni** (~7.896
+Tutto ricomposto sulla **spina dorsale anagrafica ISTAT comuni** (~7.894
 comuni) integrata con `IPA` (Indice dei domicili digitali della Pubblica
 Amministrazione, AgID).
 

@@ -56,7 +56,7 @@ by [dati.gov.it](https://www.dati.gov.it), the Italian national open data
 portal.
 
 Everything is recomposed on the **ISTAT municipal registry backbone**
-(~7,896 municipalities) integrated with `IPA` (the Index of Digital Domiciles
+(~7,894 municipalities) integrated with `IPA` (the Index of Digital Domiciles
 of the Public Administration, maintained by AgID).
 
 ---
