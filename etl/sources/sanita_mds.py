@@ -1304,7 +1304,8 @@ def build_aggregato(shards: dict[str, dict], discovery: dict) -> dict:
             "farmacie":     comuni_con_farmacie,
             "parafarmacie": comuni_con_parafarm,
             "ospedali":     comuni_con_ospedale,
-            "totale_comuni_italia": 7896,
+            # dal bundle anagrafica (elenco ISTAT vigente), non piu cablato
+            "totale_comuni_italia": len(local_lookup.load_comuni_bundle() or {}) or None,
         },
         "n_shards": len(shards),
     }
