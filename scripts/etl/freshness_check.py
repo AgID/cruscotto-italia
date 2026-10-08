@@ -401,9 +401,45 @@ def _check_dashboard(ora: datetime) -> str | None:
     return None
 
 
+# Fonti che NON scrivono nel manifest: entrano nel ciclo di main() solo per
+# il controllo di contenuto. catasto_age e' sorvegliato dallo stato della
+# sentinella giornaliera (data/_diagnostics/catasto_release.json): da giugno
+# all 08/10/2026 il check mensile e' morto in silenzio a ogni run e nessuno se
+# ne e' accorto, perche' qui il catasto non entrava affatto.
+FONTI_FUORI_MANIFEST = {"catasto_age"}
+
+
+def _check_catasto(ora: datetime) -> str | None:
+    """La sentinella catasto deve girare ogni giorno e chiudere senza errori.
+
+    catasto_age non scrive nel manifest: l'unica traccia e' lo stato scritto da
+    scripts/catasto_semestrale.sh. Si verifica che il controllo sia recente e
+    che l'esito non sia di errore. Un aggiornamento "in corso" da oltre 2
+    giorni indica un run morto a meta'.
+    """
+    d = _leggi("_diagnostics/catasto_release.json")
+    log = "Controllare /var/log/cruscotto-etl/catasto-semestrale.log"
+    if d is None:
+        return f"stato della sentinella assente o illeggibile. {log}"
+    eta = eta_giorni(d.get("ultimo_controllo"), ora)
+    if eta is None:
+        return f"ultimo_controllo illeggibile. {log}"
+    esito = str(d.get("esito") or "")
+    if esito == "aggiornamento_in_corso":
+        if eta > 2:
+            return f"aggiornamento in corso da {eta:.0f}gg: run interrotto? {log}"
+        return None
+    if eta > 2:
+        return f"sentinella ferma da {eta:.0f}gg (cadenza giornaliera). {log}"
+    if esito in ("errore", "parziale"):
+        return f"ultimo controllo con esito {esito}. {log}"
+    return None
+
+
 CONTROLLI_CONTENUTO = {
     "siope": _check_siope,
     "omi": _check_omi,
+    "catasto_age": _check_catasto,
     "agcom_bbmap": _check_agcom,
     "anac": _check_anac,
     # mensili / settimanali: eta della data del dato
@@ -528,18 +564,19 @@ def main() -> int:
     stato = carica_stato()
     righe, anomalie = [], []
 
-    for nome in sorted(sources):
-        v = sources[nome] or {}
+    for nome in sorted(set(sources) | FONTI_FUORI_MANIFEST):
+        v = sources.get(nome) or {}
         st = str(v.get("status") or "")
         eta = eta_giorni(v.get("last_run"), ora)
         c = cad.get(nome)
-        e_sh, n_file = eta_shard(nome, ora)
+        e_sh, n_file = (eta_shard(nome, ora) if nome not in FONTI_FUORI_MANIFEST
+                        else (None, 0))
 
         e_run = eta_ultimo_run(nome, ora, logpfx.get(nome), v.get("last_run"))
         grazia = grazia_per_fonte(nome, c, stato, ora)
 
         problemi, note = [], []
-        if st != "ok":
+        if st != "ok" and nome not in FONTI_FUORI_MANIFEST:
             problemi.append(f"status={st}")
 
         # ANOMALIA: l'ETL non e' stato eseguito. E' il solo caso che grida.
