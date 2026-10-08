@@ -45,7 +45,7 @@ from pathlib import Path
 import duckdb
 import structlog
 
-from etl.lib import local_lookup, manifest
+from etl.lib import codici, local_lookup, manifest
 from etl.lib.http_ua import USER_AGENT as UA
 from etl.lib.istat_sdmx import attendi_turno_istat, scarica_a_blocchi
 
@@ -222,11 +222,16 @@ def anni_da_cache(cache_dir: Path) -> None:
 
 
 def codici_comuni() -> list[str]:
-    """Codici ISTAT dei comuni dal bundle locale (stessa fonte di asia.py)."""
+    """Codici ISTAT da interrogare: comuni del bundle + loro codici precedenti.
+
+    Migrazione codici ISTAT 2026: per gli anni gia pubblicati ISTAT puo avere un
+    comune sotto il codice precedente (es. Sardegna pre-2026). Si chiedono
+    entrambi; build_turismo_shards sceglie poi il primo con dati (vigente prima).
+    """
     bundle = local_lookup.load_comuni_bundle()
     if not bundle:
         raise SystemExit("comuni-bundle.json assente: eseguire prima etl.sources.anagrafica")
-    return sorted(bundle.keys())
+    return sorted({c for v in bundle for c in codici.candidati_lettura(v)})
 
 
 def download_dataflow_csv(df: dict, cache_dir: Path, force: bool = False) -> Path:
@@ -420,17 +425,33 @@ def build_turismo_shards(cache_dir: Path, output_dir: Path) -> Path:
     comuni_validi = set(local_lookup.load_comuni_bundle().keys())
     log.info("istat_anagrafica_loaded", comuni=len(comuni_validi))
 
-    all_istat = (set(cap_by_istat.keys()) | set(com_to_prov.keys())) & comuni_validi
+    # Migrazione codici ISTAT 2026: per ogni comune del bundle si provano il codice
+    # vigente e i precedenti dello stesso comune (mai i soppressi). Capacita: il
+    # primo codice con dati. Provincia: quella del codice da cui arrivano i dati
+    # (i flussi degli anni gia pubblicati descrivono le province di allora: un
+    # comune ex Sud Sardegna resta col Sud Sardegna finche ISTAT non pubblica
+    # anni coi codici nuovi); poi il primo genitore con flussi; poi il primo
+    # trovato. Lo shard si scrive sempre col codice vigente.
     written = 0
     skip_no_prov = 0
-    for istat in sorted(all_istat):
-        prov_info = com_to_prov.get(istat)
+    da_codice_precedente = 0
+    for istat in sorted(comuni_validi):
+        candidati = codici.candidati_lettura(istat)
+        cod_cap = next((c for c in candidati if c in cap_by_istat), None)
+        # dopo il codice dei dati, i precedenti prima del vigente: senza capacita
+        # (o con capacita del vigente ma senza flussi) vale la provincia di allora
+        ordine = ([cod_cap] if cod_cap else []) + [c for c in candidati[1:] + candidati[:1] if c != cod_cap]
+        prov_cand = [com_to_prov[c] for c in ordine if c in com_to_prov]
+        prov_info = next((pi for pi in prov_cand if pi[0] in flussi_by_prov),
+                         prov_cand[0] if prov_cand else None)
         if not prov_info:
             skip_no_prov += 1
             continue  # comune non in CL_ITTER107
         prov_nuts3, prov_nome = prov_info
 
-        cap_data = cap_by_istat.get(istat, {})
+        if cod_cap and cod_cap != istat:
+            da_codice_precedente += 1
+        cap_data = cap_by_istat.get(cod_cap, {}) if cod_cap else {}
         fl_data = flussi_by_prov.get(prov_nuts3, {})
         pop = pop_by_istat.get(istat)
 
@@ -451,6 +472,7 @@ def build_turismo_shards(cache_dir: Path, output_dir: Path) -> Path:
 
     log.info("istat_shards_done", written=written,
              skip_no_provincia=skip_no_prov, attesi=len(comuni_validi),
+             capacita_da_codice_precedente=da_codice_precedente,
              dir=str(shard_dir))
     return shard_dir
 
