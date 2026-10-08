@@ -122,7 +122,7 @@ Orari in **ora italiana** (il cron della VM usa il fuso Europe/Rome), tranne i w
 | **Mensile** (giorno 5, 04:00-08:40) | anagrafica, BDAP-MOP, SIOPE, ANNCSU, AGCOM banda larga, Cultural-ON, beni culturali, dashboard | cron VM AgID | automatico |
 | **Annuale** (1 feb / 1 apr / 1 lug, 04:00-14:00) | demografia POSAS e bilancio demografico, profilo Censimento, aria, ASIA, turismo, classificazione sismica, territorio, veicoli (CSV ACI da GitHub Actions), redditi IRPEF, immobili PA, dashboard | cron VM AgID | automatico |
 | **Annuale** (5 settembre, 04:00) | scuole MIUR (anno scolastico appena iniziato) | cron VM AgID | automatico |
-| **Semestrale** (controllo il 1° di ogni mese, 03:00) | cartografia catastale AGE (particelle + fogli, 19 regioni): scarica solo se le dimensioni dei file AGE sono cambiate | cron VM AgID | automatico |
+| **Semestrale** (sentinella giornaliera 03:00) | cartografia catastale AGE (particelle + fogli, 19 regioni): `catasto_semestrale.sh` confronta ogni giorno le dimensioni degli ZIP regionali AGE e scarica, verifica e rigenera solo le regioni con un rilascio nuovo | cron VM AgID | automatico |
 | **Semestrale** (sentinella giornaliera 03:20) | quotazioni OMI AGE (zone + perimetri): `omi_semestrale.sh` interroga ogni giorno l'elenco dei semestri pubblicati e avvia la raccolta solo quando ne compare uno nuovo (l'Agenzia pubblica entro il 15 marzo e il 15 ottobre, senza data fissa) | cron VM AgID | automatico |
 | **Decennale** (manuale, prossimo 2031) | censimento Basi Territoriali (sezioni + 119 vars) | run manuale `python -m etl.sources.censimento` su VM | `workflow_dispatch` |
 | **ACI su Actions** (1 feb / 1 apr / 1 lug, 04:00 UTC) | CSV prime iscrizioni ACI LOD, scaricati poi dalla VM con `fetch_aci_artifact.py` | GitHub Actions `ubuntu-24.04` | `schedule` + `workflow_dispatch` |
@@ -211,6 +211,8 @@ come REST sul percorso `/data/catasto_full/<istat>_map.geojson.gz` e
 `/data/catasto_full/<istat>_ple.geojson.gz` (o split per foglio nei
 comuni grandi). Per pattern d'uso e esempi vedi la skill MCP Claude
 (sezione catasto) e il README dello ZIP `/data/<istat>.zip`.
+La data di rilascio AdE in produzione per regione è in
+`/data/catasto_full/_rilascio.json` (mostrata nella scheda del comune).
 
 **Rate limit**: 60 richieste/minuto per IP.
 
@@ -431,7 +433,7 @@ Lo stesso principio guida il controllo automatico. Ogni mattina
 `scripts/etl/freshness_check.py` verifica, oltre all'esecuzione degli ETL,
 il **periodo del dato** delle fonti non giornaliere (`CONTROLLI_CONTENUTO`:
 età della data per le mensili, anno minimo atteso per le annuali, finestra
-di mesi per ANAC) e invia un allarme se resta indietro rispetto al
+di mesi per ANAC, stato della sentinella giornaliera per il catasto) e invia un allarme se resta indietro rispetto al
 calendario di pubblicazione della fonte. Dall'audit del 05/10/2026 gli ETL
 seguono queste regole: anni ed edizioni delle fonti risolti a runtime e mai
 scritti nel codice, cache con scadenza (o con il periodo nel nome),

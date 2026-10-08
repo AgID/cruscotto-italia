@@ -124,7 +124,7 @@ Times in **Italian time** (the VM cron uses the Europe/Rome time zone), except t
 | **Monthly** (day 5, 04:00-08:40) | registry, BDAP-MOP, SIOPE, ANNCSU, AGCOM broadband, Cultural-ON, cultural heritage, dashboard | AgID VM cron | automatic |
 | **Annual** (1 Feb / 1 Apr / 1 Jul, 04:00-14:00) | POSAS demographics and population balance, census profile, air quality, ASIA, tourism, seismic classification, territory, vehicles (ACI CSVs from GitHub Actions), IRPEF income, public real estate, dashboard | AgID VM cron | automatic |
 | **Annual** (5 September, 04:00) | MIUR schools (school year just started) | AgID VM cron | automatic |
-| **Six-monthly** (check on the 1st of each month, 03:00) | AGE cadastral maps (parcels + sheets, 19 regions): downloads only when AGE file sizes change | AgID VM cron | automatic |
+| **Six-monthly** (daily sentinel 03:00) | AGE cadastral maps (parcels + sheets, 19 regions): `catasto_semestrale.sh` compares the size of the AGE regional ZIPs every day and downloads, verifies and rebuilds only the regions with a new release | AgID VM cron | automatic |
 | **Six-monthly** (daily sentinel 03:20) | AGE OMI quotations (zones + perimeters): `omi_semestrale.sh` checks the published semesters every day and starts the collection only when a new one appears (published by 15 March and 15 October, no fixed date) | AgID VM cron | automatic |
 | **Ten-yearly** (manual, next 2031) | census Basi Territoriali (sections + 119 vars) | manual run `python -m etl.sources.censimento` on the VM | `workflow_dispatch` |
 | **ACI on Actions** (1 Feb / 1 Apr / 1 Jul, 04:00 UTC) | ACI LOD first-registration CSVs, then fetched by the VM with `fetch_aci_artifact.py` | GitHub Actions `ubuntu-24.04` | `schedule` + `workflow_dispatch` |
@@ -213,6 +213,8 @@ exposed as REST at `/data/catasto_full/<istat>_map.geojson.gz` and
 `/data/catasto_full/<istat>_ple.geojson.gz` (or split by sheet for large
 municipalities). For usage patterns and examples see the Claude MCP skill
 (cadastre section) and the README inside the `/data/<istat>.zip` bundle.
+The Revenue Agency release date in production for each region is in
+`/data/catasto_full/_rilascio.json` (shown on the municipality page).
 
 **Rate limit**: 60 requests/minute per IP.
 
@@ -434,7 +436,7 @@ The same principle drives the automatic check. Every morning
 `scripts/etl/freshness_check.py` verifies, besides ETL execution, the
 **data period** of non-daily sources (`CONTROLLI_CONTENUTO`: date age for
 monthly sources, minimum expected year for annual ones, month window for
-ANAC) and raises an alert when it falls behind the source's publication
+ANAC, daily sentinel state for the cadastre) and raises an alert when it falls behind the source's publication
 calendar. Since the 05/10/2026 audit the ETLs follow these rules: source
 years and editions resolved at runtime and never hard-coded, caches that
 expire (or carry the period in their name), downloads written to a
