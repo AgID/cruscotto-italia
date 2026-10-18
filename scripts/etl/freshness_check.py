@@ -362,20 +362,22 @@ def _anno_minimo(rel: str, campo, ritardo_anni: int, cosa: str):
 
 
 def _check_anac(ora: datetime) -> str | None:
-    """Finestra ANAC: almeno 6 mesi e il piu recente entro 9 mesi.
+    """Finestra ANAC: almeno 6 mesi e il piu recente entro 100 giorni.
 
-    05/10/2026: si serviva un solo mese (cron con --years=<anno corrente>).
-    ANAC OCDS e ferma a marzo 2026 lato fonte: 9 mesi lasciano margine alla
-    pubblicazione a lotti e segnalano un fermo che dura."""
+    Dal 19/10/2026 la fonte e BDNCP (archivio locale dei file mensili ANAC):
+    la finestra termina con il mese precedente l'ultimo file archiviato,
+    quindi normalmente ha 35-65 giorni. Oltre 100 l'archivio non avanza
+    (scripts/anac_archivio_mensile.sh) o ANAC ha smesso di pubblicare."""
     d = _leggi("lookup/anac-aggregato.json")
     if d is None:
         return None
     mesi = sorted(str(x)[:7] for x in d.get("_period_files") or [])
     if len(mesi) < 6:
-        return f"finestra contratti di soli {len(mesi)} mesi ({mesi}): controllare anac --ultimi-mesi"
+        return f"finestra contratti di soli {len(mesi)} mesi ({mesi}): controllare anac --mesi"
     gg = _giorni_da(mesi[-1] + "-01", ora)
-    if gg is not None and gg > 300:
-        return f"mese ANAC piu recente {mesi[-1]} ({gg}gg): fonte OCDS ferma o download fallito"
+    if gg is not None and gg > 100:
+        return (f"mese ANAC piu recente {mesi[-1]} ({gg}gg): archivio BDNCP fermo "
+                "(anac_archivio_mensile.sh) o fonte non aggiornata")
     return None
 
 

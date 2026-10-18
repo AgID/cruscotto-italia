@@ -41,9 +41,12 @@ def test_agcom_soglia_170(fc, tmp_path):
 def test_anac_finestra_corta(fc, tmp_path):
     _scrivi(tmp_path, "lookup/anac-aggregato.json", {"_period_files": ["2026-03-awards"]})
     assert fc.controlli_contenuto("anac", _ora("2026-10-05"))
-    mesi = [f"2025-{m:02d}-awards" for m in range(1, 12)] + ["2026-03-awards"]
+    # finestra BDNCP (dal 19/10/2026): 12 mesi fino al mese prima dell'ultimo file
+    mesi = [f"2025-{m:02d}" for m in range(10, 13)] + [f"2026-{m:02d}" for m in range(1, 10)]
     _scrivi(tmp_path, "lookup/anac-aggregato.json", {"_period_files": mesi})
-    assert fc.controlli_contenuto("anac", _ora("2026-10-05")) == []
+    assert fc.controlli_contenuto("anac", _ora("2026-10-19")) == []
+    # archivio fermo: stessa finestra quattro mesi dopo
+    assert fc.controlli_contenuto("anac", _ora("2027-01-19"))
 
 
 def test_bdap_eta_download(fc, tmp_path):

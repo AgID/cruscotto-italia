@@ -1,495 +1,387 @@
-"""ETL ANAC OCDS — contratti pubblici aggregati per comune.
+"""ETL ANAC BDNCP — contratti pubblici aggregati per comune.
 
-Fonte: dati.anticorruzione.it/opendata, dataset 'ocds-appalti-ordinari-{anno}'
-URL pattern: https://dati.anticorruzione.it/opendata/download/dataset/ocds/filesystem/bulk/{YYYY}/{MM}.json
-Licenza: CC-BY-SA 4.0
+Fonte: Banca Dati Nazionale dei Contratti Pubblici (ANAC), dataset open data
+`aggiudicazioni` e `cig` (dati.anticorruzione.it/opendata). Licenza CC BY 4.0.
 
-Pipeline:
-  1. Per ogni (anno, mese) richiesto:
-     - Download {YYYY}/{MM}.json se non già presente (idempotente)
-     - DuckDB query → Parquet '{anno}-{mese}-awards.parquet' con un row per award
-  2. Aggregazione cross-mensile via DuckDB:
-     - Per ogni buyer_cf (= CF stazione appaltante): count, importo totale, top CPV, top fornitori
-     - Output: 'lookup/anac-aggregato.json' (mappa CF → KPI)
-  3. Push su R2 + arricchimento bundle comuni con KPI contratti
+Sostituisce l'ETL sui bulk OCDS (v0.1.0) dal 19/10/2026:
+  - ANAC non rigenera l'OCDS da aprile 2026 (2026/04 in poi: 404);
+  - i 12 file OCDS usati erano 4 file distinti e contenevano ~1/5 degli
+    affidamenti presenti in BDNCP (award_id OCDS = id_aggiudicazione BDNCP,
+    stesso importo nel 99,9% dei casi).
+
+Lettura SOLO dall'archivio locale (nessun download qui): ANAC espone i file
+mensili per ~7 mesi, li conserva scripts/anac_archivio_mensile.sh (cron
+giornaliero). Struttura attesa in --archivio:
+  aggiudicazioni/aggiudicazioni_csv_AAAAMMGG.zip   storico (si usa il piu recente)
+  aggiudicazioni/AAAAMM01-aggiudicazioni_csv.zip   mensili
+  cig/AAAAMM01-cig_csv.zip                         mensili (dal 2026)
+  cig_annuali/cig_csv_AAAA_MM.zip                  dataset cig-AAAA (fino al 2025)
+
+Regole (decise il 19/10/2026, vedi claude/HANDOFF_ANAC_FONTE_BDNCP_2026-10-19.md):
+  1. Finestra: 12 mesi di data_aggiudicazione_definitiva che terminano con il
+     mese precedente l'ultimo file mensile archiviato (il file AAAAMM01
+     contiene le comunicazioni del mese prima).
+  2. Date: scartate quelle successive a oggi o precedenti al 2000.
+  3. Deduplica per CIG: vince la sorgente piu recente (storico < mensili in
+     ordine), poi data_comunicazione_esito maggiore, poi l'ultima riga.
+  4. Comune = CF della stazione appaltante (cig.cf_amministrazione_appaltante)
+     presente in lookup/comuni-index.json. Riga cig: quella con
+     flag_prevalente=1, dal file piu recente.
+  5. Importo anomalo: una singola aggiudicazione piu grande della spesa annua
+     del comune (SIOPE totale_anno, ultimo anno completo) esce dai totali ed
+     e elencata in `anomalie`. Senza SIOPE: soglia di riserva in euro per
+     abitante (SOGLIA_EURO_AB).
+
+Output: lookup/anac-aggregato.json, mappa CF comune -> KPI, stesso formato
+della v0.1.0 (count, importo_totale, first/last_award_date, distinct_cpv,
+top_cpv, cpv) piu count_anomalie, importo_anomalie, anomalie.
 
 Usage:
-  python -m etl.sources.anac --years=2026 --months=1,2,3
-  python -m etl.sources.anac --years=2025,2026
+  python -m etl.sources.anac                      # finestra automatica
+  python -m etl.sources.anac --outdir /tmp/prova  # output di prova
+  python -m etl.sources.anac --fine 2026-09       # ultimo mese della finestra
 """
 from __future__ import annotations
 
 import argparse
+import csv
+import io
 import json
 import os
 import re
 import sys
-from datetime import date
+import zipfile
+from collections import defaultdict
+from datetime import date, datetime, timezone
 from pathlib import Path
 
-import duckdb
-import requests
 import structlog
 
 from etl.lib import manifest
-from etl.lib.http_ua import USER_AGENT
 
 log = structlog.get_logger()
 
-ANAC_BASE = "https://dati.anticorruzione.it/opendata/download/dataset/ocds/filesystem/bulk"
+ETL_VERSION = "0.2.0"
+SOURCE_LABEL = "ANAC BDNCP (dataset aggiudicazioni e cig)"
+LICENZA = "CC BY 4.0"
+ARCHIVIO_DEFAULT = Path("/home/ubuntu/anac_bdncp_archivio")
+DATA_DEFAULT = Path("/var/www/cruscotto-italia/data")
+MESI_FINESTRA = 12
+SOGLIA_EURO_AB = 20_000.0      # riserva se il comune non ha SIOPE completo
+DATA_MIN = "2000-01-01"
+MAX_ANOMALIE = 50              # per comune, in ordine di importo
+
+csv.field_size_limit(10**9)
+_RE_MENSILE = re.compile(r"^(\d{6})01-")
 
 
 # ----------------------------------------------------------------------------
-# Pull (download monthly files)
+# Lettura
 # ----------------------------------------------------------------------------
-def pull_anac_month(workdir: Path, year: int, month: int) -> Path:
-    """Download one OCDS monthly bulk file. Idempotent: skip if file exists."""
-    workdir.mkdir(parents=True, exist_ok=True)
-    fname = f"{year}-{month:02d}.json"
-    fpath = workdir / fname
+def righe_zip(path: Path):
+    """Righe (dict) del primo CSV dentro lo zip, separatore ';'."""
+    with zipfile.ZipFile(path) as zf:
+        interni = [n for n in zf.namelist() if n.lower().endswith(".csv")]
+        if not interni:
+            raise RuntimeError(f"{path.name}: nessun CSV nello zip")
+        with zf.open(interni[0]) as fb:
+            testo = io.TextIOWrapper(fb, encoding="utf-8-sig", newline="")
+            yield from csv.DictReader(testo, delimiter=";")
 
-    if fpath.exists() and fpath.stat().st_size > 100_000:  # >100KB sanity
-        log.info("anac_month_already_downloaded", path=str(fpath), bytes=fpath.stat().st_size)
-        return fpath
 
-    url = f"{ANAC_BASE}/{year}/{month:02d}.json"
-    log.info("anac_month_pulling", url=url, dest=str(fpath))
-
-    headers = {"User-Agent": USER_AGENT, "Accept": "application/json"}
-    part = fpath.with_suffix(".json.part")
+def numero(x) -> float:
     try:
-        with requests.get(url, headers=headers, stream=True, timeout=900) as resp:
-            resp.raise_for_status()
-            size = 0
-            with open(part, "wb") as f:
-                for chunk in resp.iter_content(chunk_size=1024 * 1024):  # 1 MB chunks
-                    f.write(chunk)
-                    size += len(chunk)
-    except Exception:
-        part.unlink(missing_ok=True)
-        raise
-    # rinomina solo a download completo: un file troncato non resta in cache
-    os.replace(part, fpath)
+        return float(x)
+    except (TypeError, ValueError):
+        return 0.0
 
-    log.info("anac_month_saved", path=str(fpath), bytes=size, mb=round(size / 1024 / 1024, 1))
-    return fpath
+
+def sorgenti_aggiudicazioni(archivio: Path) -> list[Path]:
+    """Storico piu recente + mensili in ordine: l'ordine e la priorita."""
+    d = archivio / "aggiudicazioni"
+    storici = sorted(d.glob("aggiudicazioni_csv_*.zip"))
+    mensili = sorted(p for p in d.glob("*-aggiudicazioni_csv.zip") if _RE_MENSILE.match(p.name))
+    return storici[-1:] + mensili
+
+
+def sorgenti_cig(archivio: Path) -> list[Path]:
+    annuali = sorted((archivio / "cig_annuali").glob("cig_csv_*.zip"))
+    mensili = sorted(p for p in (archivio / "cig").glob("*-cig_csv.zip") if _RE_MENSILE.match(p.name))
+    return annuali + mensili
 
 
 # ----------------------------------------------------------------------------
-# Transform (1 month JSON → 1 Parquet of awards)
+# Finestra
 # ----------------------------------------------------------------------------
-def _riduci_release(r: dict) -> dict:
-    """Solo i campi usati dalla query di conversione (struttura uniforme)."""
-    awards = []
-    for a in r.get("awards") or []:
-        it = (a.get("items") or [{}])[0] or {}
-        awards.append({
-            "id": a.get("id"), "status": a.get("status"), "date": a.get("date"),
-            "value": {"amount": (a.get("value") or {}).get("amount"),
-                      "currency": (a.get("value") or {}).get("currency")},
-            "items": [{"classification": {"id": (it.get("classification") or {}).get("id"),
-                                          "description": (it.get("classification") or {}).get("description")},
-                       "description": it.get("description")}],
-        })
-    t = r.get("tender") or {}
-    b = r.get("buyer") or {}
-    if not b.get("id"):
-        # Bulk 2025 (verificato su 2025/11 il 06/10/2026): niente buyer,
-        # ocid e tender. L'ente e il soggetto in parties SENZA ruolo, con il
-        # CF come id e il nome in additionalIdentifiers (registro AUSA).
-        for pt in r.get("parties") or []:
-            ruoli = pt.get("roles") or []
-            if not ruoli or "buyer" in ruoli:
-                alt = (pt.get("additionalIdentifiers") or [{}])[0] or {}
-                b = {"id": pt.get("id"), "name": pt.get("name") or alt.get("legalName")}
-                break
-    ocid = r.get("ocid")
-    if not ocid and r.get("id"):
-        # id = <ocid>-<progressivo>, es. ocds-hu01ve-CONSIP_RDO_5946238-01
-        ocid = re.sub(r"-\d+$", "", r["id"])
-    return {"ocid": ocid, "id": r.get("id"),
-            "buyer": {"id": b.get("id"), "name": b.get("name")},
-            "tender": {"mainProcurementCategory": t.get("mainProcurementCategory"),
-                       "procurementMethodDetails": t.get("procurementMethodDetails")},
-            "awards": awards}
+def finestra(ultimo_mensile: str, fine: str | None = None, mesi: int = MESI_FINESTRA):
+    """(da, a, elenco AAAA-MM). ultimo_mensile = 'AAAAMM' dell'ultimo file:
+    la finestra termina con il mese precedente, salvo --fine esplicito."""
+    if fine:
+        y, m = int(fine[:4]), int(fine[5:7])
+    else:
+        y, m = int(ultimo_mensile[:4]), int(ultimo_mensile[4:6])
+        y, m = (y, m - 1) if m > 1 else (y - 1, 12)
+    elenco = []
+    for _ in range(mesi):
+        elenco.append(f"{y}-{m:02d}")
+        y, m = (y, m - 1) if m > 1 else (y - 1, 12)
+    elenco.reverse()
+    da = elenco[0] + "-01"
+    ya, ma = int(elenco[-1][:4]), int(elenco[-1][5:7])
+    yn, mn = (ya, ma + 1) if ma < 12 else (ya + 1, 1)
+    a = date.fromordinal(date(yn, mn, 1).toordinal() - 1).isoformat()
+    return da, a, elenco
 
 
-def json_a_righe(json_path: Path, out_path: Path, blocco: int = 8 << 20) -> int:
-    """Converte il pacchetto OCDS {"releases": [...]} in un JSON a righe
-    ({"r": release ridotta} per riga), leggendo in streaming.
+# ----------------------------------------------------------------------------
+# Aggiudicazioni: deduplica per CIG
+# ----------------------------------------------------------------------------
+def dedup_aggiudicazioni(sorgenti: list[Path], oggi: str) -> dict[str, tuple]:
+    """CIG -> (priorita, data_aggiudicazione, importo).
 
-    Perche: i file mensili 2025 pesano 3-5 GB (05/10/2026) e DuckDB li
-    leggeva come UN oggetto JSON con limite di 2 GB. Solo libreria
-    standard: raw_decode su un buffer che scorre.
+    Priorita = (ordine sorgente, data comunicazione, numero riga): vince la
+    tupla maggiore. Le righe con data di aggiudicazione fuori da
+    [DATA_MIN, oggi] sono scartate PRIMA della deduplica.
     """
-    dec = json.JSONDecoder()
-    n = 0
-    part = out_path.with_suffix(out_path.suffix + ".part")
-    with open(json_path, encoding="utf-8") as fi, open(part, "w", encoding="utf-8") as fo:
-        buf = ""
-        while '"releases"' not in buf:
-            dati = fi.read(blocco)
-            if not dati:
-                raise RuntimeError(f"{json_path.name}: chiave releases non trovata")
-            buf += dati
-        pos = buf.index("[", buf.index('"releases"')) + 1
-        fine_file = False
-        while True:
-            while pos < len(buf) and buf[pos] in " \t\r\n,":
-                pos += 1
-            if pos >= len(buf):
-                if fine_file:
-                    raise RuntimeError(f"{json_path.name}: array releases non chiuso")
-                dati = fi.read(blocco)
-                fine_file = not dati
-                buf, pos = buf[pos:] + dati, 0
+    best: dict[str, tuple] = {}
+    for o, z in enumerate(sorgenti):
+        n_righe = n_scartate = 0
+        for n, r in enumerate(righe_zip(z)):
+            n_righe += 1
+            d = (r.get("data_aggiudicazione_definitiva") or "")[:10]
+            cig = (r.get("cig") or "").strip()
+            if not (DATA_MIN <= d <= oggi) or not cig:
+                n_scartate += 1
                 continue
-            if buf[pos] == "]":
-                break
-            try:
-                obj, fine = dec.raw_decode(buf, pos)
-            except json.JSONDecodeError:
-                if fine_file:
-                    raise
-                dati = fi.read(blocco)
-                fine_file = not dati
-                buf, pos = buf[pos:] + dati, 0
+            v = ((o, (r.get("data_comunicazione_esito") or "")[:10], n), d,
+                 numero(r.get("importo_aggiudicazione")))
+            vecchio = best.get(cig)
+            if vecchio is None or v[0] > vecchio[0]:
+                best[cig] = v
+        log.info("anac_aggiudicazioni_lette", file=z.name, righe=n_righe,
+                 scartate=n_scartate, cig_distinti=len(best))
+    return best
+
+
+def info_cig(sorgenti: list[Path], servono: set[str]) -> dict[str, dict]:
+    """CIG -> campi della stazione appaltante e del lotto. Riga prevalente,
+    dal file piu recente."""
+    info: dict[str, dict] = {}
+    for z in sorgenti:
+        for r in righe_zip(z):
+            c = (r.get("cig") or "").strip()
+            if c not in servono:
                 continue
-            fo.write(json.dumps({"r": _riduci_release(obj)}, ensure_ascii=False))
-            fo.write("\n")
-            n += 1
-            pos = fine
-            if pos > blocco:                        # scarta la parte gia letta
-                buf, pos = buf[pos:], 0
-    os.replace(part, out_path)
-    return n
-
-
-def transform_anac_month(json_path: Path, output_dir: Path) -> Path:
-    """Parse OCDS JSON and produce Parquet with one row per award."""
-    output_dir.mkdir(parents=True, exist_ok=True)
-    pq_path = output_dir / f"{json_path.stem}-awards.parquet"
-
-    if pq_path.exists():
-        log.info("anac_parquet_already_built", path=str(pq_path), bytes=pq_path.stat().st_size)
-        return pq_path
-
-    log.info("anac_transforming", json=str(json_path))
-    righe_path = json_path.with_suffix(".righe.json")
-    pq_tmp = pq_path.with_suffix(".parquet.part")
-    n_rel = json_a_righe(json_path, righe_path)
-    log.info("anac_json_a_righe", releases=n_rel, bytes=righe_path.stat().st_size)
-    con = duckdb.connect()
-
-    # Estrazione: una riga per award. Conserva CF, nome, importo, data, CPV.
-    # CPV va estratto dal primo item dell'award (di solito ce n'è uno solo).
-    con.execute(f"""
-        COPY (
-            SELECT
-                r.ocid AS ocid,
-                r.id AS release_id,
-                r.buyer.id AS buyer_cf,
-                r.buyer.name AS buyer_name,
-                r.tender.mainProcurementCategory AS category,
-                r.tender.procurementMethodDetails AS procurement_method,
-                a.id AS award_id,
-                a.status AS award_status,
-                CAST(a.date AS VARCHAR) AS award_date,
-                CAST(a.value.amount AS DOUBLE) AS award_amount,
-                a.value.currency AS award_currency,
-                -- CPV dal primo item
-                (a.items[1]).classification.id AS cpv_code,
-                (a.items[1]).classification.description AS cpv_desc,
-                (a.items[1]).description AS item_description
-            FROM read_json('{righe_path}', format='newline_delimited',
-                           sample_size=-1, maximum_object_size=268435456),
-            unnest(r.awards) AS award_t(a)
-            WHERE r.buyer.id IS NOT NULL
-        )
-        TO '{pq_tmp}' (FORMAT PARQUET, COMPRESSION ZSTD)
-    """)
-    n_righe = duckdb.connect().execute(
-        f"SELECT COUNT(*) FROM read_parquet('{pq_tmp}')").fetchone()[0]
-    if n_rel > 0 and n_righe == 0:
-        # 06/10/2026: struttura 2025 diversa -> 0 righe da 269.275 rilasci,
-        # parquet vuoto salvato e JSON da 5 GB cancellato. Mai piu in silenzio.
-        pq_tmp.unlink(missing_ok=True)
-        raise RuntimeError(f"{json_path.name}: {n_rel} rilasci ma 0 affidamenti estratti "
-                           "(struttura OCDS cambiata?). JSON conservato")
-    os.replace(pq_tmp, pq_path)        # un parquet a meta non deve essere riusato
-    righe_path.unlink(missing_ok=True)
-
-    n_rows = con.execute(f"SELECT COUNT(*) FROM '{pq_path}'").fetchone()[0]
-    n_buyers = con.execute(
-        f"SELECT COUNT(DISTINCT buyer_cf) FROM '{pq_path}'"
-    ).fetchone()[0]
-    log.info(
-        "anac_parquet_built",
-        path=str(pq_path),
-        bytes=pq_path.stat().st_size,
-        rows=n_rows,
-        unique_buyers=n_buyers,
-    )
-    return pq_path
+            if c in info and r.get("flag_prevalente") != "1":
+                continue
+            info[c] = {
+                "cf": (r.get("cf_amministrazione_appaltante") or "").strip(),
+                "nome": (r.get("denominazione_amministrazione_appaltante") or "").strip(),
+                "cpv": (r.get("cod_cpv") or "").strip() or None,
+                "cpv_desc": (r.get("descrizione_cpv") or "").strip() or None,
+                "oggetto": (r.get("oggetto_lotto") or r.get("oggetto_gara") or "").strip()[:200],
+            }
+        log.info("anac_cig_letti", file=z.name, cig_trovati=len(info))
+    return info
 
 
 # ----------------------------------------------------------------------------
-# Aggregate (N Parquet → 1 JSON map: buyer_cf → KPI)
+# Riferimenti per il comune: CF e spesa SIOPE
 # ----------------------------------------------------------------------------
-def aggregate_anac(parquet_paths: list[Path], output_dir: Path) -> Path:
-    """Aggregate all monthly awards parquets into a per-buyer KPI JSON."""
-    output_dir.mkdir(parents=True, exist_ok=True)
-    out_path = output_dir / "anac-aggregato.json"
+def carica_comuni(data_dir: Path) -> dict[str, dict]:
+    """CF comune -> {istat, nome, pop} da lookup/comuni-index.json."""
+    righe = json.loads((data_dir / "lookup" / "comuni-index.json").read_text(encoding="utf-8"))
+    out = {}
+    for r in righe:
+        cf = (r.get("cf") or "").strip()
+        if cf:
+            out[cf] = {"istat": r["i"], "nome": r.get("n"), "pop": r.get("p")}
+    return out
 
-    log.info("anac_aggregating", n_parquets=len(parquet_paths))
-    con = duckdb.connect()
 
-    # UNION di tutti i parquet, poi DEDUPLICA per affidamento.
-    # In OCDS lo stesso affidamento (ocid + award_id) ricompare nei rilasci
-    # dei mesi successivi quando viene aggiornato, e ANAC ha pubblicato file
-    # mensili identici (2025/10 e 2025/11: stessi 5.245.605.141 byte,
-    # verificato il 05/10/2026). Con UNION ALL + COUNT/SUM sarebbero contati
-    # piu volte. Si tiene una riga per (ocid, award_id): la piu recente.
-    union_sql = " UNION ALL ".join(f"SELECT * FROM '{p}'" for p in parquet_paths)
-    con.execute(f"CREATE TEMP TABLE awards_grezzi AS {union_sql}")
-    n_grezzi = con.execute("SELECT COUNT(*) FROM awards_grezzi").fetchone()[0]
-    con.execute("""
-        CREATE TEMP TABLE all_awards AS
-        SELECT * FROM awards_grezzi
-        QUALIFY ROW_NUMBER() OVER (
-            PARTITION BY ocid, COALESCE(award_id, '')
-            ORDER BY award_date DESC NULLS LAST, release_id DESC
-        ) = 1
-    """)
+def spesa_siope(data_dir: Path, istat: str) -> tuple[str, float] | None:
+    """(anno, totale_anno uscite) dell'ultimo anno SIOPE completo, o None."""
+    f = data_dir / "siope" / f"{istat}.json"
+    try:
+        d = json.loads(f.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    anni = sorted((a for a, b in (d.get("per_anno") or {}).items()
+                   if not b.get("parziale") and b.get("totale_anno")), reverse=True)
+    if not anni:
+        return None
+    return anni[0], float(d["per_anno"][anni[0]]["totale_anno"])
 
-    n_total = con.execute("SELECT COUNT(*) FROM all_awards").fetchone()[0]
-    log.info("anac_dedup", righe_grezze=n_grezzi, affidamenti_unici=n_total,
-             duplicati_rimossi=n_grezzi - n_total)
-    n_buyers = con.execute("SELECT COUNT(DISTINCT buyer_cf) FROM all_awards").fetchone()[0]
-    log.info("anac_total_awards_loaded", awards=n_total, unique_buyers=n_buyers)
 
-    # Aggregazione principale per buyer_cf
-    rows = con.execute("""
-        SELECT
-            buyer_cf,
-            ANY_VALUE(buyer_name) AS buyer_name,
-            COUNT(*) AS count_total,
-            SUM(award_amount) AS importo_totale,
-            MIN(award_date) AS first_award_date,
-            MAX(award_date) AS last_award_date,
-            COUNT(DISTINCT cpv_code) AS distinct_cpv
-        FROM all_awards
-        WHERE buyer_cf IS NOT NULL
-        GROUP BY buyer_cf
-    """).fetchall()
+def soglia_anomalia(rif: tuple[str, float] | None, pop) -> tuple[float | None, dict | None]:
+    """(soglia in euro, descrizione del riferimento)."""
+    if rif:
+        return rif[1], {"tipo": "spesa_siope", "anno": rif[0], "valore": round(rif[1], 2)}
+    try:
+        p = float(pop)
+    except (TypeError, ValueError):
+        p = 0.0
+    if p > 0:
+        s = SOGLIA_EURO_AB * p
+        return s, {"tipo": "euro_per_abitante", "soglia_euro_ab": SOGLIA_EURO_AB,
+                   "popolazione": int(p), "valore": round(s, 2)}
+    return None, None
 
-    # Top 5 CPV per buyer (separato)
-    cpv_rows = con.execute("""
-        SELECT buyer_cf, cpv_code, cpv_desc, COUNT(*) AS n, SUM(award_amount) AS importo
-        FROM all_awards
-        WHERE cpv_code IS NOT NULL AND buyer_cf IS NOT NULL
-        GROUP BY buyer_cf, cpv_code, cpv_desc
-        QUALIFY ROW_NUMBER() OVER (PARTITION BY buyer_cf ORDER BY importo DESC) <= 5
-    """).fetchall()
-    top_cpv: dict[str, list] = {}
-    for r in cpv_rows:
-        top_cpv.setdefault(r[0], []).append({
-            "code": r[1],
-            "desc": r[2][:80] if r[2] else None,
-            "count": r[3],
-            "importo": float(r[4]) if r[4] else 0.0,
-        })
 
-    # Tutte le CPV per buyer (no QUALIFY) per tabella filtrabile FE
-    all_cpv_rows = con.execute("""
-        SELECT buyer_cf, cpv_code, cpv_desc, COUNT(*) AS n, SUM(award_amount) AS importo
-        FROM all_awards
-        WHERE cpv_code IS NOT NULL AND buyer_cf IS NOT NULL
-        GROUP BY buyer_cf, cpv_code, cpv_desc
-        ORDER BY buyer_cf, importo DESC
-    """).fetchall()
-    all_cpv: dict[str, list] = {}
-    for r in all_cpv_rows:
-        all_cpv.setdefault(r[0], []).append({
-            "code": r[1],
-            "desc": r[2][:120] if r[2] else None,
-            "count": r[3],
-            "importo": float(r[4]) if r[4] else 0.0,
-        })
+# ----------------------------------------------------------------------------
+# Aggregazione per comune
+# ----------------------------------------------------------------------------
+def aggrega(best: dict, info: dict, comuni: dict, data_dir: Path, da: str, a: str) -> dict:
+    per_cf: dict[str, list] = defaultdict(list)
+    for cig, (_, d, imp) in best.items():
+        if not (da <= d <= a):
+            continue
+        i = info.get(cig)
+        if not i or i["cf"] not in comuni:
+            continue
+        per_cf[i["cf"]].append((cig, d, imp, i))
 
-    # Costruzione map finale
-    aggregato: dict[str, dict] = {}
-    for r in rows:
-        cf = r[0]
-        aggregato[cf] = {
-            "buyer_name": r[1],
-            "count": r[2],
-            "importo_totale": float(r[3]) if r[3] else 0.0,
-            "first_award_date": r[4],
-            "last_award_date": r[5],
-            "distinct_cpv": r[6],
-            "top_cpv": top_cpv.get(cf, []),
-            "cpv": all_cpv.get(cf, []),
+    out: dict[str, dict] = {}
+    n_anom = 0
+    for cf, lista in per_cf.items():
+        com = comuni[cf]
+        soglia, rif = soglia_anomalia(spesa_siope(data_dir, com["istat"]), com.get("pop"))
+        tenute, anomalie = [], []
+        for x in lista:
+            (anomalie if soglia is not None and x[2] > soglia else tenute).append(x)
+        n_anom += len(anomalie)
+
+        cpv_agg: dict[tuple, list] = defaultdict(lambda: [0, 0.0])
+        for _, _, imp, i in tenute:
+            if i["cpv"]:
+                k = (i["cpv"], i["cpv_desc"])
+                cpv_agg[k][0] += 1
+                cpv_agg[k][1] += imp
+        cpv = sorted(({"code": k[0], "desc": (k[1] or "")[:120] or None, "count": v[0],
+                       "importo": round(v[1], 2)} for k, v in cpv_agg.items()),
+                     key=lambda c: -c["importo"])
+        date_t = sorted(x[1] for x in tenute)
+        nome = max(lista, key=lambda x: x[1])[3]["nome"] or com["nome"]
+        out[cf] = {
+            "buyer_name": nome,
+            "istat": com["istat"],
+            "count": len(tenute),
+            "importo_totale": round(sum(x[2] for x in tenute), 2),
+            "first_award_date": date_t[0] if date_t else None,
+            "last_award_date": date_t[-1] if date_t else None,
+            "distinct_cpv": len(cpv),
+            "top_cpv": [dict(c, desc=(c["desc"] or "")[:80] or None) for c in cpv[:5]],
+            "cpv": cpv,
+            "count_anomalie": len(anomalie),
+            "importo_anomalie": round(sum(x[2] for x in anomalie), 2),
+            "riferimento_anomalie": rif,
+            "anomalie": [
+                {"cig": c, "data": d, "importo": round(imp, 2), "oggetto": i["oggetto"],
+                 "cpv": i["cpv"],
+                 "rapporto_su_riferimento": round(imp / soglia, 1) if soglia else None}
+                for c, d, imp, i in sorted(anomalie, key=lambda x: -x[2])[:MAX_ANOMALIE]
+            ],
         }
-
-    out_path.write_text(
-        json.dumps(
-            {
-                "_etl_version": "0.1.0",
-                "_source": "ANAC OCDS",
-                "_period_files": [p.stem for p in parquet_paths],
-                "data": aggregato,
-            },
-            ensure_ascii=False,
-            separators=(",", ":"),
-        ),
-        encoding="utf-8",
-    )
-    log.info(
-        "anac_aggregato_built",
-        path=str(out_path),
-        bytes=out_path.stat().st_size,
-        n_buyers=len(aggregato),
-    )
-    return out_path
+    log.info("anac_aggregato_comuni", comuni=len(out), anomalie=n_anom,
+             aggiudicazioni=sum(v["count"] for v in out.values()))
+    return out
 
 
 # ----------------------------------------------------------------------------
 # Main
 # ----------------------------------------------------------------------------
-def process_month(workdir: Path, year: int, month: int, output_dir: Path) -> Path | None:
-    """Parquet degli award di un mese, None se il mese non e pubblicato.
+def main(argv: list[str] | None = None) -> int:
+    p = argparse.ArgumentParser(description="ETL ANAC BDNCP — contratti aggregati per comune")
+    p.add_argument("--target", choices=["local"], default="local",
+                   help="Solo 'local' (compatibilita con i workflow esistenti)")
+    p.add_argument("--outdir", type=Path, default=DATA_DEFAULT,
+                   help="Radice di output: scrive <outdir>/lookup/anac-aggregato.json")
+    p.add_argument("--datadir", type=Path, default=DATA_DEFAULT,
+                   help="Radice dati da cui leggere comuni-index e SIOPE")
+    p.add_argument("--archivio", type=Path, default=ARCHIVIO_DEFAULT)
+    p.add_argument("--fine", type=str, default=None, help="Ultimo mese della finestra, AAAA-MM")
+    p.add_argument("--mesi", type=int, default=MESI_FINESTRA)
+    # argomenti della v0.1.0 (OCDS), accettati e ignorati
+    p.add_argument("--years", type=str, default=None, help=argparse.SUPPRESS)
+    p.add_argument("--months", type=str, default=None, help=argparse.SUPPRESS)
+    p.add_argument("--ultimi-mesi", type=int, default=None, help=argparse.SUPPRESS)
+    p.add_argument("--workdir", type=Path, default=None, help=argparse.SUPPRESS)
+    args = p.parse_args(argv)
 
-    Se il parquet esiste lo riusa senza scaricare. Dopo la conversione il
-    JSON (~700 MB) viene cancellato: con la finestra di 12 mesi in /tmp
-    resterebbero ~9 GB.
-    """
-    pq = output_dir / "monthly" / f"{year}-{month:02d}-awards.parquet"
-    if pq.exists():
-        log.info("anac_parquet_reused", year=year, month=month)
-        return pq
-    try:
-        json_path = pull_anac_month(workdir, year, month)
-    except requests.HTTPError as e:
-        if e.response is not None and e.response.status_code == 404:
-            log.info("anac_month_not_available", year=year, month=month)
-            return None
-        raise
-    # Sanity: verifica che il file scaricato sia davvero JSON (non HTML del WAF)
-    if json_path.stat().st_size < 1_000_000:  # < 1MB = sospetto
-        head = json_path.read_bytes()[:200].decode("utf-8", errors="replace")
-        if "<html" in head.lower():
-            log.error("anac_month_blocked_by_waf", year=year, month=month, head=head[:200])
-            json_path.unlink(missing_ok=True)
-            return None
-    pq = transform_anac_month(json_path, output_dir / "monthly")
-    json_path.unlink(missing_ok=True)
-    return pq
-
-
-def mesi_indietro(n_max: int):
-    """(anno, mese) dal mese corrente all'indietro, al massimo n_max mesi."""
-    y, m = date.today().year, date.today().month
-    for _ in range(n_max):
-        yield y, m
-        y, m = (y, m - 1) if m > 1 else (y - 1, 12)
-
-
-def parse_months(s: str) -> list[int]:
-    return [int(m.strip()) for m in s.split(",") if m.strip()]
-
-
-def parse_years(s: str) -> list[int]:
-    return [int(y.strip()) for y in s.split(",") if y.strip()]
-
-
-def main() -> int:
-    parser = argparse.ArgumentParser(description="ETL ANAC OCDS — contratti aggregati per comune")
-    # --target tenuto per retrocompat workflow esistenti, ma solo 'local' e' supportato
-    parser.add_argument("--target", choices=["local"], default="local",
-                        help="Solo 'local' supportato (R2 rimosso dall'infrastruttura AgID)")
-    parser.add_argument("--years", type=str, default=None,
-                        help="Modalita manuale: anni comma-separated (es. 2025,2026)")
-    parser.add_argument("--ultimi-mesi", type=int, default=12,
-                        help="Default: i N mesi piu recenti effettivamente pubblicati "
-                             "da ANAC (si cercano fino a 36 mesi indietro)")
-    parser.add_argument("--months", type=str, default="1,2,3,4,5,6,7,8,9,10,11,12",
-                        help="Comma-separated month list, default all 12")
-    parser.add_argument("--outdir", type=Path, default=Path("/var/www/cruscotto-italia/data"))
-    parser.add_argument("--workdir", type=Path, default=Path("/tmp/cruscotto-anac-cache"),
-                        help="Persistent download cache (won't re-download)")
-    args = parser.parse_args()
-
-    structlog.configure(
-        processors=[
-            structlog.processors.TimeStamper(fmt="iso"),
-            structlog.processors.add_log_level,
-            structlog.dev.ConsoleRenderer(colors=sys.stderr.isatty()),
-        ]
-    )
-
-    years = parse_years(args.years) if args.years else []
-    months = parse_months(args.months)
-
-    output_dir = args.outdir
-    output_dir.mkdir(parents=True, exist_ok=True)
-    lookup_dir = output_dir / "lookup"
-    lookup_dir.mkdir(parents=True, exist_ok=True)
-    args.workdir.mkdir(parents=True, exist_ok=True)
-
-    log.info("etl_start", output_dir=str(output_dir),
-             workdir=str(args.workdir), years=years, months=months)
+    structlog.configure(processors=[
+        structlog.processors.TimeStamper(fmt="iso"),
+        structlog.processors.add_log_level,
+        structlog.dev.ConsoleRenderer(colors=sys.stderr.isatty()),
+    ])
+    if args.years or args.months or args.ultimi_mesi or args.workdir:
+        log.warning("anac_argomenti_ocds_ignorati")
+    produzione = args.outdir == DATA_DEFAULT
 
     try:
-        # 1. Pull + transform
-        parquet_paths: list[Path] = []
-        if args.years:
-            for year in years:
-                for month in months:
-                    pq = process_month(args.workdir, year, month, output_dir)
-                    if pq:
-                        parquet_paths.append(pq)
-        else:
-            # Finestra mobile: i mesi PUBBLICATI piu recenti, non i mesi di
-            # calendario. Fino al 05/10/2026 il cron passava --years=<anno
-            # corrente>: con ANAC ferma a marzo 2026 e gennaio-febbraio 2026
-            # non scaricabili, si serviva un solo mese di contratti.
-            for year, month in mesi_indietro(36):
-                pq = process_month(args.workdir, year, month, output_dir)
-                if pq:
-                    parquet_paths.append(pq)
-                if len(parquet_paths) >= args.ultimi_mesi:
-                    break
-            log.info("anac_finestra", mesi=[p.stem[:7] for p in parquet_paths])
+        oggi = date.today().isoformat()
+        src_agg = sorgenti_aggiudicazioni(args.archivio)
+        src_cig = sorgenti_cig(args.archivio)
+        mensili = [s for s in src_agg if _RE_MENSILE.match(s.name)]
+        if not mensili or not src_cig:
+            raise RuntimeError(f"archivio incompleto in {args.archivio}: "
+                               f"{len(mensili)} mensili aggiudicazioni, {len(src_cig)} file cig")
+        da, a, elenco = finestra(_RE_MENSILE.match(mensili[-1].name).group(1), args.fine, args.mesi)
+        log.info("etl_start", archivio=str(args.archivio), finestra_da=da, finestra_a=a,
+                 sorgenti_aggiudicazioni=[s.name for s in src_agg], file_cig=len(src_cig))
 
-        if not parquet_paths:
-            log.error("no_parquets_built")
-            return 1
+        best = dedup_aggiudicazioni(src_agg, oggi)
+        servono = {c for c, v in best.items() if da <= v[1] <= a}
+        log.info("anac_finestra", aggiudicazioni_nella_finestra=len(servono))
+        info = info_cig(src_cig, servono)
+        log.info("anac_unione_cig", trovati=len(info), senza_cig=len(servono) - len(info),
+                 copertura_pct=round(100 * len(info) / max(len(servono), 1), 2))
+        if len(info) < 0.95 * len(servono):
+            raise RuntimeError(f"unione con i CIG troppo bassa: {len(info)}/{len(servono)}")
 
-        # 2. Aggregate -> scrive direttamente in lookup_dir
-        aggr_path = aggregate_anac(parquet_paths, lookup_dir)
+        comuni = carica_comuni(args.datadir)
+        dati = aggrega(best, info, comuni, args.datadir, da, a)
+        if produzione and len(dati) < 5000:
+            raise RuntimeError(f"solo {len(dati)} comuni con aggiudicazioni: output non scritto")
 
-        # 3. Aggiorna manifest (best-effort)
-        files = [{"key": "lookup/anac-aggregato.json",
-                  "size": aggr_path.stat().st_size}]
-        for pq in parquet_paths:
-            files.append({"key": f"anac/monthly/{pq.name}",
-                          "size": pq.stat().st_size})
-        try:
-            manifest.update_source("anac", files, status="ok")
-            log.info("manifest_updated")
-        except Exception as e:
-            log.warning("manifest_update_skipped", error=str(e))
+        lookup_dir = args.outdir / "lookup"
+        lookup_dir.mkdir(parents=True, exist_ok=True)
+        out_path = lookup_dir / "anac-aggregato.json"
+        doc = {
+            "_etl_version": ETL_VERSION,
+            "_source": SOURCE_LABEL,
+            "_licenza": LICENZA,
+            "_generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            "_finestra": {"da": da, "a": a, "campo": "data_aggiudicazione_definitiva"},
+            "_period_files": elenco,
+            "_sorgenti": {"aggiudicazioni": [s.name for s in src_agg],
+                          "cig": [s.name for s in src_cig]},
+            "_regole": {"deduplica": "per CIG, versione piu recente",
+                        "anomalie": "singola aggiudicazione > spesa SIOPE annua del comune "
+                                    f"(riserva {SOGLIA_EURO_AB:.0f} euro/abitante): esclusa dai totali"},
+            "data": dati,
+        }
+        tmp = out_path.with_suffix(".json.part")
+        tmp.write_text(json.dumps(doc, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+        os.replace(tmp, out_path)
+        log.info("anac_aggregato_built", path=str(out_path), bytes=out_path.stat().st_size,
+                 n_comuni=len(dati))
 
-        log.info("etl_done", parquets_built=len(parquet_paths), aggregato_bytes=aggr_path.stat().st_size)
+        if produzione:
+            try:
+                manifest.update_source("anac", [{"key": "lookup/anac-aggregato.json",
+                                                 "size": out_path.stat().st_size}], status="ok")
+                log.info("manifest_updated")
+            except Exception as e:
+                log.warning("manifest_update_skipped", error=str(e))
+        log.info("etl_done")
         return 0
-
     except Exception as e:
         log.exception("etl_failed", error=str(e))
-        try:
-            manifest.update_source("anac", [], status=f"failed: {e}")
-        except Exception:
-            pass
+        if produzione:
+            try:
+                manifest.update_source("anac", [], status=f"failed: {e}")
+            except Exception:
+                pass
         return 1
 
 
