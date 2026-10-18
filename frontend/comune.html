@@ -5052,9 +5052,10 @@ function bindRowClicks() {
 }
 
 // ----------------------------------------------------------------------------
-// Render del tab "Contratti" (ANAC OCDS)
+// Render del tab "Contratti" (ANAC BDNCP: dataset aggiudicazioni e cig)
 // ----------------------------------------------------------------------------
 function renderContrattiTab(contratti) {
+  const escA = s => String(s ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
   if (!contratti || contratti.count == null) {
     return `
       <div class="tab-pane" id="pane-contratti">
@@ -5117,12 +5118,13 @@ function renderContrattiTab(contratti) {
       <div class="section-title">§ contratti</div>
       <h2 class="section-h">${fmtNum(c.count)} aggiudicazioni <em>per €${fmtNum(Math.round(c.importo_totale || 0))}</em>.</h2>
       <p class="section-sub">
-        Contratti pubblici dove il Comune è <em>stazione appaltante</em>, secondo lo standard
-        Open Contracting (OCDS). ${(() => {
+        Contratti pubblici dove il Comune è <em>stazione appaltante</em>${(() => {
+          const da = fmtDateExt(c.finestra_da), a = fmtDateExt(c.finestra_a);
+          return (da && a) ? `, aggiudicati dal ${da} al ${a}` : '';
+        })()}: una aggiudicazione per CIG, dalla Banca Dati Nazionale dei Contratti Pubblici.
+        ${(() => {
           const last = fmtDateExt(c.last_award_date);
-          return last
-            ? `L'ultima aggiudicazione registrata è del <strong>${last}</strong>: per il quadro completo servirà l'aggregazione di altri mesi.`
-            : `Per il quadro completo servirà l'aggregazione di altri mesi.`;
+          return last ? `L'ultima aggiudicazione registrata è del <strong>${last}</strong>.` : '';
         })()}
       </p>
 
@@ -5175,9 +5177,42 @@ function renderContrattiTab(contratti) {
       </div>
       ` : ''}
 
+      ${(c.anomalie && c.anomalie.length) ? `
+      <div class="cpvt-block">
+        <h3 class="col-h">Importi anomali segnalati (${fmtNum(c.count_anomalie || c.anomalie.length)})</h3>
+        <p class="section-sub">
+          Aggiudicazioni con un importo superiore ${(() => {
+            const r = c.riferimento_anomalie || {};
+            return r.tipo === 'spesa_siope'
+              ? `alla spesa annua complessiva del Comune (pagamenti SIOPE ${escA(r.anno)}: €${fmtNum(Math.round(r.valore || 0))})`
+              : `a ${fmtNum(r.soglia_euro_ab || 0)} € per abitante`;
+          })()}. Sono quasi sempre errori di compilazione nella banca dati ANAC (per esempio importi
+          inseriti in centesimi) oppure valori pluriennali di concessioni e convenzioni:
+          sono <strong>esclusi</strong> dal numero e dall'importo mostrati sopra
+          (totale escluso: €${fmtNum(Math.round(c.importo_anomalie || 0))}).
+        </p>
+        <div class="cpvt-head">
+          <div class="cpvt-th">CIG</div>
+          <div class="cpvt-th">Oggetto</div>
+          <div class="cpvt-th num">Data</div>
+          <div class="cpvt-th num">Importo \u20ac</div>
+        </div>
+        ${c.anomalie.map(x => `
+          <div class="cpvt-row">
+            <div class="cpvt-code">${escA(x.cig)}</div>
+            <div class="cpvt-desc">${escA(x.oggetto) || '(oggetto non disponibile)'}</div>
+            <div class="cpvt-count">${fmtDate(x.data)}</div>
+            <div class="cpvt-imp">\u20ac${fmtNum(Math.round(x.importo || 0))}</div>
+          </div>
+        `).join('')}
+      </div>
+      ` : ''}
+
       <div class="tab-footer">
         <strong>Fonte</strong>: <a href="https://dati.anticorruzione.it/" target="_blank" rel="noopener">ANAC</a>
-        — Banca Dati Nazionale dei Contratti Pubblici, dataset <em>OCDS</em> (Open Contracting Data Standard, licenza CC-BY 4.0).
+        — Banca Dati Nazionale dei Contratti Pubblici, dataset <em>aggiudicazioni</em> e <em>cig</em> (licenza CC-BY 4.0).
+        Il Comune è riconosciuto dal codice fiscale della stazione appaltante; per ogni CIG si considera
+        la comunicazione più recente.
         I CPV (Common Procurement Vocabulary) sono codici merceologici europei per categorizzare i contratti.
         Per la situazione completa di un singolo CIG consulta direttamente il
         <a href="https://dati.anticorruzione.it/opendata" target="_blank" rel="noopener">portale ANAC</a>.
@@ -12526,6 +12561,12 @@ function adaptDashboardToOverview(d) {
         top_cpv:           anac.top_cpv,
         cpv:               anac.cpv || [],
         buyer_name:        anac.buyer_name,
+        finestra_da:       anac.finestra_da || null,
+        finestra_a:        anac.finestra_a || null,
+        count_anomalie:    anac.count_anomalie || 0,
+        importo_anomalie:  anac.importo_anomalie || 0,
+        riferimento_anomalie: anac.riferimento_anomalie || null,
+        anomalie:          anac.anomalie || [],
       } : null,
       opere: bk ? {
         // data del download BDAP: sta nello shard di dettaglio (d.opere), non in bdap_kpi
@@ -12763,7 +12804,7 @@ CONTENUTO DELLO ZIP
 
 FONTI INTEGRATE
 ---------------
-- ANAC                              Contratti pubblici (OCDS)
+- ANAC                              Contratti pubblici (BDNCP: aggiudicazioni e cig)
 - BDAP-MOP                          Opere pubbliche dei comuni
 - SIOPE                             Cassa: pagamenti + entrate + saldo_cassa (per_anno)
 - Italia Domani (PNRR)              Progetti del Piano (Sistema ReGiS)

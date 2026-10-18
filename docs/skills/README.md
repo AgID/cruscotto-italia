@@ -11,7 +11,7 @@ l'intent dell'utente.
 
 ## Pacchetto corrente
 
-- **`cruscotto-italia-workflow-v2.12.0.zip`** — workflow del connettore MCP:
+- **`cruscotto-italia-workflow-v2.13.0.zip`** — workflow del connettore MCP:
   **6 tool** (`mcp_info`, `search_comune`, `comune_kpi` ~620 token con 55 KPI in
   24 gruppi tematici, `comune_dashboard` ~250K token con le sezioni dettagliate,
   `anncsu_civico_search`, `censimento_sezione_search`), **28 dataset** integrati
@@ -33,6 +33,9 @@ l'intent dell'utente.
   `suolo_consumato_anno`); aria con `_fonti` e `_anni_preliminari` (ultimo anno
   anche da tabelle preliminari SNPA); ANAC sugli ultimi 12 mesi pubblicati con
   affidamenti deduplicati; immobili PA con l'anno in `anno_rilevazione`.
+  Versione 2.13.0: ANAC dalla Banca Dati Nazionale dei Contratti Pubblici
+  (aggiudicazioni + cig) al posto dell'OCDS; finestra in `finestra_da`/`finestra_a`,
+  una aggiudicazione per CIG, importi anomali in `anomalie` esclusi dai totali.
 
 ## Skill CLI (eseguibile)
 

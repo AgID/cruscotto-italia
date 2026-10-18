@@ -1,6 +1,6 @@
 ---
 name: cruscotto-italia-workflow
-version: 2.12.0
+version: 2.13.0
 description: Cruscotto Italia MCP (7896 comuni). Tool: comune_kpi (~55 KPI ~620 token); comune_dashboard (27 sezioni); search_comune; anncsu_civico_search; censimento_sezione_search. Sezioni: anagrafica, demografia POSAS+D7B (serie storica, nati/morti), censimento profilo, turismo, PNRR, ISPRA suolo/idro/rifiuti/aria, DPC sismica, BDAP-MOP, SIOPE cassa (pagamenti+incassi+saldo), ANAC, MIUR scuole/plessi, ACI veicoli, MEF redditi/patrimonio, ANNCSU civici, MdS farmacie/ospedali, GSE ricarica EV, AGCOM FTTH, MIMIT carburanti, RUNTS, ISTAT ASIA, pendolarismo 2021, Basi Territoriali 2021, vars 2023 (127), MiC ArCo+Cultural-ON, meteo ItaliaMeteo, morfologia CNR-IRPI DTM 5m, OMI quotazioni immobiliari per zona. Catasto AGE: fogli/particelle REST /data/catasto_full/. Trigger: ISTAT, BDAP, SIOPE, incassi, saldo cassa, ISPRA, sismica, PNRR, ANAC, MEF, ANNCSU, AGCOM, MIMIT, RUNTS, FTTH, pendolarismo, beni culturali, MiC, catasto, meteo, morfologia, DTM, natalita, OMI, quotazioni, mercato immobiliare, euro/mq.
 ---
 
@@ -285,7 +285,7 @@ User: *"Quanti monumenti tutelati ci sono a Matera?"* / *"Top 10 comuni per beni
 
 ## Caveat per sezione
 
-- **anac**: copre solo i comuni che sono *stazioni appaltanti* nel periodo monitorato. Comuni piccoli senza aggiudicazioni → `anac: null` o counter zero. La data `ultima_aggiudicazione` indica la freschezza reale del dato.
+- **anac**: copre solo i comuni che sono *stazioni appaltanti* nel periodo monitorato. Comuni piccoli senza aggiudicazioni → `anac: null` o counter zero. La data `ultima_aggiudicazione` indica la freschezza reale del dato. Fonte BDNCP (aggiudicazioni + cig, dal 19/10/2026): 12 mesi di aggiudicazione in `anac.finestra_da`..`anac.finestra_a`, una per CIG; gli importi oltre la spesa annua SIOPE del comune sono esclusi dai totali ed elencati in `anac.anomalie` (citarli come probabili errori di compilazione, mai sommarli).
 - **aria_ispra**: solo 604 comuni hanno stazione di rilevazione. Se `ha_stazione: false`, le medie PM10/PM2.5/NO2 sono null.
 - **immobili_pa**: snapshot 2022 (MEF DE Censimento Beni Immobili). Dato non aggiornato annualmente.
 - **anncsu**: snapshot Agenzia Entrate. Coverage geografica varia per comune.

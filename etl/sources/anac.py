@@ -265,6 +265,8 @@ def aggrega(best: dict, info: dict, comuni: dict, data_dir: Path, da: str, a: st
         out[cf] = {
             "buyer_name": nome,
             "istat": com["istat"],
+            "finestra_da": da,
+            "finestra_a": a,
             "count": len(tenute),
             "importo_totale": round(sum(x[2] for x in tenute), 2),
             "first_award_date": date_t[0] if date_t else None,

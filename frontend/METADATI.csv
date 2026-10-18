@@ -11,7 +11,7 @@ anagrafica,codice_fiscale,Codice fiscale dell'ente comunale,codice,IndicePA,corr
 anagrafica,nome_categoria,Categoria IPA (Pubbliche Amministrazioni),testo,IndicePA,corrente,https://indicepa.gov.it,CC BY 4.0
 anagrafica,codice_catastale,Codice catastale Agenzia Entrate,codice,Agenzia Entrate,corrente,https://www.agenziaentrate.gov.it,CC BY 4.0
 anagrafica,kpi.popolazione,KPI aggregato popolazione totale,numero,ISTAT POSAS,1 gen anno corrente,https://demo.istat.it,CC BY 4.0
-anagrafica,kpi.contratti,KPI aggregato n. contratti ANAC (può essere null),numero,ANAC,ultimo mese disponibile,https://dati.anticorruzione.it,CC BY 4.0
+anagrafica,kpi.contratti,KPI aggregato n. contratti ANAC (può essere null),numero,ANAC,ultimi 12 mesi di aggiudicazione,https://dati.anticorruzione.it,CC BY 4.0
 anagrafica,kpi.opere,KPI aggregato n. opere pubbliche BDAP (può essere null),numero,BDAP MOP,annuale,https://bdap-opendata.rgs.mef.gov.it,IODL 2.0
 anagrafica,kpi.spese_siope,KPI aggregato n. voci di pagamento SIOPE (può essere null),numero,SIOPE,mensile cumulato,https://www.siope.it,CC BY 4.0
 anagrafica,kpi.coesione,KPI aggregato fondi coesione (può essere null),numero,OpenCoesione,corrente,https://opencoesione.gov.it,IODL 2.0
@@ -177,14 +177,21 @@ redditi,anni.<anno>.trattamento,Bonus/Trattamento integrativo (schema cambia tra
 redditi,anni.<anno>.tipologie,Distribuzione per tipologia reddito (lavoro dip/auton/pensione/altro),dict,MEF DF,annuale,https://www.finanze.gov.it/it/statistiche-fiscali/,CC BY 3.0
 redditi,anni.<anno>.fasce,Distribuzione per fascia di reddito (8 fasce),dict,MEF DF,annuale,https://www.finanze.gov.it/it/statistiche-fiscali/,CC BY 3.0
 redditi,trend,"Trend 5 anni reddito medio, contribuenti, imposta media",lista,MEF DF,serie storica,https://www.finanze.gov.it/it/statistiche-fiscali/,CC BY 3.0
-anac,buyer_name,Nome stazione appaltante,testo,ANAC,"ultimi 12 file mensili ANAC, deduplicati (periodo reale tra first_award_date e last_award_date)",https://dati.anticorruzione.it,CC BY 4.0
-anac,count,Numero aggiudicazioni contratti pubblici,numero,ANAC,"ultimi 12 file mensili ANAC, deduplicati (periodo reale tra first_award_date e last_award_date)",https://dati.anticorruzione.it,CC BY 4.0
-anac,importo_totale,Importo totale aggiudicazioni (euro),euro,ANAC,"ultimi 12 file mensili ANAC, deduplicati (periodo reale tra first_award_date e last_award_date)",https://dati.anticorruzione.it,CC BY 4.0
-anac,first_award_date,Data prima aggiudicazione nel periodo,data,ANAC,"ultimi 12 file mensili ANAC, deduplicati (periodo reale tra first_award_date e last_award_date)",https://dati.anticorruzione.it,CC BY 4.0
-anac,last_award_date,Data ultima aggiudicazione nel periodo,data,ANAC,"ultimi 12 file mensili ANAC, deduplicati (periodo reale tra first_award_date e last_award_date)",https://dati.anticorruzione.it,CC BY 4.0
-anac,distinct_cpv,Numero codici CPV distinti (categorie merceologiche),numero,ANAC,"ultimi 12 file mensili ANAC, deduplicati (periodo reale tra first_award_date e last_award_date)",https://dati.anticorruzione.it,CC BY 4.0
-anac,top_cpv,"Top 5 CPV per importo (code, desc, count, importo)",lista,ANAC,"ultimi 12 file mensili ANAC, deduplicati (periodo reale tra first_award_date e last_award_date)",https://dati.anticorruzione.it,CC BY 4.0
-anac,cpv,"Tutte le categorie CPV ordinate per importo (code, desc, count, importo)",lista,ANAC,"ultimi 12 file mensili ANAC, deduplicati (periodo reale tra first_award_date e last_award_date)",https://dati.anticorruzione.it,CC BY 4.0
+anac,buyer_name,Nome stazione appaltante,testo,ANAC,"ultimi 12 mesi di aggiudicazione (finestra_da - finestra_a), una aggiudicazione per CIG",https://dati.anticorruzione.it,CC BY 4.0
+anac,count,Numero aggiudicazioni contratti pubblici,numero,ANAC,"ultimi 12 mesi di aggiudicazione (finestra_da - finestra_a), una aggiudicazione per CIG",https://dati.anticorruzione.it,CC BY 4.0
+anac,importo_totale,Importo totale aggiudicazioni (euro),euro,ANAC,"ultimi 12 mesi di aggiudicazione (finestra_da - finestra_a), una aggiudicazione per CIG",https://dati.anticorruzione.it,CC BY 4.0
+anac,first_award_date,Data prima aggiudicazione nel periodo,data,ANAC,"ultimi 12 mesi di aggiudicazione (finestra_da - finestra_a), una aggiudicazione per CIG",https://dati.anticorruzione.it,CC BY 4.0
+anac,last_award_date,Data ultima aggiudicazione nel periodo,data,ANAC,"ultimi 12 mesi di aggiudicazione (finestra_da - finestra_a), una aggiudicazione per CIG",https://dati.anticorruzione.it,CC BY 4.0
+anac,distinct_cpv,Numero codici CPV distinti (categorie merceologiche),numero,ANAC,"ultimi 12 mesi di aggiudicazione (finestra_da - finestra_a), una aggiudicazione per CIG",https://dati.anticorruzione.it,CC BY 4.0
+anac,top_cpv,"Top 5 CPV per importo (code, desc, count, importo)",lista,ANAC,"ultimi 12 mesi di aggiudicazione (finestra_da - finestra_a), una aggiudicazione per CIG",https://dati.anticorruzione.it,CC BY 4.0
+anac,cpv,"Tutte le categorie CPV ordinate per importo (code, desc, count, importo)",lista,ANAC,"ultimi 12 mesi di aggiudicazione (finestra_da - finestra_a), una aggiudicazione per CIG",https://dati.anticorruzione.it,CC BY 4.0
+anac,istat,Codice ISTAT del comune stazione appaltante,testo,ANAC,"ultimi 12 mesi di aggiudicazione (finestra_da - finestra_a), una aggiudicazione per CIG",https://dati.anticorruzione.it,CC BY 4.0
+anac,finestra_da,Inizio della finestra di aggiudicazione,data,ANAC,"ultimi 12 mesi di aggiudicazione (finestra_da - finestra_a), una aggiudicazione per CIG",https://dati.anticorruzione.it,CC BY 4.0
+anac,finestra_a,Fine della finestra di aggiudicazione,data,ANAC,"ultimi 12 mesi di aggiudicazione (finestra_da - finestra_a), una aggiudicazione per CIG",https://dati.anticorruzione.it,CC BY 4.0
+anac,count_anomalie,"Aggiudicazioni con importo superiore alla spesa annua SIOPE del comune, escluse da count e importo_totale",numero,ANAC,"ultimi 12 mesi di aggiudicazione (finestra_da - finestra_a), una aggiudicazione per CIG",https://dati.anticorruzione.it,CC BY 4.0
+anac,importo_anomalie,Importo totale delle aggiudicazioni anomale escluse (euro),euro,ANAC,"ultimi 12 mesi di aggiudicazione (finestra_da - finestra_a), una aggiudicazione per CIG",https://dati.anticorruzione.it,CC BY 4.0
+anac,riferimento_anomalie,"Soglia usata (tipo spesa_siope con anno e valore, oppure euro_per_abitante)",oggetto,ANAC + SIOPE,"ultimi 12 mesi di aggiudicazione (finestra_da - finestra_a), una aggiudicazione per CIG",https://dati.anticorruzione.it,CC BY 4.0
+anac,anomalie,"Elenco delle aggiudicazioni anomale (cig, data, importo, oggetto, cpv, rapporto_su_riferimento), max 50",lista,ANAC,"ultimi 12 mesi di aggiudicazione (finestra_da - finestra_a), una aggiudicazione per CIG",https://dati.anticorruzione.it,CC BY 4.0
 bdap_kpi,totale.count,Numero totale opere BDAP (storico complessivo),numero,BDAP MOP,cumulato storico,https://bdap-opendata.rgs.mef.gov.it,IODL 2.0
 bdap_kpi,totale.costo_lavori_eff,Costo effettivo lavori totale (euro),euro,BDAP MOP,cumulato,https://bdap-opendata.rgs.mef.gov.it,IODL 2.0
 bdap_kpi,totale.finanz_statali,Finanziamenti statali totali (euro),euro,BDAP MOP,cumulato,https://bdap-opendata.rgs.mef.gov.it,IODL 2.0

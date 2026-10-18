@@ -4,7 +4,7 @@ Cruscotto Italia aggrega dati pubblicati da diverse istituzioni, ciascuna con la
 
 | Fonte | Licenza | URL ufficiale |
 |-------|---------|---------------|
-| ANAC OCDS-IT | CC-BY 4.0 | https://dati.anticorruzione.it/opendata/licenza |
+| ANAC BDNCP (aggiudicazioni, cig) | CC-BY 4.0 | https://dati.anticorruzione.it/opendata/licenza |
 | OpenBDAP (incl. SIOPE) | IODL 2.0 | https://bdap-opendata.rgs.mef.gov.it/content/note-legali |
 | OpenCoesione | CC-BY 4.0 | https://opencoesione.gov.it/it/note-legali/ |
 | ISTAT | CC-BY 3.0 IT | https://www.istat.it/note-legali/ |

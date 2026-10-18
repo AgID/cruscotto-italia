@@ -16,7 +16,7 @@
 
 Searching for a municipality ("Lecce") returns a 360° view of:
 
-- 🏗️ **Public contracts** (ANAC — national anti-corruption authority, OCDS-IT)
+- 🏗️ **Public contracts** (ANAC — national anti-corruption authority, BDNCP awards and CIG)
 - 🚧 **Public works** (BDAP-MOP — Ministry of Economy and Finance / State General Accounting Office)
 - 💰 **Cash flows** (SIOPE — MEF/RGS): payments, receipts and cash balance
 - 🇪🇺 **NRRP projects** (Italia Domani — ReGiS system; Italy's Recovery and Resilience Plan)
@@ -120,7 +120,8 @@ Times in **Italian time** (the VM cron uses the Europe/Rome time zone), except t
 | **Daily** (05:00, 11:00, 16:00, 22:00) | ItaliaMeteo ICON-2I weather forecasts | AgID VM cron | automatic |
 | **Daily** (11:00 and 16:00) | dashboard rebuild (aggregate of all sections) | AgID VM cron | automatic |
 | **Daily** (09:30) | freshness check: ETL runs and data period per source | AgID VM cron | automatic |
-| **Weekly** (Monday 04:00-06:00) | ANAC OCDS (awards in the last 12 published monthly files, deduplicated), NRRP, RUNTS, SIOPE, dashboard | AgID VM cron | automatic |
+| **Daily** (03:40) | local archive of the ANAC BDNCP monthly files (`cig`, `aggiudicazioni`, `aggiudicatari`): `anac_archivio_mensile.sh` downloads new months, because ANAC exposes them for about 7 months only | AgID VM cron | automatic |
+| **Weekly** (Monday 04:00-06:00) | ANAC BDNCP (awards of the last 12 months from the local archive, one per CIG; amounts above the municipality's yearly SIOPE spending listed separately), NRRP, RUNTS, SIOPE, dashboard | AgID VM cron | automatic |
 | **Monthly** (day 5, 04:00-08:40) | registry, BDAP-MOP, SIOPE, ANNCSU, AGCOM broadband, Cultural-ON, cultural heritage, dashboard | AgID VM cron | automatic |
 | **Annual** (1 Feb / 1 Apr / 1 Jul, 04:00-14:00) | POSAS demographics and population balance, census profile, air quality, ASIA, tourism, seismic classification, territory, vehicles (ACI CSVs from GitHub Actions), IRPEF income, public real estate, dashboard | AgID VM cron | automatic |
 | **Annual** (5 September, 04:00) | MIUR schools (school year just started) | AgID VM cron | automatic |
@@ -229,7 +230,7 @@ The Revenue Agency release date in production for each region is in
 A Claude skill documents how to use the connector (inventory of the 6 tools,
 `comune_dashboard` schema, operational patterns and per-section caveats, REST
 access to the cadastral cartography). Current version:
-`https://cruscotto-italia.dati.gov.it/data/skills/cruscotto-italia-workflow-v2.12.0.zip`.
+`https://cruscotto-italia.dati.gov.it/data/skills/cruscotto-italia-workflow-v2.13.0.zip`.
 `cruscotto-cli-v0.2.0.zip` is also available: an executable skill that queries
 the static JSON shards directly without going through the MCP server (full
 list with history in `docs/skills/README.md`).
@@ -341,7 +342,7 @@ cruscotto-italia/
 │   ├── pyproject.toml        ← ruff + mypy + pytest config
 │   ├── sources/              ← one module per source (all run by the VM cron)
 │   │   ├── anagrafica.py        ← ISTAT municipal registry backbone + IPA
-│   │   ├── anac.py              ← public contracts (OCDS)
+│   │   ├── anac.py              ← public contracts (BDNCP)
 │   │   ├── bdap.py              ← BDAP-MOP public works
 │   │   ├── siope.py             ← SIOPE multi-year payments + receipts (siope.it)
 │   │   ├── pnrr_progetti.py     ← NRRP projects (Italia Domani/ReGiS)

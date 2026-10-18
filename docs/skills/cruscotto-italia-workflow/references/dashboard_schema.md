@@ -556,7 +556,7 @@ NON è incluso nello shard `dashboard/<istat>.json`: per il calcolo `delta_vs_na
 
 ## `anac`
 
-Fonte: ANAC contratti pubblici, bulk mensili OCDS (CC BY 4.0). Finestra: gli ultimi 12 mesi **effettivamente pubblicati** da ANAC (alcuni mesi del catalogo non sono scaricabili, quindi non sono necessariamente consecutivi); i mesi usati sono in `_period_files` dell'aggregato. Ogni affidamento (`ocid` + `award_id`) conta una sola volta anche se compare in più mesi.
+Fonte: ANAC, Banca Dati Nazionale dei Contratti Pubblici (BDNCP), dataset `aggiudicazioni` e `cig` (CC BY 4.0), dal 19/10/2026 (prima: bulk OCDS). Finestra: 12 mesi consecutivi di `data_aggiudicazione_definitiva`, da `finestra_da` a `finestra_a`, che terminano con il mese precedente l'ultimo file mensile ANAC; i mesi sono anche in `_period_files` dell'aggregato. Una aggiudicazione per CIG (la comunicazione più recente). Il comune è riconosciuto dal codice fiscale della stazione appaltante. Un'aggiudicazione con importo superiore alla spesa annua SIOPE del comune è esclusa da `count` e `importo_totale` ed elencata in `anomalie`.
 
 - `buyer_name` — nome comune come appare in ANAC
 - `count` — numero aggiudicazioni
@@ -565,6 +565,10 @@ Fonte: ANAC contratti pubblici, bulk mensili OCDS (CC BY 4.0). Finestra: gli ult
 - `distinct_cpv` — n. CPV distinti
 - `top_cpv` — array top categorie: `code`, `desc`, `count`, `importo`
 - `cpv` — array di TUTTE le categorie CPV (stesso schema di top_cpv: code/desc/count/importo), ordinate per importo decrescente. Per elenchi completi/filtrabili; `top_cpv` resta le prime 5.
+- `istat`, `finestra_da`, `finestra_a` — comune e periodo di aggiudicazione coperto
+- `count_anomalie`, `importo_anomalie` — aggiudicazioni escluse dai totali perché superiori alla spesa annua del comune
+- `riferimento_anomalie` — soglia usata: `{tipo: "spesa_siope", anno, valore}` oppure `{tipo: "euro_per_abitante", soglia_euro_ab, popolazione, valore}`
+- `anomalie` — elenco (max 50, per importo): `cig`, `data`, `importo`, `oggetto`, `cpv`, `rapporto_su_riferimento`
 
 Aggregato. Non c'è ancora dettaglio CIG-level via connettore: la query CIG-level con filtri per anno, importo, fornitore, RUP, CPV è prevista ma non ancora attiva.
 

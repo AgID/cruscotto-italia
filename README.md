@@ -16,7 +16,7 @@
 
 Cercando un comune ("Lecce") si ottiene una vista a 360° su:
 
-- 🏗️ **Contratti pubblici** (ANAC OCDS-IT)
+- 🏗️ **Contratti pubblici** (ANAC BDNCP: aggiudicazioni e CIG)
 - 🚧 **Opere pubbliche** (BDAP-MOP — MEF/RGS)
 - 💰 **Flussi di cassa** (SIOPE — MEF/RGS): pagamenti, incassi e saldo di cassa
 - 🇪🇺 **Progetti PNRR** (Italia Domani — Sistema ReGiS)
@@ -118,7 +118,8 @@ Orari in **ora italiana** (il cron della VM usa il fuso Europe/Rome), tranne i w
 | **Giornaliera** (05:00, 11:00, 16:00, 22:00) | ItaliaMeteo ICON-2I previsioni meteo | cron VM AgID | automatico |
 | **Giornaliera** (11:00 e 16:00) | dashboard rebuild (aggregato di tutte le sezioni) | cron VM AgID | automatico |
 | **Giornaliera** (09:30) | freshness check: esecuzione degli ETL e periodo del dato per fonte | cron VM AgID | automatico |
-| **Settimanale** (lunedì 04:00-06:00) | ANAC OCDS (affidamenti degli ultimi 12 file mensili pubblicati, deduplicati), PNRR, RUNTS, SIOPE, dashboard | cron VM AgID | automatico |
+| **Giornaliera** (03:40) | archivio locale dei file mensili ANAC BDNCP (`cig`, `aggiudicazioni`, `aggiudicatari`): `anac_archivio_mensile.sh` scarica i mesi nuovi, perché ANAC li espone solo per circa 7 mesi | cron VM AgID | automatico |
+| **Settimanale** (lunedì 04:00-06:00) | ANAC BDNCP (aggiudicazioni degli ultimi 12 mesi dall'archivio locale, una per CIG; importi oltre la spesa annua SIOPE del comune elencati a parte), PNRR, RUNTS, SIOPE, dashboard | cron VM AgID | automatico |
 | **Mensile** (giorno 5, 04:00-08:40) | anagrafica, BDAP-MOP, SIOPE, ANNCSU, AGCOM banda larga, Cultural-ON, beni culturali, dashboard | cron VM AgID | automatico |
 | **Annuale** (1 feb / 1 apr / 1 lug, 04:00-14:00) | demografia POSAS e bilancio demografico, profilo Censimento, aria, ASIA, turismo, classificazione sismica, territorio, veicoli (CSV ACI da GitHub Actions), redditi IRPEF, immobili PA, dashboard | cron VM AgID | automatico |
 | **Annuale** (5 settembre, 04:00) | scuole MIUR (anno scolastico appena iniziato) | cron VM AgID | automatico |
@@ -227,7 +228,7 @@ La data di rilascio AdE in produzione per regione è in
 È disponibile una skill Claude che documenta l'uso del connettore
 (inventario dei 6 tool, schema di `comune_dashboard`, pattern operativi
 e caveat per sezione, accesso REST alla cartografia catastale). Versione
-corrente: `https://cruscotto-italia.dati.gov.it/data/skills/cruscotto-italia-workflow-v2.12.0.zip`.
+corrente: `https://cruscotto-italia.dati.gov.it/data/skills/cruscotto-italia-workflow-v2.13.0.zip`.
 È disponibile anche `cruscotto-cli-v0.2.0.zip`, una skill eseguibile che
 interroga gli shard JSON statici senza passare dal server MCP (elenco
 completo con storici in `docs/skills/README.md`).
@@ -338,7 +339,7 @@ cruscotto-italia/
 │   ├── pyproject.toml        ← ruff + mypy + pytest config
 │   ├── sources/              ← un modulo per fonte (tutti eseguiti dal cron della VM)
 │   │   ├── anagrafica.py        ← spina dorsale ISTAT comuni + IPA
-│   │   ├── anac.py              ← contratti pubblici (OCDS)
+│   │   ├── anac.py              ← contratti pubblici (BDNCP)
 │   │   ├── bdap.py              ← BDAP-MOP opere pubbliche
 │   │   ├── siope.py             ← SIOPE uscite+entrate multi-anno (siope.it)
 │   │   ├── pnrr_progetti.py     ← progetti PNRR (Italia Domani/ReGiS)
