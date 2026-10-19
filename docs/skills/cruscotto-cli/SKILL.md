@@ -1,6 +1,6 @@
 ---
 name: cruscotto-cli
-version: 0.3.0
+version: 0.4.0
 description: Interroga via CLI i dati aperti di Cruscotto Italia (AgID) per tutti i comuni italiani, leggendo direttamente gli shard JSON statici senza passare dal server MCP. Usa questa skill quando servono dati ufficiali su un comune - popolazione, demografia (serie storica, nati e morti), censimento 2023, redditi, veicoli, scuole/plessi, sanita', opere pubbliche, cassa SIOPE (pagamenti e incassi), appalti, PNRR, turismo, qualita' dell'aria, morfologia, beni culturali, civici e toponomastica, carburanti, banda larga, terzo settore, immobili pubblici, pendolarismo, meteo, quotazioni immobiliari OMI - oppure quando si citano fonti come ISTAT, BDAP, SIOPE, ANAC, ISPRA, MEF, MIUR, ACI, ANNCSU, AGCOM, MIMIT, RUNTS, MiC, Ministero della Salute, OMI. Copre 7896 comuni, 32 sezioni piu' tre archivi estesi. Preferibile all'MCP quando serve una query mirata su pochi campi, un confronto tra comuni o un ranking, perche' filtra i dati prima di caricarli in contesto ed evita di leggere shard da centinaia di KB.
 license: CC-BY-4.0
 ---
@@ -115,6 +115,7 @@ python3 scripts/cruscotto.py vars stranieri         # cerca nel dizionario delle
 
 - Il catasto (`catasto_full`) non e' esposto: sono geometrie pure, il point-in-polygon resta lato client per vincolo CERT-AgID.
 - Gli aggregati nazionali ANAC e BDAP (indicizzati per codice fiscale, oltre 10 MB) non sono coperti: niente ranking nazionali.
+- Sezione `anac` (fonte BDNCP dal 19/10/2026): aggiudicazioni degli ultimi 12 mesi, una per CIG, periodo in `finestra_da`/`finestra_a`. Le aggiudicazioni con importo superiore alla spesa annua SIOPE del comune sono escluse da `count` e `importo_totale` ed elencate in `anomalie`: citarle come probabili errori di compilazione, mai sommarle ai totali.
 - Questa skill non sostituisce il server MCP `cruscotto-italia-mcp`, che resta il canale per i client AI esterni.
 
 ## Riferimenti

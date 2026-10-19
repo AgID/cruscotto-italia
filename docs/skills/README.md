@@ -39,7 +39,7 @@ l'intent dell'utente.
 
 ## Skill CLI (eseguibile)
 
-- **`cruscotto-cli-v0.3.0.zip`** — a differenza dei pacchetti `cruscotto-italia-workflow`,
+- **`cruscotto-cli-v0.4.0.zip`** — a differenza dei pacchetti `cruscotto-italia-workflow`,
   questa skill **contiene codice eseguibile** (`scripts/cruscotto.py`, solo stdlib
   Python 3) e non documenta il connettore MCP: interroga direttamente gli shard
   JSON statici, via HTTPS pubblico oppure da filesystem locale
@@ -71,7 +71,11 @@ l'intent dell'utente.
   dinamica demografica).
   Versione 0.3.0: quotazioni immobiliari OMI. Compatibile con la workflow
   2.12.0: la CLI legge gli shard senza riferimenti ai campi rinominati.
+  Versione 0.4.0: sezione `anac` dalla BDNCP (finestra di 12 mesi, una
+  aggiudicazione per CIG, importi anomali in `anomalie` esclusi dai totali).
+  Compatibile con la workflow 2.13.0; lo script non cambia.
 
+- `cruscotto-cli-v0.3.0.zip` (storico)
 - `cruscotto-cli-v0.2.0.zip` (storico)
 
 - `cruscotto-cli-v0.1.5.zip` (storico)

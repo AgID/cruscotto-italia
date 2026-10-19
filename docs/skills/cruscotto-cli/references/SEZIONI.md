@@ -56,7 +56,7 @@ I pesi indicati sono quelli di Matera (077014, 59k abitanti): scalano con la dim
 
 | Chiave | Contenuto |
 |---|---|
-| `anac` | ANAC: appalti e contratti, aggregati per CPV |
+| `anac` | ANAC BDNCP (aggiudicazioni + cig): aggiudicazioni degli ultimi 12 mesi (`finestra_da`..`finestra_a`), una per CIG, aggregate per CPV; importi oltre la spesa annua SIOPE esclusi dai totali ed elencati in `anomalie` (max 50) |
 | `bdap_kpi` | indicatori sintetici di bilancio da BDAP |
 | `kpi_summary` | cruscotto sintetico trasversale a tutte le fonti |
 

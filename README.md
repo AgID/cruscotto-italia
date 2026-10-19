@@ -229,7 +229,7 @@ La data di rilascio AdE in produzione per regione è in
 (inventario dei 6 tool, schema di `comune_dashboard`, pattern operativi
 e caveat per sezione, accesso REST alla cartografia catastale). Versione
 corrente: `https://cruscotto-italia.dati.gov.it/data/skills/cruscotto-italia-workflow-v2.13.0.zip`.
-È disponibile anche `cruscotto-cli-v0.2.0.zip`, una skill eseguibile che
+È disponibile anche `cruscotto-cli-v0.4.0.zip`, una skill eseguibile che
 interroga gli shard JSON statici senza passare dal server MCP (elenco
 completo con storici in `docs/skills/README.md`).
 

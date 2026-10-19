@@ -1436,7 +1436,7 @@ footer a:hover { color: #fff !important; }
           Script Python (uno per fonte) scaricano i dataset originali dai
           portali ufficiali delle 15 istituzioni integrate: ISTAT (POSAS,
           censimento, basi territoriali e variabili censuarie 2021, turismo, incidenti) in SDMX-ML via API REST,
-          ANAC i contratti come JSON-LD su dati.anticorruzione.it,
+          ANAC le aggiudicazioni e i CIG della Banca Dati Nazionale dei Contratti Pubblici in CSV mensili su dati.anticorruzione.it (conservati in un archivio locale, perché il portale li espone per circa sette mesi),
           BDAP-MOP le opere via API a paginazione,
           Italia Domani il PNRR via dump CSV,
           ISPRA consumo di suolo e rischio idrogeologico in archivi ZIP regionali,
@@ -1473,7 +1473,7 @@ footer a:hover { color: #fff !important; }
           Ogni dataset viene suddiviso in porzioni indipendenti ("shardato")
           per codice ISTAT comunale: un file
           JSON per ognuno dei 7.894 comuni, dentro una cartella per ogni
-          fonte. Lecce (075035) ha il suo file in <code>anac/075035.json</code>,
+          fonte. Lecce (075035) ha il suo file in <code>redditi/075035.json</code>,
           un altro in <code>siope/075035.json</code>, un altro ancora in
           <code>pnrr/075035.json</code>, e così via per tutte le fonti elencate sopra.
         </p>
@@ -1583,7 +1583,7 @@ footer a:hover { color: #fff !important; }
         <p>
           <strong>Skill CLI per analisi ripetute.</strong> Per chi interroga
           i dati in modo sistematico è disponibile una
-          <strong><a href="https://cruscotto-italia.dati.gov.it/data/skills/cruscotto-cli-v0.3.0.zip" download><em>skill</em> CLI (versione 0.3.0 del 04/10/2026)</a></strong>:
+          <strong><a href="https://cruscotto-italia.dati.gov.it/data/skills/cruscotto-cli-v0.4.0.zip" download><em>skill</em> CLI (versione 0.4.0 del 19/10/2026)</a></strong>:
           un pacchetto ZIP con uno script Python 3 senza dipendenze che legge
           direttamente i file JSON pubblici, senza passare dall'endpoint MCP.
           Filtra i dati prima di leggerli, quindi una domanda mirata non
@@ -1677,8 +1677,9 @@ footer a:hover { color: #fff !important; }
       <div class="aggiorna-row">
         <div class="aggiorna-cadence">Settimanale</div>
         <div class="aggiorna-what">
-          <strong>ANAC contratti</strong> — nuovi affidamenti registrati
-          nel sistema dell'Autorità Anticorruzione.
+          <strong>ANAC contratti</strong> — aggiudicazioni degli ultimi 12 mesi
+          dalla Banca Dati Nazionale dei Contratti Pubblici; i nuovi file
+          mensili dell'Autorità Anticorruzione vengono archiviati ogni giorno.
         </div>
         <div class="aggiorna-when">ogni lunedì</div>
       </div>
