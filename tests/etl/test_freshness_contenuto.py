@@ -44,9 +44,30 @@ def test_anac_finestra_corta(fc, tmp_path):
     # finestra BDNCP (dal 19/10/2026): 12 mesi fino al mese prima dell'ultimo file
     mesi = [f"2025-{m:02d}" for m in range(10, 13)] + [f"2026-{m:02d}" for m in range(1, 10)]
     _scrivi(tmp_path, "lookup/anac-aggregato.json", {"_period_files": mesi})
+    _scrivi(tmp_path, "_diagnostics/anac_archivio.json", _archivio("2026-10-19T01:40:00+00:00"))
     assert fc.controlli_contenuto("anac", _ora("2026-10-19")) == []
     # archivio fermo: stessa finestra quattro mesi dopo
     assert fc.controlli_contenuto("anac", _ora("2027-01-19"))
+
+
+def _archivio(controllato_il, ultimo="20261001", esito="ok"):
+    return {"controllato_il": controllato_il, "esito": esito,
+            "dataset": {n: {"esito": esito, "ultimo_mese": ultimo, "n_mesi": 7}
+                        for n in ("cig", "aggiudicazioni", "aggiudicatari")}}
+
+
+def test_anac_archivio_bdncp(fc, tmp_path):
+    mesi = [f"2025-{m:02d}" for m in range(10, 13)] + [f"2026-{m:02d}" for m in range(1, 10)]
+    _scrivi(tmp_path, "lookup/anac-aggregato.json", {"_period_files": mesi})
+    assert "assente" in fc.controlli_contenuto("anac", _ora("2026-10-19"))[0]
+    _scrivi(tmp_path, "_diagnostics/anac_archivio.json", _archivio("2026-10-15T01:40:00+00:00"))
+    assert "non controllato" in fc.controlli_contenuto("anac", _ora("2026-10-19"))[0]
+    _scrivi(tmp_path, "_diagnostics/anac_archivio.json",
+            _archivio("2026-10-19T01:40:00+00:00", esito="errore"))
+    assert "esito errore" in fc.controlli_contenuto("anac", _ora("2026-10-19"))[0]
+    # 20261101 mai arrivato: il 25/11 l'ultimo file e del 1/10 (55 giorni)
+    _scrivi(tmp_path, "_diagnostics/anac_archivio.json", _archivio("2026-11-25T01:40:00+00:00"))
+    assert "ultimo file mensile" in fc.controlli_contenuto("anac", _ora("2026-11-25"))[0]
 
 
 def test_bdap_eta_download(fc, tmp_path):

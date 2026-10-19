@@ -434,7 +434,7 @@ Lo stesso principio guida il controllo automatico. Ogni mattina
 `scripts/etl/freshness_check.py` verifica, oltre all'esecuzione degli ETL,
 il **periodo del dato** delle fonti non giornaliere (`CONTROLLI_CONTENUTO`:
 età della data per le mensili, anno minimo atteso per le annuali, finestra
-di mesi per ANAC, stato della sentinella giornaliera per il catasto) e invia un allarme se resta indietro rispetto al
+di mesi per ANAC e stato dell'archivio giornaliero dei file BDNCP, stato della sentinella giornaliera per il catasto) e invia un allarme se resta indietro rispetto al
 calendario di pubblicazione della fonte. Dall'audit del 05/10/2026 gli ETL
 seguono queste regole: anni ed edizioni delle fonti risolti a runtime e mai
 scritti nel codice, cache con scadenza (o con il periodo nel nome),

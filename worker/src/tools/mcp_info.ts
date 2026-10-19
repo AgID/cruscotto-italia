@@ -29,7 +29,7 @@ export const mcpInfo: ToolDefinition = {
     }
     return {
       service: "cruscotto-italia-mcp",
-      version: "0.21.4",
+      version: "0.21.5",
       protocol: "MCP 2025-11-25 (supportate anche 2025-06-18, 2025-03-26, 2024-11-05)",
       build: {
         // Tree hash git della cartella worker/: identico nel repo pubblico
@@ -47,7 +47,7 @@ export const mcpInfo: ToolDefinition = {
         anac: {
           canonical: "https://dati.anticorruzione.it/opendata",
           license: "CC-BY 4.0",
-          datasets: ["contratti pubblici (OCDS)"],
+          datasets: ["BDNCP: aggiudicazioni e cig (ultimi 12 mesi, una aggiudicazione per CIG)"],
         },
         bdap: {
           canonical: "https://bdap-opendata.rgs.mef.gov.it",

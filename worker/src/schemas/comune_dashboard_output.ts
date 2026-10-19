@@ -242,7 +242,7 @@ export const comuneDashboardOutputSchema: Record<string, unknown> = {
         "object",
         "null"
       ],
-      "description": "ANAC OCDS: aggiudicazioni aggregate, CPV, top CPV",
+      "description": "ANAC BDNCP: aggiudicazioni aggregate degli ultimi 12 mesi (finestra_da/finestra_a), CPV, top CPV, importi anomali esclusi in anomalie",
       "additionalProperties": true
     },
     "bdap_kpi": {

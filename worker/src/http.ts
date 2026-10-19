@@ -376,7 +376,7 @@ export async function handleHealth(_req: Request, env: Env): Promise<Response> {
 
   const status = {
     service: "cruscotto-italia-mcp",
-    version: "0.21.4",
+    version: "0.21.5",
     build: env.BUILD_TREE ?? null,
     r2: r2Ok,
     kv: kvOk,

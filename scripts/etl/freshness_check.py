@@ -378,6 +378,33 @@ def _check_anac(ora: datetime) -> str | None:
     if gg is not None and gg > 100:
         return (f"mese ANAC piu recente {mesi[-1]} ({gg}gg): archivio BDNCP fermo "
                 "(anac_archivio_mensile.sh) o fonte non aggiornata")
+    return _check_anac_archivio(ora)
+
+
+def _check_anac_archivio(ora: datetime) -> str | None:
+    """L'archivio locale dei file mensili BDNCP deve avanzare.
+
+    ANAC espone i file mensili per ~7 mesi: un mese non archiviato e' perso.
+    Stato scritto ogni giorno da scripts/anac_archivio_mensile.sh. Il file
+    AAAAMM01 arriva intorno al 5 del mese: oltre 50 giorni dall'ultimo
+    archiviato vuol dire che un mese e' saltato (o che ANAC non pubblica).
+    """
+    log = "Controllare /var/log/cruscotto-etl/anac-archivio.log"
+    d = _leggi("_diagnostics/anac_archivio.json")
+    if d is None:
+        return f"stato dell'archivio BDNCP assente o illeggibile. {log}"
+    eta = eta_giorni(d.get("controllato_il"), ora)
+    if eta is None or eta > 2:
+        return f"archivio BDNCP non controllato da {eta:.0f}gg (cadenza giornaliera). {log}" if eta \
+            else f"controllato_il illeggibile nello stato dell'archivio BDNCP. {log}"
+    if d.get("esito") != "ok":
+        ko = [n for n, v in (d.get("dataset") or {}).items() if v.get("esito") != "ok"]
+        return f"archivio BDNCP con esito {d.get('esito')} ({', '.join(ko) or '?'}). {log}"
+    for n, v in (d.get("dataset") or {}).items():
+        um = str(v.get("ultimo_mese") or "")
+        gg = eta_giorni(f"{um[:4]}-{um[4:6]}-{um[6:8]}T00:00:00+00:00", ora) if len(um) == 8 else None
+        if gg is None or gg > 50:
+            return f"archivio BDNCP {n}: ultimo file mensile {um or '?'} ({gg or 0:.0f}gg). {log}"
     return None
 
 

@@ -437,7 +437,7 @@ The same principle drives the automatic check. Every morning
 `scripts/etl/freshness_check.py` verifies, besides ETL execution, the
 **data period** of non-daily sources (`CONTROLLI_CONTENUTO`: date age for
 monthly sources, minimum expected year for annual ones, month window for
-ANAC, daily sentinel state for the cadastre) and raises an alert when it falls behind the source's publication
+ANAC plus the state of the daily BDNCP file archive, daily sentinel state for the cadastre) and raises an alert when it falls behind the source's publication
 calendar. Since the 05/10/2026 audit the ETLs follow these rules: source
 years and editions resolved at runtime and never hard-coded, caches that
 expire (or carry the period in their name), downloads written to a

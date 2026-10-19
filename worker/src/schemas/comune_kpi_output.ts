@@ -321,7 +321,7 @@ export const comuneKpiOutputSchema: Record<string, unknown> = {
         "object",
         "null"
       ],
-      "description": "ANAC aggiudicazioni (OCDS)",
+      "description": "ANAC aggiudicazioni (BDNCP, ultimi 12 mesi)",
       "properties": {
         "importo_per_abitante_eur": {
           "type": [
