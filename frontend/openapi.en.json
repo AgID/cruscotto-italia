@@ -1,0 +1,1880 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Cruscotto Italia - Municipal data API",
+    "version": "1.0.0",
+    "summary": "Open data of Italian municipalities, one JSON or GeoJSON file per source and per municipality.",
+    "description": "Read-only REST API of Cruscotto Italia (AgID). Each resource is a static file per municipality, identified by the 6-digit ISTAT code.\n\n**Access**: GET only, no registration and no key, open CORS (Access-Control-Allow-Origin: *).\n\n**ISTAT codes**: use the code of the current municipality (list in /istat-coords.json). Previous codes of recoded municipalities are served automatically (table in /lookup/variazioni_istat.json).\n\n**Updates**: each source has its own schedule; the reference date of the data is in the metadata fields of the file (`_anno_riferimento`, `_data_period` etc.), the file date in the Last-Modified header. Conditional requests are supported (ETag, 304).\n\n**Usage limits** (per IP address): per-municipality files 2 requests per second with bursts up to 80; aggregated and `_full` archives 10 requests per second with bursts up to 60; 8 simultaneous connections on /data/. Above 3,000 requests in 10 minutes the automatic block lasts 24 hours and doubles at each repeat, up to 4 weeks. When a limit is exceeded the response is 429: wait and retry with increasing intervals. Details and good practices: https://cruscotto-italia.dati.gov.it/api.html?lang=en#limiti\n\n**Testing from the API page**: it shows what the data looks like. Lists in the displayed response are limited to 1000 items and the heaviest files cannot be tested from the page: for the full data use calls from code or from the command line.\n\n**Licence**: CC BY 4.0, with attribution to the data holder stated for each path.",
+    "termsOfService": "https://cruscotto-italia.dati.gov.it/api.html?lang=en#condizioni",
+    "contact": {
+      "name": "Agenzia per l'Italia Digitale (Agency for Digital Italy) - Cruscotto Italia",
+      "url": "https://cruscotto-italia.dati.gov.it/api.html?lang=en",
+      "email": "dati@agid.gov.it"
+    },
+    "license": {
+      "name": "CC BY 4.0",
+      "identifier": "CC-BY-4.0"
+    }
+  },
+  "externalDocs": {
+    "description": "Sources and methodology",
+    "url": "https://cruscotto-italia.dati.gov.it/about.html#fonti"
+  },
+  "servers": [
+    {
+      "url": "https://cruscotto-italia.dati.gov.it/data"
+    }
+  ],
+  "security": [
+    {}
+  ],
+  "tags": [
+    {
+      "name": "Service",
+      "description": "Discovery and service files"
+    },
+    {
+      "name": "Agenzia delle Entrate",
+      "description": "Data held by: Agenzia delle Entrate."
+    },
+    {
+      "name": "Agenzia per l'Italia Digitale",
+      "description": "Data held by: Agenzia per l'Italia Digitale."
+    },
+    {
+      "name": "Automobile Club d'Italia",
+      "description": "Data held by: Automobile Club d'Italia."
+    },
+    {
+      "name": "Autorita' per le Garanzie nelle Comunicazioni - AGCOM",
+      "description": "Data held by: Autorita' per le Garanzie nelle Comunicazioni - AGCOM."
+    },
+    {
+      "name": "Consiglio Nazionale delle Ricerche - CNR",
+      "description": "Data held by: Consiglio Nazionale delle Ricerche - CNR."
+    },
+    {
+      "name": "Gestore dei Mercati Energetici SpA",
+      "description": "Data held by: Gestore dei Mercati Energetici SpA."
+    },
+    {
+      "name": "Istituto Nazionale di Statistica - ISTAT",
+      "description": "Data held by: Istituto Nazionale di Statistica - ISTAT."
+    },
+    {
+      "name": "Istituto Superiore per la Protezione e la Ricerca Ambientale",
+      "description": "Data held by: Istituto Superiore per la Protezione e la Ricerca Ambientale."
+    },
+    {
+      "name": "MIMIT - Ministero delle Imprese e del Made in Italy",
+      "description": "Data held by: MIMIT - Ministero delle Imprese e del Made in Italy."
+    },
+    {
+      "name": "Ministero del Lavoro e delle Politiche Sociali",
+      "description": "Data held by: Ministero del Lavoro e delle Politiche Sociali."
+    },
+    {
+      "name": "Ministero dell'Economia e delle Finanze",
+      "description": "Data held by: Ministero dell'Economia e delle Finanze."
+    },
+    {
+      "name": "Ministero dell'istruzione e del merito",
+      "description": "Data held by: Ministero dell'istruzione e del merito."
+    },
+    {
+      "name": "Ministero della Cultura",
+      "description": "Data held by: Ministero della Cultura."
+    },
+    {
+      "name": "Ministero della Salute",
+      "description": "Data held by: Ministero della Salute."
+    },
+    {
+      "name": "Presidenza del Consiglio dei Ministri",
+      "description": "Data held by: Presidenza del Consiglio dei Ministri."
+    }
+  ],
+  "paths": {
+    "/istat-coords.json": {
+      "get": {
+        "operationId": "get_istat-coords",
+        "summary": "Current municipalities with coordinates",
+        "description": "Object keyed by the ISTAT code of the current municipality, with value [lat, lon]. Use it to enumerate the valid codes for all the other paths.",
+        "tags": [
+          "Service"
+        ],
+        "responses": {
+          "200": {
+            "description": "Data of the municipality.",
+            "headers": {
+              "Last-Modified": {
+                "$ref": "#/components/headers/LastModified"
+              },
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "Access-Control-Allow-Origin": {
+                "$ref": "#/components/headers/CORS"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Shard"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not modified (conditional request with If-None-Match or If-Modified-Since)."
+          },
+          "404": {
+            "$ref": "#/components/responses/NonTrovato"
+          },
+          "429": {
+            "$ref": "#/components/responses/TroppeRichieste"
+          }
+        }
+      }
+    },
+    "/lookup/variazioni_istat.json": {
+      "get": {
+        "operationId": "get_lookup_variazioni_istat",
+        "summary": "ISTAT code changes",
+        "description": "Table of recodings, mergers and incorporations of municipalities (previous code -> current code, type, effective date). It explains the automatic forwarding of previous codes.",
+        "tags": [
+          "Service"
+        ],
+        "responses": {
+          "200": {
+            "description": "Data of the municipality.",
+            "headers": {
+              "Last-Modified": {
+                "$ref": "#/components/headers/LastModified"
+              },
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "Access-Control-Allow-Origin": {
+                "$ref": "#/components/headers/CORS"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Shard"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not modified (conditional request with If-None-Match or If-Modified-Since)."
+          },
+          "404": {
+            "$ref": "#/components/responses/NonTrovato"
+          },
+          "429": {
+            "$ref": "#/components/responses/TroppeRichieste"
+          }
+        }
+      }
+    },
+    "/manifest.json": {
+      "get": {
+        "operationId": "get_manifest",
+        "summary": "ETL manifest",
+        "description": "Status of the sources: ETL version and generation date for each source. Heavy file (about 10 MB): download it rarely.\n\n**Not available for testing on this page**: for the largest municipalities the file reaches tens of MB. Download it from code or from the command line, for example:\n\n`curl -O https://cruscotto-italia.dati.gov.it/data/manifest.json`",
+        "tags": [
+          "Service"
+        ],
+        "responses": {
+          "200": {
+            "description": "Data of the municipality.",
+            "headers": {
+              "Last-Modified": {
+                "$ref": "#/components/headers/LastModified"
+              },
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "Access-Control-Allow-Origin": {
+                "$ref": "#/components/headers/CORS"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Shard"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not modified (conditional request with If-None-Match or If-Modified-Since)."
+          },
+          "404": {
+            "$ref": "#/components/responses/NonTrovato"
+          },
+          "429": {
+            "$ref": "#/components/responses/TroppeRichieste"
+          }
+        },
+        "x-anteprima": false
+      }
+    },
+    "/carburanti/_nazionale.json": {
+      "get": {
+        "operationId": "get_carburanti__nazionale",
+        "summary": "National average fuel prices",
+        "description": "National benchmark used to compare the prices of the municipality. Data holder: MIMIT.",
+        "tags": [
+          "Service"
+        ],
+        "responses": {
+          "200": {
+            "description": "Data of the municipality.",
+            "headers": {
+              "Last-Modified": {
+                "$ref": "#/components/headers/LastModified"
+              },
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "Access-Control-Allow-Origin": {
+                "$ref": "#/components/headers/CORS"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Shard"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not modified (conditional request with If-None-Match or If-Modified-Since)."
+          },
+          "404": {
+            "$ref": "#/components/responses/NonTrovato"
+          },
+          "429": {
+            "$ref": "#/components/responses/TroppeRichieste"
+          }
+        }
+      }
+    },
+    "/dashboard/{istat}.json": {
+      "get": {
+        "operationId": "get_dashboard",
+        "summary": "Full municipality profile",
+        "description": "Unified profile with all the data sections of the municipality, including the KPIs of ANAC public contracts. Data holder: AgID (multi-source aggregation).\n\nHolder of the source data: Agenzia per l'Italia Digitale.\n\n**Not available for testing on this page**: for the largest municipalities the file reaches tens of MB. Download it from code or from the command line, for example:\n\n`curl -O https://cruscotto-italia.dati.gov.it/data/dashboard/075035.json`",
+        "tags": [
+          "Agenzia per l'Italia Digitale"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/istat"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Data of the municipality.",
+            "headers": {
+              "Last-Modified": {
+                "$ref": "#/components/headers/LastModified"
+              },
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "Access-Control-Allow-Origin": {
+                "$ref": "#/components/headers/CORS"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Shard"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not modified (conditional request with If-None-Match or If-Modified-Since)."
+          },
+          "404": {
+            "$ref": "#/components/responses/NonTrovato"
+          },
+          "429": {
+            "$ref": "#/components/responses/TroppeRichieste"
+          }
+        },
+        "x-anteprima": false
+      }
+    },
+    "/demografia/{istat}.json": {
+      "get": {
+        "operationId": "get_demografia",
+        "summary": "Resident population and demographic change",
+        "description": "Resident population by age and sex on 1 January (POSAS), with the last five years, and annual demographic change from the monthly demographic balance (ANPR registry source): births, deaths, natural balance and migration balances. Data holder: ISTAT.\n\nHolder of the source data: Istituto Nazionale di Statistica - ISTAT.",
+        "tags": [
+          "Istituto Nazionale di Statistica - ISTAT"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/istat"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Data of the municipality.",
+            "headers": {
+              "Last-Modified": {
+                "$ref": "#/components/headers/LastModified"
+              },
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "Access-Control-Allow-Origin": {
+                "$ref": "#/components/headers/CORS"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Shard"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not modified (conditional request with If-None-Match or If-Modified-Since)."
+          },
+          "404": {
+            "$ref": "#/components/responses/NonTrovato"
+          },
+          "429": {
+            "$ref": "#/components/responses/TroppeRichieste"
+          }
+        }
+      }
+    },
+    "/censimento/{istat}.json": {
+      "get": {
+        "operationId": "get_censimento",
+        "summary": "Permanent census - profile",
+        "description": "Indicators of the Permanent population census. Data holder: ISTAT.\n\nHolder of the source data: Istituto Nazionale di Statistica - ISTAT.",
+        "tags": [
+          "Istituto Nazionale di Statistica - ISTAT"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/istat"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Data of the municipality.",
+            "headers": {
+              "Last-Modified": {
+                "$ref": "#/components/headers/LastModified"
+              },
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "Access-Control-Allow-Origin": {
+                "$ref": "#/components/headers/CORS"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Shard"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not modified (conditional request with If-None-Match or If-Modified-Since)."
+          },
+          "404": {
+            "$ref": "#/components/responses/NonTrovato"
+          },
+          "429": {
+            "$ref": "#/components/responses/TroppeRichieste"
+          }
+        }
+      }
+    },
+    "/profilo/{istat}.json": {
+      "get": {
+        "operationId": "get_profilo",
+        "summary": "Statistical profile of the municipality",
+        "description": "Summary profile of the municipality. Data holder: ISTAT.\n\nHolder of the source data: Istituto Nazionale di Statistica - ISTAT.",
+        "tags": [
+          "Istituto Nazionale di Statistica - ISTAT"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/istat"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Data of the municipality.",
+            "headers": {
+              "Last-Modified": {
+                "$ref": "#/components/headers/LastModified"
+              },
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "Access-Control-Allow-Origin": {
+                "$ref": "#/components/headers/CORS"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Shard"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not modified (conditional request with If-None-Match or If-Modified-Since)."
+          },
+          "404": {
+            "$ref": "#/components/responses/NonTrovato"
+          },
+          "429": {
+            "$ref": "#/components/responses/TroppeRichieste"
+          }
+        }
+      }
+    },
+    "/pendolarismo/{istat}.json": {
+      "get": {
+        "operationId": "get_pendolarismo",
+        "summary": "Commuting 2021",
+        "description": "Commuting matrices of the 2021 Census. Data holder: ISTAT.\n\nHolder of the source data: Istituto Nazionale di Statistica - ISTAT.",
+        "tags": [
+          "Istituto Nazionale di Statistica - ISTAT"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/istat"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Data of the municipality.",
+            "headers": {
+              "Last-Modified": {
+                "$ref": "#/components/headers/LastModified"
+              },
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "Access-Control-Allow-Origin": {
+                "$ref": "#/components/headers/CORS"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Shard"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not modified (conditional request with If-None-Match or If-Modified-Since)."
+          },
+          "404": {
+            "$ref": "#/components/responses/NonTrovato"
+          },
+          "429": {
+            "$ref": "#/components/responses/TroppeRichieste"
+          }
+        }
+      }
+    },
+    "/asia/{istat}.json": {
+      "get": {
+        "operationId": "get_asia",
+        "summary": "Businesses and employees (ASIA)",
+        "description": "ASIA statistical register of active enterprises. Data holder: ISTAT.\n\nHolder of the source data: Istituto Nazionale di Statistica - ISTAT.",
+        "tags": [
+          "Istituto Nazionale di Statistica - ISTAT"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/istat"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Data of the municipality.",
+            "headers": {
+              "Last-Modified": {
+                "$ref": "#/components/headers/LastModified"
+              },
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "Access-Control-Allow-Origin": {
+                "$ref": "#/components/headers/CORS"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Shard"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not modified (conditional request with If-None-Match or If-Modified-Since)."
+          },
+          "404": {
+            "$ref": "#/components/responses/NonTrovato"
+          },
+          "429": {
+            "$ref": "#/components/responses/TroppeRichieste"
+          }
+        }
+      }
+    },
+    "/territorio/{istat}.json": {
+      "get": {
+        "operationId": "get_territorio",
+        "summary": "Land and land use",
+        "description": "Territorial and environmental data, including DPC seismic classification, hydrogeological risk, land consumption and ISPRA waste data. Data holder: ISTAT/ISPRA/DPC.\n\nHolder of the source data: Istituto Nazionale di Statistica - ISTAT.",
+        "tags": [
+          "Istituto Nazionale di Statistica - ISTAT"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/istat"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Data of the municipality.",
+            "headers": {
+              "Last-Modified": {
+                "$ref": "#/components/headers/LastModified"
+              },
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "Access-Control-Allow-Origin": {
+                "$ref": "#/components/headers/CORS"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Shard"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not modified (conditional request with If-None-Match or If-Modified-Since)."
+          },
+          "404": {
+            "$ref": "#/components/responses/NonTrovato"
+          },
+          "429": {
+            "$ref": "#/components/responses/TroppeRichieste"
+          }
+        }
+      }
+    },
+    "/turismo/{istat}.json": {
+      "get": {
+        "operationId": "get_turismo",
+        "summary": "Tourist accommodation capacity",
+        "description": "Accommodation establishments and bed places. Data holder: ISTAT.\n\nHolder of the source data: Istituto Nazionale di Statistica - ISTAT.",
+        "tags": [
+          "Istituto Nazionale di Statistica - ISTAT"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/istat"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Data of the municipality.",
+            "headers": {
+              "Last-Modified": {
+                "$ref": "#/components/headers/LastModified"
+              },
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "Access-Control-Allow-Origin": {
+                "$ref": "#/components/headers/CORS"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Shard"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not modified (conditional request with If-None-Match or If-Modified-Since)."
+          },
+          "404": {
+            "$ref": "#/components/responses/NonTrovato"
+          },
+          "429": {
+            "$ref": "#/components/responses/TroppeRichieste"
+          }
+        }
+      }
+    },
+    "/veicoli/{istat}.json": {
+      "get": {
+        "operationId": "get_veicoli",
+        "summary": "Vehicle fleet",
+        "description": "Vehicle fleet by type and emission class. Data holder: ACI/ISTAT.\n\nHolder of the source data: Automobile Club d'Italia.",
+        "tags": [
+          "Automobile Club d'Italia"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/istat"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Data of the municipality.",
+            "headers": {
+              "Last-Modified": {
+                "$ref": "#/components/headers/LastModified"
+              },
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "Access-Control-Allow-Origin": {
+                "$ref": "#/components/headers/CORS"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Shard"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not modified (conditional request with If-None-Match or If-Modified-Since)."
+          },
+          "404": {
+            "$ref": "#/components/responses/NonTrovato"
+          },
+          "429": {
+            "$ref": "#/components/responses/TroppeRichieste"
+          }
+        }
+      }
+    },
+    "/redditi/{istat}.json": {
+      "get": {
+        "operationId": "get_redditi",
+        "summary": "IRPEF personal income",
+        "description": "Distribution of declared incomes. Data holder: MEF Department of Finance.\n\nHolder of the source data: Ministero dell'Economia e delle Finanze.",
+        "tags": [
+          "Ministero dell'Economia e delle Finanze"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/istat"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Data of the municipality.",
+            "headers": {
+              "Last-Modified": {
+                "$ref": "#/components/headers/LastModified"
+              },
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "Access-Control-Allow-Origin": {
+                "$ref": "#/components/headers/CORS"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Shard"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not modified (conditional request with If-None-Match or If-Modified-Since)."
+          },
+          "404": {
+            "$ref": "#/components/responses/NonTrovato"
+          },
+          "429": {
+            "$ref": "#/components/responses/TroppeRichieste"
+          }
+        }
+      }
+    },
+    "/immobili_pa/{istat}.json": {
+      "get": {
+        "operationId": "get_immobili_pa",
+        "summary": "Public real estate",
+        "description": "Census of public real estate assets. Data holder: MEF Department of the Treasury.\n\nHolder of the source data: Ministero dell'Economia e delle Finanze.",
+        "tags": [
+          "Ministero dell'Economia e delle Finanze"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/istat"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Data of the municipality.",
+            "headers": {
+              "Last-Modified": {
+                "$ref": "#/components/headers/LastModified"
+              },
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "Access-Control-Allow-Origin": {
+                "$ref": "#/components/headers/CORS"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Shard"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not modified (conditional request with If-None-Match or If-Modified-Since)."
+          },
+          "404": {
+            "$ref": "#/components/responses/NonTrovato"
+          },
+          "429": {
+            "$ref": "#/components/responses/TroppeRichieste"
+          }
+        }
+      }
+    },
+    "/siope/{istat}.json": {
+      "get": {
+        "operationId": "get_siope",
+        "summary": "SIOPE cash: payments and receipts",
+        "description": "Cash movements of the municipality by SIOPE management code (Ministerial Decree 9/6/2016): payments, receipts and cash balance, monthly series. These are cash movements, not accrual-based. Source: SIOPE database (siope.it), managed by Banca d'Italia. Data holder: MEF - State General Accounting Department.\n\nHolder of the source data: Ministero dell'Economia e delle Finanze.",
+        "tags": [
+          "Ministero dell'Economia e delle Finanze"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/istat"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Data of the municipality.",
+            "headers": {
+              "Last-Modified": {
+                "$ref": "#/components/headers/LastModified"
+              },
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "Access-Control-Allow-Origin": {
+                "$ref": "#/components/headers/CORS"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Shard"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not modified (conditional request with If-None-Match or If-Modified-Since)."
+          },
+          "404": {
+            "$ref": "#/components/responses/NonTrovato"
+          },
+          "429": {
+            "$ref": "#/components/responses/TroppeRichieste"
+          }
+        }
+      }
+    },
+    "/bdap/dettaglio/{istat}.json": {
+      "get": {
+        "operationId": "get_bdap",
+        "summary": "Public works BDAP-MOP",
+        "description": "Monitoring of public works. Data holder: RGS BDAP.\n\nHolder of the source data: Ministero dell'Economia e delle Finanze.",
+        "tags": [
+          "Ministero dell'Economia e delle Finanze"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/istat"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Data of the municipality.",
+            "headers": {
+              "Last-Modified": {
+                "$ref": "#/components/headers/LastModified"
+              },
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "Access-Control-Allow-Origin": {
+                "$ref": "#/components/headers/CORS"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Shard"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not modified (conditional request with If-None-Match or If-Modified-Since)."
+          },
+          "404": {
+            "$ref": "#/components/responses/NonTrovato"
+          },
+          "429": {
+            "$ref": "#/components/responses/TroppeRichieste"
+          }
+        }
+      }
+    },
+    "/pnrr/{istat}.json": {
+      "get": {
+        "operationId": "get_pnrr",
+        "summary": "PNRR projects",
+        "description": "PNRR (National Recovery and Resilience Plan) projects located in the municipality. Data holder: Italia Domani / ReGiS.\n\nHolder of the source data: Presidenza del Consiglio dei Ministri.",
+        "tags": [
+          "Presidenza del Consiglio dei Ministri"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/istat"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Data of the municipality.",
+            "headers": {
+              "Last-Modified": {
+                "$ref": "#/components/headers/LastModified"
+              },
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "Access-Control-Allow-Origin": {
+                "$ref": "#/components/headers/CORS"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Shard"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not modified (conditional request with If-None-Match or If-Modified-Since)."
+          },
+          "404": {
+            "$ref": "#/components/responses/NonTrovato"
+          },
+          "429": {
+            "$ref": "#/components/responses/TroppeRichieste"
+          }
+        }
+      }
+    },
+    "/scuole/{istat}.json": {
+      "get": {
+        "operationId": "get_scuole",
+        "summary": "Schools",
+        "description": "Registry of state and state-recognised private schools. Data holder: Ministry of Education and Merit.\n\nHolder of the source data: Ministero dell'istruzione e del merito.",
+        "tags": [
+          "Ministero dell'istruzione e del merito"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/istat"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Data of the municipality.",
+            "headers": {
+              "Last-Modified": {
+                "$ref": "#/components/headers/LastModified"
+              },
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "Access-Control-Allow-Origin": {
+                "$ref": "#/components/headers/CORS"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Shard"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not modified (conditional request with If-None-Match or If-Modified-Since)."
+          },
+          "404": {
+            "$ref": "#/components/responses/NonTrovato"
+          },
+          "429": {
+            "$ref": "#/components/responses/TroppeRichieste"
+          }
+        }
+      }
+    },
+    "/sanita_mds/{istat}.json": {
+      "get": {
+        "operationId": "get_sanita_mds",
+        "summary": "Health: pharmacies and hospitals",
+        "description": "Pharmacies, para-pharmacies and hospital facilities. Data holder: Ministry of Health.\n\nHolder of the source data: Ministero della Salute.",
+        "tags": [
+          "Ministero della Salute"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/istat"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Data of the municipality.",
+            "headers": {
+              "Last-Modified": {
+                "$ref": "#/components/headers/LastModified"
+              },
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "Access-Control-Allow-Origin": {
+                "$ref": "#/components/headers/CORS"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Shard"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not modified (conditional request with If-None-Match or If-Modified-Since)."
+          },
+          "404": {
+            "$ref": "#/components/responses/NonTrovato"
+          },
+          "429": {
+            "$ref": "#/components/responses/TroppeRichieste"
+          }
+        }
+      }
+    },
+    "/carburanti/{istat}.json": {
+      "get": {
+        "operationId": "get_carburanti",
+        "summary": "Fuel stations and prices",
+        "description": "Fuel stations and prices. Data holder: MIMIT.\n\nHolder of the source data: MIMIT - Ministero delle Imprese e del Made in Italy.",
+        "tags": [
+          "MIMIT - Ministero delle Imprese e del Made in Italy"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/istat"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Data of the municipality.",
+            "headers": {
+              "Last-Modified": {
+                "$ref": "#/components/headers/LastModified"
+              },
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "Access-Control-Allow-Origin": {
+                "$ref": "#/components/headers/CORS"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Shard"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not modified (conditional request with If-None-Match or If-Modified-Since)."
+          },
+          "404": {
+            "$ref": "#/components/responses/NonTrovato"
+          },
+          "429": {
+            "$ref": "#/components/responses/TroppeRichieste"
+          }
+        }
+      }
+    },
+    "/runts/{istat}.json": {
+      "get": {
+        "operationId": "get_runts",
+        "summary": "Third-sector organisations (RUNTS)",
+        "description": "Organisations registered in the RUNTS (National Single Register of the Third Sector). Data holder: Ministry of Labour.\n\nHolder of the source data: Ministero del Lavoro e delle Politiche Sociali.",
+        "tags": [
+          "Ministero del Lavoro e delle Politiche Sociali"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/istat"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Data of the municipality.",
+            "headers": {
+              "Last-Modified": {
+                "$ref": "#/components/headers/LastModified"
+              },
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "Access-Control-Allow-Origin": {
+                "$ref": "#/components/headers/CORS"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Shard"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not modified (conditional request with If-None-Match or If-Modified-Since)."
+          },
+          "404": {
+            "$ref": "#/components/responses/NonTrovato"
+          },
+          "429": {
+            "$ref": "#/components/responses/TroppeRichieste"
+          }
+        }
+      }
+    },
+    "/beni_culturali/{istat}.json": {
+      "get": {
+        "operationId": "get_beni_culturali",
+        "summary": "Catalogued cultural heritage",
+        "description": "Heritage catalogued by the Ministry of Culture (ArCo and Cultural-ON). Data holder: Ministry of Culture.\n\nHolder of the source data: Ministero della Cultura.",
+        "tags": [
+          "Ministero della Cultura"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/istat"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Data of the municipality.",
+            "headers": {
+              "Last-Modified": {
+                "$ref": "#/components/headers/LastModified"
+              },
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "Access-Control-Allow-Origin": {
+                "$ref": "#/components/headers/CORS"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Shard"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not modified (conditional request with If-None-Match or If-Modified-Since)."
+          },
+          "404": {
+            "$ref": "#/components/responses/NonTrovato"
+          },
+          "429": {
+            "$ref": "#/components/responses/TroppeRichieste"
+          }
+        }
+      }
+    },
+    "/aria/{istat}.json": {
+      "get": {
+        "operationId": "get_aria",
+        "summary": "Air quality",
+        "description": "Air quality indicators. Data holder: ISPRA.\n\nHolder of the source data: Istituto Superiore per la Protezione e la Ricerca Ambientale.",
+        "tags": [
+          "Istituto Superiore per la Protezione e la Ricerca Ambientale"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/istat"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Data of the municipality.",
+            "headers": {
+              "Last-Modified": {
+                "$ref": "#/components/headers/LastModified"
+              },
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "Access-Control-Allow-Origin": {
+                "$ref": "#/components/headers/CORS"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Shard"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not modified (conditional request with If-None-Match or If-Modified-Since)."
+          },
+          "404": {
+            "$ref": "#/components/responses/NonTrovato"
+          },
+          "429": {
+            "$ref": "#/components/responses/TroppeRichieste"
+          }
+        }
+      }
+    },
+    "/agcom_bbmap/{istat}.json": {
+      "get": {
+        "operationId": "get_agcom_bbmap",
+        "summary": "Broadband coverage",
+        "description": "FTTH coverage from the Broadband Map. Data holder: AGCOM.\n\nHolder of the source data: Autorita' per le Garanzie nelle Comunicazioni - AGCOM.",
+        "tags": [
+          "Autorita' per le Garanzie nelle Comunicazioni - AGCOM"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/istat"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Data of the municipality.",
+            "headers": {
+              "Last-Modified": {
+                "$ref": "#/components/headers/LastModified"
+              },
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "Access-Control-Allow-Origin": {
+                "$ref": "#/components/headers/CORS"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Shard"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not modified (conditional request with If-None-Match or If-Modified-Since)."
+          },
+          "404": {
+            "$ref": "#/components/responses/NonTrovato"
+          },
+          "429": {
+            "$ref": "#/components/responses/TroppeRichieste"
+          }
+        }
+      }
+    },
+    "/morfologia/{istat}/{istat}_stats.json": {
+      "get": {
+        "operationId": "get_morfologia",
+        "summary": "Terrain morphology",
+        "description": "Morphological statistics from the 5 m HR-DTM. Data holder: CNR-IRPI.\n\nHolder of the source data: Consiglio Nazionale delle Ricerche - CNR.",
+        "tags": [
+          "Consiglio Nazionale delle Ricerche - CNR"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/istat"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Data of the municipality.",
+            "headers": {
+              "Last-Modified": {
+                "$ref": "#/components/headers/LastModified"
+              },
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "Access-Control-Allow-Origin": {
+                "$ref": "#/components/headers/CORS"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Shard"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not modified (conditional request with If-None-Match or If-Modified-Since)."
+          },
+          "404": {
+            "$ref": "#/components/responses/NonTrovato"
+          },
+          "429": {
+            "$ref": "#/components/responses/TroppeRichieste"
+          }
+        }
+      }
+    },
+    "/pun/{istat}.json": {
+      "get": {
+        "operationId": "get_pun",
+        "summary": "EV charging points and energy",
+        "description": "PUN section (National Single Platform of charging points). Data holder: GME.\n\nHolder of the source data: Gestore dei Mercati Energetici SpA.",
+        "tags": [
+          "Gestore dei Mercati Energetici SpA"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/istat"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Data of the municipality.",
+            "headers": {
+              "Last-Modified": {
+                "$ref": "#/components/headers/LastModified"
+              },
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "Access-Control-Allow-Origin": {
+                "$ref": "#/components/headers/CORS"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Shard"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not modified (conditional request with If-None-Match or If-Modified-Since)."
+          },
+          "404": {
+            "$ref": "#/components/responses/NonTrovato"
+          },
+          "429": {
+            "$ref": "#/components/responses/TroppeRichieste"
+          }
+        }
+      }
+    },
+    "/anncsu_full/{istat}.json": {
+      "get": {
+        "operationId": "get_anncsu_full",
+        "summary": "ANNCSU street numbers and streets (full)",
+        "description": "Full archive of the geocoded street numbers and streets of the municipality from ANNCSU, with coverage KPIs. Data holder: Agenzia delle Entrate (with ISTAT).\n\nHolder of the source data: Agenzia delle Entrate.\n\n**Not available for testing on this page**: for the largest municipalities the file reaches tens of MB. Download it from code or from the command line, for example:\n\n`curl -O https://cruscotto-italia.dati.gov.it/data/anncsu_full/075035.json`",
+        "tags": [
+          "Agenzia delle Entrate"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/istat"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Data of the municipality.",
+            "headers": {
+              "Last-Modified": {
+                "$ref": "#/components/headers/LastModified"
+              },
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "Access-Control-Allow-Origin": {
+                "$ref": "#/components/headers/CORS"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Shard"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not modified (conditional request with If-None-Match or If-Modified-Since)."
+          },
+          "404": {
+            "$ref": "#/components/responses/NonTrovato"
+          },
+          "429": {
+            "$ref": "#/components/responses/TroppeRichieste"
+          }
+        },
+        "x-anteprima": false
+      }
+    },
+    "/censimento_full/{istat}.geojson": {
+      "get": {
+        "operationId": "get_censimento_full",
+        "summary": "2021 census sections (GeoJSON)",
+        "description": "Territorial bases of the 2021 Permanent census: geometries of the census sections with the census variables. Data holder: ISTAT.\n\nHolder of the source data: Istituto Nazionale di Statistica - ISTAT.\n\n**Not available for testing on this page**: for the largest municipalities the file reaches tens of MB. Download it from code or from the command line, for example:\n\n`curl -O https://cruscotto-italia.dati.gov.it/data/censimento_full/075035.geojson`",
+        "tags": [
+          "Istituto Nazionale di Statistica - ISTAT"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/istat"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Data of the municipality.",
+            "headers": {
+              "Last-Modified": {
+                "$ref": "#/components/headers/LastModified"
+              },
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "Access-Control-Allow-Origin": {
+                "$ref": "#/components/headers/CORS"
+              }
+            },
+            "content": {
+              "application/geo+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Shard"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not modified (conditional request with If-None-Match or If-Modified-Since)."
+          },
+          "404": {
+            "$ref": "#/components/responses/NonTrovato"
+          },
+          "429": {
+            "$ref": "#/components/responses/TroppeRichieste"
+          }
+        },
+        "x-anteprima": false
+      }
+    },
+    "/beni_culturali_full/{istat}.json": {
+      "get": {
+        "operationId": "get_beni_culturali_full",
+        "summary": "Catalogued cultural heritage (full)",
+        "description": "Full inventory of the cultural heritage catalogued by the Ministry of Culture (ArCo and Cultural-ON) for municipalities with more than 30 items. Data holder: Ministry of Culture.\n\nHolder of the source data: Ministero della Cultura.",
+        "tags": [
+          "Ministero della Cultura"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/istat"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Data of the municipality.",
+            "headers": {
+              "Last-Modified": {
+                "$ref": "#/components/headers/LastModified"
+              },
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "Access-Control-Allow-Origin": {
+                "$ref": "#/components/headers/CORS"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Shard"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not modified (conditional request with If-None-Match or If-Modified-Since)."
+          },
+          "404": {
+            "$ref": "#/components/responses/NonTrovato"
+          },
+          "429": {
+            "$ref": "#/components/responses/TroppeRichieste"
+          }
+        }
+      }
+    },
+    "/omi/{istat}.json": {
+      "get": {
+        "operationId": "get_omi",
+        "summary": "OMI real estate prices",
+        "description": "Sale and rental values in euro/m² for each homogeneous zone inside the municipality, by property type, use and state of repair. The only economic data at sub-municipal level. Data holder: Agenzia delle Entrate - Real Estate Market Observatory.\n\nHolder of the source data: Agenzia delle Entrate.",
+        "tags": [
+          "Agenzia delle Entrate"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/istat"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Data of the municipality.",
+            "headers": {
+              "Last-Modified": {
+                "$ref": "#/components/headers/LastModified"
+              },
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "Access-Control-Allow-Origin": {
+                "$ref": "#/components/headers/CORS"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Shard"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not modified (conditional request with If-None-Match or If-Modified-Since)."
+          },
+          "404": {
+            "$ref": "#/components/responses/NonTrovato"
+          },
+          "429": {
+            "$ref": "#/components/responses/TroppeRichieste"
+          }
+        }
+      }
+    },
+    "/omi_full/{istat}.geojson": {
+      "get": {
+        "operationId": "get_omi_full",
+        "summary": "OMI zone boundaries (GeoJSON)",
+        "description": "Geometries of the OMI homogeneous zones of the municipality (GeoJSON WGS84). They link to the prices through the zone field. Data holder: Agenzia delle Entrate - Real Estate Market Observatory.\n\nHolder of the source data: Agenzia delle Entrate.",
+        "tags": [
+          "Agenzia delle Entrate"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/istat"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Data of the municipality.",
+            "headers": {
+              "Last-Modified": {
+                "$ref": "#/components/headers/LastModified"
+              },
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "Access-Control-Allow-Origin": {
+                "$ref": "#/components/headers/CORS"
+              }
+            },
+            "content": {
+              "application/geo+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Shard"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not modified (conditional request with If-None-Match or If-Modified-Since)."
+          },
+          "404": {
+            "$ref": "#/components/responses/NonTrovato"
+          },
+          "429": {
+            "$ref": "#/components/responses/TroppeRichieste"
+          }
+        }
+      }
+    },
+    "/catasto_full/{istat}_map.geojson.gz": {
+      "get": {
+        "operationId": "get_catasto_fogli",
+        "summary": "Cadastral sheets (GeoJSON)",
+        "description": "Geometries of the cadastral sheets of the municipality (GeoJSON, gzip-compressed transfer). Data holder: Agenzia delle Entrate.\n\nHolder of the source data: Agenzia delle Entrate.\n\n**Not available for testing on this page**: for the largest municipalities the file reaches tens of MB. Download it from code or from the command line, for example:\n\n`curl -O https://cruscotto-italia.dati.gov.it/data/catasto_full/075035_map.geojson.gz`",
+        "tags": [
+          "Agenzia delle Entrate"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/istat"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Gzip-compressed GeoJSON file (decompress on the client).",
+            "headers": {
+              "Last-Modified": {
+                "$ref": "#/components/headers/LastModified"
+              },
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "Access-Control-Allow-Origin": {
+                "$ref": "#/components/headers/CORS"
+              }
+            },
+            "content": {
+              "application/gzip": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not modified (conditional request with If-None-Match or If-Modified-Since)."
+          },
+          "404": {
+            "$ref": "#/components/responses/NonTrovato"
+          },
+          "429": {
+            "$ref": "#/components/responses/TroppeRichieste"
+          }
+        },
+        "x-anteprima": false
+      }
+    },
+    "/catasto_full/{istat}_ple.geojson.gz": {
+      "get": {
+        "operationId": "get_catasto_particelle",
+        "summary": "Cadastral parcels (GeoJSON)",
+        "description": "Geometries of the cadastral parcels of the municipality (GeoJSON, gzip-compressed transfer). Data holder: Agenzia delle Entrate.\n\nHolder of the source data: Agenzia delle Entrate.\n\n**Not available for testing on this page**: for the largest municipalities the file reaches tens of MB. Download it from code or from the command line, for example:\n\n`curl -O https://cruscotto-italia.dati.gov.it/data/catasto_full/075035_ple.geojson.gz`",
+        "tags": [
+          "Agenzia delle Entrate"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/istat"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Gzip-compressed GeoJSON file (decompress on the client).",
+            "headers": {
+              "Last-Modified": {
+                "$ref": "#/components/headers/LastModified"
+              },
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "Access-Control-Allow-Origin": {
+                "$ref": "#/components/headers/CORS"
+              }
+            },
+            "content": {
+              "application/gzip": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not modified (conditional request with If-None-Match or If-Modified-Since)."
+          },
+          "404": {
+            "$ref": "#/components/responses/NonTrovato"
+          },
+          "429": {
+            "$ref": "#/components/responses/TroppeRichieste"
+          }
+        },
+        "x-anteprima": false
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "istat": {
+        "name": "istat",
+        "in": "path",
+        "required": true,
+        "description": "ISTAT code of the municipality, 6 digits (e.g. 075035 Lecce).",
+        "schema": {
+          "type": "string",
+          "pattern": "^[0-9]{6}$"
+        },
+        "example": "075035"
+      }
+    },
+    "headers": {
+      "LastModified": {
+        "description": "Date of the last regeneration of the file.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "ETag": {
+        "description": "Version identifier of the file.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "CacheControl": {
+        "description": "Allowed cache duration.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "CORS": {
+        "description": "Always *.",
+        "schema": {
+          "type": "string",
+          "const": "*"
+        }
+      }
+    },
+    "responses": {
+      "NonTrovato": {
+        "description": "Unknown municipality or source, or source not available for that municipality.",
+        "content": {
+          "text/html": {
+            "schema": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "TroppeRichieste": {
+        "description": "Per-IP rate limit exceeded (see info.description): wait and retry with increasing intervals.",
+        "content": {
+          "text/html": {
+            "schema": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "Shard": {
+        "type": "object",
+        "description": "Source-specific structure. Common metadata fields start with _ (not all present in every source). The schema is descriptive: sources may add fields over time.",
+        "properties": {
+          "_source": {
+            "type": "string",
+            "description": "Original source."
+          },
+          "_etl_version": {
+            "type": "string",
+            "description": "Version of the collection procedure."
+          },
+          "_generated_at": {
+            "type": "string",
+            "description": "Generation date of the file."
+          },
+          "istat_code": {
+            "type": "string",
+            "description": "ISTAT code of the municipality."
+          },
+          "comune": {
+            "type": "string",
+            "description": "Name of the municipality."
+          }
+        },
+        "additionalProperties": true
+      }
+    }
+  }
+}

@@ -81,7 +81,21 @@ footer a:hover{color:#fff}
 .swagger-ui .copy-to-clipboard button{min-width:32px;min-height:32px}
 /* 1.4.10 – Reflow a 320 px: scroll solo dentro il blocco, non sulla pagina */
 .swagger-ui .responses-inner,.swagger-ui .opblock-body{overflow-x:auto;max-width:100%}
+/* Selettore lingua (stesso schema del chatbot CICO) */
+.mini-destra{display:flex;align-items:center;gap:16px}
+.langsel{display:inline-flex;gap:4px;flex-shrink:0}
+.flag{display:inline-flex;align-items:center;gap:3px;background:none;border:1px solid transparent;border-radius:6px;line-height:1;padding:3px 6px;cursor:pointer;min-height:28px}
+.flag .fl{width:20px;height:14px;border:1px solid #b9c2cc;border-radius:2px;display:inline-block;filter:grayscale(1);opacity:.55}
+#lang-it .fl{background:linear-gradient(90deg,#009246 0 33.33%,#fff 33.33% 66.66%,#ce2b37 66.66%)}
+#lang-en .fl{background:#012169 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 30'%3E%3CclipPath id='t'%3E%3Cpath d='M30,15h30v15zv15h-30zh-30v-15zv-15h30z'/%3E%3C/clipPath%3E%3Cpath d='M0,0v30h60v-30z' fill='%23012169'/%3E%3Cpath d='M0,0L60,30M60,0L0,30' stroke='%23fff' stroke-width='6'/%3E%3Cpath d='M0,0L60,30M60,0L0,30' clip-path='url(%23t)' stroke='%23C8102E' stroke-width='4'/%3E%3Cpath d='M30,0v30M0,15h60' stroke='%23fff' stroke-width='10'/%3E%3Cpath d='M30,0v30M0,15h60' stroke='%23C8102E' stroke-width='6'/%3E%3C/svg%3E") center/100% 100% no-repeat}
+.flag .lc{font-size:12px;font-weight:600;color:#1a2330}
+.flag[aria-pressed="true"]{border-color:#c3ccd6;background:#eef3f9}
+.flag[aria-pressed="true"] .fl{filter:none;opacity:1}
+.flag:focus-visible{outline:2px solid #06c;outline-offset:2px}
+/* Swagger: etichetta "required" (aggiunta via CSS da Swagger) in italiano */
+html[lang="it"] .swagger-ui .parameter__name.required::after{content:"obbligatorio"}
 @media (max-width:720px){
+  .mini-destra{justify-content:space-between}
   .wrap{padding:0 16px}
   .api-hero h1{font-size:32px}
   footer .wrap{grid-template-columns:1fr}
@@ -89,18 +103,24 @@ footer a:hover{color:#fff}
 </style>
 </head>
 <body>
-<a href="#main" class="skip">Salta al contenuto</a>
+<a href="#main" class="skip" data-i18n="skip">Salta al contenuto</a>
 
 <header class="mini-mast">
   <div class="wrap">
     <div class="mini-agid">
-      <a href="https://www.agid.gov.it/it" target="_blank" rel="noopener noreferrer" aria-label="Sito istituzionale AgID (apre in nuova scheda)">
-        <img src="/assets/logo-agid.png" alt="AgID — Agenzia per l'Italia Digitale" class="mini-agid-logo" width="97" height="24">
+      <a href="https://www.agid.gov.it/it" target="_blank" rel="noopener noreferrer" aria-label="Sito istituzionale AgID (apre in nuova scheda)" data-i18n-attr="aria-label:agid_link">
+        <img src="/assets/logo-agid.png" alt="AgID — Agenzia per l'Italia Digitale" class="mini-agid-logo" width="97" height="24" data-i18n-attr="alt:agid_alt">
       </a>
     </div>
+    <div class="mini-destra">
     <div class="mini-brand-wrap">
       <a href="/" class="mini-brand">Cruscotto <span class="it">Italia</span></a>
-      <span class="mini-brand-sub">7.894 comuni · fonti istituzionali</span>
+      <span class="mini-brand-sub" data-i18n="brand_sub">7.894 comuni · fonti istituzionali</span>
+    </div>
+    <span class="langsel" role="group" aria-label="Lingua / Language">
+      <button type="button" id="lang-it" class="flag" aria-label="IT, Italiano" aria-pressed="true" title="Italiano" lang="it"><span class="fl" aria-hidden="true"></span><span class="lc">IT</span></button>
+      <button type="button" id="lang-en" class="flag" aria-label="EN, English" aria-pressed="false" title="English" lang="en"><span class="fl" aria-hidden="true"></span><span class="lc">EN</span></button>
+    </span>
     </div>
   </div>
 </header>
@@ -109,105 +129,105 @@ footer a:hover{color:#fff}
 
 <section class="api-hero">
   <div class="wrap">
-    <h1>API e accesso ai dati</h1>
-    <p class="lede">
+    <h1 data-i18n="h1">API e accesso ai dati</h1>
+    <p class="lede" data-i18n="lede">
       I dati di Cruscotto Italia si possono leggere anche da programma.
       Ci sono due servizi, entrambi pubblici, gratuiti e senza registrazione:
       un'<strong>API REST</strong> di sola lettura per applicazioni e script,
       e un <strong>server MCP</strong> per gli assistenti di intelligenza artificiale.
     </p>
-    <ul class="api-toc" aria-label="Sezioni della pagina">
-      <li><a href="#rest">API REST</a></li>
-      <li><a href="#riferimento">Riferimento OpenAPI</a></li>
-      <li><a href="#mcp">Server MCP</a></li>
-      <li><a href="#strumenti">Strumenti client</a></li>
-      <li><a href="#condizioni">Condizioni d'uso</a></li>
-      <li><a href="#contatti">Contatti</a></li>
+    <ul class="api-toc" aria-label="Sezioni della pagina" data-i18n-attr="aria-label:toc">
+      <li><a href="#rest" data-i18n="toc_rest">API REST</a></li>
+      <li><a href="#riferimento" data-i18n="toc_rif">Riferimento OpenAPI</a></li>
+      <li><a href="#mcp" data-i18n="toc_mcp">Server MCP</a></li>
+      <li><a href="#strumenti" data-i18n="toc_str">Strumenti client</a></li>
+      <li><a href="#condizioni" data-i18n="toc_cond">Condizioni d'uso</a></li>
+      <li><a href="#contatti" data-i18n="toc_cont">Contatti</a></li>
     </ul>
   </div>
 </section>
 
 <section class="api-sez" id="rest">
   <div class="wrap">
-    <h2>API REST</h2>
-    <p>
+    <h2 data-i18n="toc_rest">API REST</h2>
+    <p data-i18n="rest1">
       Ogni fonte ha un file per comune, identificato dal codice ISTAT a 6 cifre.
       Si leggono con una semplice richiesta GET all'indirizzo
       <code>https://cruscotto-italia.dati.gov.it/data/&lt;fonte&gt;/&lt;codice ISTAT&gt;.json</code>.
       Non servono chiavi e le richieste da browser sono consentite (CORS aperto).
     </p>
-    <h3>Esempi</h3>
-    <p>Popolazione residente di Lecce (codice ISTAT 075035):</p>
+    <h3 data-i18n="esempi">Esempi</h3>
+    <p data-i18n="es1">Popolazione residente di Lecce (codice ISTAT 075035):</p>
 <pre class="api-es"><code>curl https://cruscotto-italia.dati.gov.it/data/demografia/075035.json</code></pre>
-    <p>Lo stesso in Python, senza librerie esterne:</p>
+    <p data-i18n="es2">Lo stesso in Python, senza librerie esterne:</p>
 <pre class="api-es"><code>import json, urllib.request
 
 url = "https://cruscotto-italia.dati.gov.it/data/demografia/075035.json"
 with urllib.request.urlopen(url) as r:
     dati = json.load(r)
 print(dati["comune"], dati["popolazione_totale"])</code></pre>
-    <h3>Codici ISTAT</h3>
+    <h3 data-i18n="codici">Codici ISTAT</h3>
     <ul>
-      <li>L'elenco dei codici dei comuni vigenti è in <a href="/data/istat-coords.json"><code>/data/istat-coords.json</code></a>.</li>
-      <li>I codici precedenti dei comuni ricodificati (per esempio la riforma delle province sarde del 2026) funzionano ancora: il server risponde con i dati del comune attuale. La tabella delle variazioni è in <a href="/data/lookup/variazioni_istat.json"><code>/data/lookup/variazioni_istat.json</code></a>.</li>
+      <li data-i18n="cod1">L'elenco dei codici dei comuni vigenti è in <a href="/data/istat-coords.json"><code>/data/istat-coords.json</code></a>.</li>
+      <li data-i18n="cod2">I codici precedenti dei comuni ricodificati (per esempio la riforma delle province sarde del 2026) funzionano ancora: il server risponde con i dati del comune attuale. La tabella delle variazioni è in <a href="/data/lookup/variazioni_istat.json"><code>/data/lookup/variazioni_istat.json</code></a>.</li>
     </ul>
-    <h3>Aggiornamento</h3>
+    <h3 data-i18n="agg">Aggiornamento</h3>
     <ul>
-      <li>Ogni fonte segue il calendario di pubblicazione del suo titolare. La data a cui si riferisce il dato è indicata dentro il file, nei campi che iniziano con il trattino basso (per esempio <code>_anno_riferimento</code>).</li>
-      <li>La data dell'ultima rigenerazione del file è nell'intestazione <code>Last-Modified</code>. Con <code>If-None-Match</code> o <code>If-Modified-Since</code> il server risponde <code>304</code> se il file non è cambiato.</li>
+      <li data-i18n="agg1">Ogni fonte segue il calendario di pubblicazione del suo titolare. La data a cui si riferisce il dato è indicata dentro il file, nei campi che iniziano con il trattino basso (per esempio <code>_anno_riferimento</code>).</li>
+      <li data-i18n="agg2">La data dell'ultima rigenerazione del file è nell'intestazione <code>Last-Modified</code>. Con <code>If-None-Match</code> o <code>If-Modified-Since</code> il server risponde <code>304</code> se il file non è cambiato.</li>
     </ul>
   </div>
 </section>
 
 <section class="api-sez" id="riferimento">
   <div class="wrap">
-    <h2>Riferimento OpenAPI</h2>
-    <p>
+    <h2 data-i18n="toc_rif">Riferimento OpenAPI</h2>
+    <p data-i18n="rif1">
       Tutti i percorsi, con il titolare di ciascun dato, sono descritti nel documento
       <a href="/openapi.json"><code>openapi.json</code></a> (OpenAPI 3.1), che si può importare
       in qualsiasi strumento compatibile. Qui sotto la stessa descrizione in forma navigabile.
     </p>
-    <p class="api-nota">
+    <p class="api-nota" data-i18n="rif_nota">
       La prova delle chiamate con «Try it out» serve a vedere com'è fatto il dato, non a scaricarlo:
       gli elenchi della risposta sono limitati a 1000 elementi e i file più pesanti (civici completi,
       sezioni di censimento, catasto, scheda completa del comune) non si provano dalla pagina.
       Per i dati completi usare le chiamate da programma o da riga di comando, come negli esempi sopra.
     </p>
-    <div id="swagger" aria-label="Riferimento interattivo dell'API REST"></div>
+    <div id="swagger" aria-label="Riferimento interattivo dell'API REST" data-i18n-attr="aria-label:swagger"></div>
     <noscript><p class="api-nota">Il riferimento interattivo richiede JavaScript. Il documento <a href="/openapi.json">openapi.json</a> è leggibile anche senza.</p></noscript>
   </div>
 </section>
 
 <section class="api-sez" id="mcp">
   <div class="wrap">
-    <h2>Server MCP</h2>
-    <p>
+    <h2 data-i18n="toc_mcp">Server MCP</h2>
+    <p data-i18n="mcp1">
       Il server <a href="https://modelcontextprotocol.io" target="_blank" rel="noopener">Model Context Protocol<span class="sr-only"> (apre in nuova scheda)</span></a>
       permette a un assistente AI (Claude, ChatGPT e altri compatibili) di interrogare i dati
       con domande in linguaggio naturale.
     </p>
     <ul>
-      <li>Indirizzo: <code>https://cruscotto-italia-mcp.agid.workers.dev/mcp</code></li>
-      <li>Protocollo: MCP, revisione 2025-11-25, trasporto HTTP</li>
-      <li>Tutti gli strumenti sono di sola lettura e non richiedono autenticazione.</li>
+      <li data-i18n="mcp_ind">Indirizzo: <code>https://cruscotto-italia-mcp.agid.workers.dev/mcp</code></li>
+      <li data-i18n="mcp_prot">Protocollo: MCP, revisione 2025-11-25, trasporto HTTP</li>
+      <li data-i18n="mcp_ro">Tutti gli strumenti sono di sola lettura e non richiedono autenticazione.</li>
     </ul>
-    <h3>Strumenti disponibili</h3>
+    <h3 data-i18n="mcp_tools">Strumenti disponibili</h3>
     <div class="api-tab-wrap">
     <table class="api-tab">
-      <thead><tr><th scope="col">Strumento</th><th scope="col">A cosa serve</th></tr></thead>
+      <thead><tr><th scope="col" data-i18n="th_tool">Strumento</th><th scope="col" data-i18n="th_uso">A cosa serve</th></tr></thead>
       <tbody>
-        <tr><td><code>search_comune</code></td><td>Trova il codice ISTAT a partire dal nome del comune</td></tr>
-        <tr><td><code>comune_kpi</code></td><td>Indicatori sintetici del comune (circa 55)</td></tr>
-        <tr><td><code>comune_dashboard</code></td><td>Scheda completa del comune, tutte le sezioni</td></tr>
-        <tr><td><code>anncsu_civico_search</code></td><td>Numeri civici georeferenziati</td></tr>
-        <tr><td><code>censimento_sezione_search</code></td><td>Ricerche e classifiche sulle sezioni di censimento</td></tr>
-        <tr><td><code>search</code> e <code>fetch</code></td><td>Ricerca e lettura nel formato standard dei connettori</td></tr>
-        <tr><td><code>mcp_info</code></td><td>Versione del server e freschezza dei dati per fonte</td></tr>
+        <tr><td><code>search_comune</code></td><td data-i18n="t1">Trova il codice ISTAT a partire dal nome del comune</td></tr>
+        <tr><td><code>comune_kpi</code></td><td data-i18n="t2">Indicatori sintetici del comune (circa 55)</td></tr>
+        <tr><td><code>comune_dashboard</code></td><td data-i18n="t3">Scheda completa del comune, tutte le sezioni</td></tr>
+        <tr><td><code>anncsu_civico_search</code></td><td data-i18n="t4">Numeri civici georeferenziati</td></tr>
+        <tr><td><code>censimento_sezione_search</code></td><td data-i18n="t5">Ricerche e classifiche sulle sezioni di censimento</td></tr>
+        <tr><td data-i18n="t6a"><code>search</code> e <code>fetch</code></td><td data-i18n="t6">Ricerca e lettura nel formato standard dei connettori</td></tr>
+        <tr><td><code>mcp_info</code></td><td data-i18n="t7">Versione del server e freschezza dei dati per fonte</td></tr>
       </tbody>
     </table>
     </div>
-    <h3>Verificare la versione in esercizio</h3>
-    <p>
+    <h3 data-i18n="mcp_ver">Verificare la versione in esercizio</h3>
+    <p data-i18n="mcp_ver1">
       <a href="https://cruscotto-italia-mcp.agid.workers.dev/health"><code>/health</code></a> restituisce versione e
       <code>build</code>: è l'identificativo del codice del server, uguale a quello della cartella
       <code>worker/</code> nel <a href="https://github.com/AgID/cruscotto-italia">repository pubblico</a>
@@ -219,17 +239,17 @@ print(dati["comune"], dati["popolazione_totale"])</code></pre>
 
 <section class="api-sez" id="strumenti">
   <div class="wrap">
-    <h2>Strumenti client</h2>
-    <p>Non sono servizi a sé, ma strumenti pronti che usano i due servizi sopra.</p>
+    <h2 data-i18n="toc_str">Strumenti client</h2>
+    <p data-i18n="str1">Non sono servizi a sé, ma strumenti pronti che usano i due servizi sopra.</p>
     <ul>
-      <li><strong>Skill per assistenti AI</strong>: documenta gli strumenti MCP, lo schema delle sezioni dati e i modi d'uso consigliati.</li>
-      <li><strong>Skill CLI</strong>: script Python 3 senza dipendenze che legge direttamente l'API REST e filtra i dati prima di caricarli. Si usa con un assistente AI o da solo, in un terminale.</li>
+      <li data-i18n="str_skill"><strong>Skill per assistenti AI</strong>: documenta gli strumenti MCP, lo schema delle sezioni dati e i modi d'uso consigliati.</li>
+      <li data-i18n="str_cli"><strong>Skill CLI</strong>: script Python 3 senza dipendenze che legge direttamente l'API REST e filtra i dati prima di caricarli. Si usa con un assistente AI o da solo, in un terminale.</li>
     </ul>
-    <p>
+    <p data-i18n="str2">
       Le versioni correnti da scaricare e le guide passo-passo per collegare
       Claude e ChatGPT sono nella pagina <a href="/about.html#accesso-mcp">Il progetto, sezione Accesso</a>.
     </p>
-    <p>
+    <p data-i18n="str3">
       Chi vuole i dati di un solo comune tutti insieme può scaricare l'archivio ZIP
       dalla pagina del comune: contiene i file JSON, la legenda dei campi e le attribuzioni.
     </p>
@@ -238,44 +258,44 @@ print(dati["comune"], dati["popolazione_totale"])</code></pre>
 
 <section class="api-sez" id="condizioni">
   <div class="wrap">
-    <h2>Condizioni d'uso</h2>
+    <h2 data-i18n="toc_cond">Condizioni d'uso</h2>
     <ul>
-      <li><strong>Licenza</strong>: i dati sono rilasciati con licenza <a href="https://creativecommons.org/licenses/by/4.0/deed.it" target="_blank" rel="noopener">CC BY 4.0<span class="sr-only"> (apre in nuova scheda)</span></a>. Va citato il titolare del dato di origine, indicato per ogni percorso nel riferimento OpenAPI, e Cruscotto Italia (AgID).</li>
-      <li><strong>Accesso</strong>: libero, gratuito, senza registrazione e senza chiavi.</li>
-      <li><strong>Titolarità</strong>: Cruscotto Italia ricompone dati già pubblicati dalle amministrazioni titolari e non li sostituisce. Per gli usi ufficiali fa fede la pubblicazione del titolare.</li>
+      <li data-i18n="c_lic"><strong>Licenza</strong>: i dati sono rilasciati con licenza <a href="https://creativecommons.org/licenses/by/4.0/deed.it" target="_blank" rel="noopener">CC BY 4.0<span class="sr-only"> (apre in nuova scheda)</span></a>. Va citato il titolare del dato di origine, indicato per ogni percorso nel riferimento OpenAPI, e Cruscotto Italia (AgID).</li>
+      <li data-i18n="c_acc"><strong>Accesso</strong>: libero, gratuito, senza registrazione e senza chiavi.</li>
+      <li data-i18n="c_tit"><strong>Titolarità</strong>: Cruscotto Italia ricompone dati già pubblicati dalle amministrazioni titolari e non li sostituisce. Per gli usi ufficiali fa fede la pubblicazione del titolare.</li>
     </ul>
-    <h3 id="limiti">Limiti di utilizzo</h3>
-    <p>Per mantenere il servizio disponibile a tutti valgono i limiti seguenti, applicati automaticamente per indirizzo IP.</p>
+    <h3 id="limiti" data-i18n="lim">Limiti di utilizzo</h3>
+    <p data-i18n="lim1">Per mantenere il servizio disponibile a tutti valgono i limiti seguenti, applicati automaticamente per indirizzo IP.</p>
     <div class="api-tab-wrap">
     <table class="api-tab">
-      <thead><tr><th scope="col">Risorsa</th><th scope="col">Limite</th></tr></thead>
+      <thead><tr><th scope="col" data-i18n="th_ris">Risorsa</th><th scope="col" data-i18n="th_lim">Limite</th></tr></thead>
       <tbody>
-        <tr><td>Endpoint MCP <code>/mcp</code></td><td>60 richieste al minuto</td></tr>
-        <tr><td>Shard per comune <code>/data/&lt;fonte&gt;/&lt;istat&gt;.json</code></td><td>2 richieste al secondo, picchi fino a 80</td></tr>
-        <tr><td>Archivi aggregati e <code>_full</code></td><td>10 richieste al secondo, picchi fino a 60</td></tr>
-        <tr><td>Connessioni simultanee su <code>/data/</code></td><td>8</td></tr>
-        <tr><td>Controlli di disponibilità</td><td>usare <code>/health</code>: non sono ammessi controlli ripetuti sui tool dati</td></tr>
-        <tr><td>Blocco automatico</td><td>oltre 3.000 richieste in 10 minuti: 24 ore</td></tr>
-        <tr><td>Blocchi ripetuti</td><td>la durata raddoppia a ogni recidiva, fino a 4 settimane</td></tr>
+        <tr><td data-i18n="l1a">Endpoint MCP <code>/mcp</code></td><td data-i18n="l1">60 richieste al minuto</td></tr>
+        <tr><td data-i18n="l2a">Shard per comune <code>/data/&lt;fonte&gt;/&lt;istat&gt;.json</code></td><td data-i18n="l2">2 richieste al secondo, picchi fino a 80</td></tr>
+        <tr><td data-i18n="l3a">Archivi aggregati e <code>_full</code></td><td data-i18n="l3">10 richieste al secondo, picchi fino a 60</td></tr>
+        <tr><td data-i18n="l4a">Connessioni simultanee su <code>/data/</code></td><td>8</td></tr>
+        <tr><td data-i18n="l5a">Controlli di disponibilità</td><td data-i18n="l5">usare <code>/health</code>: non sono ammessi controlli ripetuti sui tool dati</td></tr>
+        <tr><td data-i18n="l6a">Blocco automatico</td><td data-i18n="l6">oltre 3.000 richieste in 10 minuti: 24 ore</td></tr>
+        <tr><td data-i18n="l7a">Blocchi ripetuti</td><td data-i18n="l7">la durata raddoppia a ogni recidiva, fino a 4 settimane</td></tr>
       </tbody>
     </table>
     </div>
-    <h3>Buone pratiche</h3>
+    <h3 data-i18n="bp">Buone pratiche</h3>
     <ul>
-      <li>Dichiarare uno <em>User-Agent</em> riconoscibile, con il nome del progetto e un recapito: un client che si identifica non viene scambiato per traffico anomalo.</li>
-      <li>Per i controlli di disponibilità usare <code>/health</code>, non i tool dati: è l'endpoint previsto allo scopo e non consuma il limite MCP.</li>
-      <li>Per scaricare molti comuni usare l'API REST, non chiamate MCP ripetute: è più veloce per chi scarica e più leggero per il servizio. Le richieste condizionali (<code>If-None-Match</code>, <code>If-Modified-Since</code>) evitano di riscaricare i file non cambiati.</li>
-      <li>Le risposte indicano in <code>Cache-Control</code> per quanto tempo si possono riutilizzare.</li>
-      <li>Superato un limite la risposta è <code>429</code>: attendere e riprovare con intervalli crescenti, non insistere.</li>
+      <li data-i18n="bp1">Dichiarare uno <em>User-Agent</em> riconoscibile, con il nome del progetto e un recapito: un client che si identifica non viene scambiato per traffico anomalo.</li>
+      <li data-i18n="bp2">Per i controlli di disponibilità usare <code>/health</code>, non i tool dati: è l'endpoint previsto allo scopo e non consuma il limite MCP.</li>
+      <li data-i18n="bp3">Per scaricare molti comuni usare l'API REST, non chiamate MCP ripetute: è più veloce per chi scarica e più leggero per il servizio. Le richieste condizionali (<code>If-None-Match</code>, <code>If-Modified-Since</code>) evitano di riscaricare i file non cambiati.</li>
+      <li data-i18n="bp4">Le risposte indicano in <code>Cache-Control</code> per quanto tempo si possono riutilizzare.</li>
+      <li data-i18n="bp5">Superato un limite la risposta è <code>429</code>: attendere e riprovare con intervalli crescenti, non insistere.</li>
     </ul>
-    <p>Per usi che richiedono volumi superiori a questi limiti, o in caso di dubbi, scrivere a <a href="mailto:dati@agid.gov.it">dati@agid.gov.it</a>: i limiti sono una tutela del servizio, non una chiusura verso il riuso.</p>
+    <p data-i18n="bp6">Per usi che richiedono volumi superiori a questi limiti, o in caso di dubbi, scrivere a <a href="mailto:dati@agid.gov.it">dati@agid.gov.it</a>: i limiti sono una tutela del servizio, non una chiusura verso il riuso.</p>
   </div>
 </section>
 
 <section class="api-sez" id="contatti">
   <div class="wrap">
-    <h2>Contatti</h2>
-    <p>
+    <h2 data-i18n="toc_cont">Contatti</h2>
+    <p data-i18n="cont1">
       Per segnalazioni sul servizio o sui dati: <a href="mailto:dati@agid.gov.it">dati@agid.gov.it</a>.
       Il codice è pubblico su <a href="https://github.com/AgID/cruscotto-italia">GitHub</a>, dove si possono aprire segnalazioni.
     </p>
@@ -286,32 +306,32 @@ print(dati["comune"], dati["popolazione_totale"])</code></pre>
 
 <footer>
   <div class="wrap">
-    <div class="colophon">
+    <div class="colophon" data-i18n="f_colophon">
       <strong>Cruscotto Italia</strong><br>
       Iniziativa basata sui dati pubblici del Catalogo Nazionale
       <a href="https://www.dati.gov.it" target="_blank" rel="noopener">dati.gov.it<span class="sr-only"> (apre in nuova scheda)</span></a>.
     </div>
     <div>
-      <h3>Progetto</h3>
+      <h3 data-i18n="f_prog">Progetto</h3>
       <ul>
         <li><a href="/">Home</a></li>
-        <li><a href="/about.html">Il progetto</a></li>
+        <li><a href="/about.html" data-i18n="f_about">Il progetto</a></li>
         <li><a href="https://github.com/AgID/cruscotto-italia">GitHub</a></li>
-        <li><a href="https://form.agid.gov.it/agid/Cruscotto_Italia/dichiarazione">Dichiarazione accessibilità</a></li>
+        <li><a href="https://form.agid.gov.it/agid/Cruscotto_Italia/dichiarazione" data-i18n="f_acc">Dichiarazione accessibilità</a></li>
       </ul>
     </div>
     <div>
-      <h3>Contatti</h3>
+      <h3 data-i18n="toc_cont">Contatti</h3>
       <ul>
-        <li><a href="https://www.dati.gov.it" target="_blank" rel="noopener">dati.gov.it<span class="sr-only"> (apre in nuova scheda)</span></a></li>
+        <li><a href="https://www.dati.gov.it" target="_blank" rel="noopener" data-i18n="f_datigov">dati.gov.it<span class="sr-only"> (apre in nuova scheda)</span></a></li>
         <li><a href="mailto:dati@agid.gov.it">dati@agid.gov.it</a></li>
       </ul>
     </div>
   </div>
   <div class="wrap" style="display:block;margin-top:32px;padding-top:16px;border-top:1px solid #333">
     <div class="footer-bottom">
-      <span>Riferimento interattivo: Swagger UI 5.34.0 (Apache-2.0)</span>
-      <span>Contenuti <a href="https://creativecommons.org/licenses/by/4.0/deed.it" target="_blank" rel="noopener">CC-BY 4.0<span class="sr-only"> (apre in nuova scheda)</span></a> · Codice AGPL-3.0 · 2026 AgID</span>
+      <span data-i18n="f_swagger">Riferimento interattivo: Swagger UI 5.34.0 (Apache-2.0)</span>
+      <span data-i18n="f_lic">Contenuti <a href="https://creativecommons.org/licenses/by/4.0/deed.it" target="_blank" rel="noopener">CC-BY 4.0<span class="sr-only"> (apre in nuova scheda)</span></a> · Codice AGPL-3.0 · 2026 AgID</span>
     </div>
   </div>
 </footer>
@@ -319,7 +339,144 @@ print(dati["comune"], dati["popolazione_totale"])</code></pre>
 <script src="/vendor/swagger-ui/swagger-ui-bundle.js?v=5.34.0"></script>
 <script>
 (function(){
-  if (typeof SwaggerUIBundle !== "function") return;
+  // ===== Lingua: stesso schema del chatbot CICO (data-i18n, data-i18n-attr, UI_I18N_EN) =====
+  var UI_I18N_EN = {
+    skip: "Skip to content",
+    agid_link: "AgID institutional website (opens in a new tab)",
+    agid_alt: "AgID — Agency for Digital Italy",
+    brand_sub: "7,894 municipalities · institutional sources",
+    h1: "API and data access",
+    lede: "Cruscotto Italia data can also be read from code. There are two services, both public, free and with no registration: a read-only <strong>REST API</strong> for applications and scripts, and an <strong>MCP server</strong> for artificial intelligence assistants.",
+    toc: "Page sections",
+    toc_rest: "REST API", toc_rif: "OpenAPI reference", toc_mcp: "MCP server", toc_str: "Client tools", toc_cond: "Terms of use", toc_cont: "Contacts",
+    rest1: "Each source has one file per municipality, identified by the 6-digit ISTAT code. Files are read with a simple GET request to <code>https://cruscotto-italia.dati.gov.it/data/&lt;source&gt;/&lt;ISTAT code&gt;.json</code>. No keys are needed and browser requests are allowed (open CORS).",
+    esempi: "Examples",
+    es1: "Resident population of Lecce (ISTAT code 075035):",
+    es2: "The same in Python, with no external libraries:",
+    codici: "ISTAT codes",
+    cod1: "The list of codes of the current municipalities is in <a href=\"/data/istat-coords.json\"><code>/data/istat-coords.json</code></a>.",
+    cod2: "Previous codes of recoded municipalities (for example after the 2026 reform of the Sardinian provinces) still work: the server answers with the data of the current municipality. The table of changes is in <a href=\"/data/lookup/variazioni_istat.json\"><code>/data/lookup/variazioni_istat.json</code></a>.",
+    agg: "Updates",
+    agg1: "Each source follows the publication schedule of its data holder. The reference date of the data is stated inside the file, in the fields starting with an underscore (for example <code>_anno_riferimento</code>).",
+    agg2: "The date of the last regeneration of the file is in the <code>Last-Modified</code> header. With <code>If-None-Match</code> or <code>If-Modified-Since</code> the server answers <code>304</code> if the file has not changed.",
+    rif1: "All paths, with the holder of each dataset, are described in the <a href=\"/openapi.en.json\"><code>openapi.en.json</code></a> document (OpenAPI 3.1), which can be imported into any compatible tool. Below is the same description in browsable form.",
+    rif_nota: "Testing calls with «Try it out» shows what the data looks like, it is not a way to download it: lists in the response are limited to 1000 items and the heaviest files (full street numbers, census sections, cadastre, full municipality profile) cannot be tested from the page. For the full data use calls from code or from the command line, as in the examples above.",
+    swagger: "Interactive REST API reference",
+    mcp1: "The <a href=\"https://modelcontextprotocol.io\" target=\"_blank\" rel=\"noopener\">Model Context Protocol<span class=\"sr-only\"> (opens in a new tab)</span></a> server lets an AI assistant (Claude, ChatGPT and other compatible ones) query the data with questions in natural language.",
+    mcp_ind: "Address: <code>https://cruscotto-italia-mcp.agid.workers.dev/mcp</code>",
+    mcp_prot: "Protocol: MCP, revision 2025-11-25, HTTP transport",
+    mcp_ro: "All tools are read-only and require no authentication.",
+    mcp_tools: "Available tools",
+    th_tool: "Tool", th_uso: "What it does",
+    t1: "Finds the ISTAT code from the name of the municipality",
+    t2: "Summary indicators of the municipality (about 55)",
+    t3: "Full municipality profile, all sections",
+    t4: "Geocoded street numbers",
+    t5: "Searches and rankings on census sections",
+    t6a: "<code>search</code> and <code>fetch</code>",
+    t6: "Search and read in the standard connector format",
+    t7: "Server version and data freshness for each source",
+    mcp_ver: "Checking the version in production",
+    mcp_ver1: "<a href=\"https://cruscotto-italia-mcp.agid.workers.dev/health\"><code>/health</code></a> returns the version and the <code>build</code>: the identifier of the server code, equal to that of the <code>worker/</code> folder in the <a href=\"https://github.com/AgID/cruscotto-italia\">public repository</a> (<code>git rev-parse &lt;commit&gt;:worker</code>). This way anyone can check that the server in production runs the published code.",
+    str1: "They are not services in their own right, but ready-made tools that use the two services above.",
+    str_skill: "<strong>Skill for AI assistants</strong>: documents the MCP tools, the schema of the data sections and the recommended usage patterns.",
+    str_cli: "<strong>CLI skill</strong>: a dependency-free Python 3 script that reads the REST API directly and filters the data before loading it. It can be used with an AI assistant or on its own, in a terminal.",
+    str2: "The current versions to download and the step-by-step guides to connect Claude and ChatGPT are on the <a href=\"/about.html#accesso-mcp\">About page, Access section</a> (in Italian).",
+    str3: "Anyone who wants all the data of a single municipality at once can download the ZIP archive from the municipality page: it contains the JSON files, the field legend and the attributions.",
+    c_lic: "<strong>Licence</strong>: data are released under the <a href=\"https://creativecommons.org/licenses/by/4.0/\" target=\"_blank\" rel=\"noopener\">CC BY 4.0<span class=\"sr-only\"> (opens in a new tab)</span></a> licence. Credit the holder of the source data, stated for each path in the OpenAPI reference, and Cruscotto Italia (AgID).",
+    c_acc: "<strong>Access</strong>: open, free, with no registration and no keys.",
+    c_tit: "<strong>Data ownership</strong>: Cruscotto Italia recombines data already published by the holding administrations and does not replace them. For official use, the holder's publication is authoritative.",
+    lim: "Usage limits",
+    lim1: "To keep the service available to everyone, the following limits apply automatically per IP address.",
+    th_ris: "Resource", th_lim: "Limit",
+    l1a: "MCP endpoint <code>/mcp</code>", l1: "60 requests per minute",
+    l2a: "Per-municipality files <code>/data/&lt;source&gt;/&lt;istat&gt;.json</code>", l2: "2 requests per second, bursts up to 80",
+    l3a: "Aggregated and <code>_full</code> archives", l3: "10 requests per second, bursts up to 60",
+    l4a: "Simultaneous connections on <code>/data/</code>",
+    l5a: "Availability checks", l5: "use <code>/health</code>: repeated checks on the data tools are not allowed",
+    l6a: "Automatic block", l6: "more than 3,000 requests in 10 minutes: 24 hours",
+    l7a: "Repeated blocks", l7: "the duration doubles at each repeat, up to 4 weeks",
+    bp: "Good practices",
+    bp1: "Declare a recognisable <em>User-Agent</em>, with the project name and a contact: a client that identifies itself is not mistaken for anomalous traffic.",
+    bp2: "For availability checks use <code>/health</code>, not the data tools: it is the endpoint meant for that and does not consume the MCP limit.",
+    bp3: "To download many municipalities use the REST API, not repeated MCP calls: it is faster for the downloader and lighter for the service. Conditional requests (<code>If-None-Match</code>, <code>If-Modified-Since</code>) avoid downloading unchanged files again.",
+    bp4: "Responses state in <code>Cache-Control</code> how long they can be reused.",
+    bp5: "When a limit is exceeded the response is <code>429</code>: wait and retry with increasing intervals, do not insist.",
+    bp6: "For uses that need volumes above these limits, or in case of doubt, write to <a href=\"mailto:dati@agid.gov.it\">dati@agid.gov.it</a>: the limits protect the service, they are not a barrier to reuse.",
+    cont1: "To report issues with the service or the data: <a href=\"mailto:dati@agid.gov.it\">dati@agid.gov.it</a>. The code is public on <a href=\"https://github.com/AgID/cruscotto-italia\">GitHub</a>, where issues can be opened.",
+    f_colophon: "<strong>Cruscotto Italia</strong><br>An initiative based on the public data of the National Catalogue <a href=\"https://www.dati.gov.it\" target=\"_blank\" rel=\"noopener\">dati.gov.it<span class=\"sr-only\"> (opens in a new tab)</span></a>.",
+    f_prog: "Project", f_about: "About", f_acc: "Accessibility statement",
+    f_datigov: "dati.gov.it<span class=\"sr-only\"> (opens in a new tab)</span>",
+    f_swagger: "Interactive reference: Swagger UI 5.34.0 (Apache-2.0)",
+    f_lic: "Content <a href=\"https://creativecommons.org/licenses/by/4.0/\" target=\"_blank\" rel=\"noopener\">CC-BY 4.0<span class=\"sr-only\"> (opens in a new tab)</span></a> · Code AGPL-3.0 · 2026 AgID"
+  };
+  // Testi generati dallo script (etichette aggiunte a Swagger, nota di anteprima, titolo)
+  var T = {
+    it: { title: "API e accesso ai dati · Cruscotto Italia", spec: "/openapi.json",
+          istat: "Codice ISTAT del comune", obbl: " (obbligatorio)", mostra: "Mostra", nascondi: "Nascondi",
+          gruppo: " le operazioni del gruppo ", risposte: "Risposte", curl: "Comando curl", url: "Indirizzo della richiesta",
+          corpo: "Corpo della risposta", esempio: "Esempio di risposta",
+          nota: function(n, max, url){ return "Anteprima della pagina API: " + n + " elenchi limitati a " + max + " elementi. Per il file completo: curl -O " + url; } },
+    en: { title: "API and data access · Cruscotto Italia", spec: "/openapi.en.json",
+          istat: "ISTAT code of the municipality", obbl: " (required)", mostra: "Show", nascondi: "Hide",
+          gruppo: " the operations of the group ", risposte: "Responses", curl: "curl command", url: "Request URL",
+          corpo: "Response body", esempio: "Example response",
+          nota: function(n, max, url){ return "API page preview: " + n + " lists limited to " + max + " items. For the full file: curl -O " + url; } }
+  };
+  // Testi fissi di Swagger UI 5.34 tradotti in italiano (in inglese restano gli originali)
+  var SW_IT = {
+    "Try it out": "Prova", "Cancel": "Annulla", "Execute": "Esegui", "Clear": "Pulisci",
+    "Parameters": "Parametri", "No parameters": "Nessun parametro", "Responses": "Risposte",
+    "Code": "Codice", "Description": "Descrizione", "Links": "Collegamenti", "No links": "Nessun collegamento",
+    "Name": "Nome", "Type": "Tipo", "Details": "Dettagli", "Curl": "Comando curl", "Request URL": "URL della richiesta",
+    "Server response": "Risposta del server", "Response body": "Corpo della risposta", "Response headers": "Intestazioni della risposta",
+    "Headers:": "Intestazioni:", "Media type": "Tipo di contenuto", "Example Value": "Esempio", "Schema": "Schema",
+    "Download": "Scarica", "Expand all": "Espandi tutto", "Collapse all": "Comprimi tutto",
+    "Additional properties": "Proprietà aggiuntive", "allowed": "consentite",
+    "Controls": "Imposta l'intestazione", "header.": "della richiesta.", "path": "percorso",
+    "Loading...": "Caricamento...", "Please correct the following validation errors and try again.": "Correggi questi errori e riprova.",
+    "Required field is not provided": "Campo obbligatorio non compilato",
+    "Collapse operation": "Comprimi l'operazione", "Expand operation": "Espandi l'operazione",
+    "Copy cURL command to clipboard": "Copia il comando cURL", "Copy code to clipboard": "Copia il codice",
+    "Copy path to clipboard": "Copia il percorso", "Copy to clipboard": "Copia", "Media Type": "Tipo di contenuto"
+  };
+  var RE_OBBL = /^For '(.+)': Required field is not provided\.$/;
+
+  var LANG = (new URLSearchParams(location.search).get("lang") === "en") ? "en" : "it";
+  var ui = null;
+
+  function applyI18n(){
+    document.querySelectorAll("[data-i18n]").forEach(function(el){
+      if (el._i18nOrig == null) el._i18nOrig = el.innerHTML;
+      var k = el.getAttribute("data-i18n");
+      el.innerHTML = (LANG === "en" && UI_I18N_EN[k] != null) ? UI_I18N_EN[k] : el._i18nOrig;
+    });
+    document.querySelectorAll("[data-i18n-attr]").forEach(function(el){
+      if (!el._i18nAttr) el._i18nAttr = {};
+      el.getAttribute("data-i18n-attr").split(";").forEach(function(pair){
+        var pz = pair.split(":"), attr = pz[0], k = pz[1];
+        if (el._i18nAttr[attr] == null) el._i18nAttr[attr] = el.getAttribute(attr) || "";
+        el.setAttribute(attr, (LANG === "en" && UI_I18N_EN[k] != null) ? UI_I18N_EN[k] : el._i18nAttr[attr]);
+      });
+    });
+  }
+
+  function setLang(l){
+    LANG = (l === "en") ? "en" : "it";
+    document.getElementById("lang-it").setAttribute("aria-pressed", String(LANG === "it"));
+    document.getElementById("lang-en").setAttribute("aria-pressed", String(LANG === "en"));
+    document.documentElement.setAttribute("lang", LANG);
+    document.title = T[LANG].title;
+    applyI18n();
+    try {
+      var u = new URL(location.href);
+      if (LANG === "en") u.searchParams.set("lang", "en"); else u.searchParams.delete("lang");
+      history.replaceState(null, "", u.pathname + u.search + u.hash);
+    } catch (e) {}
+    if (ui) { ui.specActions.updateUrl(T[LANG].spec); ui.specActions.download(T[LANG].spec); }
+  }
+
+  if (typeof SwaggerUIBundle !== "function") { setLang(LANG); return; }
   var MAX = 1000;
 
   // Niente "Try it out" per le operazioni marcate x-anteprima: false
@@ -353,8 +510,7 @@ print(dati["comune"], dati["popolazione_totale"])</code></pre>
       if (!res || typeof res.text !== "string" || res.text.charAt(0) !== "{" && res.text.charAt(0) !== "[") return res;
       var st = { n: 0 }, t = tronca(JSON.parse(res.text), st);
       if (!st.n) return res;
-      var nota = "Anteprima della pagina API: " + st.n + " elenchi limitati a " + MAX +
-        " elementi. Per il file completo: curl -O " + res.url;
+      var nota = T[LANG].nota(st.n, MAX, res.url);
       // Le chiavi numeriche (codici ISTAT) precedono sempre le altre negli
       // oggetti JS: in quel caso la nota va in un involucro, o finirebbe in fondo.
       var numeriche = !Array.isArray(t) && Object.keys(t).some(function(k){ return /^[0-9]+$/.test(k); });
@@ -375,16 +531,31 @@ print(dati["comune"], dati["popolazione_totale"])</code></pre>
     }}};
   }
 
-  // Accessibilità dopo ogni render: etichette e stato degli input, errori
-  // come alert, regione scorrevole delle risposte, lingua delle stringhe fisse.
-  var EN = /^(Try it out|Cancel|Execute|Clear|Parameters|No parameters|Responses|Code|Description|Links|No links|Name|Type|Curl|Request URL|Server response|Response body|Response headers|Details|Download|Example Value|Schema|Media type|Controls Accept header\.|Headers:|Loading\.\.\.)$/;
+  // Testi fissi di Swagger in italiano (solo in modalita IT): testo e title.
+  var ESCLUSI = ".markdown, .renderedMarkdown, pre, .opblock-summary-path, .opblock-summary-description, .opblock-tag, .highlight-code, .model, .prop-type";
+  function traduciSwagger(radice){
+    var w = document.createTreeWalker(radice, NodeFilter.SHOW_TEXT), n, t, m;
+    while ((n = w.nextNode())) {
+      t = n.nodeValue.trim(); if (!t) continue;
+      if (n.parentElement.closest(ESCLUSI) && !n.parentElement.closest(".opblock-tag button")) continue;
+      if (SW_IT[t] != null) n.nodeValue = n.nodeValue.replace(t, SW_IT[t]);
+      else if ((m = RE_OBBL.exec(t))) n.nodeValue = "Per '" + m[1] + "': campo obbligatorio non compilato.";
+    }
+    radice.querySelectorAll("[title], [aria-label]").forEach(function(e){
+      ["title", "aria-label"].forEach(function(a){ var v = e.getAttribute(a); if (v != null && SW_IT[v] != null) e.setAttribute(a, SW_IT[v]); });
+    });
+  }
+
+  // Accessibilita dopo ogni render: etichette e stato degli input, errori
+  // come alert, regioni nominate, nomi dei pulsanti dei gruppi.
   function sistema(radice){
+    var L = T[LANG];
     radice.querySelectorAll(".parameters tr[data-param-name]").forEach(function(tr){
       var inp = tr.querySelector("input, select, textarea"); if (!inp) return;
       var nome = tr.getAttribute("data-param-name") || "parametro";
       var obbl = !!tr.querySelector(".parameter__name.required");
       var desc = tr.querySelector(".parameter__description .markdown p, .parameter__description p");
-      var et = (nome === "istat" ? "Codice ISTAT del comune" : nome) + (obbl ? " (obbligatorio)" : "");
+      var et = (nome === "istat" ? L.istat : nome) + (obbl ? L.obbl : "");
       if (inp.getAttribute("aria-label") !== et) inp.setAttribute("aria-label", et);
       if (obbl) inp.setAttribute("aria-required", "true");
       inp.setAttribute("aria-invalid", inp.classList.contains("invalid") ? "true" : "false");
@@ -392,25 +563,24 @@ print(dati["comune"], dati["popolazione_totale"])</code></pre>
     });
     radice.querySelectorAll(".validation-errors").forEach(function(e){ if (e.getAttribute("role") !== "alert") e.setAttribute("role", "alert"); });
     radice.querySelectorAll(".responses-inner").forEach(function(e){
-      if (e.getAttribute("role") !== "region") { e.setAttribute("role", "region"); e.setAttribute("aria-label", "Risposte"); e.setAttribute("tabindex", "0"); }
+      e.setAttribute("role", "region"); e.setAttribute("tabindex", "0");
+      if (e.getAttribute("aria-label") !== L.risposte) e.setAttribute("aria-label", L.risposte);
     });
-    // 4.1.2 / 2.4.6 – pulsanti dei gruppi: nome distinto e in italiano
+    // 4.1.2 / 2.4.6 – pulsanti dei gruppi: nome distinto, nella lingua della pagina
     radice.querySelectorAll("h3.opblock-tag button.expand-operation").forEach(function(btn){
       var gruppo = btn.closest("h3").getAttribute("data-tag") || "";
       var aperto = btn.getAttribute("aria-expanded") === "true";
-      var et = (aperto ? "Nascondi" : "Mostra") + " le operazioni del gruppo " + gruppo;
+      var et = (aperto ? L.nascondi : L.mostra) + L.gruppo + gruppo;
       if (btn.getAttribute("aria-label") !== et) btn.setAttribute("aria-label", et);
     });
     // 2.1.1 – blocchi di codice scorrevoli raggiungibili da tastiera, con un nome
     radice.querySelectorAll(".highlight-code > pre, pre.microlight, .curl-command pre, .request-url pre").forEach(function(e){
-      if (e.getAttribute("tabindex") === "0") return;
-      var nome = e.closest(".curl-command") ? "Comando curl" : e.closest(".request-url") ? "Indirizzo della richiesta"
-        : e.closest(".live-responses-table") ? "Corpo della risposta" : "Esempio di risposta";
-      e.setAttribute("tabindex", "0"); e.setAttribute("role", "region"); e.setAttribute("aria-label", nome);
+      var nome = e.closest(".curl-command") ? L.curl : e.closest(".request-url") ? L.url
+        : e.closest(".live-responses-table") ? L.corpo : L.esempio;
+      e.setAttribute("tabindex", "0"); e.setAttribute("role", "region");
+      if (e.getAttribute("aria-label") !== nome) e.setAttribute("aria-label", nome);
     });
-    radice.querySelectorAll("button, h4, h5, th, td, span, small, div.tab-header, li.tabitem button, label").forEach(function(e){
-      if (e.children.length === 0 && !e.hasAttribute("lang") && EN.test(e.textContent.trim())) e.setAttribute("lang", "en");
-    });
+    if (LANG === "it") traduciSwagger(radice);
   }
   var radice = document.getElementById("swagger");
   if (radice && "MutationObserver" in window) {
@@ -418,11 +588,15 @@ print(dati["comune"], dati["popolazione_totale"])</code></pre>
     new MutationObserver(function(){
       if (inCorso) return; inCorso = true;
       requestAnimationFrame(function(){ sistema(radice); inCorso = false; });
-    }).observe(radice, { childList: true, subtree: true, attributes: true, attributeFilter: ["class", "aria-expanded"] });
+    }).observe(radice, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ["class", "aria-expanded", "title", "aria-label"] });
   }
 
-  SwaggerUIBundle({
-    url: "/openapi.json",
+  document.getElementById("lang-it").addEventListener("click", function(){ setLang("it"); });
+  document.getElementById("lang-en").addEventListener("click", function(){ setLang("en"); });
+  setLang(LANG);
+
+  ui = SwaggerUIBundle({
+    url: T[LANG].spec,
     dom_id: "#swagger",
     presets: [SwaggerUIBundle.presets.apis],
     plugins: [AnteprimaPlugin, LayoutPlugin],
