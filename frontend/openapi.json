@@ -1,0 +1,1880 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Cruscotto Italia - API dati comunali",
+    "version": "1.0.0",
+    "summary": "Dati aperti dei comuni italiani, un file JSON o GeoJSON per fonte e per comune.",
+    "description": "API REST di sola lettura di Cruscotto Italia (AgID). Ogni risorsa è un file statico per comune, identificato dal codice ISTAT a 6 cifre.\n\n**Accesso**: solo GET, nessuna registrazione né chiave, CORS aperto (Access-Control-Allow-Origin: *).\n\n**Codici ISTAT**: si usa il codice del comune vigente (elenco in /istat-coords.json). I codici precedenti di comuni ricodificati vengono serviti automaticamente (tabella in /lookup/variazioni_istat.json).\n\n**Aggiornamento**: ogni fonte ha il proprio calendario; la data del dato è nei campi di metadato del file (`_anno_riferimento`, `_data_period` ecc.), la data del file nell'header Last-Modified. Sono supportate le richieste condizionali (ETag, 304).\n\n**Limiti d'uso** (per indirizzo IP): file per comune 2 richieste al secondo con picchi fino a 80; archivi aggregati e `_full` 10 richieste al secondo con picchi fino a 60; 8 connessioni simultanee su /data/. Oltre 3.000 richieste in 10 minuti il blocco automatico dura 24 ore e raddoppia a ogni recidiva, fino a 4 settimane. Superato un limite la risposta è 429: attendere e riprovare con intervalli crescenti. Dettagli e buone pratiche: https://cruscotto-italia.dati.gov.it/api.html#limiti\n\n**Prova dalla pagina API**: serve a vedere com'è fatto il dato. Gli elenchi della risposta mostrata sono limitati a 1000 elementi e i file più pesanti non si provano dalla pagina: per i dati completi usare chiamate da programma o da riga di comando.\n\n**Licenza**: CC BY 4.0, con attribuzione al titolare del dato indicato in ogni percorso.",
+    "termsOfService": "https://cruscotto-italia.dati.gov.it/api.html#condizioni",
+    "contact": {
+      "name": "Agenzia per l'Italia Digitale - Cruscotto Italia",
+      "url": "https://cruscotto-italia.dati.gov.it/api.html",
+      "email": "dati@agid.gov.it"
+    },
+    "license": {
+      "name": "CC BY 4.0",
+      "identifier": "CC-BY-4.0"
+    }
+  },
+  "externalDocs": {
+    "description": "Fonti e metodologia",
+    "url": "https://cruscotto-italia.dati.gov.it/about.html#fonti"
+  },
+  "servers": [
+    {
+      "url": "https://cruscotto-italia.dati.gov.it/data"
+    }
+  ],
+  "security": [
+    {}
+  ],
+  "tags": [
+    {
+      "name": "Servizio",
+      "description": "File di scoperta e di servizio"
+    },
+    {
+      "name": "Agenzia delle Entrate",
+      "description": "Dati di cui è titolare: Agenzia delle Entrate."
+    },
+    {
+      "name": "Agenzia per l'Italia Digitale",
+      "description": "Dati di cui è titolare: Agenzia per l'Italia Digitale."
+    },
+    {
+      "name": "Automobile Club d'Italia",
+      "description": "Dati di cui è titolare: Automobile Club d'Italia."
+    },
+    {
+      "name": "Autorita' per le Garanzie nelle Comunicazioni - AGCOM",
+      "description": "Dati di cui è titolare: Autorita' per le Garanzie nelle Comunicazioni - AGCOM."
+    },
+    {
+      "name": "Consiglio Nazionale delle Ricerche - CNR",
+      "description": "Dati di cui è titolare: Consiglio Nazionale delle Ricerche - CNR."
+    },
+    {
+      "name": "Gestore dei Mercati Energetici SpA",
+      "description": "Dati di cui è titolare: Gestore dei Mercati Energetici SpA."
+    },
+    {
+      "name": "Istituto Nazionale di Statistica - ISTAT",
+      "description": "Dati di cui è titolare: Istituto Nazionale di Statistica - ISTAT."
+    },
+    {
+      "name": "Istituto Superiore per la Protezione e la Ricerca Ambientale",
+      "description": "Dati di cui è titolare: Istituto Superiore per la Protezione e la Ricerca Ambientale."
+    },
+    {
+      "name": "MIMIT - Ministero delle Imprese e del Made in Italy",
+      "description": "Dati di cui è titolare: MIMIT - Ministero delle Imprese e del Made in Italy."
+    },
+    {
+      "name": "Ministero del Lavoro e delle Politiche Sociali",
+      "description": "Dati di cui è titolare: Ministero del Lavoro e delle Politiche Sociali."
+    },
+    {
+      "name": "Ministero dell'Economia e delle Finanze",
+      "description": "Dati di cui è titolare: Ministero dell'Economia e delle Finanze."
+    },
+    {
+      "name": "Ministero dell'istruzione e del merito",
+      "description": "Dati di cui è titolare: Ministero dell'istruzione e del merito."
+    },
+    {
+      "name": "Ministero della Cultura",
+      "description": "Dati di cui è titolare: Ministero della Cultura."
+    },
+    {
+      "name": "Ministero della Salute",
+      "description": "Dati di cui è titolare: Ministero della Salute."
+    },
+    {
+      "name": "Presidenza del Consiglio dei Ministri",
+      "description": "Dati di cui è titolare: Presidenza del Consiglio dei Ministri."
+    }
+  ],
+  "paths": {
+    "/istat-coords.json": {
+      "get": {
+        "operationId": "get_istat-coords",
+        "summary": "Elenco dei comuni vigenti con coordinate",
+        "description": "Oggetto con chiave il codice ISTAT del comune vigente e valore [lat, lon]. Serve a enumerare i codici validi per tutti gli altri percorsi.",
+        "tags": [
+          "Servizio"
+        ],
+        "responses": {
+          "200": {
+            "description": "Dati del comune.",
+            "headers": {
+              "Last-Modified": {
+                "$ref": "#/components/headers/LastModified"
+              },
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "Access-Control-Allow-Origin": {
+                "$ref": "#/components/headers/CORS"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Shard"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Non modificato (richiesta condizionale con If-None-Match o If-Modified-Since)."
+          },
+          "404": {
+            "$ref": "#/components/responses/NonTrovato"
+          },
+          "429": {
+            "$ref": "#/components/responses/TroppeRichieste"
+          }
+        }
+      }
+    },
+    "/lookup/variazioni_istat.json": {
+      "get": {
+        "operationId": "get_lookup_variazioni_istat",
+        "summary": "Variazioni dei codici ISTAT",
+        "description": "Tabella delle ricodifiche, fusioni e incorporazioni dei comuni (codice precedente -> codice vigente, tipo, decorrenza). Spiega l'inoltro automatico dei codici precedenti.",
+        "tags": [
+          "Servizio"
+        ],
+        "responses": {
+          "200": {
+            "description": "Dati del comune.",
+            "headers": {
+              "Last-Modified": {
+                "$ref": "#/components/headers/LastModified"
+              },
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "Access-Control-Allow-Origin": {
+                "$ref": "#/components/headers/CORS"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Shard"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Non modificato (richiesta condizionale con If-None-Match o If-Modified-Since)."
+          },
+          "404": {
+            "$ref": "#/components/responses/NonTrovato"
+          },
+          "429": {
+            "$ref": "#/components/responses/TroppeRichieste"
+          }
+        }
+      }
+    },
+    "/manifest.json": {
+      "get": {
+        "operationId": "get_manifest",
+        "summary": "Manifest ETL",
+        "description": "Stato delle fonti: versione ETL e data di generazione per fonte. File pesante (circa 10 MB): da scaricare raramente.\n\n**Prova non disponibile in questa pagina**: per i comuni più grandi il file arriva a decine di MB. Va scaricato da programma o da riga di comando, ad esempio:\n\n`curl -O https://cruscotto-italia.dati.gov.it/data/manifest.json`",
+        "tags": [
+          "Servizio"
+        ],
+        "responses": {
+          "200": {
+            "description": "Dati del comune.",
+            "headers": {
+              "Last-Modified": {
+                "$ref": "#/components/headers/LastModified"
+              },
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "Access-Control-Allow-Origin": {
+                "$ref": "#/components/headers/CORS"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Shard"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Non modificato (richiesta condizionale con If-None-Match o If-Modified-Since)."
+          },
+          "404": {
+            "$ref": "#/components/responses/NonTrovato"
+          },
+          "429": {
+            "$ref": "#/components/responses/TroppeRichieste"
+          }
+        },
+        "x-anteprima": false
+      }
+    },
+    "/carburanti/_nazionale.json": {
+      "get": {
+        "operationId": "get_carburanti__nazionale",
+        "summary": "Prezzi medi nazionali dei carburanti",
+        "description": "Riferimento nazionale usato per il confronto con i prezzi del comune. Titolare: MIMIT.",
+        "tags": [
+          "Servizio"
+        ],
+        "responses": {
+          "200": {
+            "description": "Dati del comune.",
+            "headers": {
+              "Last-Modified": {
+                "$ref": "#/components/headers/LastModified"
+              },
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "Access-Control-Allow-Origin": {
+                "$ref": "#/components/headers/CORS"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Shard"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Non modificato (richiesta condizionale con If-None-Match o If-Modified-Since)."
+          },
+          "404": {
+            "$ref": "#/components/responses/NonTrovato"
+          },
+          "429": {
+            "$ref": "#/components/responses/TroppeRichieste"
+          }
+        }
+      }
+    },
+    "/dashboard/{istat}.json": {
+      "get": {
+        "operationId": "get_dashboard",
+        "summary": "Scheda completa del comune",
+        "description": "Scheda unificata con tutte le sezioni dati del comune, inclusi i KPI dei Contratti pubblici ANAC. Titolare: AgID (aggregazione multi-fonte).\n\nTitolare del dato di origine: Agenzia per l'Italia Digitale.\n\n**Prova non disponibile in questa pagina**: per i comuni più grandi il file arriva a decine di MB. Va scaricato da programma o da riga di comando, ad esempio:\n\n`curl -O https://cruscotto-italia.dati.gov.it/data/dashboard/075035.json`",
+        "tags": [
+          "Agenzia per l'Italia Digitale"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/istat"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dati del comune.",
+            "headers": {
+              "Last-Modified": {
+                "$ref": "#/components/headers/LastModified"
+              },
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "Access-Control-Allow-Origin": {
+                "$ref": "#/components/headers/CORS"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Shard"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Non modificato (richiesta condizionale con If-None-Match o If-Modified-Since)."
+          },
+          "404": {
+            "$ref": "#/components/responses/NonTrovato"
+          },
+          "429": {
+            "$ref": "#/components/responses/TroppeRichieste"
+          }
+        },
+        "x-anteprima": false
+      }
+    },
+    "/demografia/{istat}.json": {
+      "get": {
+        "operationId": "get_demografia",
+        "summary": "Popolazione residente e dinamica demografica",
+        "description": "Popolazione residente per eta e sesso al 1 gennaio (POSAS), con la serie storica delle ultime cinque annate, e dinamica demografica annuale dal bilancio demografico mensile (fonte anagrafica ANPR): nati, morti, saldo naturale e saldi migratori. Titolare: ISTAT.\n\nTitolare del dato di origine: Istituto Nazionale di Statistica - ISTAT.",
+        "tags": [
+          "Istituto Nazionale di Statistica - ISTAT"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/istat"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dati del comune.",
+            "headers": {
+              "Last-Modified": {
+                "$ref": "#/components/headers/LastModified"
+              },
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "Access-Control-Allow-Origin": {
+                "$ref": "#/components/headers/CORS"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Shard"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Non modificato (richiesta condizionale con If-None-Match o If-Modified-Since)."
+          },
+          "404": {
+            "$ref": "#/components/responses/NonTrovato"
+          },
+          "429": {
+            "$ref": "#/components/responses/TroppeRichieste"
+          }
+        }
+      }
+    },
+    "/censimento/{istat}.json": {
+      "get": {
+        "operationId": "get_censimento",
+        "summary": "Censimento permanente - profilo",
+        "description": "Indicatori del Censimento permanente della popolazione. Titolare: ISTAT.\n\nTitolare del dato di origine: Istituto Nazionale di Statistica - ISTAT.",
+        "tags": [
+          "Istituto Nazionale di Statistica - ISTAT"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/istat"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dati del comune.",
+            "headers": {
+              "Last-Modified": {
+                "$ref": "#/components/headers/LastModified"
+              },
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "Access-Control-Allow-Origin": {
+                "$ref": "#/components/headers/CORS"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Shard"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Non modificato (richiesta condizionale con If-None-Match o If-Modified-Since)."
+          },
+          "404": {
+            "$ref": "#/components/responses/NonTrovato"
+          },
+          "429": {
+            "$ref": "#/components/responses/TroppeRichieste"
+          }
+        }
+      }
+    },
+    "/profilo/{istat}.json": {
+      "get": {
+        "operationId": "get_profilo",
+        "summary": "Profilo statistico del comune",
+        "description": "Profilo sintetico del comune. Titolare: ISTAT.\n\nTitolare del dato di origine: Istituto Nazionale di Statistica - ISTAT.",
+        "tags": [
+          "Istituto Nazionale di Statistica - ISTAT"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/istat"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dati del comune.",
+            "headers": {
+              "Last-Modified": {
+                "$ref": "#/components/headers/LastModified"
+              },
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "Access-Control-Allow-Origin": {
+                "$ref": "#/components/headers/CORS"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Shard"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Non modificato (richiesta condizionale con If-None-Match o If-Modified-Since)."
+          },
+          "404": {
+            "$ref": "#/components/responses/NonTrovato"
+          },
+          "429": {
+            "$ref": "#/components/responses/TroppeRichieste"
+          }
+        }
+      }
+    },
+    "/pendolarismo/{istat}.json": {
+      "get": {
+        "operationId": "get_pendolarismo",
+        "summary": "Pendolarismo 2021",
+        "description": "Matrici di pendolarismo del Censimento 2021. Titolare: ISTAT.\n\nTitolare del dato di origine: Istituto Nazionale di Statistica - ISTAT.",
+        "tags": [
+          "Istituto Nazionale di Statistica - ISTAT"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/istat"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dati del comune.",
+            "headers": {
+              "Last-Modified": {
+                "$ref": "#/components/headers/LastModified"
+              },
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "Access-Control-Allow-Origin": {
+                "$ref": "#/components/headers/CORS"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Shard"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Non modificato (richiesta condizionale con If-None-Match o If-Modified-Since)."
+          },
+          "404": {
+            "$ref": "#/components/responses/NonTrovato"
+          },
+          "429": {
+            "$ref": "#/components/responses/TroppeRichieste"
+          }
+        }
+      }
+    },
+    "/asia/{istat}.json": {
+      "get": {
+        "operationId": "get_asia",
+        "summary": "Imprese e addetti (ASIA)",
+        "description": "Registro statistico imprese attive ASIA. Titolare: ISTAT.\n\nTitolare del dato di origine: Istituto Nazionale di Statistica - ISTAT.",
+        "tags": [
+          "Istituto Nazionale di Statistica - ISTAT"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/istat"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dati del comune.",
+            "headers": {
+              "Last-Modified": {
+                "$ref": "#/components/headers/LastModified"
+              },
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "Access-Control-Allow-Origin": {
+                "$ref": "#/components/headers/CORS"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Shard"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Non modificato (richiesta condizionale con If-None-Match o If-Modified-Since)."
+          },
+          "404": {
+            "$ref": "#/components/responses/NonTrovato"
+          },
+          "429": {
+            "$ref": "#/components/responses/TroppeRichieste"
+          }
+        }
+      }
+    },
+    "/territorio/{istat}.json": {
+      "get": {
+        "operationId": "get_territorio",
+        "summary": "Territorio e uso del suolo",
+        "description": "Dati territoriali e ambientali, incluse classificazione sismica DPC, rischio idrogeologico, consumo di suolo e rifiuti ISPRA. Titolare: ISTAT/ISPRA/DPC.\n\nTitolare del dato di origine: Istituto Nazionale di Statistica - ISTAT.",
+        "tags": [
+          "Istituto Nazionale di Statistica - ISTAT"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/istat"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dati del comune.",
+            "headers": {
+              "Last-Modified": {
+                "$ref": "#/components/headers/LastModified"
+              },
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "Access-Control-Allow-Origin": {
+                "$ref": "#/components/headers/CORS"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Shard"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Non modificato (richiesta condizionale con If-None-Match o If-Modified-Since)."
+          },
+          "404": {
+            "$ref": "#/components/responses/NonTrovato"
+          },
+          "429": {
+            "$ref": "#/components/responses/TroppeRichieste"
+          }
+        }
+      }
+    },
+    "/turismo/{istat}.json": {
+      "get": {
+        "operationId": "get_turismo",
+        "summary": "Capacita ricettiva turistica",
+        "description": "Esercizi ricettivi e posti letto. Titolare: ISTAT.\n\nTitolare del dato di origine: Istituto Nazionale di Statistica - ISTAT.",
+        "tags": [
+          "Istituto Nazionale di Statistica - ISTAT"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/istat"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dati del comune.",
+            "headers": {
+              "Last-Modified": {
+                "$ref": "#/components/headers/LastModified"
+              },
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "Access-Control-Allow-Origin": {
+                "$ref": "#/components/headers/CORS"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Shard"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Non modificato (richiesta condizionale con If-None-Match o If-Modified-Since)."
+          },
+          "404": {
+            "$ref": "#/components/responses/NonTrovato"
+          },
+          "429": {
+            "$ref": "#/components/responses/TroppeRichieste"
+          }
+        }
+      }
+    },
+    "/veicoli/{istat}.json": {
+      "get": {
+        "operationId": "get_veicoli",
+        "summary": "Parco veicoli",
+        "description": "Parco veicolare per tipologia e classe ambientale. Titolare: ACI/ISTAT.\n\nTitolare del dato di origine: Automobile Club d'Italia.",
+        "tags": [
+          "Automobile Club d'Italia"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/istat"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dati del comune.",
+            "headers": {
+              "Last-Modified": {
+                "$ref": "#/components/headers/LastModified"
+              },
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "Access-Control-Allow-Origin": {
+                "$ref": "#/components/headers/CORS"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Shard"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Non modificato (richiesta condizionale con If-None-Match o If-Modified-Since)."
+          },
+          "404": {
+            "$ref": "#/components/responses/NonTrovato"
+          },
+          "429": {
+            "$ref": "#/components/responses/TroppeRichieste"
+          }
+        }
+      }
+    },
+    "/redditi/{istat}.json": {
+      "get": {
+        "operationId": "get_redditi",
+        "summary": "Redditi IRPEF",
+        "description": "Distribuzione redditi dichiarati. Titolare: MEF Dipartimento Finanze.\n\nTitolare del dato di origine: Ministero dell'Economia e delle Finanze.",
+        "tags": [
+          "Ministero dell'Economia e delle Finanze"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/istat"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dati del comune.",
+            "headers": {
+              "Last-Modified": {
+                "$ref": "#/components/headers/LastModified"
+              },
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "Access-Control-Allow-Origin": {
+                "$ref": "#/components/headers/CORS"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Shard"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Non modificato (richiesta condizionale con If-None-Match o If-Modified-Since)."
+          },
+          "404": {
+            "$ref": "#/components/responses/NonTrovato"
+          },
+          "429": {
+            "$ref": "#/components/responses/TroppeRichieste"
+          }
+        }
+      }
+    },
+    "/immobili_pa/{istat}.json": {
+      "get": {
+        "operationId": "get_immobili_pa",
+        "summary": "Patrimonio immobiliare PA",
+        "description": "Censimento beni immobili pubblici. Titolare: MEF Dipartimento Economia.\n\nTitolare del dato di origine: Ministero dell'Economia e delle Finanze.",
+        "tags": [
+          "Ministero dell'Economia e delle Finanze"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/istat"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dati del comune.",
+            "headers": {
+              "Last-Modified": {
+                "$ref": "#/components/headers/LastModified"
+              },
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "Access-Control-Allow-Origin": {
+                "$ref": "#/components/headers/CORS"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Shard"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Non modificato (richiesta condizionale con If-None-Match o If-Modified-Since)."
+          },
+          "404": {
+            "$ref": "#/components/responses/NonTrovato"
+          },
+          "429": {
+            "$ref": "#/components/responses/TroppeRichieste"
+          }
+        }
+      }
+    },
+    "/siope/{istat}.json": {
+      "get": {
+        "operationId": "get_siope",
+        "summary": "Cassa SIOPE: pagamenti e incassi",
+        "description": "Movimenti di cassa del comune per codice gestionale SIOPE (D.M. 9/6/2016): pagamenti, incassi e saldo di cassa, serie mensile. Sono movimenti di cassa e non di competenza. Fonte: banca dati SIOPE (siope.it), gestita da Banca d'Italia. Titolare: MEF - Ragioneria Generale dello Stato.\n\nTitolare del dato di origine: Ministero dell'Economia e delle Finanze.",
+        "tags": [
+          "Ministero dell'Economia e delle Finanze"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/istat"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dati del comune.",
+            "headers": {
+              "Last-Modified": {
+                "$ref": "#/components/headers/LastModified"
+              },
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "Access-Control-Allow-Origin": {
+                "$ref": "#/components/headers/CORS"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Shard"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Non modificato (richiesta condizionale con If-None-Match o If-Modified-Since)."
+          },
+          "404": {
+            "$ref": "#/components/responses/NonTrovato"
+          },
+          "429": {
+            "$ref": "#/components/responses/TroppeRichieste"
+          }
+        }
+      }
+    },
+    "/bdap/dettaglio/{istat}.json": {
+      "get": {
+        "operationId": "get_bdap",
+        "summary": "Opere pubbliche BDAP-MOP",
+        "description": "Monitoraggio opere pubbliche. Titolare: RGS BDAP.\n\nTitolare del dato di origine: Ministero dell'Economia e delle Finanze.",
+        "tags": [
+          "Ministero dell'Economia e delle Finanze"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/istat"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dati del comune.",
+            "headers": {
+              "Last-Modified": {
+                "$ref": "#/components/headers/LastModified"
+              },
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "Access-Control-Allow-Origin": {
+                "$ref": "#/components/headers/CORS"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Shard"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Non modificato (richiesta condizionale con If-None-Match o If-Modified-Since)."
+          },
+          "404": {
+            "$ref": "#/components/responses/NonTrovato"
+          },
+          "429": {
+            "$ref": "#/components/responses/TroppeRichieste"
+          }
+        }
+      }
+    },
+    "/pnrr/{istat}.json": {
+      "get": {
+        "operationId": "get_pnrr",
+        "summary": "Progetti PNRR",
+        "description": "Progetti PNRR localizzati nel comune. Titolare: Italia Domani / ReGiS.\n\nTitolare del dato di origine: Presidenza del Consiglio dei Ministri.",
+        "tags": [
+          "Presidenza del Consiglio dei Ministri"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/istat"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dati del comune.",
+            "headers": {
+              "Last-Modified": {
+                "$ref": "#/components/headers/LastModified"
+              },
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "Access-Control-Allow-Origin": {
+                "$ref": "#/components/headers/CORS"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Shard"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Non modificato (richiesta condizionale con If-None-Match o If-Modified-Since)."
+          },
+          "404": {
+            "$ref": "#/components/responses/NonTrovato"
+          },
+          "429": {
+            "$ref": "#/components/responses/TroppeRichieste"
+          }
+        }
+      }
+    },
+    "/scuole/{istat}.json": {
+      "get": {
+        "operationId": "get_scuole",
+        "summary": "Scuole",
+        "description": "Anagrafe scuole statali e paritarie. Titolare: Ministero Istruzione e Merito.\n\nTitolare del dato di origine: Ministero dell'istruzione e del merito.",
+        "tags": [
+          "Ministero dell'istruzione e del merito"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/istat"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dati del comune.",
+            "headers": {
+              "Last-Modified": {
+                "$ref": "#/components/headers/LastModified"
+              },
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "Access-Control-Allow-Origin": {
+                "$ref": "#/components/headers/CORS"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Shard"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Non modificato (richiesta condizionale con If-None-Match o If-Modified-Since)."
+          },
+          "404": {
+            "$ref": "#/components/responses/NonTrovato"
+          },
+          "429": {
+            "$ref": "#/components/responses/TroppeRichieste"
+          }
+        }
+      }
+    },
+    "/sanita_mds/{istat}.json": {
+      "get": {
+        "operationId": "get_sanita_mds",
+        "summary": "Sanita: farmacie e ospedali",
+        "description": "Farmacie, parafarmacie e strutture ospedaliere. Titolare: Ministero della Salute.\n\nTitolare del dato di origine: Ministero della Salute.",
+        "tags": [
+          "Ministero della Salute"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/istat"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dati del comune.",
+            "headers": {
+              "Last-Modified": {
+                "$ref": "#/components/headers/LastModified"
+              },
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "Access-Control-Allow-Origin": {
+                "$ref": "#/components/headers/CORS"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Shard"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Non modificato (richiesta condizionale con If-None-Match o If-Modified-Since)."
+          },
+          "404": {
+            "$ref": "#/components/responses/NonTrovato"
+          },
+          "429": {
+            "$ref": "#/components/responses/TroppeRichieste"
+          }
+        }
+      }
+    },
+    "/carburanti/{istat}.json": {
+      "get": {
+        "operationId": "get_carburanti",
+        "summary": "Distributori e prezzi carburanti",
+        "description": "Impianti e prezzi carburanti. Titolare: MIMIT.\n\nTitolare del dato di origine: MIMIT - Ministero delle Imprese e del Made in Italy.",
+        "tags": [
+          "MIMIT - Ministero delle Imprese e del Made in Italy"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/istat"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dati del comune.",
+            "headers": {
+              "Last-Modified": {
+                "$ref": "#/components/headers/LastModified"
+              },
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "Access-Control-Allow-Origin": {
+                "$ref": "#/components/headers/CORS"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Shard"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Non modificato (richiesta condizionale con If-None-Match o If-Modified-Since)."
+          },
+          "404": {
+            "$ref": "#/components/responses/NonTrovato"
+          },
+          "429": {
+            "$ref": "#/components/responses/TroppeRichieste"
+          }
+        }
+      }
+    },
+    "/runts/{istat}.json": {
+      "get": {
+        "operationId": "get_runts",
+        "summary": "Enti Terzo Settore (RUNTS)",
+        "description": "Enti iscritti al RUNTS. Titolare: Ministero del Lavoro.\n\nTitolare del dato di origine: Ministero del Lavoro e delle Politiche Sociali.",
+        "tags": [
+          "Ministero del Lavoro e delle Politiche Sociali"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/istat"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dati del comune.",
+            "headers": {
+              "Last-Modified": {
+                "$ref": "#/components/headers/LastModified"
+              },
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "Access-Control-Allow-Origin": {
+                "$ref": "#/components/headers/CORS"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Shard"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Non modificato (richiesta condizionale con If-None-Match o If-Modified-Since)."
+          },
+          "404": {
+            "$ref": "#/components/responses/NonTrovato"
+          },
+          "429": {
+            "$ref": "#/components/responses/TroppeRichieste"
+          }
+        }
+      }
+    },
+    "/beni_culturali/{istat}.json": {
+      "get": {
+        "operationId": "get_beni_culturali",
+        "summary": "Beni culturali catalogati",
+        "description": "Beni catalogati MiC (ArCo e Cultural-ON). Titolare: Ministero della Cultura.\n\nTitolare del dato di origine: Ministero della Cultura.",
+        "tags": [
+          "Ministero della Cultura"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/istat"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dati del comune.",
+            "headers": {
+              "Last-Modified": {
+                "$ref": "#/components/headers/LastModified"
+              },
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "Access-Control-Allow-Origin": {
+                "$ref": "#/components/headers/CORS"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Shard"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Non modificato (richiesta condizionale con If-None-Match o If-Modified-Since)."
+          },
+          "404": {
+            "$ref": "#/components/responses/NonTrovato"
+          },
+          "429": {
+            "$ref": "#/components/responses/TroppeRichieste"
+          }
+        }
+      }
+    },
+    "/aria/{istat}.json": {
+      "get": {
+        "operationId": "get_aria",
+        "summary": "Qualita aria",
+        "description": "Indicatori qualita aria. Titolare: ISPRA.\n\nTitolare del dato di origine: Istituto Superiore per la Protezione e la Ricerca Ambientale.",
+        "tags": [
+          "Istituto Superiore per la Protezione e la Ricerca Ambientale"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/istat"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dati del comune.",
+            "headers": {
+              "Last-Modified": {
+                "$ref": "#/components/headers/LastModified"
+              },
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "Access-Control-Allow-Origin": {
+                "$ref": "#/components/headers/CORS"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Shard"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Non modificato (richiesta condizionale con If-None-Match o If-Modified-Since)."
+          },
+          "404": {
+            "$ref": "#/components/responses/NonTrovato"
+          },
+          "429": {
+            "$ref": "#/components/responses/TroppeRichieste"
+          }
+        }
+      }
+    },
+    "/agcom_bbmap/{istat}.json": {
+      "get": {
+        "operationId": "get_agcom_bbmap",
+        "summary": "Copertura banda larga",
+        "description": "Copertura FTTH da Broadband Map. Titolare: AGCOM.\n\nTitolare del dato di origine: Autorita' per le Garanzie nelle Comunicazioni - AGCOM.",
+        "tags": [
+          "Autorita' per le Garanzie nelle Comunicazioni - AGCOM"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/istat"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dati del comune.",
+            "headers": {
+              "Last-Modified": {
+                "$ref": "#/components/headers/LastModified"
+              },
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "Access-Control-Allow-Origin": {
+                "$ref": "#/components/headers/CORS"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Shard"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Non modificato (richiesta condizionale con If-None-Match o If-Modified-Since)."
+          },
+          "404": {
+            "$ref": "#/components/responses/NonTrovato"
+          },
+          "429": {
+            "$ref": "#/components/responses/TroppeRichieste"
+          }
+        }
+      }
+    },
+    "/morfologia/{istat}/{istat}_stats.json": {
+      "get": {
+        "operationId": "get_morfologia",
+        "summary": "Morfologia del territorio",
+        "description": "Statistiche morfologiche da HR-DTM 5m. Titolare: CNR-IRPI.\n\nTitolare del dato di origine: Consiglio Nazionale delle Ricerche - CNR.",
+        "tags": [
+          "Consiglio Nazionale delle Ricerche - CNR"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/istat"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dati del comune.",
+            "headers": {
+              "Last-Modified": {
+                "$ref": "#/components/headers/LastModified"
+              },
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "Access-Control-Allow-Origin": {
+                "$ref": "#/components/headers/CORS"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Shard"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Non modificato (richiesta condizionale con If-None-Match o If-Modified-Since)."
+          },
+          "404": {
+            "$ref": "#/components/responses/NonTrovato"
+          },
+          "429": {
+            "$ref": "#/components/responses/TroppeRichieste"
+          }
+        }
+      }
+    },
+    "/pun/{istat}.json": {
+      "get": {
+        "operationId": "get_pun",
+        "summary": "Punti di ricarica e energia",
+        "description": "Sezione PUN. Titolare: GME.\n\nTitolare del dato di origine: Gestore dei Mercati Energetici SpA.",
+        "tags": [
+          "Gestore dei Mercati Energetici SpA"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/istat"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dati del comune.",
+            "headers": {
+              "Last-Modified": {
+                "$ref": "#/components/headers/LastModified"
+              },
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "Access-Control-Allow-Origin": {
+                "$ref": "#/components/headers/CORS"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Shard"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Non modificato (richiesta condizionale con If-None-Match o If-Modified-Since)."
+          },
+          "404": {
+            "$ref": "#/components/responses/NonTrovato"
+          },
+          "429": {
+            "$ref": "#/components/responses/TroppeRichieste"
+          }
+        }
+      }
+    },
+    "/anncsu_full/{istat}.json": {
+      "get": {
+        "operationId": "get_anncsu_full",
+        "summary": "Civici e strade ANNCSU (completo)",
+        "description": "Archivio completo dei numeri civici georeferenziati e delle strade ANNCSU del comune, con KPI di copertura. Titolare: Agenzia delle Entrate (con ISTAT).\n\nTitolare del dato di origine: Agenzia delle Entrate.\n\n**Prova non disponibile in questa pagina**: per i comuni più grandi il file arriva a decine di MB. Va scaricato da programma o da riga di comando, ad esempio:\n\n`curl -O https://cruscotto-italia.dati.gov.it/data/anncsu_full/075035.json`",
+        "tags": [
+          "Agenzia delle Entrate"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/istat"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dati del comune.",
+            "headers": {
+              "Last-Modified": {
+                "$ref": "#/components/headers/LastModified"
+              },
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "Access-Control-Allow-Origin": {
+                "$ref": "#/components/headers/CORS"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Shard"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Non modificato (richiesta condizionale con If-None-Match o If-Modified-Since)."
+          },
+          "404": {
+            "$ref": "#/components/responses/NonTrovato"
+          },
+          "429": {
+            "$ref": "#/components/responses/TroppeRichieste"
+          }
+        },
+        "x-anteprima": false
+      }
+    },
+    "/censimento_full/{istat}.geojson": {
+      "get": {
+        "operationId": "get_censimento_full",
+        "summary": "Sezioni censuarie 2021 (GeoJSON)",
+        "description": "Basi territoriali del Censimento permanente 2021: geometrie delle sezioni censuarie con le variabili censuarie. Titolare: ISTAT.\n\nTitolare del dato di origine: Istituto Nazionale di Statistica - ISTAT.\n\n**Prova non disponibile in questa pagina**: per i comuni più grandi il file arriva a decine di MB. Va scaricato da programma o da riga di comando, ad esempio:\n\n`curl -O https://cruscotto-italia.dati.gov.it/data/censimento_full/075035.geojson`",
+        "tags": [
+          "Istituto Nazionale di Statistica - ISTAT"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/istat"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dati del comune.",
+            "headers": {
+              "Last-Modified": {
+                "$ref": "#/components/headers/LastModified"
+              },
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "Access-Control-Allow-Origin": {
+                "$ref": "#/components/headers/CORS"
+              }
+            },
+            "content": {
+              "application/geo+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Shard"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Non modificato (richiesta condizionale con If-None-Match o If-Modified-Since)."
+          },
+          "404": {
+            "$ref": "#/components/responses/NonTrovato"
+          },
+          "429": {
+            "$ref": "#/components/responses/TroppeRichieste"
+          }
+        },
+        "x-anteprima": false
+      }
+    },
+    "/beni_culturali_full/{istat}.json": {
+      "get": {
+        "operationId": "get_beni_culturali_full",
+        "summary": "Beni culturali catalogati (completo)",
+        "description": "Inventario completo dei beni culturali catalogati MiC (ArCo e Cultural-ON) per i comuni con oltre 30 beni. Titolare: Ministero della Cultura.\n\nTitolare del dato di origine: Ministero della Cultura.",
+        "tags": [
+          "Ministero della Cultura"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/istat"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dati del comune.",
+            "headers": {
+              "Last-Modified": {
+                "$ref": "#/components/headers/LastModified"
+              },
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "Access-Control-Allow-Origin": {
+                "$ref": "#/components/headers/CORS"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Shard"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Non modificato (richiesta condizionale con If-None-Match o If-Modified-Since)."
+          },
+          "404": {
+            "$ref": "#/components/responses/NonTrovato"
+          },
+          "429": {
+            "$ref": "#/components/responses/TroppeRichieste"
+          }
+        }
+      }
+    },
+    "/omi/{istat}.json": {
+      "get": {
+        "operationId": "get_omi",
+        "summary": "Quotazioni immobiliari OMI",
+        "description": "Valori di compravendita e locazione in euro/mq per zona territoriale omogenea interna al comune, distinti per tipologia immobiliare, destinazione d'uso e stato di conservazione. Unico dato economico a granularita sub-comunale. Titolare: Agenzia delle Entrate - Osservatorio del Mercato Immobiliare.\n\nTitolare del dato di origine: Agenzia delle Entrate.",
+        "tags": [
+          "Agenzia delle Entrate"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/istat"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dati del comune.",
+            "headers": {
+              "Last-Modified": {
+                "$ref": "#/components/headers/LastModified"
+              },
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "Access-Control-Allow-Origin": {
+                "$ref": "#/components/headers/CORS"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Shard"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Non modificato (richiesta condizionale con If-None-Match o If-Modified-Since)."
+          },
+          "404": {
+            "$ref": "#/components/responses/NonTrovato"
+          },
+          "429": {
+            "$ref": "#/components/responses/TroppeRichieste"
+          }
+        }
+      }
+    },
+    "/omi_full/{istat}.geojson": {
+      "get": {
+        "operationId": "get_omi_full",
+        "summary": "Perimetri zone OMI (GeoJSON)",
+        "description": "Geometrie delle zone territoriali omogenee OMI del comune (GeoJSON WGS84). Si collegano alle quotazioni tramite il campo zona. Titolare: Agenzia delle Entrate - Osservatorio del Mercato Immobiliare.\n\nTitolare del dato di origine: Agenzia delle Entrate.",
+        "tags": [
+          "Agenzia delle Entrate"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/istat"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dati del comune.",
+            "headers": {
+              "Last-Modified": {
+                "$ref": "#/components/headers/LastModified"
+              },
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "Access-Control-Allow-Origin": {
+                "$ref": "#/components/headers/CORS"
+              }
+            },
+            "content": {
+              "application/geo+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Shard"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Non modificato (richiesta condizionale con If-None-Match o If-Modified-Since)."
+          },
+          "404": {
+            "$ref": "#/components/responses/NonTrovato"
+          },
+          "429": {
+            "$ref": "#/components/responses/TroppeRichieste"
+          }
+        }
+      }
+    },
+    "/catasto_full/{istat}_map.geojson.gz": {
+      "get": {
+        "operationId": "get_catasto_fogli",
+        "summary": "Fogli catastali (GeoJSON)",
+        "description": "Geometrie dei fogli catastali del comune (GeoJSON, trasferimento compresso gzip). Titolare: Agenzia delle Entrate.\n\nTitolare del dato di origine: Agenzia delle Entrate.\n\n**Prova non disponibile in questa pagina**: per i comuni più grandi il file arriva a decine di MB. Va scaricato da programma o da riga di comando, ad esempio:\n\n`curl -O https://cruscotto-italia.dati.gov.it/data/catasto_full/075035_map.geojson.gz`",
+        "tags": [
+          "Agenzia delle Entrate"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/istat"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "File GeoJSON compresso gzip (decomprimere lato client).",
+            "headers": {
+              "Last-Modified": {
+                "$ref": "#/components/headers/LastModified"
+              },
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "Access-Control-Allow-Origin": {
+                "$ref": "#/components/headers/CORS"
+              }
+            },
+            "content": {
+              "application/gzip": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Non modificato (richiesta condizionale con If-None-Match o If-Modified-Since)."
+          },
+          "404": {
+            "$ref": "#/components/responses/NonTrovato"
+          },
+          "429": {
+            "$ref": "#/components/responses/TroppeRichieste"
+          }
+        },
+        "x-anteprima": false
+      }
+    },
+    "/catasto_full/{istat}_ple.geojson.gz": {
+      "get": {
+        "operationId": "get_catasto_particelle",
+        "summary": "Particelle catastali (GeoJSON)",
+        "description": "Geometrie delle particelle catastali del comune (GeoJSON, trasferimento compresso gzip). Titolare: Agenzia delle Entrate.\n\nTitolare del dato di origine: Agenzia delle Entrate.\n\n**Prova non disponibile in questa pagina**: per i comuni più grandi il file arriva a decine di MB. Va scaricato da programma o da riga di comando, ad esempio:\n\n`curl -O https://cruscotto-italia.dati.gov.it/data/catasto_full/075035_ple.geojson.gz`",
+        "tags": [
+          "Agenzia delle Entrate"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/istat"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "File GeoJSON compresso gzip (decomprimere lato client).",
+            "headers": {
+              "Last-Modified": {
+                "$ref": "#/components/headers/LastModified"
+              },
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "Access-Control-Allow-Origin": {
+                "$ref": "#/components/headers/CORS"
+              }
+            },
+            "content": {
+              "application/gzip": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Non modificato (richiesta condizionale con If-None-Match o If-Modified-Since)."
+          },
+          "404": {
+            "$ref": "#/components/responses/NonTrovato"
+          },
+          "429": {
+            "$ref": "#/components/responses/TroppeRichieste"
+          }
+        },
+        "x-anteprima": false
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "istat": {
+        "name": "istat",
+        "in": "path",
+        "required": true,
+        "description": "Codice ISTAT del comune, 6 cifre (es. 075035 Lecce).",
+        "schema": {
+          "type": "string",
+          "pattern": "^[0-9]{6}$"
+        },
+        "example": "075035"
+      }
+    },
+    "headers": {
+      "LastModified": {
+        "description": "Data dell'ultima rigenerazione del file.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "ETag": {
+        "description": "Identificativo di versione del file.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "CacheControl": {
+        "description": "Durata di cache consentita.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "CORS": {
+        "description": "Sempre *.",
+        "schema": {
+          "type": "string",
+          "const": "*"
+        }
+      }
+    },
+    "responses": {
+      "NonTrovato": {
+        "description": "Comune o fonte inesistente, oppure fonte non disponibile per quel comune.",
+        "content": {
+          "text/html": {
+            "schema": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "TroppeRichieste": {
+        "description": "Limite di frequenza per IP superato (vedi info.description): attendere e riprovare con intervalli crescenti.",
+        "content": {
+          "text/html": {
+            "schema": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "Shard": {
+        "type": "object",
+        "description": "Struttura specifica della fonte. Campi di metadato comuni con prefisso _ (non tutti presenti in ogni fonte). Lo schema è descrittivo: le fonti possono aggiungere campi nel tempo.",
+        "properties": {
+          "_source": {
+            "type": "string",
+            "description": "Fonte di origine."
+          },
+          "_etl_version": {
+            "type": "string",
+            "description": "Versione della procedura di raccolta."
+          },
+          "_generated_at": {
+            "type": "string",
+            "description": "Data di generazione del file."
+          },
+          "istat_code": {
+            "type": "string",
+            "description": "Codice ISTAT del comune."
+          },
+          "comune": {
+            "type": "string",
+            "description": "Denominazione del comune."
+          }
+        },
+        "additionalProperties": true
+      }
+    }
+  }
+}
