@@ -34,12 +34,12 @@
       "description": "Discovery and service files"
     },
     {
-      "name": "Agenzia delle Entrate",
-      "description": "Data held by: Agenzia delle Entrate."
+      "name": "Municipality profile",
+      "description": "All sources aggregated into a single file per municipality, curated by AgID as publisher. The data holders are those of the individual sources."
     },
     {
-      "name": "Agenzia per l'Italia Digitale",
-      "description": "Data held by: Agenzia per l'Italia Digitale."
+      "name": "Agenzia delle Entrate",
+      "description": "Data held by: Agenzia delle Entrate."
     },
     {
       "name": "Automobile Club d'Italia",
@@ -280,9 +280,9 @@
       "get": {
         "operationId": "get_dashboard",
         "summary": "Full municipality profile",
-        "description": "Unified profile with all the data sections of the municipality, including the KPIs of ANAC public contracts. Data holder: AgID (multi-source aggregation).\n\nHolder of the source data: Agenzia per l'Italia Digitale.\n\n**Not available for testing on this page**: for the largest municipalities the file reaches tens of MB. Download it from code or from the command line, for example:\n\n`curl -O https://cruscotto-italia.dati.gov.it/data/dashboard/075035.json`",
+        "description": "Unified profile with all the data sections of the municipality, including the KPIs of ANAC public contracts. Aggregation curated by AgID as publisher: the data holders are those of the individual sources.\n\n**Not available for testing on this page**: for the largest municipalities the file reaches tens of MB. Download it from code or from the command line, for example:\n\n`curl -O https://cruscotto-italia.dati.gov.it/data/dashboard/075035.json`",
         "tags": [
-          "Agenzia per l'Italia Digitale"
+          "Municipality profile"
         ],
         "parameters": [
           {

@@ -34,12 +34,12 @@
       "description": "File di scoperta e di servizio"
     },
     {
-      "name": "Agenzia delle Entrate",
-      "description": "Dati di cui è titolare: Agenzia delle Entrate."
+      "name": "Scheda del comune",
+      "description": "Aggregazione delle fonti in un unico file per comune, curata da AgID come editore. I titolari dei dati sono quelli delle singole fonti."
     },
     {
-      "name": "Agenzia per l'Italia Digitale",
-      "description": "Dati di cui è titolare: Agenzia per l'Italia Digitale."
+      "name": "Agenzia delle Entrate",
+      "description": "Dati di cui è titolare: Agenzia delle Entrate."
     },
     {
       "name": "Automobile Club d'Italia",
@@ -280,9 +280,9 @@
       "get": {
         "operationId": "get_dashboard",
         "summary": "Scheda completa del comune",
-        "description": "Scheda unificata con tutte le sezioni dati del comune, inclusi i KPI dei Contratti pubblici ANAC. Titolare: AgID (aggregazione multi-fonte).\n\nTitolare del dato di origine: Agenzia per l'Italia Digitale.\n\n**Prova non disponibile in questa pagina**: per i comuni più grandi il file arriva a decine di MB. Va scaricato da programma o da riga di comando, ad esempio:\n\n`curl -O https://cruscotto-italia.dati.gov.it/data/dashboard/075035.json`",
+        "description": "Scheda unificata con tutte le sezioni dati del comune, inclusi i KPI dei Contratti pubblici ANAC. Aggregazione curata da AgID come editore: i titolari dei dati sono quelli delle singole fonti.\n\n**Prova non disponibile in questa pagina**: per i comuni più grandi il file arriva a decine di MB. Va scaricato da programma o da riga di comando, ad esempio:\n\n`curl -O https://cruscotto-italia.dati.gov.it/data/dashboard/075035.json`",
         "tags": [
-          "Agenzia per l'Italia Digitale"
+          "Scheda del comune"
         ],
         "parameters": [
           {
