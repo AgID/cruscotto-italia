@@ -38,6 +38,10 @@
       "description": "All sources aggregated into a single file per municipality, curated by AgID as publisher. The data holders are those of the individual sources."
     },
     {
+      "name": "Agenzia Nazionale per la Meteorologia e Climatologia - ItaliaMeteo",
+      "description": "Data held by: Agenzia Nazionale per la Meteorologia e Climatologia - ItaliaMeteo."
+    },
+    {
       "name": "Agenzia delle Entrate",
       "description": "Data held by: Agenzia delle Entrate."
     },
@@ -54,8 +58,8 @@
       "description": "Data held by: Consiglio Nazionale delle Ricerche - CNR."
     },
     {
-      "name": "Gestore dei Mercati Energetici SpA",
-      "description": "Data held by: Gestore dei Mercati Energetici SpA."
+      "name": "Gestore Dei Servizi Energetici - Gse S.P.A.",
+      "description": "Data held by: Gestore Dei Servizi Energetici - Gse S.P.A.."
     },
     {
       "name": "Istituto Nazionale di Statistica - ISTAT",
@@ -581,9 +585,59 @@
       "get": {
         "operationId": "get_territorio",
         "summary": "Land and land use",
-        "description": "Territorial and environmental data, including DPC seismic classification, hydrogeological risk, land consumption and ISPRA waste data. Data holder: ISTAT/ISPRA/DPC.\n\nHolder of the source data: Istituto Nazionale di Statistica - ISTAT.",
+        "description": "Land consumption, hydrogeological hazard and risk (IdroGEO) and municipal waste (Waste Register). Data holder: ISPRA.\n\nHolder of the source data: Istituto Superiore per la Protezione e la Ricerca Ambientale.",
         "tags": [
-          "Istituto Nazionale di Statistica - ISTAT"
+          "Istituto Superiore per la Protezione e la Ricerca Ambientale"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/istat"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Data of the municipality.",
+            "headers": {
+              "Last-Modified": {
+                "$ref": "#/components/headers/LastModified"
+              },
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "Access-Control-Allow-Origin": {
+                "$ref": "#/components/headers/CORS"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Shard"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not modified (conditional request with If-None-Match or If-Modified-Since)."
+          },
+          "404": {
+            "$ref": "#/components/responses/NonTrovato"
+          },
+          "429": {
+            "$ref": "#/components/responses/TroppeRichieste"
+          }
+        }
+      }
+    },
+    "/classificazione_sismica/{istat}.json": {
+      "get": {
+        "operationId": "get_classificazione_sismica",
+        "summary": "Seismic classification",
+        "description": "Seismic zone of the municipality according to the classification of the Civil Protection Department. Data holder: Presidency of the Council of Ministers - Civil Protection Department.\n\nHolder of the source data: Presidenza del Consiglio dei Ministri.",
+        "tags": [
+          "Presidenza del Consiglio dei Ministri"
         ],
         "parameters": [
           {
@@ -1380,10 +1434,60 @@
     "/pun/{istat}.json": {
       "get": {
         "operationId": "get_pun",
-        "summary": "EV charging points and energy",
-        "description": "PUN section (National Single Platform of charging points). Data holder: GME.\n\nHolder of the source data: Gestore dei Mercati Energetici SpA.",
+        "summary": "Electric vehicle charging points",
+        "description": "Public charging points for electric vehicles from the National Single Platform (PUN) set up by MASE and run by GSE. Data holder: GSE.\n\nHolder of the source data: Gestore Dei Servizi Energetici - Gse S.P.A..",
         "tags": [
-          "Gestore dei Mercati Energetici SpA"
+          "Gestore Dei Servizi Energetici - Gse S.P.A."
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/istat"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Data of the municipality.",
+            "headers": {
+              "Last-Modified": {
+                "$ref": "#/components/headers/LastModified"
+              },
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "Access-Control-Allow-Origin": {
+                "$ref": "#/components/headers/CORS"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Shard"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not modified (conditional request with If-None-Match or If-Modified-Since)."
+          },
+          "404": {
+            "$ref": "#/components/responses/NonTrovato"
+          },
+          "429": {
+            "$ref": "#/components/responses/TroppeRichieste"
+          }
+        }
+      }
+    },
+    "/meteo/{istat}.json": {
+      "get": {
+        "operationId": "get_meteo",
+        "summary": "Weather forecasts",
+        "description": "Weather forecasts for the municipality from the ICON-2I model. Data holder: ItaliaMeteo Agency.\n\nHolder of the source data: Agenzia Nazionale per la Meteorologia e Climatologia - ItaliaMeteo.",
+        "tags": [
+          "Agenzia Nazionale per la Meteorologia e Climatologia - ItaliaMeteo"
         ],
         "parameters": [
           {

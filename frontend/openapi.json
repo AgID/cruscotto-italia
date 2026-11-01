@@ -38,6 +38,10 @@
       "description": "Aggregazione delle fonti in un unico file per comune, curata da AgID come editore. I titolari dei dati sono quelli delle singole fonti."
     },
     {
+      "name": "Agenzia Nazionale per la Meteorologia e Climatologia - ItaliaMeteo",
+      "description": "Dati di cui è titolare: Agenzia Nazionale per la Meteorologia e Climatologia - ItaliaMeteo."
+    },
+    {
       "name": "Agenzia delle Entrate",
       "description": "Dati di cui è titolare: Agenzia delle Entrate."
     },
@@ -54,8 +58,8 @@
       "description": "Dati di cui è titolare: Consiglio Nazionale delle Ricerche - CNR."
     },
     {
-      "name": "Gestore dei Mercati Energetici SpA",
-      "description": "Dati di cui è titolare: Gestore dei Mercati Energetici SpA."
+      "name": "Gestore Dei Servizi Energetici - Gse S.P.A.",
+      "description": "Dati di cui è titolare: Gestore Dei Servizi Energetici - Gse S.P.A.."
     },
     {
       "name": "Istituto Nazionale di Statistica - ISTAT",
@@ -581,9 +585,59 @@
       "get": {
         "operationId": "get_territorio",
         "summary": "Territorio e uso del suolo",
-        "description": "Dati territoriali e ambientali, incluse classificazione sismica DPC, rischio idrogeologico, consumo di suolo e rifiuti ISPRA. Titolare: ISTAT/ISPRA/DPC.\n\nTitolare del dato di origine: Istituto Nazionale di Statistica - ISTAT.",
+        "description": "Consumo di suolo, pericolosita e rischio idrogeologico (IdroGEO) e rifiuti urbani (Catasto Rifiuti). Titolare: ISPRA.\n\nTitolare del dato di origine: Istituto Superiore per la Protezione e la Ricerca Ambientale.",
         "tags": [
-          "Istituto Nazionale di Statistica - ISTAT"
+          "Istituto Superiore per la Protezione e la Ricerca Ambientale"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/istat"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dati del comune.",
+            "headers": {
+              "Last-Modified": {
+                "$ref": "#/components/headers/LastModified"
+              },
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "Access-Control-Allow-Origin": {
+                "$ref": "#/components/headers/CORS"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Shard"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Non modificato (richiesta condizionale con If-None-Match o If-Modified-Since)."
+          },
+          "404": {
+            "$ref": "#/components/responses/NonTrovato"
+          },
+          "429": {
+            "$ref": "#/components/responses/TroppeRichieste"
+          }
+        }
+      }
+    },
+    "/classificazione_sismica/{istat}.json": {
+      "get": {
+        "operationId": "get_classificazione_sismica",
+        "summary": "Classificazione sismica",
+        "description": "Zona sismica del comune secondo la classificazione del Dipartimento della Protezione Civile. Titolare: Presidenza del Consiglio dei Ministri - Dipartimento della Protezione Civile.\n\nTitolare del dato di origine: Presidenza del Consiglio dei Ministri.",
+        "tags": [
+          "Presidenza del Consiglio dei Ministri"
         ],
         "parameters": [
           {
@@ -1380,10 +1434,60 @@
     "/pun/{istat}.json": {
       "get": {
         "operationId": "get_pun",
-        "summary": "Punti di ricarica e energia",
-        "description": "Sezione PUN. Titolare: GME.\n\nTitolare del dato di origine: Gestore dei Mercati Energetici SpA.",
+        "summary": "Punti di ricarica per veicoli elettrici",
+        "description": "Punti di ricarica pubblici per veicoli elettrici dalla Piattaforma Unica Nazionale (PUN) istituita dal MASE e gestita dal GSE. Titolare: GSE.\n\nTitolare del dato di origine: Gestore Dei Servizi Energetici - Gse S.P.A..",
         "tags": [
-          "Gestore dei Mercati Energetici SpA"
+          "Gestore Dei Servizi Energetici - Gse S.P.A."
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/istat"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dati del comune.",
+            "headers": {
+              "Last-Modified": {
+                "$ref": "#/components/headers/LastModified"
+              },
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControl"
+              },
+              "Access-Control-Allow-Origin": {
+                "$ref": "#/components/headers/CORS"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Shard"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Non modificato (richiesta condizionale con If-None-Match o If-Modified-Since)."
+          },
+          "404": {
+            "$ref": "#/components/responses/NonTrovato"
+          },
+          "429": {
+            "$ref": "#/components/responses/TroppeRichieste"
+          }
+        }
+      }
+    },
+    "/meteo/{istat}.json": {
+      "get": {
+        "operationId": "get_meteo",
+        "summary": "Previsioni meteorologiche",
+        "description": "Previsioni meteorologiche per il comune dal modello ICON-2I. Titolare: Agenzia ItaliaMeteo.\n\nTitolare del dato di origine: Agenzia Nazionale per la Meteorologia e Climatologia - ItaliaMeteo.",
+        "tags": [
+          "Agenzia Nazionale per la Meteorologia e Climatologia - ItaliaMeteo"
         ],
         "parameters": [
           {
