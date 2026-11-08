@@ -1,0 +1,12 @@
+{
+  "_nota": "Comuni vigenti il cui territorio comprende comuni soppressi dopo il 2021 (anno dei confini di censimento_full). Morfologia = proprio confine (se esiste) unito ai confini dei predecessori. Fonti: ISTAT Elenco comuni soppressi (fusioni 2023-2024) e lookup/variazioni_istat.json (2026). Aggiornare a ogni nuova fusione o incorporazione.",
+  "005122": ["005079", "005110"],
+  "012144": ["012009", "012018", "012095"],
+  "013256": ["013199", "013228"],
+  "018026": ["018002"],
+  "018094": ["018082"],
+  "024128": ["024044", "024103"],
+  "024129": ["024027", "024071"],
+  "025075": ["025002", "025070"],
+  "028108": ["028022", "028098"]
+}

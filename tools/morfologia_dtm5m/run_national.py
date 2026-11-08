@@ -24,18 +24,23 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 HERE = os.path.dirname(os.path.abspath(__file__))
 
 
-def boundary_from_censimento(cens_dir, istat, out_geojson):
-    """Confine comunale = dissolve delle sezioni di censimento_full/<istat>.geojson (EPSG:4326)."""
+def boundary_from_censimento(cens_dir, istat, out_geojson, predecessori=()):
+    """Confine comunale = dissolve delle sezioni di censimento_full/<istat>.geojson (EPSG:4326).
+    Con predecessori (comuni soppressi confluiti dopo il 2021): unione del proprio confine,
+    se esiste, con quelli dei predecessori."""
     import json
     from shapely.geometry import shape, mapping
     from shapely.ops import unary_union
-    p = os.path.join(cens_dir, f"{istat}.geojson")
-    if not os.path.exists(p):
-        return False
-    g = json.load(open(p))
     from shapely.validation import make_valid
+    files = [os.path.join(cens_dir, f"{c}.geojson") for c in [istat, *predecessori]]
+    files = [f for f in files if os.path.exists(f)]
+    if not files:
+        return False
+    feats = []
+    for fp in files:
+        feats += json.load(open(fp))["features"]
     polys = []
-    for f in g["features"]:
+    for f in feats:
         try:
             geom = shape(f["geometry"])
             if not geom.is_valid:
@@ -82,7 +87,7 @@ def run_step(cmd, logf):
 
 def process_one(args_tuple):
     (istat, boundaries, field, dtm, out, solar_res, skip_solar, tiles,
-     minz, maxz, grass_run, area_csv, resume, cens_dir) = args_tuple
+     minz, maxz, grass_run, area_csv, resume, cens_dir, predecessori) = args_tuple
     t0 = time.time()
     cdir = os.path.join(out, istat)
     logdir = os.path.join(out, "_logs"); os.makedirs(logdir, exist_ok=True)
@@ -97,7 +102,7 @@ def process_one(args_tuple):
         geo = os.path.join(cdir, "_boundary.geojson")
         ok_b = False
         if cens_dir:
-            ok_b = boundary_from_censimento(cens_dir, istat, geo)
+            ok_b = boundary_from_censimento(cens_dir, istat, geo, predecessori)
         if not ok_b and boundaries:
             ok_b = extract_boundary(boundaries, field, istat, geo)
         if not ok_b:
@@ -171,10 +176,19 @@ def main():
     ap.add_argument("--grass-run", default="")
     ap.add_argument("--area-csv", default=None)
     ap.add_argument("--resume", action="store_true")
+    ap.add_argument("--predecessori", default=os.path.join(HERE, "predecessori_post2021.json"),
+                    help="JSON {istat: [codici soppressi confluiti]} per i confini post-2021")
     a = ap.parse_args()
 
     os.makedirs(a.out, exist_ok=True)
+    pred = {}
+    if a.predecessori and os.path.exists(a.predecessori):
+        pred = {k: v for k, v in json.load(open(a.predecessori)).items() if not k.startswith("_")}
+    print(f"[batch] predecessori: {len(pred)} comuni con confine unito")
     ids = list_comuni(a.boundaries, a.istat_field, a.comuni, a.limit, a.censimento_dir)
+    if not a.comuni and not a.limit:
+        # comuni nati dopo il 2021: non hanno un file proprio in censimento_full
+        ids = sorted(set(ids) | set(pred))
     # load balancing: comuni grandi processati per primi
     if a.area_csv and os.path.exists(a.area_csv):
         areas = {}
@@ -185,7 +199,8 @@ def main():
         ids.sort(key=lambda i: areas.get(i, 0.0), reverse=True)
     print(f"[batch] {len(ids)} comuni | jobs={a.jobs} | solar={'no' if a.skip_solar else a.solar_res} | tiles={a.tiles}")
     tasks = [(i, a.boundaries, a.istat_field, a.dtm, a.out, a.solar_res, a.skip_solar,
-              a.tiles, a.minzoom, a.maxzoom, a.grass_run, a.area_csv, a.resume, a.censimento_dir) for i in ids]
+              a.tiles, a.minzoom, a.maxzoom, a.grass_run, a.area_csv, a.resume, a.censimento_dir,
+              pred.get(i, [])) for i in ids]
     report = os.path.join(a.out, "_report.csv")
     new = not os.path.exists(report)
     rf = open(report, "a", newline="")
