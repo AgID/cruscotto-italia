@@ -43,7 +43,7 @@ UA_BOT_PATTERNS = re.compile(
     r"(?:"
     r"bot|crawler|spider|searchbot|preview|monitor|uptime|"
     r"pa11y|axios|curl|wget|python-requests|httpie|"
-    r"node|python|java/|go-http-client|okhttp|libwww|aiohttp|scrapy|locora|probe|"
+    r"node|python|java/|go-http-client|okhttp|libwww|aiohttp|scrapy|locora|probe|vert\.x|"
     r"facebookexternalhit|whatsapp|telegrambot|skypeuripreview|"
     r"slackbot|discordbot|linkedinbot|twitterbot|"
     r"ahrefs|semrush|mj12bot|dotbot|petalbot|bingbot|googlebot|"
@@ -443,7 +443,7 @@ def aggregate(log_paths: list[Path], exclude_test: bool = False,
                 if ev["status"] >= 400:
                     stats["totals"]["hits_error"] += 1
                     continue
-                if is_bot(ev["ua"]):
+                if is_bot(ev["ua"]) or ev["method"] == "HEAD":
                     stats["totals"]["hits_bot"] += 1
                     stats["top_bots"][ua_label(ev["ua"])] += 1
                     continue
