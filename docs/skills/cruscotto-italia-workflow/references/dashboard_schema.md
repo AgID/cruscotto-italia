@@ -720,7 +720,7 @@ Fonte: `/data/morfologia/<istat>/<istat>_stats.json`.
 - Per il dettaglio completo (geomorfologia, classi pendenza, TRI, ecc.) usare il shard separato `morfologia` via `comune_dashboard`.
 
 ## `morfologia` (shard separato, condizionale)
-Morfologia del territorio da HR-DTM 5m CNR-IRPI (Zenodo DOI 10.5281/zenodo.18872933, CC BY 4.0).
+Morfologia del territorio da HR-DTM 5m CNR-IRPI (Zenodo DOI 10.5281/zenodo.24009736, CC BY 4.0).
 Elaborazione GRASS GIS headless (r.slope.aspect, r.geomorphon, r.sun). Dato one-shot (non periodico).
 Shard: `/data/morfologia/<istat>/<istat>_stats.json` + `/data/morfologia/<istat>/bounds.json`.
 Presente nella risposta `comune_dashboard` solo se il comune è stato processato dalla pipeline.
