@@ -29,7 +29,7 @@ export const mcpInfo: ToolDefinition = {
     }
     return {
       service: "cruscotto-italia-mcp",
-      version: "0.21.5",
+      version: "0.21.6",
       protocol: "MCP 2025-11-25 (supportate anche 2025-06-18, 2025-03-26, 2024-11-05)",
       build: {
         // Tree hash git della cartella worker/: identico nel repo pubblico

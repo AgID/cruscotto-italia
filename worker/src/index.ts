@@ -61,6 +61,17 @@ export default {
         return handleHealth(req, env);
       }
       if (url.pathname === "/mcp") {
+        // HEAD e GET senza text/event-stream: stessa risposta della radice
+        // (controlli di raggiungibilita, es. data.europa.eu). GET SSE e
+        // gli altri metodi diversi da POST restano a handleMcp (405).
+        const accept = req.headers.get("Accept") || "";
+        if (req.method === "HEAD" || (req.method === "GET" && !accept.includes("text/event-stream"))) {
+          const info = await handleInfo(req, env);
+          if (req.method === "HEAD") {
+            return new Response(null, { status: info.status, headers: info.headers });
+          }
+          return info;
+        }
         return handleMcp(req, env, ctx);
       }
       if (url.pathname.startsWith("/admin/")) {
