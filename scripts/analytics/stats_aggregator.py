@@ -383,6 +383,7 @@ def aggregate(log_paths: list[Path], exclude_test: bool = False,
             "hits_internal_asset": 0,
             "hits_error": 0,           # status >= 400
             "hits_data": 0,            # accessi diretti /data/ e /dcat/ (riuso open data)
+            "hits_bot_stealth": 0,     # UA browser ma IP senza asset (scraper)
             "hits_human": 0,           # hits "veri"
         },
         "per_day": defaultdict(lambda: {
@@ -399,6 +400,21 @@ def aggregate(log_paths: list[Path], exclude_test: bool = False,
         "status_distribution": Counter(),
         "method_distribution": Counter(),
     }
+
+    # Pre-passata: IP che hanno caricato almeno un asset statico (css/js/font).
+    # Riconosce scraper con UA browser a rotazione e proxy residenziali che
+    # scaricano solo l'HTML (episodio 23/11/2026: ~6.000 false visite umane).
+    asset_ips: set = set()
+    _asset_re = re.compile(r'\.(css|js|woff2?)(\?|$)')
+    for log_path in log_paths:
+        if not log_path.exists():
+            continue
+        with open_log(log_path) as f:
+            for line in f:
+                ev = parse_line(line)
+                if (ev and ev["status"] < 400 and ev.get("ip")
+                        and _asset_re.search(ev["uri"]) and not is_bot(ev["ua"])):
+                    asset_ips.add(ev["ip"])
 
     for log_path in log_paths:
         if not log_path.exists():
@@ -457,6 +473,13 @@ def aggregate(log_paths: list[Path], exclude_test: bool = False,
                     continue
 
                 # Hit "valido" — utente reale
+                # UA da browser ma l'IP non ha mai caricato asset -> bot non dichiarato
+                if ev.get("ip") not in asset_ips:
+                    stats["totals"]["hits_bot"] += 1
+                    stats["totals"]["hits_bot_stealth"] += 1
+                    stats["top_bots"]["Bot non dichiarato (UA browser, senza asset)"] += 1
+                    continue
+
                 stats["totals"]["hits_human"] += 1
 
                 # Parse data (es. "14/May/2026:00:19:05 +0000" → "2026-05-14")
