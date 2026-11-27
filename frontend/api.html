@@ -140,6 +140,7 @@ html[lang="it"] .swagger-ui .parameter__name.required::after{content:"obbligator
       <li><a href="#rest" data-i18n="toc_rest">API REST</a></li>
       <li><a href="#riferimento" data-i18n="toc_rif">Riferimento OpenAPI</a></li>
       <li><a href="#mcp" data-i18n="toc_mcp">Server MCP</a></li>
+      <li><a href="#dcat" data-i18n="toc_dcat">Metadati DCAT-AP_IT</a></li>
       <li><a href="#strumenti" data-i18n="toc_str">Strumenti client</a></li>
       <li><a href="#condizioni" data-i18n="toc_cond">Condizioni d'uso</a></li>
       <li><a href="#contatti" data-i18n="toc_cont">Contatti</a></li>
@@ -234,6 +235,34 @@ print(dati["comune"], dati["popolazione_totale"])</code></pre>
       (<code>git rev-parse &lt;commit&gt;:worker</code>). Così chiunque può controllare che il server
       in esercizio esegua il codice pubblicato.
     </p>
+  </div>
+</section>
+
+<section class="api-sez" id="dcat">
+  <div class="wrap">
+    <h2 data-i18n="toc_dcat">Metadati DCAT-AP_IT</h2>
+    <p data-i18n="dcat1">
+      I due servizi sono descritti anche nel catalogo nazionale
+      <a href="https://www.dati.gov.it" target="_blank" rel="noopener">dati.gov.it<span class="sr-only"> (apre in nuova scheda)</span></a>
+      secondo il profilo DCAT-AP_IT, e da lì nel portale europeo
+      <a href="https://data.europa.eu" target="_blank" rel="noopener">data.europa.eu<span class="sr-only"> (apre in nuova scheda)</span></a>.
+      Ogni comune è un dataset con due servizi dati propri, l'API REST e il server MCP,
+      collegati al dataset con <code>dcat:servesDataset</code>.
+    </p>
+    <div class="api-tab-wrap">
+    <table class="api-tab">
+      <thead><tr><th scope="col" data-i18n="th_dcat_ris">Risorsa</th><th scope="col">URI</th><th scope="col" data-i18n="th_dcat_dest">Aperto da browser porta a</th></tr></thead>
+      <tbody>
+        <tr><td data-i18n="d1a">Dataset del comune</td><td><code>/dcat/dataset/&lt;istat&gt;</code></td><td data-i18n="d1">la pagina del comune</td></tr>
+        <tr><td data-i18n="d2a">Servizio API REST</td><td><code>/dcat/dataservice/rest/&lt;istat&gt;</code></td><td data-i18n="d2">questa pagina</td></tr>
+        <tr><td data-i18n="d3a">Servizio MCP</td><td><code>/dcat/dataservice/mcp/&lt;istat&gt;</code></td><td data-i18n="d3">questa pagina, sezione <a href="#mcp">Server MCP</a></td></tr>
+      </tbody>
+    </table>
+    </div>
+    <ul>
+      <li data-i18n="dcat2">Gli URI, con prefisso <code>https://cruscotto-italia.dati.gov.it</code>, identificano le risorse nel catalogo. Gli indirizzi da chiamare restano quelli delle sezioni sopra: <code>/data/</code> per l'API REST e <code>/mcp</code> per il server MCP.</li>
+      <li data-i18n="dcat3">Il catalogo completo, in Turtle e diviso in pagine, parte da <a href="/data/dcat/catalog.ttl"><code>/data/dcat/catalog.ttl</code></a> ed è rigenerato ogni settimana.</li>
+    </ul>
   </div>
 </section>
 
@@ -348,7 +377,14 @@ print(dati["comune"], dati["popolazione_totale"])</code></pre>
     h1: "API and data access",
     lede: "Cruscotto Italia data can also be read from code. There are two services, both public, free and with no registration: a read-only <strong>REST API</strong> for applications and scripts, and an <strong>MCP server</strong> for artificial intelligence assistants.",
     toc: "Page sections",
-    toc_rest: "REST API", toc_rif: "OpenAPI reference", toc_mcp: "MCP server", toc_str: "Client tools", toc_cond: "Terms of use", toc_cont: "Contacts",
+    toc_rest: "REST API", toc_rif: "OpenAPI reference", toc_mcp: "MCP server", toc_dcat: "DCAT-AP_IT metadata", toc_str: "Client tools", toc_cond: "Terms of use", toc_cont: "Contacts",
+    dcat1: "Both services are also described in the national catalogue <a href=\"https://www.dati.gov.it\" target=\"_blank\" rel=\"noopener\">dati.gov.it<span class=\"sr-only\"> (opens in a new tab)</span></a> following the DCAT-AP_IT profile, and from there in the European portal <a href=\"https://data.europa.eu\" target=\"_blank\" rel=\"noopener\">data.europa.eu<span class=\"sr-only\"> (opens in a new tab)</span></a>. Each municipality is a dataset with its own two data services, the REST API and the MCP server, linked to the dataset with <code>dcat:servesDataset</code>.",
+    th_dcat_ris: "Resource", th_dcat_dest: "Opened in a browser leads to",
+    d1a: "Municipality dataset", d1: "the municipality page",
+    d2a: "REST API service", d2: "this page",
+    d3a: "MCP service", d3: "this page, section <a href=\"#mcp\">MCP server</a>",
+    dcat2: "The URIs, prefixed with <code>https://cruscotto-italia.dati.gov.it</code>, identify the resources in the catalogue. The addresses to call remain those of the sections above: <code>/data/</code> for the REST API and <code>/mcp</code> for the MCP server.",
+    dcat3: "The full catalogue, in Turtle and split into pages, starts at <a href=\"/data/dcat/catalog.ttl\"><code>/data/dcat/catalog.ttl</code></a> and is regenerated every week.",
     rest1: "Each source has one file per municipality, identified by the 6-digit ISTAT code. Files are read with a simple GET request to <code>https://cruscotto-italia.dati.gov.it/data/&lt;source&gt;/&lt;ISTAT code&gt;.json</code>. No keys are needed and browser requests are allowed (open CORS).",
     esempi: "Examples",
     es1: "Resident population of Lecce (ISTAT code 075035):",
