@@ -1,6 +1,6 @@
 {
   "name": "cruscotto-italia-mcp",
-  "version": "0.21.6",
+  "version": "0.21.7",
   "private": true,
   "description": "MCP server federating Italian public spending data sources",
   "license": "AGPL-3.0",

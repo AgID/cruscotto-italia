@@ -39,6 +39,7 @@
 import type { Env } from "../index.js";
 import type { ToolDefinition } from "./index.js";
 import { fetchR2Json } from "../lib/r2cache.js";
+import { memGet, memPut } from "../lib/memcache.js";
 import { validateIstatCode, validateLimit } from "../lib/validate.js";
 import { censimentoSezioneSearchOutputSchema } from "../schemas/censimento_sezione_search_output.js";
 
@@ -234,7 +235,7 @@ export const censimentoSezioneSearch: ToolDefinition = {
     const cacheKey = isLookup
       ? `censimento_sez:${istatCode}:lookup:${sezId}`
       : `censimento_sez:${istatCode}:rank:${varName}:${denomVar}:${order}:${top}:${minPop}`;
-    const cached = await env.CACHE.get(cacheKey, "json");
+    const cached = memGet(cacheKey);
     if (cached) return cached;
 
     // === Fetch geojson da nginx VM (DATA_BASE_URL/censimento_full/<istat>.geojson) ===
@@ -251,7 +252,7 @@ export const censimentoSezioneSearch: ToolDefinition = {
         count: 0,
         risultati: [],
       };
-      try { await env.CACHE.put(cacheKey, JSON.stringify(result), { expirationTtl: CACHE_TTL }); } catch {}
+      try { memPut(cacheKey, result, CACHE_TTL); } catch {}
       return result;
     }
 
@@ -271,7 +272,7 @@ export const censimentoSezioneSearch: ToolDefinition = {
           error: "sez_id_not_found",
           _note: `Sezione ${sezId} non trovata nel comune ${detail.denominazione} (${istatCode}). Comune ha ${nTotali} sezioni totali.`,
         };
-        try { await env.CACHE.put(cacheKey, JSON.stringify(result), { expirationTtl: CACHE_TTL }); } catch {}
+        try { memPut(cacheKey, result, CACHE_TTL); } catch {}
         return result;
       }
       const centroid = polygonCentroid(target.geometry);
@@ -292,7 +293,7 @@ export const censimentoSezioneSearch: ToolDefinition = {
           _no_vars: !target.properties.vars || Object.keys(target.properties.vars).length === 0,
         },
       };
-      try { await env.CACHE.put(cacheKey, JSON.stringify(result), { expirationTtl: CACHE_TTL }); } catch {}
+      try { memPut(cacheKey, result, CACHE_TTL); } catch {}
       return result;
     }
 
@@ -370,7 +371,7 @@ export const censimentoSezioneSearch: ToolDefinition = {
         : undefined,
     };
 
-    try { await env.CACHE.put(cacheKey, JSON.stringify(result), { expirationTtl: CACHE_TTL }); } catch {}
+    try { memPut(cacheKey, result, CACHE_TTL); } catch {}
     return result;
   },
 };

@@ -20,7 +20,7 @@ export async function fetchR2Json<T = unknown>(
   r2Key: string,
   options: { ttl?: number; useKvCache?: boolean; bustEdgeCache?: boolean } = {}
 ): Promise<T | null> {
-  const { ttl = DEFAULT_TTL_SECONDS, useKvCache = true, bustEdgeCache = false } = options;
+  const { ttl = DEFAULT_TTL_SECONDS, useKvCache = false, bustEdgeCache = false } = options;
   const cacheKey = `${KV_PREFIX}${r2Key}`;
 
   // 1. Try KV cache

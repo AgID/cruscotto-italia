@@ -21,6 +21,7 @@
 import type { Env } from "../index.js";
 import type { ToolDefinition } from "./index.js";
 import { fetchR2Json } from "../lib/r2cache.js";
+import { memGet, memPut } from "../lib/memcache.js";
 import { anncsuCivicoSearchOutputSchema } from "../schemas/anncsu_civico_search_output.js";
 import {
   validateIstatCode,
@@ -129,7 +130,7 @@ export const anncsuCivicoSearch: ToolDefinition = {
     const odoNorm = normalizeOdo(odonimoRaw);
     const civNorm = civicoRaw.trim();
     const cacheKey = `anncsu_search:${istatCode}:${odoNorm}:${civNorm}:${limit}`;
-    const cached = await env.CACHE.get(cacheKey, "json");
+    const cached = memGet(cacheKey);
     if (cached) return cached;
 
     // Fetch dello shard full. Puo' essere assente (comune senza geo-ref
@@ -147,7 +148,7 @@ export const anncsuCivicoSearch: ToolDefinition = {
         results: [],
       };
       try {
-        await env.CACHE.put(cacheKey, JSON.stringify(result), { expirationTtl: CACHE_TTL });
+        memPut(cacheKey, result, CACHE_TTL);
       } catch (e) { /* ignore */ }
       return result;
     }
@@ -204,7 +205,7 @@ export const anncsuCivicoSearch: ToolDefinition = {
     };
 
     try {
-      await env.CACHE.put(cacheKey, JSON.stringify(result), { expirationTtl: CACHE_TTL });
+      memPut(cacheKey, result, CACHE_TTL);
     } catch (e) { /* KV put limit; cache opzionale */ }
 
     return result;
